@@ -5,6 +5,8 @@ import Layout from "@/components/Layout";
 import ScrollReveal from "@/components/ScrollReveal";
 import FounderCard from "@/components/FounderCard";
 import SEO from "@/components/SEO";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import FAQSection from "@/components/FAQSection";
 const heroBg = "/hero-bg.jpg";
 import { sections, getTodaySchedule, getTodayDate } from "@/data/mockData";
 /**
@@ -21,7 +23,7 @@ const Index = () => {
       <SEO 
         title="الرئيسية"
         description="منصة CYBER TMSAH - منصة أكاديمية متكاملة لطلاب الأمن السيبراني. مواد دراسية، جداول محاضرات، ومراجعات شاملة."
-        url="https://cybertmsah.com"
+        url="https://www.cyber-tmsah.site"
       />
       <Layout>
       {/* Hero */}
@@ -230,6 +232,9 @@ const Index = () => {
           <FounderCard />
         </section>
       </ScrollReveal>
+
+      {/* FAQ Section - SEO Rich Content */}
+      <FAQSection />
     </Layout>
     </>
   );

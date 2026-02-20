@@ -68,7 +68,7 @@ const Schedule = () => {
       <SEO 
         title="الجدول الدراسي"
         description="جدول محاضرات الأمن السيبراني الأسبوعي الكامل. جميع المحاضرات من السبت إلى الجمعة مع التفاصيل الكاملة."
-        url="https://cybertmsah.com/schedule"
+        url="https://www.cyber-tmsah.site/schedule"
       />
       <Layout>
         {/* Hero Section */}

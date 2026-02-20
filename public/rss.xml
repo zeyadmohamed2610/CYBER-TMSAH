@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" 
+     xmlns:content="http://purl.org/rss/1.0/modules/content/"
+     xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>CYBER TMSAH | سايبر تمساح - منصة الأمن السيبراني</title>
+    <link>https://www.cyber-tmsah.site</link>
+    <description>منصة CYBER TMSAH (سايبر تمساح) - منصة أكاديمية متكاملة لطلاب الأمن السيبراني في جامعة العاصمة التكنولوجية. مواد دراسية، جداول محاضرات، ومراجعات شاملة.</description>
+    <language>ar</language>
+    <lastBuildDate>Tue, 17 Feb 2025 00:00:00 GMT</lastBuildDate>
+    <atom:link href="https://www.cyber-tmsah.site/rss.xml" rel="self" type="application/rss+xml"/>
+    <image>
+      <url>https://www.cyber-tmsah.site/favicon.png</url>
+      <title>CYBER TMSAH</title>
+      <link>https://www.cyber-tmsah.site</link>
+    </image>
+    
+    <item>
+      <title>منصة CYBER TMSAH - الرئيسية</title>
+      <link>https://www.cyber-tmsah.site/</link>
+      <guid isPermaLink="true">https://www.cyber-tmsah.site/</guid>
+      <pubDate>Tue, 17 Feb 2025 00:00:00 GMT</pubDate>
+      <description>منصة CYBER TMSAH (سايبر تمساح) - منصة أكاديمية متكاملة لطلاب الأمن السيبراني. مواد دراسية، جداول محاضرات، ومراجعات شاملة في مكان واحد.</description>
+      <category>Education</category>
+      <category>Cybersecurity</category>
+    </item>
+    
+    <item>
+      <title>المواد الدراسية - CYBER TMSAH</title>
+      <link>https://www.cyber-tmsah.site/materials</link>
+      <guid isPermaLink="true">https://www.cyber-tmsah.site/materials</guid>
+      <pubDate>Tue, 17 Feb 2025 00:00:00 GMT</pubDate>
+      <description>جميع مواد الأمن السيبراني. محاضرات، ملفات، ومراجعات لجميع المواد الدراسية.</description>
+      <category>Materials</category>
+      <category>Cybersecurity</category>
+    </item>
+    
+    <item>
+      <title>الجدول الدراسي - CYBER TMSAH</title>
+      <link>https://www.cyber-tmsah.site/schedule</link>
+      <guid isPermaLink="true">https://www.cyber-tmsah.site/schedule</guid>
+      <pubDate>Tue, 17 Feb 2025 00:00:00 GMT</pubDate>
+      <description>جدول محاضرات الأمن السيبراني الأسبوعي الكامل. جميع المحاضرات من السبت إلى الجمعة مع التفاصيل الكاملة.</description>
+      <category>Schedule</category>
+      <category>Cybersecurity</category>
+    </item>
+    
+  </channel>
+</rss>

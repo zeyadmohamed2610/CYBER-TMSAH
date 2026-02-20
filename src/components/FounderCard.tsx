@@ -1,5 +1,4 @@
-import { Facebook, MessageCircle, Linkedin, Github, Shield, Sparkles } from "lucide-react";
-import founderImg from "@/assets/founder.jpg";
+import { Facebook, MessageCircle, Linkedin, Github, Shield, Sparkles, User } from "lucide-react";
 import { founderSocials } from "@/data/mockData";
 
 const FounderCard = () => {
@@ -49,7 +48,7 @@ const FounderCard = () => {
                 <div className="absolute -inset-1 bg-gradient-to-br from-primary via-cyan-400 to-primary rounded-3xl opacity-70" />
                 
                 <img
-                  src={founderImg}
+                  src="/founder.jpeg"
                   alt={founderSocials.name}
                   className="relative w-40 h-52 md:w-48 md:h-64 rounded-3xl object-cover object-top border-4 border-background"
                   width={192}

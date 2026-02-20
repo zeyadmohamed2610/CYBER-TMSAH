@@ -154,9 +154,7 @@ export const subjects: Subject[] = [
     icon: "🤝", 
     instructor: "د. نجلاء عبدالمحسن",
     articles: [
-      { id: "1", title: "المحاضرة الأولى - مقدمة في التفاوض", blogUrl: "#" },
-      { id: "2", title: "المحاضرة الثانية - استراتيجيات التفاوض", blogUrl: "#" },
-      { id: "3", title: "المحاضرة الثالثة - مهارات الإقناع", blogUrl: "#" },
+      { id: "1", title: "المحاضرة 1 -  أساسيات التفاوض واستراتيجيات النجاح  ", blogUrl: "https://cyber-tmsah.blogspot.com/2026/02/negotiation-skills-lecture-1.html" },
     ]
   },
   { 
@@ -165,9 +163,7 @@ export const subjects: Subject[] = [
     icon: "🛡️", 
     instructor: "د. سامح مصطفى",
     articles: [
-      { id: "1", title: "المحاضرة الأولى - مقدمة في الأمن السيبراني", blogUrl: "#" },
-      { id: "2", title: "المحاضرة الثانية - التهديدات الأمنية", blogUrl: "#" },
-      { id: "3", title: "المحاضرة الثالثة - الحماية والوقاية", blogUrl: "#" },
+      { id: "1", title: "المحاضرة 1 - مقدمة في أمن المعلومات ", blogUrl: "https://cyber-tmsah.blogspot.com/2026/02/information-security-basics-cia-triad.html" },
     ]
   },
   { 
@@ -187,9 +183,7 @@ export const subjects: Subject[] = [
     icon: "🌐", 
     instructor: "د. سيمون عزت",
     articles: [
-      { id: "1", title: "المحاضرة الأولى - مقدمة في الشبكات", blogUrl: "#" },
-      { id: "2", title: "المحاضرة الثانية - بروتوكولات الاتصال", blogUrl: "#" },
-      { id: "3", title: "المحاضرة الثالثة - طبقات OSI", blogUrl: "#" },
+      { id: "1", title: "المحاضرة 1 -  شرح كامل لنظم الأعداد في الحاسوب ", blogUrl: "https://cyber-tmsah.blogspot.com/2026/02/networks-data-communication-lecture-1-number-systems.html" },
     ]
   },
   { 

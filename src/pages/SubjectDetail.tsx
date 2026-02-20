@@ -1,9 +1,10 @@
 import { useParams, Link } from "react-router-dom";
-import { FileText, Download, ChevronLeft, User, ExternalLink, BookOpen, Sparkles, GraduationCap } from "lucide-react";
+import { FileText, Download, ChevronLeft, User, ExternalLink, BookOpen, Sparkles, GraduationCap, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import Layout from "@/components/Layout";
 import ScrollReveal from "@/components/ScrollReveal";
 import SEO from "@/components/SEO";
+import ShareButtons from "@/components/ShareButtons";
 import { subjects } from "@/data/mockData";
 
 /**
@@ -13,6 +14,9 @@ import { subjects } from "@/data/mockData";
 const SubjectDetail = () => {
   const { id } = useParams();
   const subject = subjects.find((s) => s.id === id);
+  
+  // Last updated date (in production, this should come from API/CMS)
+  const lastUpdated = "2025-02-17";
 
   if (!subject) {
     return (
@@ -36,7 +40,7 @@ const SubjectDetail = () => {
       <SEO 
         title={subject.title}
         description={`محاضرات ومراجعات ${subject.title} - ${subject.instructor}. جميع المحاضرات والملفات المتعلقة بالمادة.`}
-        url={`https://cybertmsah.com/materials/${subject.id}`}
+        url={`https://www.cyber-tmsah.site/materials/${subject.id}`}
       />
       <Layout>
       {/* Hero Section */}
@@ -91,11 +95,28 @@ const SubjectDetail = () => {
               
               <h1 className="text-3xl md:text-4xl font-black text-foreground">{subject.title}</h1>
               
-              <div className="flex items-center gap-2 mt-3">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <User className="h-4 w-4 text-primary" />
+              <div className="flex flex-wrap items-center gap-4 mt-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <User className="h-4 w-4 text-primary" />
+                  </div>
+                  <span className="text-muted-foreground font-medium">{subject.instructor}</span>
                 </div>
-                <span className="text-muted-foreground font-medium">{subject.instructor}</span>
+                
+                {/* Last Updated */}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  <span>آخر تحديث: {new Date(lastUpdated).toLocaleDateString('ar-EG')}</span>
+                </div>
+              </div>
+              
+              {/* Share Buttons */}
+              <div className="mt-4">
+                <ShareButtons 
+                  title={subject.title}
+                  url={`https://www.cyber-tmsah.site/materials/${subject.id}`}
+                  description={`محاضرات ومراجعات ${subject.title}`}
+                />
               </div>
             </div>
 

@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.png"],
+      includeAssets: ["favicon.png", "rss.xml", "sitemap.xml", "robots.txt", "browserconfig.xml"],
       manifest: {
         name: "CYBER TMSAH - منصة الأمن السيبراني",
         short_name: "CYBER TMSAH",
@@ -90,7 +90,24 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  publicDir: "public",
   build: {
+    copyPublicDir: true,
+    // Minification and obfuscation for production
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remove console logs
+        drop_debugger: true, // Remove debugger statements
+        pure_funcs: ['console.log', 'console.info', 'console.warn', 'console.error'],
+      },
+      mangle: {
+        properties: false, // Don't mangle property names (can break React)
+      },
+      format: {
+        comments: false, // Remove all comments
+      },
+    },
     rollupOptions: {
       output: {
         manualChunks: {
@@ -98,7 +115,22 @@ export default defineConfig(({ mode }) => ({
           vendor: ["react", "react-dom", "react-router-dom"],
           ui: ["@radix-ui/react-tooltip", "@radix-ui/react-toast"],
         },
+        // Obfuscate chunk names in production
+        chunkFileNames: (chunkInfo) => {
+          if (mode === 'production') {
+            return 'assets/[hash].js';
+          }
+          return 'assets/[name]-[hash].js';
+        },
+        entryFileNames: (chunkInfo) => {
+          if (mode === 'production') {
+            return 'assets/[hash].js';
+          }
+          return 'assets/[name]-[hash].js';
+        },
       },
     },
+    // Source maps only in development
+    sourcemap: mode === 'development',
   },
 }));

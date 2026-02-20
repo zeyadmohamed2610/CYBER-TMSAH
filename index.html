@@ -5,20 +5,352 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/favicon.png" type="image/png" />
     <link rel="apple-touch-icon" href="/favicon.png" />
-    <title>CYBER TMSAH - منصة الأمن السيبراني</title>
-    <meta name="description" content="منصة CYBER TMSAH الأكاديمية للأمن السيبراني - مواد، جداول، مراجعات في مكان واحد" />
-    <meta property="og:title" content="CYBER TMSAH" />
-    <meta property="og:description" content="منصة أكاديمية شاملة للأمن السيبراني" />
-    <meta property="og:type" content="website" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preload" as="image" href="/hero-bg.jpg" fetchpriority="high" />
+    <link rel="manifest" href="/manifest.json" />
     
-    <!-- Sitemap -->
-    <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml" />
+    <!-- العنوان الرئيسي -->
+    <title>CYBER TMSAH | سايبر تمساح - منصة الأمن السيبراني الأكاديمية</title>
+    
+    <!-- الوصف المفصل -->
+    <meta name="description" content="منصة CYBER TMSAH (سايبر تمساح) - منصة سايبر أكاديمية متكاملة لطلاب الأمن السيبراني. مواد دراسية، جداول محاضرات، مراجعات شاملة في مكان واحد. منصة تمساح لطلاب جامعة العاصمة التكنولوجية." />
+    
+    <!-- الكلمات المفتاحية -->
+    <meta name="keywords" content="CYBER TMSAH, cyber tmsah, سايبر تمساح, منصة سايبر, منصة سايبر تمساح, منصة تمساح, منصة CYBER TMSAH, منصة الأمن السيبراني, جامعة العاصمة التكنولوجية, مواد الأمن السيبراني, جدول محاضرات, مراجعات, محاضرات, ملفات دراسية, cybersecurity, الأمن السيبراني, هندسة البرمجيات, الشبكات, أنظمة التشغيل, تكنولوجيا المعلومات" />
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="CYBER TMSAH | سايبر تمساح - منصة الأمن السيبراني" />
+    <meta property="og:description" content="منصة سايبر تمساح الأكاديمية - منصة CYBER TMSAH لطلاب الأمن السيبراني في جامعة العاصمة التكنولوجية. مواد، جداول، مراجعات." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.cyber-tmsah.site" />
+    <meta property="og:image" content="https://www.cyber-tmsah.site/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="ar_AR" />
+    <meta property="og:site_name" content="CYBER TMSAH | منصة سايبر تمساح" />
+    
+    <!-- Twitter Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="CYBER TMSAH | سايبر تمساح" />
+    <meta name="twitter:description" content="منصة CYBER TMSAH (سايبر تمساح) - منصة سايبر أكاديمية للأمن السيبراني" />
+    <meta name="twitter:image" content="https://www.cyber-tmsah.site/og-image.png" />
+    
+    <!-- إعدادات أخرى -->
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
+    <meta name="author" content="زياد محمد - CYBER TMSAH" />
+    <meta name="theme-color" content="#0a0a0f" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="language" content="ar" />
+    <meta name="distribution" content="global" />
+    <meta name="rating" content="general" />
+    <meta name="revisit-after" content="1 days" />
+    <meta name="target" content="all" />
+    <meta name="classification" content="Education, Academic, Cybersecurity" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://www.cyber-tmsah.site/" />
+    
+    <!-- Google Search Console Verification (Add your verification code here) -->
+    <!-- <meta name="google-site-verification" content="YOUR_VERIFICATION_CODE" /> -->
+    
+    <!-- Mobile & App Meta Tags 2026 -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="CYBER TMSAH" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="msapplication-TileColor" content="#0a0a0f" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    
+    <!-- Geo Meta Tags -->
+    <meta name="geo.region" content="EG" />
+    <meta name="geo.placename" content="Cairo" />
+    <meta name="geo.position" content="30.0444;31.2357" />
+    <meta name="ICBM" content="30.0444, 31.2357" />
+    
+    <!-- News Keywords (For Google News compatibility) -->
+    <meta name="news_keywords" content="CYBER TMSAH, سايبر تمساح, منصة سايبر, تعليم, جامعة العاصمة, أمن سيبراني" />
+    
+    <!-- Article Modified Time -->
+    <meta property="article:modified_time" content="2025-02-17T00:00:00+02:00" />
+    <meta property="article:published_time" content="2025-02-01T00:00:00+02:00" />
+    <meta property="article:author" content="زياد محمد" />
+    <meta property="article:section" content="Education" />
+    <meta property="article:tag" content="CYBER TMSAH, سايبر تمساح, منصة سايبر" />
+    
+    <!-- Facebook Domain Verification -->
+    <!-- <meta name="facebook-domain-verification" content="YOUR_VERIFICATION_CODE" /> -->
     
     <!-- Preconnect to external domains -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
     <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+    <link rel="preconnect" href="https://xijnujhszhhysinwioqe.supabase.co" />
+    
+    <!-- Preload Critical Resources (Core Web Vitals LCP Optimization) -->
+    <link rel="preload" as="image" href="/hero-bg.jpg" fetchpriority="high" />
+    <link rel="preload" as="image" href="/favicon.png" fetchpriority="high" />
+    
+    <!-- Preload Critical CSS -->
+    <link rel="preload" href="/src/index.css" as="style" />
+    
+    <!-- Prefetch Next Pages -->
+    <link rel="prefetch" href="/schedule" />
+    <link rel="prefetch" href="/materials" />
+    
+    <!-- Preconnect to origin -->
+    <link rel="preconnect" href="https://www.cyber-tmsah.site" />
+    <link rel="dns-prefetch" href="https://www.cyber-tmsah.site" />
+    
+    <!-- Sitemap & RSS -->
+    <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml" />
+    <link rel="alternate" type="application/rss+xml" title="CYBER TMSAH RSS Feed" href="/rss.xml" />
+    
+    <!-- Alternate Languages & hreflang -->
+    <link rel="alternate" hreflang="ar" href="https://www.cyber-tmsah.site/" />
+    <link rel="alternate" hreflang="ar-EG" href="https://www.cyber-tmsah.site/" />
+    <link rel="alternate" hreflang="x-default" href="https://www.cyber-tmsah.site/" />
+    
+    <!-- Viewport & Mobile Optimization -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+    <meta name="HandheldFriendly" content="true" />
+    
+    <!-- Performance: Resource Hints -->
+    <link rel="preconnect" href="https://www.cyber-tmsah.site" />
+    <link rel="dns-prefetch" href="https://www.cyber-tmsah.site" />
+    <link rel="prefetch" href="/schedule" />
+    <link rel="prefetch" href="/materials" />
+    
+    <!-- Security Headers (will be applied by server) -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com https://xijnujhszhhysinwioqe.supabase.co;" />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-XXSS-Protection" content="1; mode=block" />
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+    
+    <!-- PWA: Theme & Display -->
+    <meta name="application-name" content="CYBER TMSAH" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="CYBER TMSAH" />
+    <meta name="format-detection" content="telephone=no" />
+    
+    <!-- Additional SEO Meta -->
+    <meta name="subject" content="منصة تعليمية للأمن السيبراني" />
+    <meta name="copyright" content="CYBER TMSAH - زياد محمد" />
+    <meta name="designer" content="زياد محمد" />
+    <meta name="owner" content="CYBER TMSAH" />
+    <meta name="url" content="https://www.cyber-tmsah.site" />
+    <meta name="identifier-URL" content="https://www.cyber-tmsah.site" />
+    <meta name="directory" content="submission" />
+    <meta name="category" content="Education" />
+    <meta name="coverage" content="Worldwide" />
+    
+    <!-- Social Media: Additional Platforms -->
+    <meta property="fb:app_id" content="" />
+    <meta property="fb:admins" content="" />
+    <meta name="pinterest" content="nopin" />
+    
+    <!-- Verification Tags (Ready to use) -->
+    <!-- <meta name="google-site-verification" content="YOUR_CODE" /> -->
+    <!-- <meta name="msvalidate.01" content="YOUR_BING_CODE" /> -->
+    <!-- <meta name="yandex-verification" content="YOUR_YANDEX_CODE" /> -->
+    <!-- <meta name="p:domain_verify" content="YOUR_PINTEREST_CODE" /> -->
+    <!-- <meta name="norton-safeweb-site-verification" content="YOUR_NORTON_CODE" /> -->
+    
+    <!-- Google tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-CWG5Z7E041"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-CWG5Z7E041');
+    </script>
+    
+    <!-- Structured Data - Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "CYBER TMSAH | سايبر تمساح",
+      "alternateName": ["منصة سايبر تمساح", "منصة سايبر", "منصة تمساح", "cyber tmsah"],
+      "description": "منصة CYBER TMSAH الأكاديمية للأمن السيبراني - مواد، جداول، مراجعات في مكان واحد",
+      "url": "https://www.cyber-tmsah.site",
+      "logo": "https://www.cyber-tmsah.site/logo.png",
+      "image": "https://www.cyber-tmsah.site/og-image.png",
+      "founder": {
+        "@type": "Person",
+        "name": "زياد محمد"
+      },
+      "sameAs": [
+        "https://www.facebook.com/zeyad.eltmsah",
+        "https://www.linkedin.com/in/zeyadmohamed26/",
+        "https://github.com/zeyadmohamed2610"
+      ],
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "القاهرة",
+        "addressCountry": "EG"
+      }
+    }
+    </script>
+    
+    <!-- Structured Data - WebSite -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "CYBER TMSAH | سايبر تمساح",
+      "alternateName": ["منصة سايبر تمساح", "منصة CYBER TMSAH"],
+      "url": "https://www.cyber-tmsah.site",
+      "description": "منصة أكاديمية متكاملة لطلاب الأمن السيبراني في جامعة العاصمة التكنولوجية",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://www.cyber-tmsah.site/search?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+    
+    <!-- Structured Data - Educational Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "EducationalOrganization",
+      "name": "CYBER TMSAH - منصة الأمن السيبراني",
+      "alternateName": "سايبر تمساح",
+      "description": "منصة تعليمية متخصصة في الأمن السيبراني لطلاب جامعة العاصمة التكنولوجية",
+      "url": "https://www.cyber-tmsah.site",
+      "logo": "https://www.cyber-tmsah.site/logo.png",
+      "sameAs": [
+        "https://www.facebook.com/zeyad.eltmsah"
+      ]
+    }
+    </script>
+    
+    <!-- Structured Data - BreadcrumbList -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "الرئيسية",
+          "item": "https://www.cyber-tmsah.site/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "المواد الدراسية",
+          "item": "https://www.cyber-tmsah.site/materials"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "الجدول الدراسي",
+          "item": "https://www.cyber-tmsah.site/schedule"
+        }
+      ]
+    }
+    </script>
+    
+    <!-- Structured Data - Course -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Course",
+      "name": "الأمن السيبراني - CYBER TMSAH",
+      "alternateName": "سايبر تمساح",
+      "description": "منصة أكاديمية متكاملة لطلاب الأمن السيبراني في جامعة العاصمة التكنولوجية",
+      "provider": {
+        "@type": "EducationalOrganization",
+        "name": "CYBER TMSAH",
+        "sameAs": "https://www.cyber-tmsah.site"
+      },
+      "hasCourseInstance": {
+        "@type": "CourseInstance",
+        "courseMode": "online",
+        "instructor": {
+          "@type": "Person",
+          "name": "زياد محمد"
+        }
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "EGP",
+        "availability": "https://schema.org/InStock"
+      }
+    }
+    </script>
+    
+    <!-- Structured Data - FAQPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "ما هي منصة CYBER TMSAH؟",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "CYBER TMSAH (سايبر تمساح) هي منصة أكاديمية متكاملة لطلاب الأمن السيبراني في جامعة العاصمة التكنولوجية، توفر مواد دراسية، جداول محاضرات، ومراجعات شاملة."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "هل المنصة مجانية؟",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "نعم، منصة CYBER TMSAH مجانية بالكامل لجميع طلاب الأمن السيبراني في جامعة العاصمة التكنولوجية."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "ما هي المواد المتاحة على المنصة؟",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "المنصة توفر مواد: أساسيات الأمن السيبراني، الشبكات، أنظمة التشغيل، الرسم الهندسي، اللغة الإنجليزية، التفاوض والحل الإبداعي، وتكنولوجيا المعلومات."
+          }
+        }
+      ]
+    }
+    </script>
+    
+    <!-- Structured Data - LocalBusiness -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "EducationalOrganization",
+      "name": "CYBER TMSAH - سايبر تمساح",
+      "image": "https://www.cyber-tmsah.site/og-image.png",
+      "url": "https://www.cyber-tmsah.site",
+      "telephone": "",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "القاهرة",
+        "addressCountry": "EG"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 30.0444,
+        "longitude": 31.2357
+      },
+      "openingHoursSpecification": {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"],
+        "opens": "00:00",
+        "closes": "23:59"
+      }
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

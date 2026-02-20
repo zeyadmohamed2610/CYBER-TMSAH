@@ -15,7 +15,7 @@ const Materials = () => {
       <SEO 
         title="المواد الدراسية"
         description="جميع مواد الأمن السيبراني. محاضرات، ملفات، ومراجعات لجميع المواد الدراسية."
-        url="https://cybertmsah.com/materials"
+        url="https://www.cyber-tmsah.site/materials"
       />
       <Layout>
       {/* Hero Header */}
