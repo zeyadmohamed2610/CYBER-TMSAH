@@ -187,11 +187,47 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.tg_enforce_doctor_single_active_session()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW.status IS DISTINCT FROM 'active' THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.ends_at <= now() THEN
+    RETURN NEW;
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(hashtext(NEW.doctor_id::text));
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.sessions existing_session
+    WHERE existing_session.doctor_id = NEW.doctor_id
+      AND existing_session.status = 'active'
+      AND existing_session.ends_at > now()
+      AND (NEW.id IS NULL OR existing_session.id <> NEW.id)
+  ) THEN
+    RAISE EXCEPTION 'Doctor already has an active session that has not ended';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
 DROP TRIGGER IF EXISTS trg_sessions_validate_state ON public.sessions;
 CREATE TRIGGER trg_sessions_validate_state
 BEFORE INSERT OR UPDATE ON public.sessions
 FOR EACH ROW
 EXECUTE FUNCTION public.tg_validate_session_state();
+
+DROP TRIGGER IF EXISTS trg_sessions_single_active_doctor ON public.sessions;
+CREATE TRIGGER trg_sessions_single_active_doctor
+BEFORE INSERT OR UPDATE OF doctor_id, status, ends_at ON public.sessions
+FOR EACH ROW
+EXECUTE FUNCTION public.tg_enforce_doctor_single_active_session();
 
 CREATE INDEX IF NOT EXISTS idx_users_role ON public.users (role);
 CREATE INDEX IF NOT EXISTS idx_users_lock_window ON public.users (account_locked_until);
@@ -199,6 +235,8 @@ CREATE INDEX IF NOT EXISTS idx_subjects_owner ON public.subjects (owner_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_doctor_time ON public.sessions (doctor_id, starts_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sessions_subject_time ON public.sessions (subject_id, starts_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sessions_status_time ON public.sessions (status, starts_at DESC);
+CREATE INDEX IF NOT EXISTS idx_sessions_doctor_active_end ON public.sessions (doctor_id, ends_at DESC)
+WHERE status = 'active';
 CREATE INDEX IF NOT EXISTS idx_attendance_student_submitted ON public.attendance (student_id, submitted_at DESC);
 CREATE INDEX IF NOT EXISTS idx_attendance_session_submitted ON public.attendance (session_id, submitted_at DESC);
 CREATE INDEX IF NOT EXISTS idx_attendance_nonce ON public.attendance (request_nonce);

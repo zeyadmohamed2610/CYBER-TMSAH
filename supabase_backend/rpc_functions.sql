@@ -284,6 +284,18 @@ BEGIN
     RAISE EXCEPTION 'Session cannot be created as active when end time is in the past';
   END IF;
 
+  IF p_status = 'active' AND p_ends_at > now() THEN
+    IF EXISTS (
+      SELECT 1
+      FROM public.sessions
+      WHERE doctor_id = p_doctor_id
+        AND status = 'active'
+        AND ends_at > now()
+    ) THEN
+      RAISE EXCEPTION 'Doctor already has an active session that has not ended';
+    END IF;
+  END IF;
+
   INSERT INTO public.sessions (
     subject_id,
     doctor_id,
@@ -427,6 +439,11 @@ BEGIN
 
   IF v_session.status IN ('ended', 'cancelled') THEN
     RAISE EXCEPTION 'Session is not active';
+  END IF;
+
+  IF NOT (v_now BETWEEN v_session.starts_at AND v_session.ends_at)
+     OR v_session.status IS DISTINCT FROM 'active' THEN
+    RAISE EXCEPTION 'Session is outside the hard-expiry active window';
   END IF;
 
   IF abs(p_time_window - floor(extract(epoch FROM v_now) / 30)::BIGINT) > 1 THEN
