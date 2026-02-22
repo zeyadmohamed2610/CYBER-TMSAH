@@ -1,11 +1,22 @@
 import { useState } from "react";
 import { Activity, BookOpenCheck, Clock3, Users } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { DataTable, type DataTableColumn } from "../components/DataTable";
 import { ExportButtons } from "../components/ExportButtons";
+import { OwnerLiveSessionMap } from "../components/OwnerLiveSessionMap";
 import { attendanceService } from "../services/attendanceService";
 import { StatCard } from "../components/StatCard";
 import { AttendanceStatusChart } from "../components/charts/AttendanceStatusChart";
@@ -27,8 +38,9 @@ const getStatusVariant = (status: AttendanceRecord["status"]) => {
 
 export const OwnerDashboard = () => {
   const { toast } = useToast();
-  const { loading, error, metrics, records, trendPoints, subjectMetrics } = useAttendanceDashboardData("owner");
+  const { loading, error, metrics, sessions, records, trendPoints, subjectMetrics } = useAttendanceDashboardData("owner");
   const [overrideTargetId, setOverrideTargetId] = useState<string | null>(null);
+  const [overrideCandidate, setOverrideCandidate] = useState<AttendanceRecord | null>(null);
   const [ownerRecordedMap, setOwnerRecordedMap] = useState<Record<string, true>>({});
 
   const isRecordedByOwner = (record: AttendanceRecord) => {
@@ -38,7 +50,7 @@ export const OwnerDashboard = () => {
   const handleOwnerOverride = async (attendanceId: string) => {
     setOverrideTargetId(attendanceId);
 
-    const result = await attendanceService.recordOwnerAttendanceOverride(attendanceId);
+    const result = await attendanceService.overrideAttendance(attendanceId);
 
     if (result.error) {
       toast({
@@ -61,6 +73,7 @@ export const OwnerDashboard = () => {
     });
 
     setOverrideTargetId(null);
+    setOverrideCandidate(null);
   };
 
   const columns: DataTableColumn<AttendanceRecord>[] = [
@@ -102,10 +115,14 @@ export const OwnerDashboard = () => {
           type="button"
           variant="outline"
           size="sm"
-          disabled={overrideTargetId === row.id}
-          onClick={() => void handleOwnerOverride(row.id)}
+          disabled={overrideTargetId === row.id || isRecordedByOwner(row)}
+          onClick={() => setOverrideCandidate(row)}
         >
-          {overrideTargetId === row.id ? "Applying..." : "Manual Override"}
+          {isRecordedByOwner(row)
+            ? "تم التسجيل"
+            : overrideTargetId === row.id
+              ? "جارٍ التنفيذ..."
+              : "تسجيل يدوي"}
         </Button>
       ),
     },
@@ -152,6 +169,8 @@ export const OwnerDashboard = () => {
         <AttendanceStatusChart records={records} />
       </div>
 
+      <OwnerLiveSessionMap sessions={sessions} records={records} />
+
       <AttendanceSubjectChart metrics={subjectMetrics} />
 
       <DataTable
@@ -164,6 +183,41 @@ export const OwnerDashboard = () => {
       />
 
       <ExportButtons role="owner" />
+
+      <AlertDialog
+        open={Boolean(overrideCandidate)}
+        onOpenChange={(open) => {
+          if (!open && !overrideTargetId) {
+            setOverrideCandidate(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد التسجيل اليدوي</AlertDialogTitle>
+            <AlertDialogDescription>
+              {overrideCandidate
+                ? `هل تريد تسجيل حضور الطالب ${overrideCandidate.studentName || overrideCandidate.studentId} يدويًا؟`
+                : "هل تريد تسجيل الحضور يدويًا؟"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={Boolean(overrideTargetId)}>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!overrideCandidate || Boolean(overrideTargetId)}
+              onClick={(event) => {
+                event.preventDefault();
+                if (!overrideCandidate) {
+                  return;
+                }
+                void handleOwnerOverride(overrideCandidate.id);
+              }}
+            >
+              {overrideTargetId ? "جارٍ التنفيذ..." : "تأكيد"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

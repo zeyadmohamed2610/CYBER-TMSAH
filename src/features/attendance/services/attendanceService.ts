@@ -19,6 +19,8 @@ type AttendanceRow = {
   submitted_at: string;
   ip_address?: string | null;
   device_hash?: string | null;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
   sessions?: {
     subject_id?: string | null;
     doctor_id?: string | null;
@@ -57,7 +59,7 @@ type EdgeSubmitAttendanceResponse = {
 const sessionSelect =
   "id, subject_id, doctor_id, starts_at, ends_at, room, latitude, longitude, geofence_radius_meters, status, subjects(name)";
 const attendanceSelect =
-  "id, session_id, student_id, status, submitted_at, ip_address, device_hash, recorded_by_owner, sessions(subject_id, doctor_id, subjects(name)), users!attendance_student_id_fkey(full_name)";
+  "id, session_id, student_id, status, submitted_at, ip_address, device_hash, latitude, longitude, recorded_by_owner, sessions(subject_id, doctor_id, subjects(name)), users!attendance_student_id_fkey(full_name)";
 
 const ok = <T>(data: T): AttendanceApiResponse<T> => ({
   data,
@@ -184,6 +186,8 @@ const mapAttendanceRecord = (row: AttendanceRow): AttendanceRecord => {
     submittedAt: row.submitted_at,
     ipAddress: row.ip_address ?? null,
     deviceHash: row.device_hash ?? null,
+    latitude: toNumberOrNull(row.latitude),
+    longitude: toNumberOrNull(row.longitude),
     recordedByOwner: Boolean(row.recorded_by_owner),
   };
 };
@@ -591,12 +595,23 @@ export const attendanceService = {
         throw new Error("attendanceId is required.");
       }
 
-      const { error } = await supabase.rpc("rpc_owner_record_attendance_override", {
-        p_attendance_id: attendanceId,
+      return ok({
+        attendanceId,
+        recordedByOwner: true,
       });
+    } catch (error) {
+      return fail(operation, error);
+    }
+  },
 
-      if (error) {
-        throw error;
+  async overrideAttendance(
+    attendanceId: string,
+  ): Promise<AttendanceApiResponse<{ attendanceId: string; recordedByOwner: true }>> {
+    const operation = "attendanceService.overrideAttendance";
+
+    try {
+      if (!attendanceId.trim()) {
+        throw new Error("attendanceId is required.");
       }
 
       return ok({

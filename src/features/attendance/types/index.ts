@@ -38,6 +38,8 @@ export interface AttendanceRecord {
   submittedAt: string;
   ipAddress?: string | null;
   deviceHash?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   recordedByOwner?: boolean;
 }
 
