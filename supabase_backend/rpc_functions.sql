@@ -204,6 +204,41 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.rpc_owner_reset_student_device(
+  student_id UUID
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF current_setting('request.jwt.claim.role', true) = 'service_role'
+     OR public.current_app_role() IS DISTINCT FROM 'owner' THEN
+    RAISE EXCEPTION 'Owner role required';
+  END IF;
+
+  UPDATE public.users
+  SET
+    device_fingerprint_hash = NULL,
+    updated_by = auth.uid()
+  WHERE id = student_id
+    AND role = 'student';
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Student not found';
+  END IF;
+
+  INSERT INTO public.system_logs (actor_user_id, action, severity, metadata)
+  VALUES (
+    auth.uid(),
+    'owner_reset_device_binding',
+    'warning',
+    jsonb_build_object('student_id', student_id)
+  );
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.rpc_owner_upsert_subject(
   p_subject_id UUID DEFAULT NULL,
   p_code TEXT DEFAULT NULL,
@@ -336,6 +371,8 @@ BEGIN
 END;
 $$;
 
+DROP FUNCTION IF EXISTS public.rpc_submit_attendance(UUID, TEXT, BIGINT, NUMERIC, NUMERIC, TEXT, INET, TEXT, UUID);
+
 CREATE OR REPLACE FUNCTION public.rpc_submit_attendance(
   p_session_id UUID,
   p_rotating_hash TEXT,
@@ -345,6 +382,7 @@ CREATE OR REPLACE FUNCTION public.rpc_submit_attendance(
   p_request_nonce TEXT,
   p_ip_address INET DEFAULT NULL,
   p_device_hash TEXT DEFAULT NULL,
+  p_device_fingerprint_raw TEXT DEFAULT NULL,
   p_student_id UUID DEFAULT NULL
 )
 RETURNS TABLE (
@@ -364,6 +402,8 @@ DECLARE
   v_expected_hash TEXT;
   v_distance_meters DOUBLE PRECISION;
   v_recent_attempts INTEGER;
+  v_device_fingerprint_hash TEXT;
+  v_stored_device_fingerprint_hash TEXT;
   v_inserted public.attendance%ROWTYPE;
   v_session public.sessions%ROWTYPE;
 BEGIN
@@ -483,6 +523,41 @@ BEGIN
     RAISE EXCEPTION 'Duplicate attendance submission';
   END IF;
 
+  IF p_device_fingerprint_raw IS NULL OR length(btrim(p_device_fingerprint_raw)) = 0 THEN
+    RAISE EXCEPTION 'Device fingerprint is required';
+  END IF;
+
+  v_device_fingerprint_hash := encode(digest(p_device_fingerprint_raw, 'sha256'), 'hex');
+
+  SELECT device_fingerprint_hash
+  INTO v_stored_device_fingerprint_hash
+  FROM public.users
+  WHERE id = v_student_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Student profile not found or inactive';
+  END IF;
+
+  IF v_stored_device_fingerprint_hash IS NULL THEN
+    UPDATE public.users
+    SET
+      device_fingerprint_hash = v_device_fingerprint_hash,
+      updated_by = coalesce(auth.uid(), updated_by)
+    WHERE id = v_student_id;
+  ELSIF v_stored_device_fingerprint_hash IS DISTINCT FROM v_device_fingerprint_hash THEN
+    INSERT INTO public.system_logs (actor_user_id, action, severity, metadata, ip_address, device_hash)
+    VALUES (
+      v_student_id,
+      'device_binding_violation',
+      'warning',
+      jsonb_build_object('session_id', p_session_id),
+      p_ip_address,
+      p_device_hash
+    );
+    RAISE EXCEPTION 'هذا الحساب مرتبط بجهاز آخر';
+  END IF;
+
   INSERT INTO public.attendance (
     session_id,
     student_id,
@@ -549,8 +624,9 @@ GRANT EXECUTE ON FUNCTION public.current_app_role() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.rpc_record_failed_login(CITEXT, INET, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.rpc_clear_failed_login(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.rpc_owner_set_user_role(UUID, public.user_role) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.rpc_owner_reset_student_device(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.rpc_owner_upsert_subject(UUID, TEXT, TEXT, BOOLEAN) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.rpc_owner_create_session(UUID, UUID, TIMESTAMPTZ, TIMESTAMPTZ, TEXT, NUMERIC, NUMERIC, INTEGER, public.session_status) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.rpc_submit_attendance(UUID, TEXT, BIGINT, NUMERIC, NUMERIC, TEXT, INET, TEXT, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.rpc_submit_attendance(UUID, TEXT, BIGINT, NUMERIC, NUMERIC, TEXT, INET, TEXT, TEXT, UUID) TO authenticated;
 
 COMMIT;

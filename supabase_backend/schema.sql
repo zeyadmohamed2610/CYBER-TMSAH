@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   email CITEXT NOT NULL UNIQUE,
   full_name TEXT,
   role public.user_role NOT NULL DEFAULT 'student',
+  device_fingerprint_hash TEXT,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   failed_login_attempts INTEGER NOT NULL DEFAULT 0 CHECK (failed_login_attempts >= 0),
   account_locked_until TIMESTAMPTZ,
@@ -49,6 +50,9 @@ CREATE TABLE IF NOT EXISTS public.users (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE public.users
+ADD COLUMN IF NOT EXISTS device_fingerprint_hash TEXT;
 
 CREATE TABLE IF NOT EXISTS public.subjects (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -231,6 +235,7 @@ EXECUTE FUNCTION public.tg_enforce_doctor_single_active_session();
 
 CREATE INDEX IF NOT EXISTS idx_users_role ON public.users (role);
 CREATE INDEX IF NOT EXISTS idx_users_lock_window ON public.users (account_locked_until);
+CREATE INDEX IF NOT EXISTS idx_users_device_fingerprint_hash ON public.users (device_fingerprint_hash);
 CREATE INDEX IF NOT EXISTS idx_subjects_owner ON public.subjects (owner_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_doctor_time ON public.sessions (doctor_id, starts_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sessions_subject_time ON public.sessions (subject_id, starts_at DESC);

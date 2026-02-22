@@ -12,6 +12,7 @@ type SubmitAttendancePayload = {
   latitude: number;
   longitude: number;
   device_hash: string;
+  device_fingerprint_raw: string;
   request_nonce: string;
   device_memory?: number | null;
 };
@@ -74,6 +75,8 @@ const isValidPayload = (payload: SubmitAttendancePayload): boolean => {
     typeof payload.latitude === "number" &&
     typeof payload.longitude === "number" &&
     typeof payload.device_hash === "string" &&
+    typeof payload.device_fingerprint_raw === "string" &&
+    payload.device_fingerprint_raw.trim().length > 0 &&
     typeof payload.request_nonce === "string"
   );
 };
@@ -463,6 +466,7 @@ serve(async (request) => {
     p_request_nonce: body.request_nonce,
     p_ip_address: ipAddress,
     p_device_hash: body.device_hash,
+    p_device_fingerprint_raw: body.device_fingerprint_raw,
     p_student_id: userId,
   });
 
