@@ -214,9 +214,7 @@ export const subjects: Subject[] = [
     icon: "⚙️", 
     instructor: "د. عبير حسن",
     articles: [
-      { id: "1", title: "المحاضرة الأولى - مقدمة في نظم التشغيل", blogUrl: "#" },
-      { id: "2", title: "المحاضرة الثانية - إدارة الذاكرة", blogUrl: "#" },
-      { id: "3", title: "المحاضرة الثالثة - إدارة العمليات", blogUrl: "#" },
+      { id: "1", title: "المحاضرة 1 - مفهوم نظام التشغيل ومكوناته وأنواعه بالتفصيل", blogUrl: "https://cyber-tmsah.blogspot.com/2026/02/operating-systems-lecture-1-basics.html" },
     ]
   },
 ];
