@@ -12,7 +12,6 @@ type SubmitAttendancePayload = {
   latitude: number;
   longitude: number;
   device_hash: string;
-  device_fingerprint_raw: string;
   request_nonce: string;
   device_memory?: number | null;
 };
@@ -35,11 +34,19 @@ const createJsonResponse = (status: number, payload: Record<string, unknown>) =>
 };
 
 const getClientIp = (request: Request): string | null => {
+  const cfConnectingIp = request.headers.get("cf-connecting-ip")?.trim();
+  if (cfConnectingIp) {
+    return cfConnectingIp;
+  }
+
   const forwarded = request.headers.get("x-forwarded-for");
   if (forwarded) {
-    return forwarded.split(",")[0]?.trim() ?? null;
+    const forwardedIp = forwarded.split(",")[0]?.trim();
+    if (forwardedIp) {
+      return forwardedIp;
+    }
   }
-  return request.headers.get("x-real-ip");
+  return request.headers.get("x-real-ip")?.trim() ?? null;
 };
 
 const computeHmacSha256 = async (payload: string, secret: string): Promise<string> => {
@@ -52,6 +59,11 @@ const computeHmacSha256 = async (payload: string, secret: string): Promise<strin
   );
   const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(payload));
   return [...new Uint8Array(signature)].map((value) => value.toString(16).padStart(2, "0")).join("");
+};
+
+const computeSha256 = async (payload: string): Promise<string> => {
+  const digest = await crypto.subtle.digest("SHA-256", encoder.encode(payload));
+  return [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, "0")).join("");
 };
 
 const haversineMeters = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -75,8 +87,6 @@ const isValidPayload = (payload: SubmitAttendancePayload): boolean => {
     typeof payload.latitude === "number" &&
     typeof payload.longitude === "number" &&
     typeof payload.device_hash === "string" &&
-    typeof payload.device_fingerprint_raw === "string" &&
-    payload.device_fingerprint_raw.trim().length > 0 &&
     typeof payload.request_nonce === "string"
   );
 };
@@ -224,6 +234,19 @@ serve(async (request) => {
   const jwt = authorization.replace("Bearer ", "").trim();
   const ipAddress = getClientIp(request);
   const userAgent = request.headers.get("user-agent")?.trim() ?? "";
+  const acceptLanguage = request.headers.get("accept-language")?.trim() ?? "";
+  const secChUa = request.headers.get("sec-ch-ua")?.trim() ?? "";
+  const secChUaPlatform = request.headers.get("sec-ch-ua-platform")?.trim() ?? "";
+  const deviceMemoryHeader = request.headers.get("device-memory")?.trim() ?? "";
+  const deviceFingerprintRaw = [
+    userAgent,
+    acceptLanguage,
+    secChUa,
+    secChUaPlatform,
+    deviceMemoryHeader,
+    ipAddress ?? "",
+  ].join("|");
+  const deviceFingerprintHash = await computeSha256(deviceFingerprintRaw);
   const vpnCheckEnabled = isFeatureEnabled(Deno.env.get("ENABLE_VPN_CHECK"));
 
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
@@ -466,7 +489,7 @@ serve(async (request) => {
     p_request_nonce: body.request_nonce,
     p_ip_address: ipAddress,
     p_device_hash: body.device_hash,
-    p_device_fingerprint_raw: body.device_fingerprint_raw,
+    p_device_fingerprint_hash: deviceFingerprintHash,
     p_student_id: userId,
   });
 

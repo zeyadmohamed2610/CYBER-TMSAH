@@ -382,7 +382,7 @@ CREATE OR REPLACE FUNCTION public.rpc_submit_attendance(
   p_request_nonce TEXT,
   p_ip_address INET DEFAULT NULL,
   p_device_hash TEXT DEFAULT NULL,
-  p_device_fingerprint_raw TEXT DEFAULT NULL,
+  p_device_fingerprint_hash TEXT DEFAULT NULL,
   p_student_id UUID DEFAULT NULL
 )
 RETURNS TABLE (
@@ -402,7 +402,7 @@ DECLARE
   v_expected_hash TEXT;
   v_distance_meters DOUBLE PRECISION;
   v_recent_attempts INTEGER;
-  v_device_fingerprint_hash TEXT;
+  v_incoming_device_fingerprint_hash TEXT;
   v_stored_device_fingerprint_hash TEXT;
   v_inserted public.attendance%ROWTYPE;
   v_session public.sessions%ROWTYPE;
@@ -523,11 +523,15 @@ BEGIN
     RAISE EXCEPTION 'Duplicate attendance submission';
   END IF;
 
-  IF p_device_fingerprint_raw IS NULL OR length(btrim(p_device_fingerprint_raw)) = 0 THEN
+  IF p_device_fingerprint_hash IS NULL OR length(btrim(p_device_fingerprint_hash)) = 0 THEN
     RAISE EXCEPTION 'Device fingerprint is required';
   END IF;
 
-  v_device_fingerprint_hash := encode(digest(p_device_fingerprint_raw, 'sha256'), 'hex');
+  v_incoming_device_fingerprint_hash := lower(btrim(p_device_fingerprint_hash));
+
+  IF v_incoming_device_fingerprint_hash !~ '^[0-9a-f]{64}$' THEN
+    RAISE EXCEPTION 'Invalid device fingerprint hash';
+  END IF;
 
   SELECT device_fingerprint_hash
   INTO v_stored_device_fingerprint_hash
@@ -542,10 +546,10 @@ BEGIN
   IF v_stored_device_fingerprint_hash IS NULL THEN
     UPDATE public.users
     SET
-      device_fingerprint_hash = v_device_fingerprint_hash,
+      device_fingerprint_hash = v_incoming_device_fingerprint_hash,
       updated_by = coalesce(auth.uid(), updated_by)
     WHERE id = v_student_id;
-  ELSIF v_stored_device_fingerprint_hash IS DISTINCT FROM v_device_fingerprint_hash THEN
+  ELSIF v_stored_device_fingerprint_hash IS DISTINCT FROM v_incoming_device_fingerprint_hash THEN
     INSERT INTO public.system_logs (actor_user_id, action, severity, metadata, ip_address, device_hash)
     VALUES (
       v_student_id,
