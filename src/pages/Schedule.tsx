@@ -230,35 +230,13 @@ const Schedule = () => {
                     <h2 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors duration-300">
                       {day.day}
                     </h2>
-                    <p className="text-sm text-muted-foreground">{day.date}</p>
                   </div>
-
-                  {/* Lecture Count Badge */}
-                  {!day.isHoliday && !day.isTraining && (
-                    <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/80 border border-border/50">
-                      <GraduationCap className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-medium text-muted-foreground">
-                        {day.lectures.filter(l => l.type !== "section").length} محاضرات + {day.lectures.filter(l => l.type === "section").length} سكاشن
-                      </span>
-                    </div>
-                  )}
                 </div>
 
                 {/* Lectures Grid or Holiday or Training */}
                 <div className="relative p-6">
                   {day.isTraining ? (
                     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-2 border-dashed border-primary/30">
-                      {/* Animated Background */}
-                      <div className="absolute inset-0 bg-primary/5 animate-pulse" />
-                      
-                      {/* Corner Badge */}
-                      <div className="absolute top-0 left-0">
-                        <div className="relative">
-                          <div className="absolute -top-1 -left-1 w-0 h-0 border-l-[50px] border-l-transparent border-t-[50px] border-t-primary" />
-                          <span className="absolute top-1 left-1 text-[10px] font-bold text-primary-foreground rotate-45 -left-1">تدريب</span>
-                        </div>
-                      </div>
-                      
                       <div className="relative flex flex-col items-center justify-center py-12 text-center space-y-4">
                         {/* Icon */}
                         <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center shadow-[0_0_25px_hsl(var(--primary)/0.2)]">
@@ -301,17 +279,8 @@ const Schedule = () => {
                           }`}
                         >
                           <div className="flex flex-col md:flex-row md:items-center gap-4">
-                            {/* Type Badge */}
-                            <div className={`absolute top-2 left-2 px-2 py-0.5 rounded-md text-xs font-bold ${
-                              isSection 
-                                ? "bg-cyan-500/20 text-cyan-400" 
-                                : "bg-primary/20 text-primary"
-                            }`}>
-                              {isSection ? "سكشن" : "محاضرة"}
-                            </div>
-                            
                             {/* Time Badge */}
-                            <div className="flex items-center gap-3 md:min-w-[140px] mt-4 md:mt-0">
+                            <div className="flex items-center gap-3 md:min-w-[140px]">
                               <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${
                                 isSection 
                                   ? "bg-cyan-500/10 border-cyan-500/30" 
