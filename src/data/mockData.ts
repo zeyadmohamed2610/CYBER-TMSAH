@@ -48,67 +48,12 @@ const getWeekDates = () => {
 
 const weekDates = getWeekDates();
 
-export const weekSchedule: DaySchedule[] = [
-  {
-    day: "السبت",
-    date: weekDates[0],
-    lectures: [], // Will be replaced by section-specific schedule
-  },
-  {
-    day: "الأحد",
-    date: weekDates[1],
-    lectures: [
-      { time: timeSlots[0], subject: "لغة انجليزية", instructor: "د. صابرين", room: "قاعة 102", type: "lecture" },
-      { time: timeSlots[1], subject: "رسم هندسي واسقاط", instructor: "د. محمد عثمان", room: "معمل الرسم", type: "lecture" },
-      { time: timeSlots[2], subject: "مبادئ تكنولوجيا", instructor: "د. أشرف ميمي", room: "قاعة 201", type: "lecture" },
-      { time: timeSlots[3], subject: "نظم تشغيل", instructor: "د. عبير حسن", room: "معمل 2", type: "lecture" },
-    ],
-  },
-  {
-    day: "الاثنين",
-    date: weekDates[2],
-    lectures: [],
-    isTraining: true,
-    trainingMessage: "قريباً سيتم تزويد التفاصيل",
-  },
-  {
-    day: "الثلاثاء",
-    date: weekDates[3],
-    lectures: [],
-    isHoliday: true,
-  },
-  {
-    day: "الأربعاء",
-    date: weekDates[4],
-    lectures: [
-      { time: timeSlots[0], subject: "لغة انجليزية", instructor: "د. صابرين", room: "قاعة 102", type: "lecture" },
-      { time: timeSlots[1], subject: "نظم تشغيل", instructor: "د. عبير حسن", room: "معمل 2", type: "lecture" },
-      { time: timeSlots[2], subject: "رسم هندسي واسقاط", instructor: "د. محمد عثمان", room: "معمل الرسم", type: "lecture" },
-      { time: timeSlots[3], subject: "مبادئ تكنولوجيا", instructor: "د. أشرف", room: "قاعة 201", type: "lecture" },
-    ],
-  },
-  {
-    day: "الخميس",
-    date: weekDates[5],
-    lectures: [
-      { time: timeSlots[0], subject: "مبادئ الأمن السيبراني", instructor: "د. سامح مصطفى", room: "معمل 1", type: "lecture" },
-      { time: timeSlots[1], subject: "شبكات وتراسل البيانات", instructor: "د. سيمون عزت", room: "قاعة 203", type: "lecture" },
-    ],
-  },
-  {
-    day: "الجمعة",
-    date: weekDates[6],
-    lectures: [],
-    isHoliday: true,
-  },
-];
-
-// Get today's schedule (for all sections - default schedule)
+// Get today's schedule for a specific section
 export const getTodaySchedule = (section?: string): DaySchedule | null => {
   const today = new Date();
   const dayNames = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
   const todayName = dayNames[today.getDay()];
-  const schedule = section ? getSectionSchedule(section) : weekSchedule;
+  const schedule = getSectionSchedule(section || "سكشن 1");
   return schedule.find(d => d.day === todayName) || null;
 };
 
@@ -151,11 +96,14 @@ export const getSectionSchedule = (section: string): DaySchedule[] => {
     { time: timeSlots[1], subject: "شبكات وتراسل البيانات", instructor: "د. سيمون عزت", room: "قاعة 203", type: "lecture" },
   ];
   
+  // Tuesday has the same lectures as Sunday
+  const tuesdayLectures = [...sundayLectures];
+  
   return [
     { day: "السبت", date: weekDates[0], lectures: saturdayLectures[sectionNum] || [] },
     { day: "الأحد", date: weekDates[1], lectures: sundayLectures },
     { day: "الاثنين", date: weekDates[2], lectures: [], isTraining: true, trainingMessage: "قريباً سيتم تزويد التفاصيل" },
-    { day: "الثلاثاء", date: weekDates[3], lectures: [], isHoliday: true },
+    { day: "الثلاثاء", date: weekDates[3], lectures: tuesdayLectures },
     { day: "الأربعاء", date: weekDates[4], lectures: wednesdayLectures },
     { day: "الخميس", date: weekDates[5], lectures: thursdayLectures },
     { day: "الجمعة", date: weekDates[6], lectures: [], isHoliday: true },
