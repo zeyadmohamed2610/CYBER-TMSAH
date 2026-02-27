@@ -61,7 +61,69 @@ const saturdayLectures: { [key: number]: Lecture[] } = {
   ],
   2: [
     { time: timeSlots[1], subject: "نظم تشغيل - سكشن", instructor: "م. محمد حمدي", room: "A02", type: "section" },
+    { time: timeSlots[2], subject: "مبادئ الأمن السيبراني", instructor: "د. سامح مصطفى", room: "G201", type: "lecture" },
+    { time: timeSlots[5], subject: "مهارات التفاوض", instructor: "د. نجلاء عبدالمحسن", room: "G203", type: "lecture" },
   ],
+  3: [
+    { time: timeSlots[3], subject: "نظم تشغيل - سكشن", instructor: "م. محمد حمدي", room: "A02", type: "section" },
+    { time: timeSlots[2], subject: "مبادئ الأمن السيبراني", instructor: "د. سامح مصطفى", room: "G201", type: "lecture" },
+    { time: timeSlots[5], subject: "مهارات التفاوض", instructor: "د. نجلاء عبدالمحسن", room: "G203", type: "lecture" },
+  ],
+  4: [
+    { time: timeSlots[2], subject: "مبادئ الأمن السيبراني", instructor: "د. سامح مصطفى", room: "G201", type: "lecture" },
+    { time: timeSlots[5], subject: "مهارات التفاوض", instructor: "د. نجلاء عبدالمحسن", room: "G203", type: "lecture" },
+  ],
+  5: [
+    { time: timeSlots[2], subject: "مبادئ الأمن السيبراني", instructor: "د. سامح مصطفى", room: "G201", type: "lecture" },
+    { time: timeSlots[5], subject: "مهارات التفاوض", instructor: "د. نجلاء عبدالمحسن", room: "G203", type: "lecture" },
+  ],
+  6: [
+    { time: timeSlots[2], subject: "نظم تشغيل - سكشن", instructor: "م. محمد حمدي", room: "A02", type: "section" },
+    { time: timeSlots[3], subject: "مبادئ الأمن السيبراني", instructor: "د. سامح مصطفى", room: "F-Sem", type: "lecture" },
+    { time: timeSlots[4], subject: "مهارات التفاوض", instructor: "د. نجلاء عبدالمحسن", room: "F-Sem", type: "lecture" },
+  ],
+  7: [
+    { time: timeSlots[3], subject: "مبادئ الأمن السيبراني", instructor: "د. سامح مصطفى", room: "F-Sem", type: "lecture" },
+    { time: timeSlots[4], subject: "مهارات التفاوض", instructor: "د. نجلاء عبدالمحسن", room: "F-Sem", type: "lecture" },
+  ],
+  8: [
+    { time: timeSlots[3], subject: "مبادئ الأمن السيبراني", instructor: "د. سامح مصطفى", room: "F-Sem", type: "lecture" },
+    { time: timeSlots[4], subject: "مهارات التفاوض", instructor: "د. نجلاء عبدالمحسن", room: "F-Sem", type: "lecture" },
+  ],
+  9: [
+    { time: timeSlots[3], subject: "مبادئ الأمن السيبراني", instructor: "د. سامح مصطفى", room: "F-Sem", type: "lecture" },
+    { time: timeSlots[4], subject: "مهارات التفاوض", instructor: "د. نجلاء عبدالمحسن", room: "F-Sem", type: "lecture" },
+  ],
+  10: [
+    { time: timeSlots[1], subject: "شبكات وتراسل البيانات - سكشن", instructor: "م. رضوي شعبان", room: "D104", type: "section" },
+    { time: timeSlots[3], subject: "مبادئ الأمن السيبراني", instructor: "د. سامح مصطفى", room: "F-Sem", type: "lecture" },
+    { time: timeSlots[4], subject: "مهارات التفاوض", instructor: "د. نجلاء عبدالمحسن", room: "F-Sem", type: "lecture" },
+  ],
+  11: [
+    { time: timeSlots[2], subject: "شبكات وتراسل البيانات - سكشن", instructor: "م. رضوي شعبان", room: "D104", type: "section" },
+    { time: timeSlots[3], subject: "مبادئ الأمن السيبراني", instructor: "د. سامح مصطفى", room: "F-Sem", type: "lecture" },
+    { time: timeSlots[4], subject: "مهارات التفاوض", instructor: "د. نجلاء عبدالمحسن", room: "F-Sem", type: "lecture" },
+  ],
+  12: [
+    { time: timeSlots[3], subject: "مهارات التفاوض", instructor: "د. نجلاء عبدالمحسن", room: "G203", type: "lecture" },
+    { time: timeSlots[4], subject: "مبادئ الأمن السيبراني", instructor: "د. سامح مصطفى", room: "G203", type: "lecture" },
+  ],
+  13: [
+    { time: timeSlots[3], subject: "مهارات التفاوض", instructor: "د. نجلاء عبدالمحسن", room: "G203", type: "lecture" },
+    { time: timeSlots[4], subject: "مبادئ الأمن السيبراني", instructor: "د. سامح مصطفى", room: "G203", type: "lecture" },
+    { time: timeSlots[5], subject: "نظم تشغيل - سكشن", instructor: "م. كريم عادل", room: "A02", type: "section" },
+  ],
+  14: [
+    { time: timeSlots[3], subject: "مهارات التفاوض", instructor: "د. نجلاء عبدالمحسن", room: "G203", type: "lecture" },
+    { time: timeSlots[4], subject: "مبادئ الأمن السيبراني", instructor: "د. سامح مصطفى", room: "G203", type: "lecture" },
+    { time: timeSlots[6], subject: "نظم تشغيل - سكشن", instructor: "م. كريم عادل", room: "A02", type: "section" },
+  ],
+   15: [
+    { time: timeSlots[3], subject: "مهارات التفاوض", instructor: "د. نجلاء عبدالمحسن", room: "G203", type: "lecture" },
+    { time: timeSlots[4], subject: "مبادئ الأمن السيبراني", instructor: "د. سامح مصطفى", room: "G203", type: "lecture" },
+    { time: timeSlots[7], subject: "نظم تشغيل - سكشن", instructor: "م. كريم عادل", room: "A02", type: "section" },
+  ],
+  
   // Add more sections here...
   // 3: [...],
   // 4: [...],
