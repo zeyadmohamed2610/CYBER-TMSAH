@@ -192,7 +192,7 @@ export const subjects: Subject[] = [
     title: "شبكات وتراسل البيانات", 
     icon: "🌐", 
     instructor: "د. سيمون عزت",
-    teachingAssistants: ["لاء جمعه", "رضوي شعبان"],
+    teachingAssistants: ["م. ولاء جمعه", "م. رضوي شعبان"],
     articles: [
       { id: "1", title: "المحاضرة 1 -  شرح كامل لنظم الأعداد في الحاسوب ", blogUrl: "https://cyber-tmsah.blogspot.com/2026/02/networks-data-communication-lecture-1-number-systems.html" },
     ]
@@ -202,7 +202,7 @@ export const subjects: Subject[] = [
     title: "رسم هندسي واسقاط", 
     icon: "📐", 
     instructor: "د. محمد عثمان - د. حسين السيد",
-    teachingAssistants: ["دينا علي"],
+    teachingAssistants: ["م. دينا علي"],
     articles: [
       { id: "1", title: "المحاضرة الأولى - أساسيات الرسم الهندسي", blogUrl: "#" },
       { id: "2", title: "المحاضرة الثانية - الإسقاط العمودي", blogUrl: "#" },
@@ -225,7 +225,7 @@ export const subjects: Subject[] = [
     title: "نظم تشغيل", 
     icon: "⚙️", 
     instructor: "د. عبير حسن",
-    teachingAssistants: ["محمد حمدي", "كريم عادل"],
+    teachingAssistants: ["م. محمد حمدي", "م. كريم عادل"],
     articles: [
       { id: "1", title: "المحاضرة 1 - مفهوم نظام التشغيل ومكوناته وأنواعه بالتفصيل", blogUrl: "https://cyber-tmsah.blogspot.com/2026/02/operating-systems-lecture-1-basics.html" },
     ]

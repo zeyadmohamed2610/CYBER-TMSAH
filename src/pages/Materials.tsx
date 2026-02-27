@@ -106,16 +106,19 @@ const Materials = () => {
                   
                   {/* Teaching Assistants */}
                   {subject.teachingAssistants && subject.teachingAssistants.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-border/30">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Users className="h-3.5 w-3.5 text-amber-500" />
-                        <span className="text-xs text-amber-500 font-medium">المعيدين</span>
+                    <div className="mt-3 pt-3 border-t border-border/30 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-3.5 w-3.5 text-cyan-400" />
+                        <span className="text-xs text-cyan-400 font-medium">المعيدين</span>
                       </div>
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="grid gap-2">
                         {subject.teachingAssistants.map((ta, taIndex) => (
-                          <span key={taIndex} className="text-xs px-2 py-1 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                            {ta}
-                          </span>
+                          <div key={taIndex} className="flex items-center gap-2 p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+                            <div className="w-6 h-6 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                              <User className="h-3 w-3 text-cyan-400" />
+                            </div>
+                            <span className="text-sm font-medium text-cyan-400">{ta}</span>
+                          </div>
                         ))}
                       </div>
                     </div>
