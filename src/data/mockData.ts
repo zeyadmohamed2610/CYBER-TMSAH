@@ -118,9 +118,31 @@ export const getTodaySchedule = (section?: string): DaySchedule | null => {
 
 // Get schedule for a specific section
 export const getSectionSchedule = (section: string): DaySchedule[] => {
-  // For now, all sections share the same schedule
-  // You can customize this per section if needed
-  return weekSchedule;
+  const sectionNum = parseInt(section.replace(/\D/g, ''));
+  
+  // Section-specific Saturday schedules
+  const saturdayBySection: { [key: number]: Lecture[] } = {
+    1: [
+      { time: timeSlots[0], subject: "نظم تشغيل - سكشن", instructor: "م. محمد حمدي", room: "A02", type: "section" },
+      { time: timeSlots[2], subject: "مبادئ الأمن السيبراني", instructor: "د. سامح مصطفى", room: "G201", type: "lecture" },
+      { time: timeSlots[5], subject: "مهارات التفاوض", instructor: "د. نجلاء عبدالمحسن", room: "G203", type: "lecture" },
+    ],
+    2: [
+      { time: timeSlots[1], subject: "نظم تشغيل - سكشن", instructor: "م. محمد حمدي", room: "A02", type: "section" },
+    ],
+  };
+  
+  const saturdayLectures = saturdayBySection[sectionNum] || weekSchedule[0].lectures;
+  
+  return [
+    { ...weekSchedule[0], lectures: saturdayLectures },
+    weekSchedule[1],
+    weekSchedule[2],
+    weekSchedule[3],
+    weekSchedule[4],
+    weekSchedule[5],
+    weekSchedule[6],
+  ];
 };
 
 export const getTodayName = (): string => {
