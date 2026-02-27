@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { FileText, Download, ChevronLeft, User, ExternalLink, BookOpen, Sparkles, GraduationCap, Calendar } from "lucide-react";
+import { FileText, Download, ChevronLeft, User, ExternalLink, BookOpen, Sparkles, GraduationCap, Calendar, Users } from "lucide-react";
 import { toast } from "sonner";
 import Layout from "@/components/Layout";
 import ScrollReveal from "@/components/ScrollReveal";
@@ -102,6 +102,22 @@ const SubjectDetail = () => {
                   </div>
                   <span className="text-muted-foreground font-medium">{subject.instructor}</span>
                 </div>
+                
+                {/* Teaching Assistants */}
+                {subject.teachingAssistants && subject.teachingAssistants.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                      <Users className="h-4 w-4 text-cyan-400" />
+                    </div>
+                    <div className="flex gap-1">
+                      {subject.teachingAssistants.map((ta, taIndex) => (
+                        <span key={taIndex} className="text-sm text-cyan-400 font-medium">
+                          {ta}{taIndex < subject.teachingAssistants!.length - 1 ? " - " : ""}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 
                 {/* Last Updated */}
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">

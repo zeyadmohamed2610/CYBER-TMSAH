@@ -10,6 +10,15 @@ import { subjects } from "@/data/mockData";
  * Displays all available subjects with links to their details
  */
 const Materials = () => {
+  // Sort subjects: those with teaching assistants first
+  const sortedSubjects = [...subjects].sort((a, b) => {
+    const aHasTA = (a.teachingAssistants?.length || 0) > 0;
+    const bHasTA = (b.teachingAssistants?.length || 0) > 0;
+    if (aHasTA && !bHasTA) return -1;
+    if (!aHasTA && bHasTA) return 1;
+    return 0;
+  });
+  
   return (
     <>
       <SEO 
@@ -58,10 +67,9 @@ const Materials = () => {
               <div className="w-px h-6 bg-border" />
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <span className="text-primary font-bold">7</span>
+                  <span className="text-primary font-bold">8</span>
                 </span>
-                <span>دكاترة
-              </span>
+                <span>دكاترة</span>
               </div>
             </div>
           </div>
@@ -71,7 +79,7 @@ const Materials = () => {
       {/* Subjects Grid */}
       <section className="section-container pb-20">
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {subjects.map((subject, index) => <ScrollReveal key={subject.id}>
+          {sortedSubjects.map((subject, index) => <ScrollReveal key={subject.id}>
               <Link to={`/materials/${subject.id}`} className="group relative overflow-hidden rounded-2xl bg-card border border-border/50 transition-all duration-500 hover:border-primary/50 hover:shadow-[0_0_30px_hsl(var(--primary)/0.15)] block">
                 {/* Card Number */}
                 <div className="absolute top-3 left-3 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
