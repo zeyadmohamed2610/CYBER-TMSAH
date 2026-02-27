@@ -123,11 +123,6 @@ const saturdayLectures: { [key: number]: Lecture[] } = {
     { time: timeSlots[4], subject: "مبادئ الأمن السيبراني", instructor: "د. سامح مصطفى", room: "G203", type: "lecture" },
     { time: timeSlots[7], subject: "نظم تشغيل - سكشن", instructor: "م. كريم عادل", room: "A02", type: "section" },
   ],
-  
-  // Add more sections here...
-  // 3: [...],
-  // 4: [...],
-  // ... up to 15
 };
 
 // Sunday - Same for all sections
