@@ -105,6 +105,16 @@ const SubjectDetail = () => {
                   <span className="text-muted-foreground font-medium">{subject.instructor}</span>
                 </div>
                 
+                {/* Second Instructor */}
+                {subject.secondInstructor && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <User className="h-4 w-4 text-primary" />
+                    </div>
+                    <span className="text-muted-foreground font-medium">{subject.secondInstructor}</span>
+                  </div>
+                )}
+                
                 {/* Teaching Assistants */}
                 {subject.teachingAssistants && subject.teachingAssistants.length > 0 && (
                   <div className="flex items-center gap-2">

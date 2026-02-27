@@ -146,6 +146,7 @@ export interface Subject {
   title: string;
   icon: string;
   instructor: string;
+  secondInstructor?: string;
   teachingAssistants?: string[];
   pdfUrl?: string;
   articles: Article[];
@@ -212,7 +213,8 @@ export const subjects: Subject[] = [
     id: "engineering-drawing", 
     title: "رسم هندسي واسقاط", 
     icon: "📐", 
-    instructor: "د. محمد عثمان - د. حسين السيد",
+    instructor: "د. محمد عثمان",
+    secondInstructor: "د. حسين السيد",
     teachingAssistants: ["م. دينا علي"],
     articles: [
       { id: "1", title: "المحاضرة الأولى - أساسيات الرسم الهندسي", blogUrl: "#" },

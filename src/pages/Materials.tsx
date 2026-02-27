@@ -112,6 +112,16 @@ const Materials = () => {
                     <span className="text-sm text-muted-foreground">{subject.instructor}</span>
                   </div>
                   
+                  {/* Second Instructor */}
+                  {subject.secondInstructor && (
+                    <div className="flex items-center gap-2.5 mt-2">
+                      <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center">
+                        <User className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <span className="text-sm text-muted-foreground">{subject.secondInstructor}</span>
+                    </div>
+                  )}
+                  
                   {/* Teaching Assistants */}
                   {subject.teachingAssistants && subject.teachingAssistants.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-border/30 space-y-2">
