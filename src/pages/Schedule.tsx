@@ -15,9 +15,18 @@ const Schedule = () => {
   // Get schedule for selected section
   const currentSchedule = useMemo(() => getSectionSchedule(selectedSection), [selectedSection]);
 
-  // Count total lectures (excluding holidays and training days)
-  const totalLectures = currentSchedule.reduce((acc, day) => 
-    acc + (day.isHoliday || day.isTraining ? 0 : day.lectures.length), 0
+  // Count total lectures and sections (excluding holidays and training days)
+  const { totalLectures, totalSections } = currentSchedule.reduce(
+    (acc, day) => {
+      if (day.isHoliday || day.isTraining) return acc;
+      const lectures = day.lectures.filter(l => l.type === "lecture").length;
+      const sections = day.lectures.filter(l => l.type === "section").length;
+      return { 
+        totalLectures: acc.totalLectures + lectures, 
+        totalSections: acc.totalSections + sections 
+      };
+    }, 
+    { totalLectures: 0, totalSections: 0 }
   );
 
   const handleDownloadImage = useCallback(async () => {
@@ -139,8 +148,17 @@ const Schedule = () => {
                     <GraduationCap className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-foreground">{totalLectures}+</div>
-                    <div className="text-sm text-muted-foreground">محاضرة أسبوعياً</div>
+                    <div className="text-2xl font-bold text-foreground">{totalLectures}</div>
+                    <div className="text-sm text-muted-foreground">محاضرة</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center">
+                    <Sparkles className="h-5 w-5 text-cyan-400" />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-cyan-400">{totalSections}</div>
+                    <div className="text-sm text-muted-foreground">سكشن</div>
                   </div>
                 </div>
               </div>
@@ -230,6 +248,19 @@ const Schedule = () => {
                     <h2 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors duration-300">
                       {day.day}
                     </h2>
+                    {/* Day Stats */}
+                    {!day.isHoliday && !day.isTraining && day.lectures.length > 0 && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                          {day.lectures.filter(l => l.type === "lecture").length} محاضرة
+                        </span>
+                        {day.lectures.some(l => l.type === "section") && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                            {day.lectures.filter(l => l.type === "section").length} سكشن
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
