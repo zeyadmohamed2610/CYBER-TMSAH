@@ -34,20 +34,16 @@ export const timeSlots = [
 
 // Get current week dates starting from Saturday
 const getWeekDates = () => {
-  const today = new Date();
-  const dayOfWeek = today.getDay();
-  // Calculate days since Saturday (Saturday = 6)
-  const daysSinceSaturday = (dayOfWeek + 1) % 7;
-  const saturday = new Date(today);
-  saturday.setDate(today.getDate() - daysSinceSaturday);
-  
-  const dates: string[] = [];
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(saturday);
-    date.setDate(saturday.getDate() + i);
-    dates.push(date.toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' }));
-  }
-  return dates;
+  // Fixed dates for semester (starting from Saturday)
+  return [
+    "7 مارس 2026",
+    "8 مارس 2026",
+    "9 مارس 2026",
+    "10 مارس 2026",
+    "11 مارس 2026",
+    "12 مارس 2026",
+    "13 مارس 2026",
+  ];
 };
 
 const weekDates = getWeekDates();

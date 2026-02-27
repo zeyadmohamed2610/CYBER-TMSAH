@@ -247,38 +247,31 @@ const Schedule = () => {
                 {/* Lectures Grid or Holiday or Training */}
                 <div className="relative p-6">
                   {day.isTraining ? (
-                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-transparent border-2 border-amber-500/50">
+                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-2 border-dashed border-primary/30">
                       {/* Animated Background */}
-                      <div className="absolute inset-0 bg-amber-500/5 animate-pulse" />
+                      <div className="absolute inset-0 bg-primary/5 animate-pulse" />
                       
                       {/* Corner Badge */}
                       <div className="absolute top-0 left-0">
                         <div className="relative">
-                          <div className="absolute -top-1 -left-1 w-0 h-0 border-l-[50px] border-l-transparent border-t-[50px] border-t-amber-500" />
-                          <span className="absolute top-1 left-1 text-[10px] font-bold text-white rotate-45 -left-1">تدريب</span>
+                          <div className="absolute -top-1 -left-1 w-0 h-0 border-l-[50px] border-l-transparent border-t-[50px] border-t-primary" />
+                          <span className="absolute top-1 left-1 text-[10px] font-bold text-primary-foreground rotate-45 -left-1">تدريب</span>
                         </div>
                       </div>
                       
-                      <div className="relative flex flex-col items-center justify-center py-16 text-center space-y-4">
+                      <div className="relative flex flex-col items-center justify-center py-12 text-center space-y-4">
                         {/* Icon */}
-                        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-500/30 to-amber-500/10 border-2 border-amber-500/50 flex items-center justify-center shadow-[0_0_30px_hsl(45_100%_50%/0.3)]">
-                          <span className="text-5xl">🏋️</span>
+                        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center shadow-[0_0_25px_hsl(var(--primary)/0.2)]">
+                          <span className="text-4xl">🏋️</span>
                         </div>
                         
                         <div>
-                          <h3 className="text-2xl font-black text-amber-500 drop-shadow-[0_0_15px_hsl(45_100%_50%/0.5)]">
+                          <h3 className="text-xl font-black text-primary drop-shadow-[0_0_15px_hsl(var(--primary)/0.5)]">
                             يوم التدريب
                           </h3>
-                          <p className="text-lg text-amber-400/80 mt-2 font-medium">
+                          <p className="text-muted-foreground mt-2 font-medium">
                             {day.trainingMessage}
                           </p>
-                        </div>
-                        
-                        {/* Decorative Elements */}
-                        <div className="flex items-center gap-2 mt-4">
-                          <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                          <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" style={{ animationDelay: '0.2s' }} />
-                          <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" style={{ animationDelay: '0.4s' }} />
                         </div>
                       </div>
                     </div>
