@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { FileText, Download, ChevronLeft, User, ExternalLink, BookOpen, Sparkles, GraduationCap, Calendar, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -14,9 +15,10 @@ import { subjects } from "@/data/mockData";
 const SubjectDetail = () => {
   const { id } = useParams();
   const subject = subjects.find((s) => s.id === id);
+  const [activeTab, setActiveTab] = useState<"lectures" | "sections">("lectures");
   
   // Last updated date (in production, this should come from API/CMS)
-  const lastUpdated = "2025-02-17";
+  const lastUpdated = "2025-02-27";
 
   if (!subject) {
     return (
@@ -187,37 +189,93 @@ const SubjectDetail = () => {
         {/* Articles Section */}
         <ScrollReveal>
           <div>
+            {/* Tabs */}
+            {subject.sections && subject.sections.length > 0 ? (
+              <div className="flex items-center gap-3 mb-6">
+                <button
+                  onClick={() => setActiveTab("lectures")}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-300 ${
+                    activeTab === "lectures"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <GraduationCap className="h-4 w-4" />
+                  المحاضرات
+                </button>
+                <button
+                  onClick={() => setActiveTab("sections")}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-300 ${
+                    activeTab === "sections"
+                      ? "bg-cyan-500 text-white"
+                      : "bg-card text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Users className="h-4 w-4" />
+                  السكاشن
+                </button>
+              </div>
+            ) : null}
+            
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center">
                 <GraduationCap className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-foreground">شروحات المحاضرات</h2>
-                <p className="text-sm text-muted-foreground">اضغط على أي محاضرة للانتقال إلى الشرح التفصيلي</p>
+                <h2 className="text-xl font-bold text-foreground">
+                  {activeTab === "lectures" ? "شروحات المحاضرات" : "شروحات السكاشن"}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {activeTab === "lectures" ? "اضغط على أي محاضرة للانتقال إلى الشرح التفصيلي" : "اضغط على أي سكشن للانتقال إلى الشرح التفصيلي"}
+                </p>
               </div>
             </div>
             
             <div className="space-y-3 mt-6">
-              {subject.articles.map((article, index) => (
-                <a
-                  key={article.id}
-                  href={article.blogUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center justify-between rounded-xl bg-card/50 backdrop-blur-sm p-4 border border-border/50 transition-all duration-300 hover:border-primary/50 hover:bg-secondary/50"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center text-primary font-bold shadow-[0_0_15px_hsl(var(--primary)/0.15)]">
-                      {index + 1}
+              {(activeTab === "lectures" ? subject.articles : subject.sections || []).map((item, index) => (
+                "blogUrl" in item ? (
+                  <a
+                    key={item.id}
+                    href={item.blogUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center justify-between rounded-xl bg-card/50 backdrop-blur-sm p-4 border border-border/50 transition-all duration-300 hover:border-primary/50 hover:bg-secondary/50"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center text-primary font-bold shadow-[0_0_15px_hsl(var(--primary)/0.15)]">
+                        {index + 1}
+                      </div>
+                      <span className="font-medium text-foreground group-hover:text-primary transition-colors">
+                        {item.title}
+                      </span>
                     </div>
-                    <span className="font-medium text-foreground group-hover:text-primary transition-colors">
-                      {article.title}
-                    </span>
+                    <div className="w-9 h-9 rounded-lg bg-secondary/50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                      <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </div>
+                  </a>
+                ) : (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between rounded-xl bg-cyan-500/10 backdrop-blur-sm p-4 border border-cyan-500/30"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-500/20 to-cyan-500/5 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-bold shadow-[0_0_15px_hsl(187_72%_50%/0.15)]">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <span className="font-bold text-cyan-400">
+                          {item.title}
+                        </span>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                          {item.description}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="w-9 h-9 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+                      <BookOpen className="h-4 w-4 text-cyan-400" />
+                    </div>
                   </div>
-                  <div className="w-9 h-9 rounded-lg bg-secondary/50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                    <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                  </div>
-                </a>
+                )
               ))}
             </div>
           </div>

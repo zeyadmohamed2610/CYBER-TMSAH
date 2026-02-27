@@ -149,12 +149,19 @@ export interface Subject {
   teachingAssistants?: string[];
   pdfUrl?: string;
   articles: Article[];
+  sections?: SectionContent[];
 }
 
 export interface Article {
   id: string;
   title: string;
   blogUrl: string;
+}
+
+export interface SectionContent {
+  id: string;
+  title: string;
+  description: string;
 }
 
 export const subjects: Subject[] = [
@@ -195,6 +202,10 @@ export const subjects: Subject[] = [
     teachingAssistants: ["م. ولاء جمعه", "م. رضوي شعبان"],
     articles: [
       { id: "1", title: "المحاضرة 1 -  شرح كامل لنظم الأعداد في الحاسوب ", blogUrl: "https://cyber-tmsah.blogspot.com/2026/02/networks-data-communication-lecture-1-number-systems.html" },
+    ],
+    sections: [
+      { id: "s1", title: "سكشن 1", description: "شرح أنظمة العد والتحويل بينها" },
+      { id: "s2", title: "سكشن 2", description: "العمليات الحسابية في النظام الثنائي" },
     ]
   },
   { 
@@ -207,6 +218,10 @@ export const subjects: Subject[] = [
       { id: "1", title: "المحاضرة الأولى - أساسيات الرسم الهندسي", blogUrl: "#" },
       { id: "2", title: "المحاضرة الثانية - الإسقاط العمودي", blogUrl: "#" },
       { id: "3", title: "المحاضرة الثالثة - المناظير", blogUrl: "#" },
+    ],
+    sections: [
+      { id: "s1", title: "سكشن 1", description: "أساسيات الرسم الهندسي" },
+      { id: "s2", title: "سكشن 2", description: "الإسقاط العمودي" },
     ]
   },
   { 
@@ -228,6 +243,10 @@ export const subjects: Subject[] = [
     teachingAssistants: ["م. محمد حمدي", "م. كريم عادل"],
     articles: [
       { id: "1", title: "المحاضرة 1 - مفهوم نظام التشغيل ومكوناته وأنواعه بالتفصيل", blogUrl: "https://cyber-tmsah.blogspot.com/2026/02/operating-systems-lecture-1-basics.html" },
+    ],
+    sections: [
+      { id: "s1", title: "سكشن 1", description: "مقدمة في أنظمة التشغيل" },
+      { id: "s2", title: "سكشن 2", description: "إدارة العمليات والذاكرة" },
     ]
   },
 ];
