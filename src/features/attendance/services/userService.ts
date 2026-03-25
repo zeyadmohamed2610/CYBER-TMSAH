@@ -39,14 +39,28 @@ export const userService = {
         keyLength: SUPABASE_ANON_KEY?.length
       });
 
-      // Get session
-      const { data: { session } } = await supabase.auth.getSession();
+      // Get current user - this gives us the most up-to-date session
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-      if (!session?.access_token) {
+      if (userError) {
+        console.error('Get user error:', userError);
+        return fail<CreatedUser>(userError.message);
+      }
+
+      if (!user) {
+        return fail<CreatedUser>("لم يتم العثور على مستخدم مسجل");
+      }
+
+      // Get the access token from the current user
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+
+      if (!accessToken) {
         return fail<CreatedUser>("لم يتم العثور على جلسة دخول");
       }
 
-      console.log('Session found, calling Edge Function with direct fetch...');
+      console.log('User authenticated, calling Edge Function...');
+      console.log('User ID:', user.id);
 
       // Use direct fetch to ensure headers are properly set
       const response = await fetch(`${SUPABASE_URL}/functions/v1/createUser`, {
@@ -54,7 +68,7 @@ export const userService = {
         headers: {
           'Content-Type': 'application/json',
           'apikey': SUPABASE_ANON_KEY!,
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           name: input.name.trim(),
