@@ -154,28 +154,36 @@ Deno.serve(async (req) => {
 
     const authUserId = createUserData.id;
 
-    // Call RPC to create user record in public.users
-    const rpcRes = await fetch(
-      `${supabaseUrl}/rest/v1/rpc/create_user`,
+    // Insert user directly into public.users using service role (bypasses RLS)
+    const insertRes = await fetch(
+      `${supabaseUrl}/rest/v1/users`,
       {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${serviceKey}`,
           'apikey': apikey!,
           'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
         },
         body: JSON.stringify({
-          p_auth_id: authUserId,
-          p_full_name: name.trim(),
-          p_role: role,
-          p_subject_id: subject_id || null,
+          auth_id: authUserId,
+          full_name: name.trim(),
+          role: role,
+          subject_id: subject_id || null
         }),
       }
     );
 
-    if (!rpcRes.ok) {
-      const rpcError = await rpcRes.text();
-      // Cleanup: delete the auth user if RPC fails
+    let insertData;
+    try {
+      insertData = await insertRes.json();
+    } catch {
+      insertData = [];
+    }
+
+    if (!insertRes.ok) {
+      const insertError = Array.isArray(insertData) ? insertData.map((e: any) => e.message).join(', ') : insertData.message || insertData.error || 'Unknown error';
+      // Cleanup: delete the auth user if insert fails
       await fetch(`${supabaseUrl}/auth/v1/admin/users/${authUserId}`, {
         method: 'DELETE',
         headers: {
@@ -183,13 +191,32 @@ Deno.serve(async (req) => {
           'apikey': apikey!,
         },
       });
-      return new Response(JSON.stringify({ error: 'Failed to create user record', details: rpcError }), {
+      return new Response(JSON.stringify({ error: 'Failed to create user record', details: insertError }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const rpcData = await rpcRes.json();
+    // Log the action
+    try {
+      await fetch(
+        `${supabaseUrl}/rest/v1/system_logs`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${serviceKey}`,
+            'apikey': apikey!,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            actor_id: userId,
+            action: `create_user: created ${insertData[0]?.id || 'unknown'} (auth_id=${authUserId}, role=${role})`
+          }),
+        }
+      );
+    } catch {
+      // Logging is best-effort, continue even if it fails
+    }
 
     return new Response(JSON.stringify({
       success: true,

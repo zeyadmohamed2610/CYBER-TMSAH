@@ -32,39 +32,36 @@ export const userService = {
         return fail<CreatedUser>("جلسة الدخول منتهية - سجّل دخول مجدداً");
       }
 
-      console.log('Calling function with manual headers...');
+      console.log('Creating user via RPC...');
 
-      // Use fetch with explicit headers including the apikey
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/createUser`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY!,
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          name: input.name.trim(),
-          national_id: input.national_id?.trim(),
-          email: input.email?.trim().toLowerCase(),
-          password: input.password,
-          role: input.role,
-          subject_id: input.subjectId ?? null,
-        }),
+      // Call the database RPC function directly
+      const { data, error } = await supabase.rpc('admin_create_user', {
+        p_full_name: input.name.trim(),
+        p_email: input.email?.trim().toLowerCase() || '',
+        p_password: input.password,
+        p_role: input.role,
+        p_subject_id: input.subjectId ?? null
       });
 
-      console.log('Response:', response.status);
+      console.log('RPC Response:', data, error);
 
-      const data = await response.json();
-      console.log('Response data:', data);
-
-      if (!response.ok) {
-        return fail<CreatedUser>(data.error || `خطأ: ${response.status}`);
+      if (error) {
+        return fail<CreatedUser>(error.message);
       }
 
-      if (data.error) return fail<CreatedUser>(data.error);
-      if (!data.success || !data.user) return fail<CreatedUser>("فشل في إنشاء المستخدم");
+      if (data?.error) {
+        return fail<CreatedUser>(data.error);
+      }
 
-      return ok<CreatedUser>(data.user);
+      if (!data?.success || !data?.user) {
+        return fail<CreatedUser>("فشل في إنشاء المستخدم");
+      }
+
+      return ok<CreatedUser>({
+        id: data.user.id,
+        name: data.user.name,
+        role: data.user.role
+      });
     } catch (error) {
       console.error('Error:', error);
       return fail<CreatedUser>(error instanceof Error ? error.message : String(error));
