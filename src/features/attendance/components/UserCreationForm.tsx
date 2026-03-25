@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { BookMinus, GraduationCap, Loader2, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,70 +15,85 @@ import { supabase } from "@/lib/supabaseClient";
 
 interface Subject { id: string; name: string; doctor_name: string; }
 
+// Zod validation schemas
+const studentSchema = z.object({
+  name: z.string().min(5, "الاسم يجب أن يكون 5 أحرف على الأقل"),
+  nationalId: z.string().regex(/^\d{14}$/, "الرقم القومي يجب أن يكون 14 رقم"),
+  password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
+});
+
+const doctorSchema = z.object({
+  name: z.string().min(5, "الاسم يجب أن يكون 5 أحرف على الأقل"),
+  email: z.string().email("يرجى إدخال بريد إلكتروني صحيح"),
+  password: z.string().min(6, "كلمة المرور يجب أن تكون 6 أحرف على الأقل"),
+  subjectId: z.string().min(1, "يرجى اختيار مادة"),
+});
+
+type StudentFormData = z.infer<typeof studentSchema>;
+type DoctorFormData = z.infer<typeof doctorSchema>;
+
 export const UserCreationForm = () => {
   const { toast } = useToast();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  // Student fields — NO subject selection (students attend all subjects)
-  const [sName, setSName] = useState("");
-  const [sNid,  setSNid]  = useState("");
-  const [sPass, setSPass] = useState("");
+  // React Hook Form for Student
+  const studentForm = useForm<StudentFormData>({
+    resolver: zodResolver(studentSchema),
+    defaultValues: { name: "", nationalId: "", password: "" },
+  });
 
-  // Doctor fields
-  const [dName,    setDName]    = useState("");
-  const [dEmail,   setDEmail]   = useState("");
-  const [dPass,    setDPass]    = useState("");
-  const [dSubject, setDSubject] = useState("");
+  // React Hook Form for Doctor
+  const doctorForm = useForm<DoctorFormData>({
+    resolver: zodResolver(doctorSchema),
+    defaultValues: { name: "", email: "", password: "", subjectId: "" },
+  });
 
   useEffect(() => {
     supabase.from("subjects").select("id, name, doctor_name").order("name")
       .then(({ data }) => {
         if (data) {
           setSubjects(data as Subject[]);
-          if (data.length > 0) setDSubject(data[0].id);
+          if (data.length > 0) doctorForm.setValue("subjectId", data[0].id);
         }
       });
   }, []);
 
   /* ─── Student submit ─── */
-  const handleStudent = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!/^\d{14}$/.test(sNid.trim())) {
-      toast({ variant: "destructive", title: "خطأ", description: "الرقم القومي يجب أن يكون 14 رقم." });
-      return;
-    }
+  const onStudentSubmit = async (data: StudentFormData) => {
     setSubmitting(true);
     const res = await userService.createUser({
-      name: sName, national_id: sNid.trim(), password: sPass,
-      role: "student", subjectId: null,   // students attend all subjects
+      name: data.name, national_id: data.nationalId.trim(), password: data.password,
+      role: "student", subjectId: null,
     });
     if (res.error) toast({ variant: "destructive", title: "فشل الإنشاء", description: res.error });
     else {
-      toast({ title: "تم إضافة الطالب ✓", description: `تم إضافة ${sName} بنجاح.` });
-      setSName(""); setSNid(""); setSPass("");
+      toast({ title: "تم إضافة الطالب ✓", description: `تم إضافة ${data.name} بنجاح.` });
+      studentForm.reset();
     }
     setSubmitting(false);
   };
 
   /* ─── Doctor submit ─── */
-  const handleDoctor = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const onDoctorSubmit = async (data: DoctorFormData) => {
     setSubmitting(true);
     const res = await userService.createUser({
-      name: dName, email: dEmail.trim(), password: dPass,
-      role: "doctor", subjectId: dSubject || null,
+      name: data.name, email: data.email.trim(), password: data.password,
+      role: "doctor", subjectId: data.subjectId || null,
     });
     if (res.error) toast({ variant: "destructive", title: "فشل الإنشاء", description: res.error });
     else {
-      toast({ title: "تم إضافة الدكتور ✓", description: `تم إضافة ${dName} وربطه بمادته.` });
-      setDName(""); setDEmail(""); setDPass("");
+      toast({ title: "تم إضافة الدكتور ✓", description: `تم إضافة ${data.name} وربطه بمادته.` });
+      doctorForm.reset();
       // Refresh subjects to reflect updated doctor_name
       supabase.from("subjects").select("id, name, doctor_name").order("name")
         .then(({ data }) => { if (data) setSubjects(data as Subject[]); });
     }
     setSubmitting(false);
   };
+
+  const studentErrors = studentForm.formState.errors;
+  const doctorErrors = doctorForm.formState.errors;
 
   return (
     <Card className="border-primary/30 bg-card/90" dir="rtl">
@@ -95,27 +113,48 @@ export const UserCreationForm = () => {
 
           {/* ══ Student Tab — no subject required ══ */}
           <TabsContent value="student">
-            <form onSubmit={handleStudent} className="space-y-4">
+            <form onSubmit={studentForm.handleSubmit(onStudentSubmit)} className="space-y-4">
               <div className="space-y-2">
                 <Label>الاسم الرباعي</Label>
-                <Input value={sName} onChange={e => setSName(e.target.value)}
-                  placeholder="الاسم الكامل" required disabled={submitting} />
+                <Input
+                  {...studentForm.register("name")}
+                  placeholder="الاسم الكامل"
+                  disabled={submitting}
+                />
+                {studentErrors.name && (
+                  <p className="text-xs text-destructive">{studentErrors.name.message}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>الرقم القومي (14 رقم)</Label>
-                <Input value={sNid} onChange={e => setSNid(e.target.value)}
-                  placeholder="14 رقم" inputMode="numeric" pattern="\d{14}"
-                  dir="ltr" required disabled={submitting} />
+                <Input
+                  {...studentForm.register("nationalId")}
+                  placeholder="14 رقم"
+                  inputMode="numeric"
+                  dir="ltr"
+                  disabled={submitting}
+                />
+                {studentErrors.nationalId && (
+                  <p className="text-xs text-destructive">{studentErrors.nationalId.message}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>كلمة المرور</Label>
-                <Input type="password" dir="ltr" value={sPass} onChange={e => setSPass(e.target.value)}
-                  placeholder="6 أحرف على الأقل" required minLength={6} disabled={submitting} />
+                <Input
+                  type="password"
+                  dir="ltr"
+                  {...studentForm.register("password")}
+                  placeholder="6 أحرف على الأقل"
+                  disabled={submitting}
+                />
+                {studentErrors.password && (
+                  <p className="text-xs text-destructive">{studentErrors.password.message}</p>
+                )}
               </div>
               <p className="text-xs text-muted-foreground">
                 الطالب يحضر جميع المواد — لا يحتاج تحديد مادة.
               </p>
-              <Button className="w-full" type="submit" disabled={submitting || !sName || !sNid || !sPass}>
+              <Button className="w-full" type="submit" disabled={submitting}>
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <GraduationCap className="h-4 w-4" />}
                 <span>إضافة الطالب</span>
               </Button>
@@ -124,21 +163,43 @@ export const UserCreationForm = () => {
 
           {/* ══ Doctor Tab — subject required ══ */}
           <TabsContent value="doctor">
-            <form onSubmit={handleDoctor} className="space-y-4">
+            <form onSubmit={doctorForm.handleSubmit(onDoctorSubmit)} className="space-y-4">
               <div className="space-y-2">
                 <Label>اسم الدكتور</Label>
-                <Input value={dName} onChange={e => setDName(e.target.value)}
-                  placeholder="الاسم الكامل" required disabled={submitting} />
+                <Input
+                  {...doctorForm.register("name")}
+                  placeholder="الاسم الكامل"
+                  disabled={submitting}
+                />
+                {doctorErrors.name && (
+                  <p className="text-xs text-destructive">{doctorErrors.name.message}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>البريد الإلكتروني</Label>
-                <Input type="email" dir="ltr" value={dEmail} onChange={e => setDEmail(e.target.value)}
-                  placeholder="doctor@university.edu" required disabled={submitting} />
+                <Input
+                  type="email"
+                  dir="ltr"
+                  {...doctorForm.register("email")}
+                  placeholder="doctor@university.edu"
+                  disabled={submitting}
+                />
+                {doctorErrors.email && (
+                  <p className="text-xs text-destructive">{doctorErrors.email.message}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>كلمة المرور</Label>
-                <Input type="password" dir="ltr" value={dPass} onChange={e => setDPass(e.target.value)}
-                  placeholder="6 أحرف على الأقل" required minLength={6} disabled={submitting} />
+                <Input
+                  type="password"
+                  dir="ltr"
+                  {...doctorForm.register("password")}
+                  placeholder="6 أحرف على الأقل"
+                  disabled={submitting}
+                />
+                {doctorErrors.password && (
+                  <p className="text-xs text-destructive">{doctorErrors.password.message}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>المادة المُسندة</Label>
@@ -148,7 +209,11 @@ export const UserCreationForm = () => {
                     أضف مادة أولاً من تبويب المواد
                   </p>
                 ) : (
-                  <Select value={dSubject} onValueChange={setDSubject} disabled={submitting}>
+                  <Select
+                    value={doctorForm.watch("subjectId")}
+                    onValueChange={(val) => doctorForm.setValue("subjectId", val)}
+                    disabled={submitting}
+                  >
                     <SelectTrigger><SelectValue placeholder="اختر المادة" /></SelectTrigger>
                     <SelectContent>
                       {subjects.map(s => (
@@ -159,9 +224,11 @@ export const UserCreationForm = () => {
                     </SelectContent>
                   </Select>
                 )}
+                {doctorErrors.subjectId && (
+                  <p className="text-xs text-destructive">{doctorErrors.subjectId.message}</p>
+                )}
               </div>
-              <Button className="w-full" type="submit"
-                disabled={submitting || !dName || !dEmail || !dPass || !dSubject}>
+              <Button className="w-full" type="submit" disabled={submitting}>
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Stethoscope className="h-4 w-4" />}
                 <span>إضافة الدكتور</span>
               </Button>

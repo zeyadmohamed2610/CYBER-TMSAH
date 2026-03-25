@@ -89,3 +89,47 @@ export interface CreateUserRpcInput {
   p_role: "doctor" | "student";
   p_subject_id: string | null;
 }
+
+// Pagination types
+export interface PaginationParams {
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+// Notification types
+export type NotificationType =
+  | 'session_starting'
+  | 'attendance_submitted'
+  | 'attendance_low'
+  | 'session_ended'
+  | 'session_extended';
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  message: string | null;
+  read: boolean;
+  created_at: string;
+}
+
+// User Settings
+export interface UserSettings {
+  notifications: {
+    email: boolean;
+    push: boolean;
+    sessionReminders: boolean;
+  };
+  display: {
+    language: 'ar' | 'en';
+  };
+}

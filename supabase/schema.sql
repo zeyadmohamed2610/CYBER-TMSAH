@@ -5,6 +5,27 @@
 -- ===========================================================
 
 -- ─────────────────────────────────────────────
+-- PERFORMANCE: Additional indices for better query performance
+-- These are safe to add - they don't affect existing functionality
+-- ─────────────────────────────────────────────
+
+-- Composite index for sessions: subject + expiry (common query pattern)
+CREATE INDEX IF NOT EXISTS idx_sessions_subject_expires 
+  ON public.sessions (subject_id, expires_at);
+
+-- Index on attendance created_at for time-based queries
+CREATE INDEX IF NOT EXISTS idx_attendance_created_at_desc 
+  ON public.attendance (created_at DESC);
+
+-- Composite index for attendance: student + session (faster lookups)
+CREATE INDEX IF NOT EXISTS idx_attendance_student_session 
+  ON public.attendance (student_id, session_id);
+
+-- Index for system_logs filtering by date range
+CREATE INDEX IF NOT EXISTS idx_system_logs_date_range 
+  ON public.system_logs (created_at DESC, action);
+
+-- ─────────────────────────────────────────────
 -- PRIVATE SCHEMA
 -- Created here (first file) and immediately locked down.
 -- ─────────────────────────────────────────────
@@ -47,7 +68,8 @@ CREATE TABLE IF NOT EXISTS public.users (
 
   CONSTRAINT chk_subject_per_role CHECK (
     (role = 'owner'              AND subject_id IS NULL) OR
-    (role IN ('doctor','student') AND subject_id IS NOT NULL)
+    (role = 'doctor'            AND subject_id IS NOT NULL) OR
+    (role = 'student'           AND subject_id IS NULL)
   )
 );
 
@@ -96,3 +118,33 @@ CREATE TABLE IF NOT EXISTS public.system_logs (
 
 CREATE INDEX IF NOT EXISTS idx_logs_actor_id   ON public.system_logs (actor_id);
 CREATE INDEX IF NOT EXISTS idx_logs_created_at ON public.system_logs (created_at DESC);
+
+-- ═══════════════════════════════════════════════
+-- TABLE: notifications
+-- For storing user notifications
+-- ═══════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS public.notifications (
+  id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID        NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  type       TEXT        NOT NULL,
+  title      TEXT        NOT NULL,
+  message    TEXT,
+  read        BOOLEAN    NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications (user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_read ON public.notifications (read);
+
+-- ═══════════════════════════════════════════════
+-- TABLE: user_settings
+-- For storing user preferences
+-- ═══════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS public.user_settings (
+  id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID        NOT NULL UNIQUE REFERENCES public.users(id) ON DELETE CASCADE,
+  settings   JSONB       NOT NULL DEFAULT '{}',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON public.user_settings (user_id);

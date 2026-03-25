@@ -1,119 +1,177 @@
-// supabase/functions/createUser/index.ts
-// Edge Function — creates an auth user + public.users record.
-// Called exclusively by the Owner dashboard.
+// Simplified Edge Function for user creation
+// Uses native fetch - no external dependencies
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-interface RequestBody {
-  name:        string;
-  national_id?: string;   // students only
-  email?:       string;   // doctors only
-  password:    string;
-  role:        "doctor" | "student";
-  subject_id:  string | null;
-}
-
-const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") ?? "http://localhost:8080";
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin":  ALLOWED_ORIGIN,
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Vary": "Origin",
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-  });
+interface UserRequest {
+  name: string;
+  national_id?: string;
+  email?: string;
+  password: string;
+  role: "doctor" | "student";
+  subject_id?: string;
+}
 
-Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return json({ error: "Missing authorization header" }, 401);
+    // Get auth token from header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'No authorization header' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    const callerClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
+    // Get Supabase config
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    // Verify the caller is authenticated
+    const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: { 'Authorization': authHeader, 'apikey': supabaseKey }
+    });
+
+    if (!userRes.ok) {
+      return new Response(JSON.stringify({ error: 'Invalid token' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const userData = await userRes.json();
+
+    // Check if user is owner
+    const profileRes = await fetch(
+      `${supabaseUrl}/rest/v1/users?auth_id=eq.${userData.id}&select=role`,
+      {
+        headers: {
+          'Authorization': `Bearer ${serviceKey}`,
+          'apikey': supabaseKey
+        }
+      }
     );
 
-    // Verify caller is owner
-    const { data: callerAuth, error: callerAuthErr } = await callerClient.auth.getUser();
-    if (callerAuthErr || !callerAuth.user) return json({ error: "Invalid or expired token" }, 401);
+    const profiles = await profileRes.json();
+    if (!profiles || profiles.length === 0 || profiles[0].role !== 'owner') {
+      return new Response(JSON.stringify({ error: 'Only owners can create users' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    const { data: callerProfile, error: profileErr } = await callerClient
-      .from("users").select("role").eq("auth_id", callerAuth.user.id).maybeSingle();
-
-    if (profileErr || !callerProfile)     return json({ error: "Cannot resolve caller profile" }, 403);
-    if (callerProfile.role !== "owner")   return json({ error: "Only owners may create users" }, 403);
-
-    // Parse body
-    const body: RequestBody = await req.json();
+    // Parse request body
+    const body: UserRequest = await req.json();
     const { name, national_id, email, password, role, subject_id } = body;
 
-    if (!name?.trim() || !password || !role) {
-      return json({ error: "Missing required fields: name, password, role" }, 400);
+    // Validate
+    if (!name || !password || !role) {
+      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
-    if (password.length < 6) return json({ error: "Password must be at least 6 characters" }, 400);
-    if (!["doctor", "student"].includes(role)) return json({ error: "Role must be doctor or student" }, 400);
 
-    // Determine the auth email
+    // Build auth email
     let authEmail: string;
-    if (role === "student") {
-      if (!national_id || !/^\d{14}$/.test(national_id.trim())) {
-        return json({ error: "Students require a valid 14-digit national ID" }, 400);
+    if (role === 'student') {
+      if (!national_id || national_id.length !== 14) {
+        return new Response(JSON.stringify({ error: 'National ID must be 14 digits' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
-      authEmail = `${national_id.trim()}@nid.local`;
+      authEmail = `${national_id}@nid.local`;
     } else {
-      if (!email?.trim()) return json({ error: "Doctors require a valid email address" }, 400);
-      authEmail = email.trim().toLowerCase();
+      if (!email) {
+        return new Response(JSON.stringify({ error: 'Email required for doctors' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      authEmail = email.toLowerCase();
     }
 
     // Create auth user
-    const serviceClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    const createUserRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${serviceKey}`,
+        'apikey': supabaseKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: authEmail,
+        password: password,
+        email_confirm: true,
+      }),
+    });
+
+    const createUserData = await createUserRes.json();
+
+    if (!createUserRes.ok) {
+      return new Response(JSON.stringify({ error: createUserData.msg || 'Failed to create user' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const authUserId = createUserData.id;
+
+    // Call RPC to create user record
+    const rpcRes = await fetch(
+      `${supabaseUrl}/rest/v1/rpc/create_user`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${serviceKey}`,
+          'apikey': supabaseKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          p_auth_id: authUserId,
+          p_full_name: name,
+          p_role: role,
+          p_subject_id: subject_id || null,
+        }),
+      }
     );
 
-    const { data: authData, error: authErr } = await serviceClient.auth.admin.createUser({
-      email:         authEmail,
-      password,
-      email_confirm: true,
-    });
-
-    if (authErr || !authData.user) {
-      return json({ error: authErr?.message ?? "Failed to create auth user" }, 400);
+    if (!rpcRes.ok) {
+      const rpcError = await rpcRes.text();
+      // Delete auth user if RPC fails
+      await fetch(`${supabaseUrl}/auth/v1/admin/users/${authUserId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${serviceKey}`,
+          'apikey': supabaseKey,
+        },
+      });
+      return new Response(JSON.stringify({ error: rpcError }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const authUserId = authData.user.id;
-
-    // Create public.users row via RPC
-    const { data: newUser, error: rpcErr } = await callerClient.rpc("create_user", {
-      p_auth_id:    authUserId,
-      p_full_name:  name.trim(),
-      p_role:       role,
-      p_subject_id: subject_id ?? null,
-    });
-
-    if (rpcErr) {
-      await serviceClient.auth.admin.deleteUser(authUserId);
-      return json({ error: rpcErr.message }, 400);
-    }
-
-    // If doctor + subject_id: update subject's doctor_name to the doctor's name
-    if (role === "doctor" && subject_id) {
-      await serviceClient.from("subjects")
-        .update({ doctor_name: name.trim() })
-        .eq("id", subject_id);
-    }
-
-    return json({
+    return new Response(JSON.stringify({
       success: true,
-      user: { id: (newUser as { id: string }).id, name: name.trim(), role },
+      user: { id: authUserId, name, role }
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-  } catch (err: unknown) {
-    return json({ error: err instanceof Error ? err.message : "Internal server error" }, 500);
+
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -6,11 +7,12 @@ interface StatCardProps {
   value: string | number;
   description: string;
   icon: LucideIcon;
+  className?: string;
 }
 
-export const StatCard = ({ title, value, description, icon: Icon }: StatCardProps) => {
+export const StatCard = ({ title, value, description, icon: Icon, className = "" }: StatCardProps) => {
   return (
-    <Card className="border-border/60 bg-card/80">
+    <Card className={`border-border/60 bg-card/80 ${className}`}>
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div>

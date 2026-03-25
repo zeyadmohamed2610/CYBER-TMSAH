@@ -89,8 +89,10 @@ BEGIN
     RAISE EXCEPTION 'validation_error: full_name cannot be empty';
   END IF;
 
-  IF p_role IN ('doctor', 'student') AND p_subject_id IS NULL THEN
-    RAISE EXCEPTION 'validation_error: doctors and students require a subject_id';
+  -- Students don't need a subject_id (they can attend any subject)
+  -- Only doctors require a subject_id
+  IF p_role = 'doctor' AND p_subject_id IS NULL THEN
+    RAISE EXCEPTION 'validation_error: doctors require a subject_id';
   END IF;
 
   IF p_role = 'owner' AND p_subject_id IS NOT NULL THEN

@@ -75,6 +75,13 @@ const formatTrendLabel = (date: string): string => {
   return parsed.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 };
 
+// Pagination helper - default values for backward compatibility
+const getPaginationRange = (page = 1, pageSize = 50) => {
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  return { from, to };
+};
+
 // ─── Mappers ──────────────────────────────────────────────────────────────────
 
 const mapSessionSummary = (row: SessionRow): SessionSummary => {
@@ -185,9 +192,14 @@ export const attendanceService = {
   async fetchAttendanceRecords(
     role: AttendanceRole,
     _userId?: string,
+    pagination?: { page?: number; pageSize?: number },
   ): Promise<AttendanceApiResponse<AttendanceRecord[]>> {
     const operation = "attendanceService.fetchAttendanceRecords";
     try {
+      const page = pagination?.page ?? 1;
+      const pageSize = pagination?.pageSize ?? 50;
+      const { from, to } = getPaginationRange(page, pageSize);
+
       const attendanceSelect =
         "id, session_id, student_id, created_at, sessions(subject_id, subjects(name)), users!attendance_student_id_fkey(full_name)";
 
@@ -195,9 +207,11 @@ export const attendanceService = {
         const { data, error } = await supabase
           .from("attendance")
           .select(attendanceSelect)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .range(from, to);
         if (error) throw error;
-        return ok<AttendanceRecord[]>(((data ?? []) as unknown as AttendanceRow[]).map(mapAttendanceRecord));
+        const records = ((data ?? []) as unknown as AttendanceRow[]).map(mapAttendanceRecord);
+        return ok<AttendanceRecord[]>(records);
       }
 
       const authId = await resolveAuthUserId();
@@ -210,7 +224,8 @@ export const attendanceService = {
           .from("attendance")
           .select(attendanceSelect)
           .eq("student_id", profile.id)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .range(from, to);
         if (error) throw error;
         return ok<AttendanceRecord[]>(((data ?? []) as unknown as AttendanceRow[]).map(mapAttendanceRecord));
       }
@@ -229,7 +244,8 @@ export const attendanceService = {
         .from("attendance")
         .select(attendanceSelect)
         .in("session_id", ids)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .range(from, to);
       if (error) throw error;
       return ok<AttendanceRecord[]>(((data ?? []) as unknown as AttendanceRow[]).map(mapAttendanceRecord));
     } catch (error) {
@@ -460,7 +476,7 @@ export const attendanceService = {
         .join("");
 
       const { data, error } = await supabase.rpc("submit_attendance", {
-        p_hash:               hash,
+        p_hash: hash,
         p_device_fingerprint: deviceFingerprint,
       });
 
