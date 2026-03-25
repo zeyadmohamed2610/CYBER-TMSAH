@@ -20,9 +20,18 @@ ALTER TABLE public.system_logs ENABLE ROW LEVEL SECURITY;
 -- TABLE: users
 -- ═══════════════════════════════════════════════
 
+DROP POLICY IF EXISTS "self_read"         ON public.users;
 DROP POLICY IF EXISTS "owner_all_users"   ON public.users;
 DROP POLICY IF EXISTS "doctor_own_users"  ON public.users;
 DROP POLICY IF EXISTS "student_own_users" ON public.users;
+
+-- Any authenticated user may always read their own row.
+-- This is required so fetchUserRole() works at login time before
+-- private.current_user_role() can return a value.
+CREATE POLICY "self_read"
+  ON public.users
+  FOR SELECT
+  USING (auth_id = auth.uid());
 
 CREATE POLICY "owner_all_users"
   ON public.users
