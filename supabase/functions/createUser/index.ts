@@ -1,25 +1,21 @@
 // supabase/functions/createUser/index.ts
 // Edge Function — creates an auth user + public.users record.
 // Called exclusively by the Owner dashboard.
-// Requires: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY env vars.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 interface RequestBody {
-  name: string;
-  email: string;
-  password: string;
-  role: "doctor" | "student";
-  subject_id: string | null;
+  name:        string;
+  national_id?: string;   // students only
+  email?:       string;   // doctors only
+  password:    string;
+  role:        "doctor" | "student";
+  subject_id:  string | null;
 }
 
-// Restrict CORS to the known frontend origin (set ALLOWED_ORIGIN env var in production).
-// Falls back to localhost for local dev only.
-const ALLOWED_ORIGIN =
-  Deno.env.get("ALLOWED_ORIGIN") ?? "http://localhost:8080";
-
+const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") ?? "http://localhost:8080";
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+  "Access-Control-Allow-Origin":  ALLOWED_ORIGIN,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Vary": "Origin",
 };
@@ -31,70 +27,58 @@ const json = (body: unknown, status = 200) =>
   });
 
 Deno.serve(async (req: Request) => {
-  // Handle CORS preflight
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: CORS_HEADERS });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return json({ error: "Missing authorization header" }, 401);
-    }
+    if (!authHeader) return json({ error: "Missing authorization header" }, 401);
 
-    // 1. Build a caller-scoped client (uses the owner's JWT)
     const callerClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } },
     );
 
-    // 2. Verify caller identity and role
+    // Verify caller is owner
     const { data: callerAuth, error: callerAuthErr } = await callerClient.auth.getUser();
-    if (callerAuthErr || !callerAuth.user) {
-      return json({ error: "Invalid or expired token" }, 401);
-    }
+    if (callerAuthErr || !callerAuth.user) return json({ error: "Invalid or expired token" }, 401);
 
     const { data: callerProfile, error: profileErr } = await callerClient
-      .from("users")
-      .select("role")
-      .eq("auth_id", callerAuth.user.id)
-      .maybeSingle();
+      .from("users").select("role").eq("auth_id", callerAuth.user.id).maybeSingle();
 
-    if (profileErr || !callerProfile) {
-      return json({ error: "Cannot resolve caller profile" }, 403);
-    }
+    if (profileErr || !callerProfile)     return json({ error: "Cannot resolve caller profile" }, 403);
+    if (callerProfile.role !== "owner")   return json({ error: "Only owners may create users" }, 403);
 
-    if (callerProfile.role !== "owner") {
-      return json({ error: "Only owners may create users" }, 403);
-    }
-
-    // 3. Parse and validate body
+    // Parse body
     const body: RequestBody = await req.json();
-    const { name, email, password, role, subject_id } = body;
+    const { name, national_id, email, password, role, subject_id } = body;
 
-    if (!name?.trim() || !email?.trim() || !password || !role) {
-      return json({ error: "Missing required fields: name, email, password, role" }, 400);
+    if (!name?.trim() || !password || !role) {
+      return json({ error: "Missing required fields: name, password, role" }, 400);
     }
-    if (password.length < 6) {
-      return json({ error: "Password must be at least 6 characters" }, 400);
-    }
-    const validRoles = ["doctor", "student"];
-    if (!validRoles.includes(role)) {
-      return json({ error: "Role must be doctor or student" }, 400);
-    }
-    if (!subject_id) {
-      return json({ error: "subject_id is required for doctors and students" }, 400);
+    if (password.length < 6) return json({ error: "Password must be at least 6 characters" }, 400);
+    if (!["doctor", "student"].includes(role)) return json({ error: "Role must be doctor or student" }, 400);
+
+    // Determine the auth email
+    let authEmail: string;
+    if (role === "student") {
+      if (!national_id || !/^\d{14}$/.test(national_id.trim())) {
+        return json({ error: "Students require a valid 14-digit national ID" }, 400);
+      }
+      authEmail = `${national_id.trim()}@nid.local`;
+    } else {
+      if (!email?.trim()) return json({ error: "Doctors require a valid email address" }, 400);
+      authEmail = email.trim().toLowerCase();
     }
 
-    // 4. Create auth.users record via service_role (only this key can do it)
+    // Create auth user
     const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
     const { data: authData, error: authErr } = await serviceClient.auth.admin.createUser({
-      email: email.trim().toLowerCase(),
+      email:         authEmail,
       password,
       email_confirm: true,
     });
@@ -105,31 +89,31 @@ Deno.serve(async (req: Request) => {
 
     const authUserId = authData.user.id;
 
-    // 5. Create the public.users row via the create_user RPC (enforces owner-only internally)
+    // Create public.users row via RPC
     const { data: newUser, error: rpcErr } = await callerClient.rpc("create_user", {
-      p_auth_id: authUserId,
-      p_full_name: name.trim(),
-      p_role: role,
+      p_auth_id:    authUserId,
+      p_full_name:  name.trim(),
+      p_role:       role,
       p_subject_id: subject_id ?? null,
     });
 
     if (rpcErr) {
-      // Rollback: remove the auth user we just created to avoid orphaned accounts
       await serviceClient.auth.admin.deleteUser(authUserId);
       return json({ error: rpcErr.message }, 400);
     }
 
+    // If doctor + subject_id: update subject's doctor_name to the doctor's name
+    if (role === "doctor" && subject_id) {
+      await serviceClient.from("subjects")
+        .update({ doctor_name: name.trim() })
+        .eq("id", subject_id);
+    }
+
     return json({
       success: true,
-      user: {
-        id: (newUser as { id: string }).id,
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        role,
-      },
+      user: { id: (newUser as { id: string }).id, name: name.trim(), role },
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Internal server error";
-    return json({ error: message }, 500);
+    return json({ error: err instanceof Error ? err.message : "Internal server error" }, 500);
   }
 });

@@ -10,7 +10,7 @@ import { LiveSessionPanel } from "../components/LiveSessionPanel";
 import { OwnerLiveSessionMap } from "../components/OwnerLiveSessionMap";
 import { StatCard } from "../components/StatCard";
 import { StudentDevicesPanel } from "../components/StudentDevicesPanel";
-import { SubjectCreationForm } from "../components/SubjectCreationForm";
+import { SubjectManagementPanel } from "../components/SubjectManagementPanel";
 import { SystemLogsTable } from "../components/SystemLogsTable";
 import { UserCreationForm } from "../components/UserCreationForm";
 import { AttendanceStatusChart } from "../components/charts/AttendanceStatusChart";
@@ -145,31 +145,7 @@ export const OwnerDashboard = () => {
 
         {/* ── Subjects ── */}
         <TabsContent value="subjects" className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-2">
-            <SubjectCreationForm
-              onSubjectCreated={(s) => setSubjects((prev) => [...prev, s as Subject].sort((a, b) => a.name.localeCompare(b.name)))}
-            />
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">المواد الموجودة</h3>
-              {subjectsLoading ? (
-                <p className="text-sm text-muted-foreground">جارٍ التحميل...</p>
-              ) : subjects.length === 0 ? (
-                <p className="text-sm text-muted-foreground">لا توجد مواد بعد.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {subjects.map((s) => (
-                    <li key={s.id} className="flex items-center justify-between rounded-lg border bg-card/60 px-4 py-2 text-sm">
-                      <div>
-                        <p className="font-medium">{s.name}</p>
-                        {s.doctor_name && <p className="text-xs text-muted-foreground">{s.doctor_name}</p>}
-                      </div>
-                      <Badge variant="outline" className="font-mono text-xs">{s.id.slice(0, 8)}…</Badge>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
+          <SubjectManagementPanel />
         </TabsContent>
 
         {/* ── Devices ── */}
