@@ -1,8 +1,8 @@
 import type { AttendanceApiResponse, AttendanceRole } from "../types";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase, supabaseUrl, supabaseAnonKey } from "@/lib/supabaseClient";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_URL = supabaseUrl;
+const SUPABASE_ANON_KEY = supabaseAnonKey;
 
 export interface CreateUserInput {
   name: string;
