@@ -226,9 +226,11 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Edge Function Error:', errorMessage);
     return new Response(JSON.stringify({
       error: 'Internal server error',
-      message: error instanceof Error ? error.message : String(error)
+      message: errorMessage
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
