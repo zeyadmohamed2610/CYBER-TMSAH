@@ -148,7 +148,18 @@ export const attendanceService = {
         return ok<SessionSummary[]>(((data ?? []) as SessionRow[]).map(mapSessionSummary));
       }
 
-      // Doctor & student: filter by subject_id from their profile
+      // Student: sees ALL active sessions (attends every subject)
+      if (role === "student") {
+        const { data, error } = await supabase
+          .from("sessions")
+          .select(sessionSelect)
+          .gt("expires_at", new Date().toISOString())
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        return ok<SessionSummary[]>(((data ?? []) as SessionRow[]).map(mapSessionSummary));
+      }
+
+      // Doctor: filter by their assigned subject only
       const authId = await resolveAuthUserId();
       if (!authId) throw new Error("Not authenticated.");
 
