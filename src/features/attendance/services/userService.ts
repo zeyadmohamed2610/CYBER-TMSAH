@@ -1,9 +1,6 @@
 import type { AttendanceApiResponse, AttendanceRole } from "../types";
 import { supabase } from "@/lib/supabaseClient";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
 export interface CreateUserInput {
   name: string;
   national_id?: string;
@@ -25,25 +22,27 @@ const fail = <T>(error: string): AttendanceApiResponse<T> => ({ data: null, erro
 export const userService = {
   async createUser(input: CreateUserInput): Promise<AttendanceApiResponse<CreatedUser>> {
     try {
-      // Get fresh session with access token
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session?.access_token) {
         return fail<CreatedUser>("جلسة الدخول منتهية - سجّل دخول مجدداً");
       }
 
-      console.log('Creating user via RPC...');
+      console.log('Creating user via Edge Function...');
 
-      // Call the database RPC function directly
-      const { data, error } = await supabase.rpc('admin_create_user', {
-        p_full_name: input.name.trim(),
-        p_email: input.email?.trim().toLowerCase() || '',
-        p_password: input.password,
-        p_role: input.role,
-        p_subject_id: input.subjectId ?? null
+      // Use Supabase client invoke - handles JWT differently
+      const { data, error } = await supabase.functions.invoke('createUser', {
+        body: {
+          name: input.name.trim(),
+          national_id: input.national_id?.trim(),
+          email: input.email?.trim().toLowerCase(),
+          password: input.password,
+          role: input.role,
+          subject_id: input.subjectId ?? null
+        }
       });
 
-      console.log('RPC Response:', data, error);
+      console.log('Function Response:', data, error);
 
       if (error) {
         return fail<CreatedUser>(error.message);
@@ -57,11 +56,7 @@ export const userService = {
         return fail<CreatedUser>("فشل في إنشاء المستخدم");
       }
 
-      return ok<CreatedUser>({
-        id: data.user.id,
-        name: data.user.name,
-        role: data.user.role
-      });
+      return ok<CreatedUser>(data.user);
     } catch (error) {
       console.error('Error:', error);
       return fail<CreatedUser>(error instanceof Error ? error.message : String(error));
