@@ -1,105 +1,109 @@
-import { Activity, BookOpenText, Clock3, UserCheck } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Activity, BookOpenText, Clock3, Monitor, Smartphone } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { DataTable, type DataTableColumn } from "../components/DataTable";
-import { ExportButtons } from "../components/ExportButtons";
-import { RotatingSessionDisplay } from "../components/RotatingSessionDisplay";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CreateSessionForm } from "../components/CreateSessionForm";
+import { LiveSessionPanel } from "../components/LiveSessionPanel";
 import { StatCard } from "../components/StatCard";
-import { AttendanceStatusChart } from "../components/charts/AttendanceStatusChart";
 import { AttendanceTrendChart } from "../components/charts/AttendanceTrendChart";
 import { useAttendanceDashboardData } from "../hooks/useAttendanceDashboardData";
-import type { SessionSummary } from "../types";
-import { formatDateTime } from "../utils/rotatingSession";
-
-const getSessionBadgeVariant = (status: SessionSummary["status"]) => {
-  if (status === "active") {
-    return "default";
-  }
-  if (status === "scheduled") {
-    return "secondary";
-  }
-  return "outline";
-};
+import { useSessionManager } from "../hooks/useSessionManager";
+import { useAttendanceAuth } from "../context/AttendanceAuthContext";
+import { supabase } from "@/lib/supabaseClient";
 
 export const DoctorDashboard = () => {
-  const { loading, error, metrics, records, sessions, trendPoints } = useAttendanceDashboardData("doctor");
+  const { user } = useAttendanceAuth();
+  const { loading, error, metrics, records, sessions, trendPoints } =
+    useAttendanceDashboardData("doctor");
+  const { activeSession, creating, error: sessionError, createSession, stopSession, updateDuration, refreshHash } =
+    useSessionManager();
 
-  const columns: DataTableColumn<SessionSummary>[] = [
-    {
-      id: "subject",
-      header: "Subject",
-      cell: (row) => row.subjectName,
-    },
-    {
-      id: "window",
-      header: "Time Window",
-      cell: (row) => `${formatDateTime(row.startsAt)} - ${formatDateTime(row.endsAt)}`,
-    },
-    {
-      id: "room",
-      header: "Room",
-      cell: (row) => row.room || "N/A",
-    },
-    {
-      id: "status",
-      header: "Status",
-      cell: (row) => <Badge variant={getSessionBadgeVariant(row.status)}>{row.status.toUpperCase()}</Badge>,
-    },
-  ];
+  // Fetch the doctor's own subject_id from DB
+  const [doctorSubjectId, setDoctorSubjectId] = useState<string | undefined>(undefined);
+  const [loginSessions, setLoginSessions]     = useState<{ ip_address: string; user_agent: string; created_at: string }[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("users").select("subject_id").eq("auth_id", user.id).maybeSingle()
+      .then(({ data }) => { if (data?.subject_id) setDoctorSubjectId(data.subject_id); });
+
+    supabase.from("login_sessions")
+      .select("ip_address, user_agent, created_at").order("created_at", { ascending: false }).limit(5)
+      .then(({ data }) => { if (data) setLoginSessions(data); });
+
+    // Log this login session (fire-and-forget)
+    void supabase.rpc("log_login_session");
+  }, [user]);
 
   return (
-    <div className="space-y-6">
-      {error ? (
-        <Alert className="border-primary/40 bg-primary/5">
-          <AlertTitle>Supabase backend not connected</AlertTitle>
+    <div className="space-y-6" dir="rtl">
+      {error && (
+        <Alert variant="destructive">
+          <AlertTitle>خطأ في قاعدة البيانات</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-      ) : null}
+      )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          title="My Sessions"
-          value={metrics.totalSessions}
-          description="Sessions assigned to this doctor"
-          icon={BookOpenText}
-        />
-        <StatCard
-          title="Active Sessions"
-          value={metrics.activeSessions}
-          description="Live sessions right now"
-          icon={Clock3}
-        />
-        <StatCard
-          title="Pending Submissions"
-          value={metrics.pendingSubmissions}
-          description="Expected attendance not yet submitted"
-          icon={UserCheck}
-        />
-        <StatCard
-          title="Attendance Rate"
-          value={`${metrics.attendanceRate.toFixed(1)}%`}
-          description="Attendance across managed sessions"
-          icon={Activity}
-        />
+      {/* Stats */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard title="جلساتي" value={metrics.totalSessions} description="جلسات مادتي" icon={BookOpenText} />
+        <StatCard title="الجلسات النشطة" value={metrics.activeSessions} description="لم تنته بعد" icon={Clock3} />
+        <StatCard title="معدل الحضور" value={`${metrics.attendanceRate.toFixed(1)}%`} description="الحضور في جلساتي" icon={Activity} />
       </div>
 
-      <RotatingSessionDisplay sessions={sessions} />
+      {/* Session management section */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {!activeSession ? (
+          <CreateSessionForm
+            fixedSubjectId={doctorSubjectId}
+            onSessionCreated={createSession}
+            creating={creating}
+            error={sessionError}
+          />
+        ) : (
+          <LiveSessionPanel
+            session={activeSession}
+            onStop={stopSession}
+            onUpdateDuration={updateDuration}
+            onRefreshHash={refreshHash}
+          />
+        )}
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <AttendanceTrendChart points={trendPoints} />
-        <AttendanceStatusChart records={records} />
+        {/* Login sessions / Device history */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Monitor className="h-4 w-4 text-primary" />
+              أجهزة تسجيل الدخول الأخيرة
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loginSessions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">لا توجد جلسات مسجلة بعد.</p>
+            ) : (
+              <ul className="space-y-2">
+                {loginSessions.map((s, i) => (
+                  <li key={i} className="flex items-center gap-3 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+                    <Smartphone className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0">
+                      <p className="truncate font-mono text-xs">{s.ip_address ?? "—"}</p>
+                      <p className="truncate text-xs text-muted-foreground">{s.user_agent?.slice(0, 60) ?? "—"}</p>
+                    </div>
+                    <Badge variant="outline" className="ml-auto shrink-0 text-xs">
+                      {new Date(s.created_at).toLocaleDateString("ar-EG")}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      <DataTable
-        title="Session Monitoring"
-        caption={loading ? "Loading..." : "Sessions visible to this doctor only."}
-        columns={columns}
-        rows={sessions}
-        getRowId={(row) => row.id}
-        emptyMessage="No sessions found for this doctor."
-      />
+      <AttendanceTrendChart points={trendPoints} />
 
-      <ExportButtons role="doctor" />
+      {loading && <p className="text-sm text-muted-foreground">جارٍ تحميل البيانات...</p>}
     </div>
   );
 };

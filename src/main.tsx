@@ -1,21 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
-import "./lib/protection"; // Load protection first
-
-// Register Service Worker for PWA
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/sw.js')
-      .then((registration) => {
-        console.log('[SW] Registered:', registration.scope);
-      })
-      .catch((error) => {
-        console.error('[SW] Registration failed:', error);
-      });
-  });
-}
+import "./lib/protection";
 
 // Core Web Vitals monitoring
 const reportWebVitals = () => {
@@ -23,9 +9,6 @@ const reportWebVitals = () => {
   new PerformanceObserver((list) => {
     const entries = list.getEntries();
     const lastEntry = entries[entries.length - 1] as PerformanceEntry & { element?: Element };
-    console.log('[Web Vitals] LCP:', lastEntry.startTime);
-    
-    // Send to analytics
     if (window.gtag) {
       window.gtag('event', 'web_vitals', {
         event_category: 'LCP',
@@ -40,8 +23,6 @@ const reportWebVitals = () => {
     for (const entry of list.getEntries()) {
       const fidEntry = entry as PerformanceEntry & { processingStart: number; startTime: number };
       const delay = fidEntry.processingStart - fidEntry.startTime;
-      console.log('[Web Vitals] FID:', delay);
-      
       if (window.gtag) {
         window.gtag('event', 'web_vitals', {
           event_category: 'FID',
@@ -61,8 +42,6 @@ const reportWebVitals = () => {
         clsValue += clsEntry.value;
       }
     }
-    console.log('[Web Vitals] CLS:', clsValue);
-    
     if (window.gtag) {
       window.gtag('event', 'web_vitals', {
         event_category: 'CLS',
@@ -74,10 +53,7 @@ const reportWebVitals = () => {
 
   // FCP (First Contentful Paint)
   new PerformanceObserver((list) => {
-    const entries = list.getEntries();
-    for (const entry of entries) {
-      console.log('[Web Vitals] FCP:', entry.startTime);
-      
+    for (const entry of list.getEntries()) {
       if (window.gtag) {
         window.gtag('event', 'web_vitals', {
           event_category: 'FCP',
@@ -92,7 +68,7 @@ const reportWebVitals = () => {
 // Initialize
 const init = () => {
   createRoot(document.getElementById("root")!).render(<App />);
-  
+
   // Start monitoring after app renders
   if (import.meta.env.PROD) {
     setTimeout(reportWebVitals, 1000);

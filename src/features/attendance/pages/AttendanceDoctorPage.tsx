@@ -1,27 +1,33 @@
+import { LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
-import { AttendanceMobileOnlyBlock } from "../components/AttendanceMobileOnlyBlock";
-import { DoctorSessionControlPanel } from "../components/DoctorSessionControlPanel";
-import { useIsDesktopDevice } from "../hooks/useIsDesktopDevice";
 import { DoctorDashboard } from "./DoctorDashboard";
+import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 
+/**
+ * Doctor attendance page.
+ * No mobile gate — doctors need desktop/laptop to project the rotating hash
+ * code on the classroom display. Mobile restriction applies only to students.
+ */
 const AttendanceDoctorPage = () => {
-  const isDesktopDevice = useIsDesktopDevice();
-
-  if (isDesktopDevice) {
-    return <AttendanceMobileOnlyBlock />;
-  }
+  const { signOut } = useAttendanceAuth();
 
   return (
     <Layout>
       <section className="section-container py-10 md:py-14">
-        <div className="mb-8 space-y-2">
-          <p className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-            Doctor Panel
-          </p>
-          <h1 className="text-3xl font-bold text-foreground md:text-4xl">Attendance Center - Doctor</h1>
-        </div>
-        <div className="mb-6">
-          <DoctorSessionControlPanel />
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <p className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+              لوحة تحكم الدكتور
+            </p>
+            <h1 className="text-3xl font-bold text-foreground md:text-4xl">
+              مركز الحضور — الدكتور
+            </h1>
+          </div>
+          <Button variant="outline" size="sm" onClick={signOut} className="mt-2 shrink-0 gap-1.5">
+            <LogOut className="h-4 w-4" />
+            <span>تسجيل الخروج</span>
+          </Button>
         </div>
         <DoctorDashboard />
       </section>

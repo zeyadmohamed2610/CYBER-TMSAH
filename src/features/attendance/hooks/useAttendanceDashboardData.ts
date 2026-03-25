@@ -17,6 +17,9 @@ const EMPTY_METRICS: DashboardMetrics = {
   pendingSubmissions: 0,
 };
 
+/** M4: Poll every 30 seconds so expired sessions update without manual refresh. */
+const POLL_INTERVAL_MS = 30_000;
+
 export const useAttendanceDashboardData = (role: AttendanceRole, userId?: string) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,30 +33,27 @@ export const useAttendanceDashboardData = (role: AttendanceRole, userId?: string
     setLoading(true);
     setError(null);
 
-    const [metricsResult, sessionsResult, recordsResult, trendResult, subjectResult] = await Promise.all([
+    // M2 fix: fetch records once, derive trend synchronously — no double network call.
+    const [metricsResult, sessionsResult, recordsResult, subjectResult] = await Promise.all([
       attendanceService.fetchDashboardMetrics(role, userId),
       attendanceService.fetchSessionsByRole(role, userId),
       attendanceService.fetchAttendanceRecords(role, userId),
-      attendanceService.fetchTrendData(role, userId),
       attendanceService.fetchSubjectMetrics(role, userId),
     ]);
 
-    if (metricsResult.data) {
-      setMetrics(metricsResult.data);
-    } else {
-      setMetrics(EMPTY_METRICS);
-    }
+    const fetchedRecords = recordsResult.data ?? [];
 
+    setMetrics(metricsResult.data ?? EMPTY_METRICS);
     setSessions(sessionsResult.data ?? []);
-    setRecords(recordsResult.data ?? []);
-    setTrendPoints(trendResult.data ?? []);
+    setRecords(fetchedRecords);
+    // M2: compute trend from the already-fetched records — zero extra DB calls.
+    setTrendPoints(attendanceService.computeTrendData(fetchedRecords));
     setSubjectMetrics(subjectResult.data ?? []);
 
     const firstError =
       metricsResult.error ||
       sessionsResult.error ||
       recordsResult.error ||
-      trendResult.error ||
       subjectResult.error ||
       null;
 
@@ -61,8 +61,17 @@ export const useAttendanceDashboardData = (role: AttendanceRole, userId?: string
     setLoading(false);
   }, [role, userId]);
 
+  // Initial fetch
   useEffect(() => {
     void refetch();
+  }, [refetch]);
+
+  // M4: Auto-refresh every 30s so session expiry reflects in real-time.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      void refetch();
+    }, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
   }, [refetch]);
 
   return {

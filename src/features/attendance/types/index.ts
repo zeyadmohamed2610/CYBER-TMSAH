@@ -1,7 +1,5 @@
 export type AttendanceRole = "owner" | "doctor" | "student";
 
-export type AttendanceStatus = "present" | "late" | "absent";
-
 export interface AttendanceApiResponse<T> {
   data: T | null;
   error: string | null;
@@ -14,18 +12,21 @@ export interface AuthUser {
   displayName?: string;
 }
 
+export interface Subject {
+  id: string;
+  name: string;
+  doctor_name: string;
+  createdAt: string;
+}
+
 export interface SessionSummary {
   id: string;
   subjectId: string;
   subjectName: string;
-  doctorId: string;
-  startsAt: string;
-  endsAt: string;
-  room?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-  geofenceRadiusMeters?: number | null;
-  status: "scheduled" | "active" | "ended";
+  rotatingHash: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+  isActive: boolean;
 }
 
 export interface AttendanceRecord {
@@ -34,13 +35,7 @@ export interface AttendanceRecord {
   studentId: string;
   studentName?: string;
   subjectName?: string;
-  status: AttendanceStatus;
-  submittedAt: string;
-  ipAddress?: string | null;
-  deviceHash?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-  recordedByOwner?: boolean;
+  submittedAt: string; // maps to created_at
 }
 
 export interface DashboardMetrics {
@@ -54,9 +49,7 @@ export interface DashboardMetrics {
 export interface AttendanceTrendPoint {
   date: string;
   label: string;
-  present: number;
-  late: number;
-  absent: number;
+  count: number;
 }
 
 export interface SubjectAttendanceMetric {
@@ -65,23 +58,9 @@ export interface SubjectAttendanceMetric {
   attendanceRate: number;
 }
 
-export interface AttendanceSubmissionInput {
-  sessionId: string;
-  rotatingHash: string;
-  latitude: number;
-  longitude: number;
-  deviceHash: string;
-  deviceClass: "mobile" | "tablet" | "desktop" | "unknown";
-  requestNonce: string;
-  timeWindow: number;
-  userAgent: string;
-  deviceMemory: number | null;
-}
-
 export interface AttendanceSubmissionResult {
   attendanceId: string;
   recordedAt: string;
-  status: Exclude<AttendanceStatus, "absent">;
 }
 
 export interface ExportRequest {
@@ -98,8 +77,15 @@ export interface ExportResult {
 
 export interface SystemLogEntry {
   id: string;
-  actorUserId?: string | null;
+  actorId: string | null;
+  actorName?: string | null;
   action: string;
-  severity: "info" | "warning" | "critical";
   createdAt: string;
+}
+
+export interface CreateUserRpcInput {
+  p_auth_id: string;
+  p_full_name: string;
+  p_role: "doctor" | "student";
+  p_subject_id: string | null;
 }

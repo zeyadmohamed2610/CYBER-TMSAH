@@ -3,15 +3,16 @@ import { supabase } from "@/lib/supabaseClient";
 
 export interface CreateUserInput {
   name: string;
-  email: string;
+  national_id?: string;   // students only (14-digit)
+  email?: string;         // doctors/owner
   password: string;
   role: "doctor" | "student";
+  subjectId?: string | null;
 }
 
 export interface CreatedUser {
   id: string;
   name: string;
-  email: string;
   role: AttendanceRole;
 }
 
@@ -21,51 +22,31 @@ type CreateUserResponse = {
   error?: string;
 };
 
-const ok = <T>(data: T): AttendanceApiResponse<T> => ({
-  data,
-  error: null,
-});
-
-const fail = <T>(error: string): AttendanceApiResponse<T> => ({
-  data: null,
-  error,
-});
+const ok  = <T>(data: T): AttendanceApiResponse<T> => ({ data, error: null });
+const fail = <T>(error: string): AttendanceApiResponse<T> => ({ data: null, error });
 
 export const userService = {
   async createUser(input: CreateUserInput): Promise<AttendanceApiResponse<CreatedUser>> {
-    const operation = "userService.createUser";
-
     try {
       const { data, error } = await supabase.functions.invoke<CreateUserResponse>("createUser", {
         body: {
-          name: input.name.trim(),
-          email: input.email.trim().toLowerCase(),
-          password: input.password,
-          role: input.role,
+          name:        input.name.trim(),
+          national_id: input.national_id?.trim(),
+          email:       input.email?.trim().toLowerCase(),
+          password:    input.password,
+          role:        input.role,
+          subject_id:  input.subjectId ?? null,
         },
       });
 
-      if (error) {
-        const message = error.message || error.toString();
-        return fail<CreatedUser>(message);
-      }
-
-      if (!data) {
-        return fail<CreatedUser>("No response from server.");
-      }
-
-      if (data.error) {
-        return fail<CreatedUser>(data.error);
-      }
-
-      if (!data.success || !data.user) {
-        return fail<CreatedUser>("Failed to create user.");
-      }
+      if (error)      return fail<CreatedUser>(error.message || error.toString());
+      if (!data)      return fail<CreatedUser>("No response from server.");
+      if (data.error) return fail<CreatedUser>(data.error);
+      if (!data.success || !data.user) return fail<CreatedUser>("Failed to create user.");
 
       return ok<CreatedUser>(data.user);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return fail<CreatedUser>(`${operation} failed: ${message}`);
+      return fail<CreatedUser>(error instanceof Error ? error.message : String(error));
     }
   },
 };

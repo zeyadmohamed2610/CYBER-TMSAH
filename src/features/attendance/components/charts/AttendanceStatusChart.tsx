@@ -10,18 +10,23 @@ interface AttendanceStatusChartProps {
 
 export const AttendanceStatusChart = ({ records }: AttendanceStatusChartProps) => {
   const chartData = useMemo(() => {
-    const present = records.filter((row) => row.status === "present").length;
-    const late = records.filter((row) => row.status === "late").length;
-    const absent = records.filter((row) => row.status === "absent").length;
+    // Real schema has no status field — just show total submissions per subject
+    const bySubject: Record<string, number> = {};
+    for (const row of records) {
+      const key = row.subjectName ?? "Unknown";
+      bySubject[key] = (bySubject[key] ?? 0) + 1;
+    }
+    const labels = Object.keys(bySubject);
+    const values = Object.values(bySubject);
 
     return {
-      labels: ["Present", "Late", "Absent"],
+      labels,
       datasets: [
         {
-          label: "Submissions",
-          data: [present, late, absent],
-          backgroundColor: ["rgba(45, 212, 191, 0.75)", "rgba(245, 158, 11, 0.75)", "rgba(239, 68, 68, 0.75)"],
-          borderColor: ["#2DD4BF", "#F59E0B", "#EF4444"],
+          label: "مسجلون",
+          data: values,
+          backgroundColor: "rgba(45, 212, 191, 0.75)",
+          borderColor: "#2DD4BF",
           borderWidth: 1,
           borderRadius: 8,
         },
@@ -34,7 +39,7 @@ export const AttendanceStatusChart = ({ records }: AttendanceStatusChartProps) =
   return (
     <Card className="bg-card/80">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg">Status Breakdown</CardTitle>
+        <CardTitle className="text-lg">الحضور حسب المادة</CardTitle>
       </CardHeader>
       <CardContent className="h-80">
         {hasData ? (
@@ -43,27 +48,16 @@ export const AttendanceStatusChart = ({ records }: AttendanceStatusChartProps) =
             options={{
               responsive: true,
               maintainAspectRatio: false,
-              plugins: {
-                legend: {
-                  display: false,
-                },
-              },
+              plugins: { legend: { display: false } },
               scales: {
-                x: {
-                  ticks: { color: "#94A3B8" },
-                  grid: { color: "rgba(148, 163, 184, 0.1)" },
-                },
-                y: {
-                  ticks: { color: "#94A3B8" },
-                  grid: { color: "rgba(148, 163, 184, 0.1)" },
-                  beginAtZero: true,
-                },
+                x: { ticks: { color: "#94A3B8" }, grid: { color: "rgba(148, 163, 184, 0.1)" } },
+                y: { ticks: { color: "#94A3B8" }, grid: { color: "rgba(148, 163, 184, 0.1)" }, beginAtZero: true },
               },
             }}
           />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            Status analytics will appear after backend integration.
+            ستظهر بيانات الحضور هنا بعد التسجيل.
           </div>
         )}
       </CardContent>

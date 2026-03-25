@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,137 +7,124 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { userService, type CreateUserInput, type CreatedUser } from "../services/userService";
+import { supabase } from "@/lib/supabaseClient";
 
-interface UserCreationFormProps {
-  onUserCreated?: (user: CreatedUser) => void;
-}
+interface Subject { id: string; name: string; doctor_name: string; }
+interface UserCreationFormProps { onUserCreated?: (user: CreatedUser) => void; }
 
 export const UserCreationForm = ({ onUserCreated }: UserCreationFormProps) => {
   const { toast } = useToast();
-
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"doctor" | "student">("student");
+  const [name, setName]             = useState("");
+  const [identifier, setIdentifier] = useState(""); // national_id or email depending on role
+  const [password, setPassword]     = useState("");
+  const [role, setRole]             = useState<"doctor" | "student">("student");
+  const [subjectId, setSubjectId]   = useState<string>("");
+  const [subjects, setSubjects]     = useState<Subject[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  useEffect(() => {
+    supabase.from("subjects").select("id, name, doctor_name").order("name")
+      .then(({ data }) => {
+        if (data) {
+          setSubjects(data as Subject[]);
+          if (data.length > 0) setSubjectId(data[0].id);
+        }
+      });
+  }, []);
+
+  const isStudent = role === "student";
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setIsSubmitting(true);
 
     const input: CreateUserInput = {
-      name: name.trim(),
-      email: email.trim(),
+      name:        name.trim(),
+      national_id: isStudent ? identifier.trim() : undefined,
+      email:       isStudent ? undefined : identifier.trim(),
       password,
       role,
+      subjectId:   subjectId || null,
     };
 
     const result = await userService.createUser(input);
-
     if (result.error) {
-      toast({
-        variant: "destructive",
-        title: "فشل إنشاء المستخدم",
-        description: result.error,
-      });
-      setIsSubmitting(false);
-      return;
+      toast({ variant: "destructive", title: "فشل إنشاء المستخدم", description: result.error });
+    } else {
+      toast({ title: "تم إنشاء المستخدم", description: `تم إنشاء حساب ${isStudent ? "الطالب" : "الدكتور"} ${name}.` });
+      setName(""); setIdentifier(""); setPassword("");
+      if (onUserCreated && result.data) onUserCreated(result.data);
     }
-
-    toast({
-      title: "تم إنشاء المستخدم بنجاح",
-      description: `تم إنشاء حساب ${role === "doctor" ? "الدكتور" : "الطالب"} ${name} بنجاح.`,
-    });
-
-    setName("");
-    setEmail("");
-    setPassword("");
-    setRole("student");
     setIsSubmitting(false);
-
-    if (onUserCreated && result.data) {
-      onUserCreated(result.data);
-    }
   };
 
   return (
-    <Card className="border-primary/30 bg-card/90">
+    <Card className="border-primary/30 bg-card/90" dir="rtl">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <UserPlus className="h-5 w-5" />
-          إنشاء مستخدم جديد
-        </CardTitle>
+        <CardTitle className="flex items-center gap-2"><UserPlus className="h-5 w-5" />إنشاء مستخدم جديد</CardTitle>
         <CardDescription>
-          إنشاء حساب جديد للدكاترة أو الطلاب في نظام الحضور.
+          {isStudent ? "يسجل الطالب دخوله بالرقم القومي وكلمة المرور." : "يسجل الدكتور دخوله بالبريد الإلكتروني."}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <Label htmlFor="user-name">الاسم</Label>
-            <Input
-              id="user-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="أدخل الاسم الكامل"
-              required
-              disabled={isSubmitting}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="user-email">البريد الإلكتروني</Label>
-            <Input
-              id="user-email"
-              type="email"
-              dir="ltr"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="example@university.edu"
-              required
-              disabled={isSubmitting}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="user-password">كلمة المرور</Label>
-            <Input
-              id="user-password"
-              type="password"
-              dir="ltr"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="6 أحرف على الأقل"
-              required
-              minLength={6}
-              disabled={isSubmitting}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="user-role">الدور</Label>
-            <Select
-              value={role}
-              onValueChange={(value) => setRole(value as "doctor" | "student")}
-              disabled={isSubmitting}
-            >
-              <SelectTrigger id="user-role">
-                <SelectValue placeholder="اختر الدور" />
-              </SelectTrigger>
+            <Label>الدور</Label>
+            <Select value={role} onValueChange={(v) => { setRole(v as "doctor" | "student"); setIdentifier(""); }} disabled={isSubmitting}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="doctor">دكتور</SelectItem>
                 <SelectItem value="student">طالب</SelectItem>
+                <SelectItem value="doctor">دكتور</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <Button className="w-full" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+          <div className="space-y-2">
+            <Label>الاسم الرباعي</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="الاسم الكامل" required disabled={isSubmitting} />
+          </div>
+
+          <div className="space-y-2">
+            <Label>{isStudent ? "الرقم القومي (14 رقم)" : "البريد الإلكتروني"}</Label>
+            <Input
+              type={isStudent ? "text" : "email"}
+              inputMode={isStudent ? "numeric" : undefined}
+              dir="ltr"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              placeholder={isStudent ? "رقم قومي 14 رقم" : "example@university.edu"}
+              pattern={isStudent ? "\\d{14}" : undefined}
+              title={isStudent ? "يجب أن يكون 14 رقماً" : undefined}
+              required disabled={isSubmitting}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>كلمة المرور</Label>
+            <Input type="password" dir="ltr" value={password} onChange={(e) => setPassword(e.target.value)}
+              placeholder="8 أحرف على الأقل" required minLength={8} disabled={isSubmitting} />
+          </div>
+
+          <div className="space-y-2">
+            <Label>المادة الدراسية</Label>
+            {subjects.length > 0 ? (
+              <Select value={subjectId} onValueChange={setSubjectId} disabled={isSubmitting}>
+                <SelectTrigger><SelectValue placeholder="اختر المادة" /></SelectTrigger>
+                <SelectContent>
+                  {subjects.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}{s.doctor_name ? ` — ${s.doctor_name}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             ) : (
-              <UserPlus className="h-4 w-4" />
+              <p className="text-xs text-muted-foreground">لا توجد مواد. أنشئ مادة أولاً.</p>
             )}
+          </div>
+
+          <Button className="w-full" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
             <span>{isSubmitting ? "جارٍ الإنشاء..." : "إنشاء المستخدم"}</span>
           </Button>
         </form>

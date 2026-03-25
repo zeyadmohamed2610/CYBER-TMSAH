@@ -10,17 +10,8 @@ export const getSecondsUntilNextWindow = (date: Date = new Date()): number => {
   return ROTATING_WINDOW_SECONDS - elapsedInWindow;
 };
 
-export const generateVisualRotatingHash = (sessionId: string, date: Date = new Date()): string => {
-  const payload = `${sessionId}:${getTimeWindow(date)}`;
-  let hash = 0;
-
-  for (let index = 0; index < payload.length; index += 1) {
-    hash = (hash << 5) - hash + payload.charCodeAt(index);
-    hash |= 0;
-  }
-
-  return Math.abs(hash).toString(36).toUpperCase().slice(0, 8).padStart(8, "0");
-};
+// M6: generateVisualRotatingHash removed — it was dead code disconnected from the
+// actual DB hash (gen_random_bytes(32)). Nothing in the codebase called it.
 
 export const formatDateTime = (value: string): string => {
   const date = new Date(value);

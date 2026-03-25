@@ -14,26 +14,10 @@ export const AttendanceTrendChart = ({ points }: AttendanceTrendChartProps) => {
       labels: points.map((point) => point.label),
       datasets: [
         {
-          label: "Present",
-          data: points.map((point) => point.present),
+          label: "تسجيلات الحضور",
+          data: points.map((point) => point.count),
           borderColor: "#2DD4BF",
           backgroundColor: "rgba(45, 212, 191, 0.2)",
-          tension: 0.3,
-          fill: true,
-        },
-        {
-          label: "Late",
-          data: points.map((point) => point.late),
-          borderColor: "#F59E0B",
-          backgroundColor: "rgba(245, 158, 11, 0.15)",
-          tension: 0.3,
-          fill: true,
-        },
-        {
-          label: "Absent",
-          data: points.map((point) => point.absent),
-          borderColor: "#EF4444",
-          backgroundColor: "rgba(239, 68, 68, 0.15)",
           tension: 0.3,
           fill: true,
         },
@@ -46,7 +30,7 @@ export const AttendanceTrendChart = ({ points }: AttendanceTrendChartProps) => {
   return (
     <Card className="bg-card/80">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg">Attendance Trend</CardTitle>
+        <CardTitle className="text-lg">اتجاه الحضور</CardTitle>
       </CardHeader>
       <CardContent className="h-80">
         {hasData ? (
@@ -56,28 +40,17 @@ export const AttendanceTrendChart = ({ points }: AttendanceTrendChartProps) => {
               responsive: true,
               maintainAspectRatio: false,
               plugins: {
-                legend: {
-                  labels: {
-                    color: "#CBD5E1",
-                  },
-                },
+                legend: { labels: { color: "#CBD5E1" } },
               },
               scales: {
-                x: {
-                  ticks: { color: "#94A3B8" },
-                  grid: { color: "rgba(148, 163, 184, 0.15)" },
-                },
-                y: {
-                  ticks: { color: "#94A3B8" },
-                  grid: { color: "rgba(148, 163, 184, 0.15)" },
-                  beginAtZero: true,
-                },
+                x: { ticks: { color: "#94A3B8" }, grid: { color: "rgba(148, 163, 184, 0.15)" } },
+                y: { ticks: { color: "#94A3B8" }, grid: { color: "rgba(148, 163, 184, 0.15)" }, beginAtZero: true },
               },
             }}
           />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            Trend data will appear after backend integration.
+            ستظهر بيانات الاتجاه هنا بعد التسجيل.
           </div>
         )}
       </CardContent>

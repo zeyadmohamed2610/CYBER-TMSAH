@@ -1,312 +1,140 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Send } from "lucide-react";
+import { useRef, useState } from "react";
+import jsQR from "jsqr";
+import { Camera, Loader2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { attendanceService } from "../services/attendanceService";
 import type { SessionSummary } from "../types";
-import { getTimeWindow } from "../utils/rotatingSession";
 
-interface AttendanceSubmissionFormProps {
+interface Props {
   sessions: SessionSummary[];
+  onSubmitSuccess?: () => void;
 }
 
-type LocationStatus = "idle" | "requesting" | "granted" | "denied" | "unsupported";
-
-interface Coordinates {
-  latitude: number;
-  longitude: number;
-}
-
-const classifyDeviceClass = (userAgent: string): "mobile" | "tablet" | "desktop" | "unknown" => {
-  const normalizedAgent = userAgent.toLowerCase();
-
-  if (!normalizedAgent.trim()) {
-    return "unknown";
-  }
-
-  if (
-    normalizedAgent.includes("ipad") ||
-    normalizedAgent.includes("tablet") ||
-    normalizedAgent.includes("playbook") ||
-    (normalizedAgent.includes("android") && !normalizedAgent.includes("mobile"))
-  ) {
-    return "tablet";
-  }
-
-  if (
-    normalizedAgent.includes("mobile") ||
-    normalizedAgent.includes("iphone") ||
-    normalizedAgent.includes("ipod") ||
-    normalizedAgent.includes("android")
-  ) {
-    return "mobile";
-  }
-
-  return "desktop";
-};
-
-const buildDeviceHash = (): string => {
-  if (typeof window === "undefined") {
-    return "server-render";
-  }
-
-  const fingerprint = `${window.navigator.userAgent}|${window.navigator.language}|${window.navigator.platform}`;
-  return btoa(fingerprint).slice(0, 32);
-};
-
-const safeUuid = (): string => {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return `fallback-${Date.now()}`;
-};
-
-const getDeviceMemory = (): number | null => {
-  if (typeof navigator === "undefined") {
-    return null;
-  }
-
-  const typedNavigator = navigator as Navigator & { deviceMemory?: number };
-  return typeof typedNavigator.deviceMemory === "number" && Number.isFinite(typedNavigator.deviceMemory)
-    ? typedNavigator.deviceMemory
-    : null;
-};
-
-type GeolocationFailure = {
-  status: Exclude<LocationStatus, "idle" | "requesting" | "granted">;
-  message: string;
-};
-
-export const AttendanceSubmissionForm = ({ sessions }: AttendanceSubmissionFormProps) => {
-  const { toast } = useToast();
+export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) => {
+  const { toast }       = useToast();
+  const [hash, setHash] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [sessionId, setSessionId] = useState("");
-  const [rotatingHash, setRotatingHash] = useState("");
-  const [deviceHash] = useState(buildDeviceHash());
-  const [locationStatus, setLocationStatus] = useState<LocationStatus>("idle");
-  const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
-  const [locationError, setLocationError] = useState<string | null>(null);
-  const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
-  const deviceMemory = useMemo(() => getDeviceMemory(), []);
-  const deviceClass = useMemo(() => classifyDeviceClass(userAgent), [userAgent]);
+  const [scanning, setScanning]         = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const activeSessionOptions = useMemo(
-    () => sessions.filter((session) => session.status === "active" || session.status === "scheduled"),
-    [sessions],
-  );
-  const hasSelectableSessions = activeSessionOptions.length > 0;
+  const activeSessions = sessions.filter((s) => s.isActive);
 
-  useEffect(() => {
-    if (!sessionId && hasSelectableSessions) {
-      setSessionId(activeSessionOptions[0].id);
-      return;
-    }
-
-    if (!hasSelectableSessions && sessionId) {
-      setSessionId("");
-    }
-  }, [activeSessionOptions, hasSelectableSessions, sessionId]);
-
-  const requestLocation = useCallback(async (): Promise<Coordinates> => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      throw {
-        status: "unsupported",
-        message: "Geolocation is not supported on this device.",
-      } as GeolocationFailure;
-    }
-
-    return new Promise<Coordinates>((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          resolve({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          });
-        },
-        (error) => {
-          if (error.code === error.PERMISSION_DENIED) {
-            reject({
-              status: "denied",
-              message: "Location permission is required before submitting attendance.",
-            } as GeolocationFailure);
-            return;
-          }
-
-          if (error.code === error.TIMEOUT) {
-            reject({
-              status: "denied",
-              message: "Location request timed out. Please retry.",
-            } as GeolocationFailure);
-            return;
-          }
-
-          reject({
-            status: "denied",
-            message: "Failed to retrieve your current location.",
-          } as GeolocationFailure);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 15_000,
-          maximumAge: 15_000,
-        },
-      );
-    });
-  }, []);
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!sessionId || !rotatingHash) {
-      toast({
-        variant: "destructive",
-        title: "Submission blocked",
-        description: "Session ID and rotating hash are required.",
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    setLocationStatus("requesting");
-    setLocationError(null);
-
-    let liveCoordinates: Coordinates;
+  /** Decode QR from a photo taken by the camera */
+  const handleQrCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setScanning(true);
 
     try {
-      liveCoordinates = await requestLocation();
-      setCoordinates(liveCoordinates);
-      setLocationStatus("granted");
-    } catch (error) {
-      setIsSubmitting(false);
+      const img  = new Image();
+      const url  = URL.createObjectURL(file);
+      img.src    = url;
+      await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = rej; });
 
-      const geolocationError = error as Partial<GeolocationFailure>;
-      const nextStatus = geolocationError.status ?? "denied";
-      const message =
-        typeof geolocationError.message === "string" && geolocationError.message.trim()
-          ? geolocationError.message
-          : "Location permission is required before submitting attendance.";
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width; canvas.height = img.height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
 
-      setCoordinates(null);
-      setLocationStatus(nextStatus);
-      setLocationError(message);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const qr        = jsQR(imageData.data, imageData.width, imageData.height);
 
-      toast({
-        variant: "destructive",
-        title: "Location required",
-        description: message,
-      });
+      if (qr?.data) {
+        setHash(qr.data);
+        toast({ title: "تم مسح الـ QR", description: "الكود جاهز — اضغط تسجيل الحضور." });
+      } else {
+        toast({ variant: "destructive", title: "لم يُكتشف QR", description: "تأكد من وضوح الصورة وأن QR ظاهر كاملاً." });
+      }
+    } catch {
+      toast({ variant: "destructive", title: "خطأ", description: "فشل قراءة الصورة." });
+    } finally {
+      setScanning(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const trimmedHash = hash.trim();
+    if (!trimmedHash) {
+      toast({ variant: "destructive", title: "مطلوب", description: "أدخل الكود أو امسح الـ QR." });
       return;
     }
-
-    const result = await attendanceService.submitAttendance({
-      sessionId,
-      rotatingHash,
-      latitude: liveCoordinates.latitude,
-      longitude: liveCoordinates.longitude,
-      deviceHash,
-      deviceClass,
-      requestNonce: safeUuid(),
-      timeWindow: getTimeWindow(),
-      userAgent: userAgent || "unknown-user-agent",
-      deviceMemory,
-    });
-
+    setIsSubmitting(true);
+    const result = await attendanceService.submitAttendance(trimmedHash);
     if (result.error) {
-      toast({
-        variant: "destructive",
-        title: "Attendance submission failed",
-        description: result.error,
-      });
+      toast({ variant: "destructive", title: "فشل تسجيل الحضور", description: result.error });
     } else {
-      toast({
-        title: "Attendance submitted",
-        description: "Attendance entry has been queued successfully.",
-      });
-      setRotatingHash("");
+      toast({ title: "تم تسجيل الحضور ✓", description: "تم تسجيل حضورك بنجاح." });
+      setHash("");
+      onSubmitSuccess?.();
     }
-
     setIsSubmitting(false);
   };
 
-  const canSubmit = hasSelectableSessions;
-
   return (
-    <Card className="bg-card/80">
+    <Card className="bg-card/80" dir="rtl">
       <CardHeader>
-        <CardTitle className="text-lg">Submit Attendance</CardTitle>
-        <CardDescription>Backend validation handles geofence, nonce, and device policy checks.</CardDescription>
+        <CardTitle className="text-lg">تسجيل الحضور</CardTitle>
+        <CardDescription>امسح الـ QR الخاص بالمحاضر أو اكتب الكود يدوياً.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="session-id">Session</Label>
-            <Select value={sessionId} onValueChange={setSessionId} disabled={!hasSelectableSessions}>
-              <SelectTrigger id="session-id">
-                <SelectValue placeholder="Select active session" />
-              </SelectTrigger>
-              <SelectContent>
-                {activeSessionOptions.map((session) => (
-                  <SelectItem key={session.id} value={session.id}>
-                    {session.subjectName} ({session.status})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {!hasSelectableSessions ? (
-              <p className="text-xs text-muted-foreground">
-                No scheduled or active sessions are currently available for attendance submission.
-              </p>
-            ) : null}
+          {activeSessions.length > 0 ? (
+            <div className="rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 text-sm">
+              <p className="font-medium">الجلسات النشطة الآن:</p>
+              <ul className="mt-1 list-inside list-disc text-xs text-muted-foreground">
+                {activeSessions.map((s) => <li key={s.id}>{s.subjectName}</li>)}
+              </ul>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">لا توجد جلسات نشطة حالياً.</p>
+          )}
+
+          {/* QR Camera button */}
+          <div>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleQrCapture}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full gap-2"
+              onClick={() => fileRef.current?.click()}
+              disabled={scanning || isSubmitting}
+            >
+              {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+              {scanning ? "جاري القراءة..." : "مسح QR بالكاميرا"}
+            </Button>
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="rotating-hash">Rotating Hash</Label>
+            <Label htmlFor="attendance-hash">أو أدخل الكود يدوياً</Label>
             <Input
-              id="rotating-hash"
-              value={rotatingHash}
-              onChange={(event) => setRotatingHash(event.target.value)}
-              placeholder="Enter current rotating hash"
-              required
+              id="attendance-hash"
+              value={hash}
+              onChange={(e) => setHash(e.target.value)}
+              placeholder="الكود المكون من 64 حرفاً"
+              dir="ltr"
+              className="font-mono text-xs"
+              disabled={isSubmitting}
+              autoComplete="off"
             />
           </div>
 
-          <div className="rounded-lg border border-border/70 bg-muted/20 p-4">
-            <div className="space-y-1">
-              <p className="text-sm font-medium">Live Location Capture</p>
-              <p className="text-xs text-muted-foreground">
-                Geolocation is requested at submit time. Submission is refused if permission is denied.
-              </p>
-              {locationStatus === "granted" && coordinates ? (
-                <p className="text-xs text-muted-foreground">
-                  Last capture: {coordinates.latitude.toFixed(6)} | {coordinates.longitude.toFixed(6)}
-                </p>
-              ) : null}
-              {locationError ? <p className="text-xs text-destructive">{locationError}</p> : null}
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-border/70 bg-muted/20 p-4 text-xs text-muted-foreground">
-            Device metadata is sent automatically for backend enforcement.
-            <div>User-Agent: {userAgent || "unknown-user-agent"}</div>
-            <div>Device memory: {deviceMemory ?? "not-available"} GB</div>
-            <div>Device class: {deviceClass}</div>
-            <div>Device hash: {deviceHash}</div>
-          </div>
-
-          <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || !canSubmit}>
+          <Button type="submit" className="w-full" disabled={isSubmitting || !hash.trim()}>
             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            Submit
+            تسجيل الحضور
           </Button>
         </form>
       </CardContent>

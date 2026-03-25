@@ -1,170 +1,135 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.0";
+// supabase/functions/createUser/index.ts
+// Edge Function — creates an auth user + public.users record.
+// Called exclusively by the Owner dashboard.
+// Requires: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY env vars.
 
-type CreateUserPayload = {
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+interface RequestBody {
   name: string;
   email: string;
   password: string;
   role: "doctor" | "student";
+  subject_id: string | null;
+}
+
+// Restrict CORS to the known frontend origin (set ALLOWED_ORIGIN env var in production).
+// Falls back to localhost for local dev only.
+const ALLOWED_ORIGIN =
+  Deno.env.get("ALLOWED_ORIGIN") ?? "http://localhost:8080";
+
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Vary": "Origin",
 };
 
-// Helper to add CORS headers for Edge Functions
-const createJsonResponse = (
-  status: number,
-  payload: Record<string, unknown>,
-  origin: string | null
-) => {
-  const headers = new Headers({
-    "Content-Type": "application/json",
-    "Cache-Control": "no-store",
-  });
-  if (origin) {
-    headers.set("Access-Control-Allow-Origin", origin);
-    headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
-    headers.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
-  }
-  return new Response(JSON.stringify(payload), { status, headers });
-};
-
-const isValidPayload = (payload: unknown): payload is CreateUserPayload => {
-  if (typeof payload !== "object" || payload === null) {
-    return false;
-  }
-  const p = payload as Record<string, unknown>;
-  return (
-    typeof p.name === "string" &&
-    p.name.trim().length > 0 &&
-    typeof p.email === "string" &&
-    p.email.trim().length > 0 &&
-    typeof p.password === "string" &&
-    p.password.length >= 6 &&
-    (p.role === "doctor" || p.role === "student")
-  );
-};
-
-serve(async (request) => {
-  const origin = request.headers.get("origin") ?? null;
-  if (request.method === "OPTIONS") {
-    // Preflight CORS request
-    const respHeaders = new Headers({
-      "Access-Control-Allow-Origin": origin ?? "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Authorization, Content-Type",
-    });
-    return new Response(null, { status: 204, headers: respHeaders });
-  }
-  if (request.method !== "POST") {
-    return createJsonResponse(405, { error: "Method not allowed. Use POST." }, origin);
-  }
-
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    return createJsonResponse(500, {
-      error: "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required.",
-    });
-  }
-
-  const authorization = request.headers.get("authorization");
-  if (!authorization?.startsWith("Bearer ")) {
-    return createJsonResponse(401, { error: "Missing bearer token." }, origin);
-  }
-
-  const jwt = authorization.replace("Bearer ", "").trim();
-
-  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
   });
 
-  const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(jwt);
-  if (authError || !authData.user) {
-    return createJsonResponse(401, { error: "Invalid JWT token." }, origin);
+Deno.serve(async (req: Request) => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: CORS_HEADERS });
   }
 
-  const callerId = authData.user.id;
-
-  const { data: callerData, error: callerError } = await supabaseAdmin
-    .from("users")
-    .select("role")
-    .eq("id", callerId)
-    .maybeSingle();
-
-  if (callerError) {
-    return createJsonResponse(500, { error: "Failed to verify caller role.", details: callerError.message });
-  }
-
-  if (!callerData || callerData.role !== "owner") {
-    return createJsonResponse(403, { error: "Only owners can create new users." }, origin);
-  }
-
-  let body: CreateUserPayload;
   try {
-    body = await request.json();
-  } catch {
-    return createJsonResponse(400, { error: "Invalid JSON body." }, origin);
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return json({ error: "Missing authorization header" }, 401);
+    }
+
+    // 1. Build a caller-scoped client (uses the owner's JWT)
+    const callerClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } },
+    );
+
+    // 2. Verify caller identity and role
+    const { data: callerAuth, error: callerAuthErr } = await callerClient.auth.getUser();
+    if (callerAuthErr || !callerAuth.user) {
+      return json({ error: "Invalid or expired token" }, 401);
+    }
+
+    const { data: callerProfile, error: profileErr } = await callerClient
+      .from("users")
+      .select("role")
+      .eq("auth_id", callerAuth.user.id)
+      .maybeSingle();
+
+    if (profileErr || !callerProfile) {
+      return json({ error: "Cannot resolve caller profile" }, 403);
+    }
+
+    if (callerProfile.role !== "owner") {
+      return json({ error: "Only owners may create users" }, 403);
+    }
+
+    // 3. Parse and validate body
+    const body: RequestBody = await req.json();
+    const { name, email, password, role, subject_id } = body;
+
+    if (!name?.trim() || !email?.trim() || !password || !role) {
+      return json({ error: "Missing required fields: name, email, password, role" }, 400);
+    }
+    if (password.length < 6) {
+      return json({ error: "Password must be at least 6 characters" }, 400);
+    }
+    const validRoles = ["doctor", "student"];
+    if (!validRoles.includes(role)) {
+      return json({ error: "Role must be doctor or student" }, 400);
+    }
+    if (!subject_id) {
+      return json({ error: "subject_id is required for doctors and students" }, 400);
+    }
+
+    // 4. Create auth.users record via service_role (only this key can do it)
+    const serviceClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    const { data: authData, error: authErr } = await serviceClient.auth.admin.createUser({
+      email: email.trim().toLowerCase(),
+      password,
+      email_confirm: true,
+    });
+
+    if (authErr || !authData.user) {
+      return json({ error: authErr?.message ?? "Failed to create auth user" }, 400);
+    }
+
+    const authUserId = authData.user.id;
+
+    // 5. Create the public.users row via the create_user RPC (enforces owner-only internally)
+    const { data: newUser, error: rpcErr } = await callerClient.rpc("create_user", {
+      p_auth_id: authUserId,
+      p_full_name: name.trim(),
+      p_role: role,
+      p_subject_id: subject_id ?? null,
+    });
+
+    if (rpcErr) {
+      // Rollback: remove the auth user we just created to avoid orphaned accounts
+      await serviceClient.auth.admin.deleteUser(authUserId);
+      return json({ error: rpcErr.message }, 400);
+    }
+
+    return json({
+      success: true,
+      user: {
+        id: (newUser as { id: string }).id,
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        role,
+      },
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Internal server error";
+    return json({ error: message }, 500);
   }
-
-  if (!isValidPayload(body)) {
-    return createJsonResponse(400, { error: "Invalid payload. Required: name (string), email (string), password (min 6 chars), role (doctor|student)." }, origin);
-  }
-
-  const { data: existingUser } = await supabaseAdmin
-    .from("users")
-    .select("id")
-    .eq("email", body.email.trim().toLowerCase())
-    .maybeSingle();
-
-  if (existingUser) {
-    return createJsonResponse(409, { error: "A user with this email already exists." }, origin);
-  }
-
-  const { data: newAuthUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-    email: body.email.trim().toLowerCase(),
-    password: body.password,
-    email_confirm: true,
-  });
-
-  if (createError) {
-    return createJsonResponse(500, { error: "Failed to create auth user.", details: createError.message }, origin);
-  }
-
-  if (!newAuthUser.user) {
-    return createJsonResponse(500, { error: "Failed to create auth user. No user returned." }, origin);
-  }
-
-  const newUserId = newAuthUser.user.id;
-
-  const { error: insertError } = await supabaseAdmin.from("users").insert({
-    id: newUserId,
-    name: body.name.trim(),
-    email: body.email.trim().toLowerCase(),
-    role: body.role,
-  });
-
-  if (insertError) {
-    await supabaseAdmin.auth.admin.deleteUser(newUserId);
-    return createJsonResponse(500, { error: "Failed to create user record.", details: insertError.message }, origin);
-  }
-
-  await supabaseAdmin.from("system_logs").insert({
-    actor_user_id: callerId,
-    action: "user_created_by_owner",
-    severity: "info",
-    metadata: {
-      new_user_id: newUserId,
-      new_user_email: body.email.trim().toLowerCase(),
-      new_user_role: body.role,
-    },
-  });
-
-  return createJsonResponse(201, {
-    success: true,
-    user: {
-      id: newUserId,
-      name: body.name.trim(),
-      email: body.email.trim().toLowerCase(),
-      role: body.role,
-    },
-  }, origin);
 });

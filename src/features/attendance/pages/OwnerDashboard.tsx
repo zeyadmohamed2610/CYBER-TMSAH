@@ -1,199 +1,132 @@
-import { useState } from "react";
-import { Activity, BookOpenCheck, Clock3, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Activity, BookOpenCheck, Clock3, Monitor, Smartphone, Users } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
+import { CreateSessionForm } from "../components/CreateSessionForm";
 import { DataTable, type DataTableColumn } from "../components/DataTable";
 import { ExportButtons } from "../components/ExportButtons";
+import { LiveSessionPanel } from "../components/LiveSessionPanel";
 import { OwnerLiveSessionMap } from "../components/OwnerLiveSessionMap";
-import { attendanceService } from "../services/attendanceService";
 import { StatCard } from "../components/StatCard";
-import { AttendanceStatusChart } from "../components/charts/AttendanceStatusChart";
-import { AttendanceSubjectChart } from "../components/charts/AttendanceSubjectChart";
-import { AttendanceTrendChart } from "../components/charts/AttendanceTrendChart";
+import { StudentDevicesPanel } from "../components/StudentDevicesPanel";
+import { SubjectCreationForm } from "../components/SubjectCreationForm";
+import { SystemLogsTable } from "../components/SystemLogsTable";
 import { UserCreationForm } from "../components/UserCreationForm";
+import { AttendanceStatusChart } from "../components/charts/AttendanceStatusChart";
+import { AttendanceTrendChart } from "../components/charts/AttendanceTrendChart";
 import { useAttendanceDashboardData } from "../hooks/useAttendanceDashboardData";
+import { useSessionManager } from "../hooks/useSessionManager";
+import { useAttendanceAuth } from "../context/AttendanceAuthContext";
+import { supabase } from "@/lib/supabaseClient";
 import type { AttendanceRecord } from "../types";
 import { formatDateTime } from "../utils/rotatingSession";
 
-const getStatusVariant = (status: AttendanceRecord["status"]) => {
-  if (status === "present") {
-    return "default";
-  }
-  if (status === "late") {
-    return "secondary";
-  }
-  return "destructive";
-};
+interface Subject { id: string; name: string; doctor_name: string; }
 
 export const OwnerDashboard = () => {
-  const { toast } = useToast();
-  const { loading, error, metrics, sessions, records, trendPoints, subjectMetrics } = useAttendanceDashboardData("owner");
-  const [overrideTargetId, setOverrideTargetId] = useState<string | null>(null);
-  const [overrideCandidate, setOverrideCandidate] = useState<AttendanceRecord | null>(null);
-  const [ownerRecordedMap, setOwnerRecordedMap] = useState<Record<string, true>>({});
+  const { user } = useAttendanceAuth();
+  const { loading, error, metrics, sessions, records, trendPoints } =
+    useAttendanceDashboardData("owner");
 
-  const isRecordedByOwner = (record: AttendanceRecord) => {
-    return Boolean(record.recordedByOwner || ownerRecordedMap[record.id]);
-  };
+  // Session management
+  const { activeSession, creating, error: sessionError, createSession, stopSession, updateDuration, refreshHash } =
+    useSessionManager();
 
-  const handleOwnerOverride = async (attendanceId: string) => {
-    setOverrideTargetId(attendanceId);
+  // Subjects list
+  const [subjects, setSubjects]         = useState<Subject[]>([]);
+  const [subjectsLoading, setSubjectsLoading] = useState(false);
 
-    const result = await attendanceService.overrideAttendance(attendanceId);
-
-    if (result.error) {
-      toast({
-        variant: "destructive",
-        title: "Owner override failed",
-        description: result.error,
+  const loadSubjects = () => {
+    setSubjectsLoading(true);
+    supabase.from("subjects").select("id, name, doctor_name").order("name")
+      .then(({ data }) => {
+        if (data) setSubjects(data as Subject[]);
+        setSubjectsLoading(false);
       });
-      setOverrideTargetId(null);
-      return;
-    }
-
-    setOwnerRecordedMap((current) => ({
-      ...current,
-      [attendanceId]: true,
-    }));
-
-    toast({
-      title: "Owner override completed",
-      description: "The attendance record is now marked as Recorded by Owner.",
-    });
-
-    setOverrideTargetId(null);
-    setOverrideCandidate(null);
   };
+  useEffect(() => { loadSubjects(); }, []);
 
-  const columns: DataTableColumn<AttendanceRecord>[] = [
-    {
-      id: "student",
-      header: "Student",
-      cell: (row) => row.studentName || row.studentId,
-    },
-    {
-      id: "subject",
-      header: "Subject",
-      cell: (row) => row.subjectName || "N/A",
-    },
-    {
-      id: "submitted-at",
-      header: "Submitted At",
-      cell: (row) => formatDateTime(row.submittedAt),
-    },
-    {
-      id: "status",
-      header: "Status",
-      cell: (row) => <Badge variant={getStatusVariant(row.status)}>{row.status.toUpperCase()}</Badge>,
-    },
-    {
-      id: "source",
-      header: "Source",
-      cell: (row) =>
-        isRecordedByOwner(row) ? (
-          <Badge variant="secondary">Recorded by Owner</Badge>
-        ) : (
-          <Badge variant="outline">Standard</Badge>
-        ),
-    },
-    {
-      id: "owner-action",
-      header: "Owner Override",
-      cell: (row) => (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={overrideTargetId === row.id || isRecordedByOwner(row)}
-          onClick={() => setOverrideCandidate(row)}
-        >
-          {isRecordedByOwner(row)
-            ? "تم التسجيل"
-            : overrideTargetId === row.id
-              ? "جارٍ التنفيذ..."
-              : "تسجيل يدوي"}
-        </Button>
-      ),
-    },
+  // Owner login session tracking
+  useEffect(() => {
+    if (user) void supabase.rpc("log_login_session");
+  }, [user]);
+
+  const attendanceCols: DataTableColumn<AttendanceRecord>[] = [
+    { id: "student", header: "الطالب",      cell: (r) => r.studentName || r.studentId },
+    { id: "subject", header: "المادة",       cell: (r) => r.subjectName || "—" },
+    { id: "time",    header: "وقت التسجيل", cell: (r) => formatDateTime(r.submittedAt) },
+    { id: "session", header: "الجلسة",       cell: (r) => <Badge variant="outline">{r.sessionId.slice(0, 8)}…</Badge> },
   ];
 
   return (
-    <div className="space-y-6">
-      {error ? (
-        <Alert className="border-primary/40 bg-primary/5">
-          <AlertTitle>Supabase backend not connected</AlertTitle>
+    <div className="space-y-6" dir="rtl">
+      {error && (
+        <Alert variant="destructive">
+          <AlertTitle>خطأ في قاعدة البيانات</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-      ) : null}
+      )}
 
+      {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          title="Total Sessions"
-          value={metrics.totalSessions}
-          description="Sessions across all subjects"
-          icon={BookOpenCheck}
-        />
-        <StatCard
-          title="Total Students"
-          value={metrics.totalStudents}
-          description="Users with student role"
-          icon={Users}
-        />
-        <StatCard
-          title="Active Sessions"
-          value={metrics.activeSessions}
-          description="Live or ongoing sessions"
-          icon={Clock3}
-        />
-        <StatCard
-          title="Attendance Rate"
-          value={`${metrics.attendanceRate.toFixed(1)}%`}
-          description="Global attendance ratio"
-          icon={Activity}
-        />
+        <StatCard title="إجمالي الجلسات"  value={metrics.totalSessions}  description="جلسات في جميع المواد" icon={BookOpenCheck} />
+        <StatCard title="إجمالي الطلاب"  value={metrics.totalStudents}  description="مستخدمون بدور الطالب" icon={Users} />
+        <StatCard title="الجلسات النشطة" value={metrics.activeSessions} description="لم تنته بعد"          icon={Clock3} />
+        <StatCard title="معدل الحضور"    value={`${metrics.attendanceRate.toFixed(1)}%`} description="النسبة العامة" icon={Activity} />
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className="grid w-full max-w-2xl grid-cols-5">
           <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
-          <TabsTrigger value="users">إدارة المستخدمين</TabsTrigger>
+          <TabsTrigger value="session">إنشاء جلسة</TabsTrigger>
+          <TabsTrigger value="users">المستخدمون</TabsTrigger>
+          <TabsTrigger value="subjects">المواد</TabsTrigger>
+          <TabsTrigger value="devices">الأجهزة</TabsTrigger>
         </TabsList>
 
+        {/* ── Overview ── */}
         <TabsContent value="overview" className="space-y-6">
           <div className="grid gap-4 xl:grid-cols-2">
             <AttendanceTrendChart points={trendPoints} />
             <AttendanceStatusChart records={records} />
           </div>
-
           <OwnerLiveSessionMap sessions={sessions} records={records} />
-
-          <AttendanceSubjectChart metrics={subjectMetrics} />
-
           <DataTable
-            title="Recent Attendance Events"
-            caption={loading ? "Loading..." : "Latest attendance submissions for governance visibility."}
-            columns={columns}
+            title="سجل الحضور الكامل"
+            caption={loading ? "جارٍ التحميل..." : "آخر تسجيلات الحضور."}
+            columns={attendanceCols}
             rows={records}
-            getRowId={(row) => row.id}
-            emptyMessage="No attendance events available."
+            getRowId={(r) => r.id}
+            emptyMessage="لا توجد سجلات حضور."
           />
-
           <ExportButtons role="owner" />
+          <SystemLogsTable />
         </TabsContent>
 
+        {/* ── Create Session ── */}
+        <TabsContent value="session" className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            {!activeSession ? (
+              <CreateSessionForm
+                onSessionCreated={createSession}
+                creating={creating}
+                error={sessionError}
+              />
+            ) : (
+              <LiveSessionPanel
+                session={activeSession}
+                onStop={stopSession}
+                onUpdateDuration={updateDuration}
+                onRefreshHash={refreshHash}
+              />
+            )}
+            {/* Owner login history */}
+            <OwnerLoginSessions />
+          </div>
+        </TabsContent>
+
+        {/* ── Users ── */}
         <TabsContent value="users" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             <UserCreationForm />
@@ -201,49 +134,86 @@ export const OwnerDashboard = () => {
               <h3 className="text-lg font-semibold">ملاحظات</h3>
               <Alert>
                 <AlertDescription>
-                  يمكن للمالك فقط إنشاء حسابات جديدة للدكاترة والطلاب.
-                  كلمة المرور يجب أن تكون 6 أحرف على الأقل.
+                  الطلاب يسجلون دخولهم بالرقم القومي وكلمة المرور.<br />
+                  الدكاترة يسجلون بالبريد الإلكتروني.<br />
+                  كلمة المرور يجب أن تكون 8 أحرف على الأقل.
                 </AlertDescription>
               </Alert>
             </div>
           </div>
         </TabsContent>
-      </Tabs>
 
-      <AlertDialog
-        open={Boolean(overrideCandidate)}
-        onOpenChange={(open) => {
-          if (!open && !overrideTargetId) {
-            setOverrideCandidate(null);
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>تأكيد التسجيل اليدوي</AlertDialogTitle>
-            <AlertDialogDescription>
-              {overrideCandidate
-                ? `هل تريد تسجيل حضور الطالب ${overrideCandidate.studentName || overrideCandidate.studentId} يدويًا؟`
-                : "هل تريد تسجيل الحضور يدويًا؟"}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={Boolean(overrideTargetId)}>إلغاء</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={!overrideCandidate || Boolean(overrideTargetId)}
-              onClick={(event) => {
-                event.preventDefault();
-                if (!overrideCandidate) {
-                  return;
-                }
-                void handleOwnerOverride(overrideCandidate.id);
-              }}
-            >
-              {overrideTargetId ? "جارٍ التنفيذ..." : "تأكيد"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        {/* ── Subjects ── */}
+        <TabsContent value="subjects" className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <SubjectCreationForm
+              onSubjectCreated={(s) => setSubjects((prev) => [...prev, s as Subject].sort((a, b) => a.name.localeCompare(b.name)))}
+            />
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">المواد الموجودة</h3>
+              {subjectsLoading ? (
+                <p className="text-sm text-muted-foreground">جارٍ التحميل...</p>
+              ) : subjects.length === 0 ? (
+                <p className="text-sm text-muted-foreground">لا توجد مواد بعد.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {subjects.map((s) => (
+                    <li key={s.id} className="flex items-center justify-between rounded-lg border bg-card/60 px-4 py-2 text-sm">
+                      <div>
+                        <p className="font-medium">{s.name}</p>
+                        {s.doctor_name && <p className="text-xs text-muted-foreground">{s.doctor_name}</p>}
+                      </div>
+                      <Badge variant="outline" className="font-mono text-xs">{s.id.slice(0, 8)}…</Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ── Devices ── */}
+        <TabsContent value="devices" className="space-y-6">
+          <StudentDevicesPanel />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
+
+/** Owner's own login session history */
+function OwnerLoginSessions() {
+  const [sessions, setSessions] = useState<{ ip_address: string; user_agent: string; created_at: string }[]>([]);
+  useEffect(() => {
+    supabase.from("login_sessions").select("ip_address, user_agent, created_at")
+      .order("created_at", { ascending: false }).limit(8)
+      .then(({ data }) => { if (data) setSessions(data); });
+  }, []);
+
+  return (
+    <div className="space-y-3">
+      <h3 className="text-base font-semibold flex items-center gap-2">
+        <Monitor className="h-4 w-4 text-primary" />
+        جلسات تسجيل دخول الأدمن
+      </h3>
+      {sessions.length === 0 ? (
+        <p className="text-sm text-muted-foreground">لا توجد جلسات مسجلة.</p>
+      ) : (
+        <ul className="space-y-2">
+          {sessions.map((s, i) => (
+            <li key={i} className="flex items-center gap-3 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+              <Smartphone className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0">
+                <p className="font-mono text-xs">{s.ip_address ?? "—"}</p>
+                <p className="truncate text-xs text-muted-foreground">{s.user_agent?.slice(0, 55) ?? "—"}</p>
+              </div>
+              <Badge variant="outline" className="ml-auto shrink-0 text-xs">
+                {new Date(s.created_at).toLocaleDateString("ar-EG")}
+              </Badge>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
