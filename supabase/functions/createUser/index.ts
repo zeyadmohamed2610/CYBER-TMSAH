@@ -1,5 +1,5 @@
-// Simplified Edge Function for user creation
-// Uses native fetch - no external dependencies
+// Edge Function - Create User
+// Simpler version with better error handling
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,8 +21,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Get auth token from header
+    // Get headers
     const authHeader = req.headers.get('Authorization');
+    const apikey = req.headers.get('apikey') || Deno.env.get('SUPABASE_ANON_KEY');
+
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'No authorization header' }), {
         status: 401,
@@ -30,38 +32,49 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get Supabase config
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    // Verify the caller is authenticated
+    // Verify user is authenticated
     const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
-      headers: { 'Authorization': authHeader, 'apikey': supabaseKey }
+      headers: {
+        'Authorization': authHeader,
+        'apikey': apikey!
+      }
     });
 
     if (!userRes.ok) {
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
+      const err = await userRes.text();
+      return new Response(JSON.stringify({ error: 'Invalid token', details: err }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const userData = await userRes.json();
+    const userId = userData.id;
 
-    // Check if user is owner
+    // Check if user is owner - using service role to bypass RLS
     const profileRes = await fetch(
-      `${supabaseUrl}/rest/v1/users?auth_id=eq.${userData.id}&select=role`,
+      `${supabaseUrl}/rest/v1/users?auth_id=eq.${userId}&select=role`,
       {
         headers: {
           'Authorization': `Bearer ${serviceKey}`,
-          'apikey': supabaseKey
+          'apikey': apikey!
         }
       }
     );
 
     const profiles = await profileRes.json();
-    if (!profiles || profiles.length === 0 || profiles[0].role !== 'owner') {
+
+    if (!profiles || profiles.length === 0) {
+      return new Response(JSON.stringify({ error: 'User profile not found' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (profiles[0].role !== 'owner') {
       return new Response(JSON.stringify({ error: 'Only owners can create users' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -74,25 +87,32 @@ Deno.serve(async (req) => {
 
     // Validate
     if (!name || !password || !role) {
-      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+      return new Response(JSON.stringify({ error: 'Missing required fields: name, password, role' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Build auth email
+    if (password.length < 6) {
+      return new Response(JSON.stringify({ error: 'Password must be at least 6 characters' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Build auth email based on role
     let authEmail: string;
     if (role === 'student') {
-      if (!national_id || national_id.length !== 14) {
-        return new Response(JSON.stringify({ error: 'National ID must be 14 digits' }), {
+      if (!national_id || national_id.length !== 14 || !/^\d+$/.test(national_id)) {
+        return new Response(JSON.stringify({ error: 'National ID must be exactly 14 digits' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
       authEmail = `${national_id}@nid.local`;
     } else {
-      if (!email) {
-        return new Response(JSON.stringify({ error: 'Email required for doctors' }), {
+      if (!email || !email.includes('@')) {
+        return new Response(JSON.stringify({ error: 'Valid email required for doctors' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -100,12 +120,12 @@ Deno.serve(async (req) => {
       authEmail = email.toLowerCase();
     }
 
-    // Create auth user
+    // Create auth user using admin API
     const createUserRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${serviceKey}`,
-        'apikey': supabaseKey,
+        'apikey': apikey!,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -115,10 +135,18 @@ Deno.serve(async (req) => {
       }),
     });
 
-    const createUserData = await createUserRes.json();
+    let createUserData;
+    try {
+      createUserData = await createUserRes.json();
+    } catch {
+      createUserData = {};
+    }
 
     if (!createUserRes.ok) {
-      return new Response(JSON.stringify({ error: createUserData.msg || 'Failed to create user' }), {
+      return new Response(JSON.stringify({
+        error: createUserData.msg || createUserData.error || 'Failed to create auth user',
+        details: createUserData
+      }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -126,19 +154,19 @@ Deno.serve(async (req) => {
 
     const authUserId = createUserData.id;
 
-    // Call RPC to create user record
+    // Call RPC to create user record in public.users
     const rpcRes = await fetch(
       `${supabaseUrl}/rest/v1/rpc/create_user`,
       {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${serviceKey}`,
-          'apikey': supabaseKey,
+          'apikey': apikey!,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           p_auth_id: authUserId,
-          p_full_name: name,
+          p_full_name: name.trim(),
           p_role: role,
           p_subject_id: subject_id || null,
         }),
@@ -147,29 +175,34 @@ Deno.serve(async (req) => {
 
     if (!rpcRes.ok) {
       const rpcError = await rpcRes.text();
-      // Delete auth user if RPC fails
+      // Cleanup: delete the auth user if RPC fails
       await fetch(`${supabaseUrl}/auth/v1/admin/users/${authUserId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${serviceKey}`,
-          'apikey': supabaseKey,
+          'apikey': apikey!,
         },
       });
-      return new Response(JSON.stringify({ error: rpcError }), {
+      return new Response(JSON.stringify({ error: 'Failed to create user record', details: rpcError }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    const rpcData = await rpcRes.json();
+
     return new Response(JSON.stringify({
       success: true,
-      user: { id: authUserId, name, role }
+      user: { id: authUserId, name: name.trim(), role: role }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : String(error)
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
