@@ -32,65 +32,31 @@ const fail = <T>(error: string): AttendanceApiResponse<T> => ({ data: null, erro
 export const userService = {
   async createUser(input: CreateUserInput): Promise<AttendanceApiResponse<CreatedUser>> {
     try {
-      // Debug: log the environment variables
-      console.log('Creating user - ENV:', {
-        url: SUPABASE_URL,
-        hasKey: !!SUPABASE_ANON_KEY,
-        keyLength: SUPABASE_ANON_KEY?.length
-      });
+      console.log('Creating user via Supabase SDK...');
 
-      // Get current user - this gives us the most up-to-date session
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-      if (userError) {
-        console.error('Get user error:', userError);
-        return fail<CreatedUser>(userError.message);
-      }
-
-      if (!user) {
-        return fail<CreatedUser>("لم يتم العثور على مستخدم مسجل");
-      }
-
-      // Get the access token from the current user
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
-
-      if (!accessToken) {
-        return fail<CreatedUser>("لم يتم العثور على جلسة دخول");
-      }
-
-      console.log('User authenticated, calling Edge Function...');
-      console.log('User ID:', user.id);
-
-      // Use direct fetch to ensure headers are properly set
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/createUser`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY!,
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
+      // Use Supabase SDK's built-in function invoke
+      // This handles auth headers automatically
+      const { data, error } = await supabase.functions.invoke('createUser', {
+        body: {
           name: input.name.trim(),
           national_id: input.national_id?.trim(),
           email: input.email?.trim().toLowerCase(),
           password: input.password,
           role: input.role,
           subject_id: input.subjectId ?? null,
-        }),
+        }
       });
 
-      console.log('Response status:', response.status);
+      console.log('SDK Response:', { data, error });
 
-      const data = await response.json();
-      console.log('Response data:', data);
-
-      if (!response.ok) {
-        return fail<CreatedUser>(data.error || `HTTP ${response.status}`);
+      if (error) {
+        console.error('Edge Function error:', error);
+        return fail<CreatedUser>(error.message || String(error));
       }
 
-      if (data.error) return fail<CreatedUser>(data.error);
-      if (!data.success || !data.user) return fail<CreatedUser>("فشل في إنشاء المستخدم");
+      if (!data || !data.success || !data.user) {
+        return fail<CreatedUser>("فشل في إنشاء المستخدم");
+      }
 
       return ok<CreatedUser>(data.user);
     } catch (error) {
