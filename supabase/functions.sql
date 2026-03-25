@@ -151,7 +151,8 @@ DECLARE
   v_session public.sessions;
 BEGIN
   -- 1. Resolve caller
-  v_caller := private.get_caller_user();
+  SELECT * INTO v_caller
+  FROM public.users WHERE auth_id = auth.uid() LIMIT 1;
 
   -- 2. Enforce owner-only
   IF v_caller IS NULL OR v_caller.role <> 'owner' THEN
@@ -163,8 +164,9 @@ BEGIN
     RAISE EXCEPTION 'not_found: subject % does not exist', p_subject_id;
   END IF;
 
-  -- 4. Generate 256-bit cryptographically random hash
-  v_hash := encode(gen_random_bytes(32), 'hex');
+  -- 4. Generate random hash using built-in gen_random_uuid() — no pgcrypto needed
+  v_hash := replace(gen_random_uuid()::text, '-', '') ||
+            replace(gen_random_uuid()::text, '-', '');
 
   -- 5. Insert session (2-minute window)
   INSERT INTO public.sessions (subject_id, rotating_hash, expires_at)
