@@ -93,27 +93,16 @@ export default defineConfig(({ mode }) => ({
   publicDir: "public",
   build: {
     copyPublicDir: true,
-    // Minification and obfuscation for production
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true, // Remove console logs
-        drop_debugger: true, // Remove debugger statements
-        pure_funcs: ['console.log', 'console.info', 'console.warn', 'console.error'],
-      },
-      mangle: {
-        properties: false, // Don't mangle property names (can break React)
-      },
-      format: {
-        comments: false, // Remove all comments
-      },
-    },
+    // Minification — uses esbuild (built into Vite 8, no extra install needed)
+    minify: 'esbuild',
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Separate vendor chunks for better caching
-          vendor: ["react", "react-dom", "react-router-dom"],
-          ui: ["@radix-ui/react-tooltip", "@radix-ui/react-toast"],
+        // manualChunks must be a function in Vite 8 / Rolldown
+        manualChunks: (id: string) => {
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') || id.includes('node_modules/react-router-dom/'))
+            return 'vendor';
+          if (id.includes('node_modules/@radix-ui/'))
+            return 'ui';
         },
         // Obfuscate chunk names in production
         chunkFileNames: (chunkInfo) => {
