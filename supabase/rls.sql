@@ -227,3 +227,63 @@ CREATE POLICY "user_upsert_settings"
   FOR ALL
   USING ( user_id = private.current_user_id() )
   WITH CHECK ( user_id = private.current_user_id() );
+
+
+-- ===========================================================
+-- Attendance system reconciliation
+-- ===========================================================
+
+ALTER TABLE public.student_devices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.login_sessions ENABLE ROW LEVEL SECURITY;
+
+-- Doctors need to see all students because students can attend any subject.
+DROP POLICY IF EXISTS "doctor_own_users" ON public.users;
+CREATE POLICY "doctor_own_users"
+  ON public.users
+  FOR SELECT
+  USING (
+    private.current_user_role() = 'doctor'
+    AND (
+      auth_id = auth.uid()
+      OR role = 'student'
+    )
+  );
+
+-- Students can browse all subjects shown in their dashboard.
+DROP POLICY IF EXISTS "student_own_subject" ON public.subjects;
+CREATE POLICY "student_own_subject"
+  ON public.subjects
+  FOR SELECT
+  USING ( private.current_user_role() = 'student' );
+
+-- Students can see all sessions; the frontend filters active ones when needed.
+DROP POLICY IF EXISTS "student_own_sessions" ON public.sessions;
+CREATE POLICY "student_own_sessions"
+  ON public.sessions
+  FOR SELECT
+  USING ( private.current_user_role() = 'student' );
+
+-- Device bindings: owner sees all bindings, student may inspect their own row.
+DROP POLICY IF EXISTS "owner_all_student_devices" ON public.student_devices;
+DROP POLICY IF EXISTS "student_own_device" ON public.student_devices;
+
+CREATE POLICY "owner_all_student_devices"
+  ON public.student_devices
+  FOR SELECT
+  USING ( private.current_user_role() = 'owner' );
+
+CREATE POLICY "student_own_device"
+  ON public.student_devices
+  FOR SELECT
+  USING (
+    private.current_user_role() = 'student'
+    AND student_id = private.current_user_id()
+  );
+
+-- Login session history is private to each logged-in user.
+DROP POLICY IF EXISTS "self_read_login_sessions" ON public.login_sessions;
+
+CREATE POLICY "self_read_login_sessions"
+  ON public.login_sessions
+  FOR SELECT
+  USING ( user_id = private.current_user_id() );

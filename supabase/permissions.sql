@@ -18,6 +18,8 @@ GRANT SELECT ON public.users        TO authenticated;
 GRANT SELECT ON public.subjects     TO authenticated;
 GRANT SELECT ON public.sessions     TO authenticated;
 GRANT SELECT ON public.attendance   TO authenticated;
+GRANT SELECT ON public.student_devices TO authenticated;
+GRANT SELECT ON public.login_sessions  TO authenticated;
 
 -- system_logs: owner can SELECT via RLS; non-owners are blocked by
 -- RLS at query time. Grant is required or even owners cannot read.
@@ -34,6 +36,8 @@ REVOKE ALL ON public.subjects     FROM anon;
 REVOKE ALL ON public.sessions     FROM anon;
 REVOKE ALL ON public.attendance   FROM anon;
 REVOKE ALL ON public.system_logs  FROM anon;
+REVOKE ALL ON public.student_devices FROM anon;
+REVOKE ALL ON public.login_sessions  FROM anon;
 
 -- ─────────────────────────────────────────────
 -- PUBLIC FUNCTION GRANTS
@@ -53,6 +57,20 @@ REVOKE EXECUTE ON FUNCTION public.submit_attendance(TEXT)
   FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION public.cleanup_expired_sessions()
   FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.generate_rotating_hash(UUID, INTEGER)
+  FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.refresh_session_hash(UUID)
+  FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.stop_session(UUID)
+  FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.set_session_duration(UUID, INTEGER)
+  FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.submit_attendance(TEXT, TEXT)
+  FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.delete_student_device(UUID)
+  FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.log_login_session()
+  FROM PUBLIC, anon;
 
 -- Grant only to authenticated
 GRANT EXECUTE ON FUNCTION public.create_user(UUID, TEXT, public.user_role, UUID)
@@ -62,6 +80,20 @@ GRANT EXECUTE ON FUNCTION public.generate_rotating_hash(UUID)
 GRANT EXECUTE ON FUNCTION public.submit_attendance(TEXT)
   TO authenticated;
 GRANT EXECUTE ON FUNCTION public.cleanup_expired_sessions()
+  TO authenticated;
+GRANT EXECUTE ON FUNCTION public.generate_rotating_hash(UUID, INTEGER)
+  TO authenticated;
+GRANT EXECUTE ON FUNCTION public.refresh_session_hash(UUID)
+  TO authenticated;
+GRANT EXECUTE ON FUNCTION public.stop_session(UUID)
+  TO authenticated;
+GRANT EXECUTE ON FUNCTION public.set_session_duration(UUID, INTEGER)
+  TO authenticated;
+GRANT EXECUTE ON FUNCTION public.submit_attendance(TEXT, TEXT)
+  TO authenticated;
+GRANT EXECUTE ON FUNCTION public.delete_student_device(UUID)
+  TO authenticated;
+GRANT EXECUTE ON FUNCTION public.log_login_session()
   TO authenticated;
 
 -- ─────────────────────────────────────────────
@@ -79,8 +111,14 @@ REVOKE ALL ON FUNCTION private.get_caller_user()         FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION private.current_user_role()       FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION private.current_user_subject_id() FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION private.current_user_id()         FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION private.request_headers()         FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION private.current_request_ip()      FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION private.current_request_user_agent() FROM PUBLIC, anon;
 
 GRANT EXECUTE ON FUNCTION private.get_caller_user()         TO authenticated;
 GRANT EXECUTE ON FUNCTION private.current_user_role()       TO authenticated;
 GRANT EXECUTE ON FUNCTION private.current_user_subject_id() TO authenticated;
 GRANT EXECUTE ON FUNCTION private.current_user_id()         TO authenticated;
+GRANT EXECUTE ON FUNCTION private.request_headers()         TO authenticated;
+GRANT EXECUTE ON FUNCTION private.current_request_ip()      TO authenticated;
+GRANT EXECUTE ON FUNCTION private.current_request_user_agent() TO authenticated;

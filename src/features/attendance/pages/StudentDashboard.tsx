@@ -20,7 +20,7 @@ export const StudentDashboard = () => {
   const absenceRate = 100 - metrics.attendanceRate;
 
   // Get top performing subjects
-  const topSubjects = subjectMetrics
+  const topSubjects = [...subjectMetrics]
     .sort((a, b) => b.attendanceRate - a.attendanceRate)
     .slice(0, 3);
 

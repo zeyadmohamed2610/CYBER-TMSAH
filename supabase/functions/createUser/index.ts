@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
 
     // Check if user is owner - using service role to bypass RLS
     const profileRes = await fetch(
-      `${supabaseUrl}/rest/v1/users?auth_id=eq.${userId}&select=role`,
+      `${supabaseUrl}/rest/v1/users?auth_id=eq.${userId}&select=id,role`,
       {
         headers: {
           'Authorization': `Bearer ${serviceKey}`,
@@ -81,6 +81,8 @@ Deno.serve(async (req) => {
       });
     }
 
+    const callerProfileId = profiles[0].id;
+
     // Parse request body
     const body: UserRequest = await req.json();
     const { name, national_id, email, password, role, subject_id } = body;
@@ -95,6 +97,20 @@ Deno.serve(async (req) => {
 
     if (password.length < 6) {
       return new Response(JSON.stringify({ error: 'Password must be at least 6 characters' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (role === 'doctor' && !subject_id) {
+      return new Response(JSON.stringify({ error: 'Subject is required for doctors' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (role === 'student' && subject_id) {
+      return new Response(JSON.stringify({ error: 'Students must not be assigned to a subject' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -168,6 +184,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           auth_id: authUserId,
           full_name: name.trim(),
+          national_id: national_id || null,
           role: role,
           subject_id: subject_id || null
         }),
@@ -209,7 +226,7 @@ Deno.serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            actor_id: userId,
+            actor_id: callerProfileId,
             action: `create_user: created ${insertData[0]?.id || 'unknown'} (auth_id=${authUserId}, role=${role})`
           }),
         }

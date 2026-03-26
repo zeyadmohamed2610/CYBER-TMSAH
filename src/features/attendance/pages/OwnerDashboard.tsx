@@ -25,7 +25,7 @@ export const OwnerDashboard = () => {
     useAttendanceDashboardData("owner");
 
   // Session management
-  const { activeSession, creating, error: sessionError, createSession, stopSession, refreshHash } =
+  const { activeSession, creating, error: sessionError, createSession, stopSession, updateDuration, refreshHash } =
     useSessionManager();
 
   // Owner login session tracking
@@ -95,6 +95,7 @@ export const OwnerDashboard = () => {
               <LiveSessionPanel
                 session={activeSession}
                 onStop={stopSession}
+                onUpdateDuration={updateDuration}
                 onRefreshHash={refreshHash}
               />
             )}

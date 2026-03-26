@@ -29,6 +29,7 @@ interface UseSessionManagerReturn {
   creating: boolean;
   createSession: (subjectId: string, durationMinutes: number) => Promise<void>;
   stopSession: (sessionId: string) => Promise<void>;
+  updateDuration: (sessionId: string, durationMinutes: number) => Promise<{ error?: string }>;
   refreshHash: () => Promise<void>;
 }
 
@@ -118,5 +119,38 @@ export function useSessionManager(): UseSessionManagerReturn {
     setLoading(false);
   }, []);
 
-  return { activeSession, loading, error, creating, createSession, stopSession, refreshHash };
+  /** Reset the remaining session duration from now. */
+  const updateDuration = useCallback(async (sessionId: string, durationMinutes: number) => {
+    setError(null);
+
+    const { data, error: rpcErr } = await supabase.rpc("set_session_duration", {
+      p_session_id: sessionId,
+      p_duration_minutes: durationMinutes,
+    });
+
+    if (rpcErr) {
+      setError(rpcErr.message);
+      return { error: rpcErr.message };
+    }
+
+    const row = data as SessionRow | null;
+    const expiresAt = row?.expires_at ?? new Date(Date.now() + durationMinutes * 60_000).toISOString();
+    const expiresInSeconds = Math.max(0, Math.round((new Date(expiresAt).getTime() - Date.now()) / 1000));
+
+    setActiveSession((prev) => (
+      prev && prev.id === sessionId
+        ? {
+            ...prev,
+            duration_minutes: durationMinutes,
+            expires_at: expiresAt,
+            is_active: new Date(expiresAt).getTime() > Date.now(),
+            expires_in_seconds: expiresInSeconds,
+          }
+        : prev
+    ));
+
+    return {};
+  }, []);
+
+  return { activeSession, loading, error, creating, createSession, stopSession, updateDuration, refreshHash };
 }

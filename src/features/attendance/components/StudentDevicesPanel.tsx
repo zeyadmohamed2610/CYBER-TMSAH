@@ -25,9 +25,11 @@ export function StudentDevicesPanel() {
   const [students, setStudents] = useState<StudentDevice[]>([]);
   const [loading, setLoading]   = useState(true);
   const [clearing, setClearing] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
+    setErrorMessage(null);
     // Join users (students) with student_devices (left join — some may not have device bound)
     const { data, error } = await supabase
       .from("users")
@@ -40,7 +42,11 @@ export function StudentDevicesPanel() {
       .eq("role", "student")
       .order("full_name");
 
-    if (error) { setLoading(false); return; }
+    if (error) {
+      setErrorMessage(error.message);
+      setLoading(false);
+      return;
+    }
 
     setStudents(
       (data ?? []).map((u: { id: string; full_name: string; national_id: string | null; student_devices: { device_fingerprint: string; ip_address: string; bound_at: string }[] }) => ({
@@ -80,6 +86,13 @@ export function StudentDevicesPanel() {
       <CardContent>
         {loading ? (
           <p className="text-sm text-muted-foreground">جارٍ التحميل...</p>
+        ) : errorMessage ? (
+          <div className="space-y-3">
+            <p className="text-sm text-destructive">{errorMessage}</p>
+            <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
+              إعادة المحاولة
+            </Button>
+          </div>
         ) : (
           <ul className="space-y-2">
             {students.map((s) => (

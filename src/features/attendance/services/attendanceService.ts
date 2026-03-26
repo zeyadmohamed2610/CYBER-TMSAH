@@ -295,7 +295,7 @@ export const attendanceService = {
       const profile = await resolveDbUserProfile(authId);
 
       if (role === "student") {
-        if (!profile?.subjectId) {
+        if (!profile) {
           return ok<DashboardMetrics>({
             totalSessions: 0,
             totalStudents: 1,
@@ -305,9 +305,9 @@ export const attendanceService = {
           });
         }
 
-        // M1 fix: fetch real session counts for the student's subject
+        // Students can attend any active subject, so their metrics are global.
         const [sessionsResult, attendedResult] = await Promise.all([
-          supabase.from("sessions").select("id, expires_at").eq("subject_id", profile.subjectId),
+          supabase.from("sessions").select("id, expires_at"),
           supabase
             .from("attendance")
             .select("id", { head: true, count: "exact" })
@@ -349,8 +349,7 @@ export const attendanceService = {
         supabase
           .from("users")
           .select("id", { head: true, count: "exact" })
-          .eq("role", "student")
-          .eq("subject_id", profile.subjectId),
+          .eq("role", "student"),
       ]);
       if (sessionsResult.error) throw sessionsResult.error;
       if (studentsResult.error) throw studentsResult.error;
@@ -407,50 +406,110 @@ export const attendanceService = {
 
   /** Subject metrics (owner only effectively). */
   async fetchSubjectMetrics(
-    _role: AttendanceRole,
+    role: AttendanceRole,
     _userId?: string,
   ): Promise<AttendanceApiResponse<SubjectAttendanceMetric[]>> {
     const operation = "attendanceService.fetchSubjectMetrics";
     try {
-      const { data, error } = await supabase
+      const authId = await resolveAuthUserId();
+      const profile = authId ? await resolveDbUserProfile(authId) : null;
+
+      let sessionsQuery = supabase
         .from("sessions")
-        .select("id, subject_id, expires_at, subjects(name), attendance(id)");
+        .select("id, subject_id, subjects(name)");
 
-      if (error) throw error;
+      if (role === "doctor") {
+        if (!profile?.subjectId) return ok<SubjectAttendanceMetric[]>([]);
+        sessionsQuery = sessionsQuery.eq("subject_id", profile.subjectId);
+      }
 
-      type SubjectRow = {
+      const { data: sessionData, error: sessionError } = await sessionsQuery;
+      if (sessionError) throw sessionError;
+
+      type SubjectMetricSessionRow = {
         id: string;
         subject_id: string;
-        expires_at?: string | null;
         subjects?: { name?: string | null } | Array<{ name?: string | null }> | null;
-        attendance?: Array<{ id?: string }> | null;
       };
 
-      const bySubject: Record<
-        string,
-        { subjectName: string; totalSessions: number; attendedRows: number }
-      > = {};
+      const sessions = (sessionData ?? []) as SubjectMetricSessionRow[];
+      if (sessions.length === 0) return ok<SubjectAttendanceMetric[]>([]);
 
-      for (const row of (data ?? []) as SubjectRow[]) {
-        const subject = asObj(row.subjects);
-        const subjectName = subject?.name ?? "Unknown Subject";
+      const sessionToSubject = new Map<string, string>();
+      const bySubject: Record<string, { subjectName: string; totalSessions: number; attendedRows: number }> = {};
+
+      for (const row of sessions) {
+        const subjectName = asObj(row.subjects)?.name ?? "Unknown Subject";
+        sessionToSubject.set(row.id, row.subject_id);
         if (!bySubject[row.subject_id]) {
           bySubject[row.subject_id] = { subjectName, totalSessions: 0, attendedRows: 0 };
         }
         bySubject[row.subject_id].totalSessions += 1;
-        bySubject[row.subject_id].attendedRows += (row.attendance ?? []).length;
       }
 
-      const metrics: SubjectAttendanceMetric[] = Object.values(bySubject)
-        .map((e) => ({
-          subjectName: e.subjectName,
-          totalSessions: e.totalSessions,
-          attendanceRate:
-            e.totalSessions > 0 ? Math.min(100, (e.attendedRows / e.totalSessions) * 100) : 0,
-        }))
-        .sort((a, b) => a.subjectName.localeCompare(b.subjectName));
+      const sessionIds = sessions.map((row) => row.id);
 
-      return ok<SubjectAttendanceMetric[]>(metrics);
+      if (role === "student") {
+        if (!profile) return ok<SubjectAttendanceMetric[]>([]);
+
+        const { data: attendanceData, error: attendanceError } = await supabase
+          .from("attendance")
+          .select("session_id")
+          .eq("student_id", profile.id)
+          .in("session_id", sessionIds);
+
+        if (attendanceError) throw attendanceError;
+
+        for (const row of (attendanceData ?? []) as Array<{ session_id: string }>) {
+          const subjectId = sessionToSubject.get(row.session_id);
+          if (subjectId && bySubject[subjectId]) bySubject[subjectId].attendedRows += 1;
+        }
+
+        return ok<SubjectAttendanceMetric[]>(
+          Object.values(bySubject)
+            .map((entry) => ({
+              subjectName: entry.subjectName,
+              totalSessions: entry.totalSessions,
+              attendanceRate:
+                entry.totalSessions > 0
+                  ? Math.min(100, (entry.attendedRows / entry.totalSessions) * 100)
+                  : 0,
+            }))
+            .sort((a, b) => a.subjectName.localeCompare(b.subjectName)),
+        );
+      }
+
+      const { count: totalStudents, error: studentCountError } = await supabase
+        .from("users")
+        .select("id", { head: true, count: "exact" })
+        .eq("role", "student");
+
+      if (studentCountError) throw studentCountError;
+
+      const { data: attendanceData, error: attendanceError } = await supabase
+        .from("attendance")
+        .select("session_id")
+        .in("session_id", sessionIds);
+
+      if (attendanceError) throw attendanceError;
+
+      for (const row of (attendanceData ?? []) as Array<{ session_id: string }>) {
+        const subjectId = sessionToSubject.get(row.session_id);
+        if (subjectId && bySubject[subjectId]) bySubject[subjectId].attendedRows += 1;
+      }
+
+      return ok<SubjectAttendanceMetric[]>(
+        Object.values(bySubject)
+          .map((entry) => ({
+            subjectName: entry.subjectName,
+            totalSessions: entry.totalSessions,
+            attendanceRate:
+              entry.totalSessions > 0 && (totalStudents ?? 0) > 0
+                ? Math.min(100, (entry.attendedRows / (entry.totalSessions * (totalStudents ?? 0))) * 100)
+                : 0,
+          }))
+          .sort((a, b) => a.subjectName.localeCompare(b.subjectName)),
+      );
     } catch (error) {
       return fail<SubjectAttendanceMetric[]>(operation, error);
     }
