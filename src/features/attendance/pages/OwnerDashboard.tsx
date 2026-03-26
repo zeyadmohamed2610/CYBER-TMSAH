@@ -10,9 +10,6 @@ import { LiveSessionPanel } from "../components/LiveSessionPanel";
 import { OwnerLiveSessionMap } from "../components/OwnerLiveSessionMap";
 import { StatCard } from "../components/StatCard";
 import { StudentDevicesPanel } from "../components/StudentDevicesPanel";
-import { SubjectManagementPanel } from "../components/SubjectManagementPanel";
-import { SystemLogsTable } from "../components/SystemLogsTable";
-import { UserCreationForm } from "../components/UserCreationForm";
 import { AttendanceStatusChart } from "../components/charts/AttendanceStatusChart";
 import { AttendanceTrendChart } from "../components/charts/AttendanceTrendChart";
 import { useAttendanceDashboardData } from "../hooks/useAttendanceDashboardData";
@@ -22,30 +19,14 @@ import { supabase } from "@/lib/supabaseClient";
 import type { AttendanceRecord } from "../types";
 import { formatDateTime } from "../utils/rotatingSession";
 
-interface Subject { id: string; name: string; doctor_name: string; }
-
 export const OwnerDashboard = () => {
   const { user } = useAttendanceAuth();
   const { loading, error, metrics, sessions, records, trendPoints } =
     useAttendanceDashboardData("owner");
 
   // Session management
-  const { activeSession, creating, error: sessionError, createSession, stopSession, updateDuration, refreshHash } =
+  const { activeSession, creating, error: sessionError, createSession, stopSession, refreshHash } =
     useSessionManager();
-
-  // Subjects list
-  const [subjects, setSubjects]         = useState<Subject[]>([]);
-  const [subjectsLoading, setSubjectsLoading] = useState(false);
-
-  const loadSubjects = () => {
-    setSubjectsLoading(true);
-    supabase.from("subjects").select("id, name, doctor_name").order("name")
-      .then(({ data }) => {
-        if (data) setSubjects(data as Subject[]);
-        setSubjectsLoading(false);
-      });
-  };
-  useEffect(() => { loadSubjects(); }, []);
 
   // Owner login session tracking
   useEffect(() => {
@@ -53,10 +34,10 @@ export const OwnerDashboard = () => {
   }, [user]);
 
   const attendanceCols: DataTableColumn<AttendanceRecord>[] = [
-    { id: "student", header: "الطالب",      cell: (r) => r.studentName || r.studentId },
-    { id: "subject", header: "المادة",       cell: (r) => r.subjectName || "—" },
-    { id: "time",    header: "وقت التسجيل", cell: (r) => formatDateTime(r.submittedAt) },
-    { id: "session", header: "الجلسة",       cell: (r) => <Badge variant="outline">{r.sessionId.slice(0, 8)}…</Badge> },
+    { id: "student", header: "الطالب", cell: (r) => r.studentName || r.studentId },
+    { id: "subject", header: "المادة", cell: (r) => r.subjectName || "—" },
+    { id: "time", header: "وقت التسجيل", cell: (r) => formatDateTime(r.submittedAt) },
+    { id: "session", header: "الجلسة", cell: (r) => <Badge variant="outline">{r.sessionId.slice(0, 8)}…</Badge> },
   ];
 
   return (
@@ -70,18 +51,16 @@ export const OwnerDashboard = () => {
 
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="إجمالي الجلسات"  value={metrics.totalSessions}  description="جلسات في جميع المواد" icon={BookOpenCheck} />
-        <StatCard title="إجمالي الطلاب"  value={metrics.totalStudents}  description="مستخدمون بدور الطالب" icon={Users} />
-        <StatCard title="الجلسات النشطة" value={metrics.activeSessions} description="لم تنته بعد"          icon={Clock3} />
-        <StatCard title="معدل الحضور"    value={`${metrics.attendanceRate.toFixed(1)}%`} description="النسبة العامة" icon={Activity} />
+        <StatCard title="إجمالي الجلسات" value={metrics.totalSessions} description="جلسات في جميع المواد" icon={BookOpenCheck} />
+        <StatCard title="إجمالي الطلاب" value={metrics.totalStudents} description="مستخدمون بدور الطالب" icon={Users} />
+        <StatCard title="الجلسات النشطة" value={metrics.activeSessions} description="لم تنته بعد" icon={Clock3} />
+        <StatCard title="معدل الحضور" value={`${metrics.attendanceRate.toFixed(1)}%`} description="النسبة العامة" icon={Activity} />
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full max-w-2xl grid-cols-5">
+        <TabsList className="grid w-full max-w-2xl grid-cols-3">
           <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
           <TabsTrigger value="session">إنشاء جلسة</TabsTrigger>
-          <TabsTrigger value="users">المستخدمون</TabsTrigger>
-          <TabsTrigger value="subjects">المواد</TabsTrigger>
           <TabsTrigger value="devices">الأجهزة</TabsTrigger>
         </TabsList>
 
@@ -101,7 +80,6 @@ export const OwnerDashboard = () => {
             emptyMessage="لا توجد سجلات حضور."
           />
           <ExportButtons role="owner" />
-          <SystemLogsTable />
         </TabsContent>
 
         {/* ── Create Session ── */}
@@ -117,7 +95,6 @@ export const OwnerDashboard = () => {
               <LiveSessionPanel
                 session={activeSession}
                 onStop={stopSession}
-                onUpdateDuration={updateDuration}
                 onRefreshHash={refreshHash}
               />
             )}
@@ -126,27 +103,7 @@ export const OwnerDashboard = () => {
           </div>
         </TabsContent>
 
-        {/* ── Users ── */}
-        <TabsContent value="users" className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-2">
-            <UserCreationForm />
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">ملاحظات</h3>
-              <Alert>
-                <AlertDescription>
-                  الطلاب يسجلون دخولهم بالرقم القومي وكلمة المرور.<br />
-                  الدكاترة يسجلون بالبريد الإلكتروني.<br />
-                  كلمة المرور يجب أن تكون 8 أحرف على الأقل.
-                </AlertDescription>
-              </Alert>
-            </div>
-          </div>
-        </TabsContent>
 
-        {/* ── Subjects ── */}
-        <TabsContent value="subjects" className="space-y-6">
-          <SubjectManagementPanel />
-        </TabsContent>
 
         {/* ── Devices ── */}
         <TabsContent value="devices" className="space-y-6">
