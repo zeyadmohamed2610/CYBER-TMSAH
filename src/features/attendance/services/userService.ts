@@ -6,7 +6,7 @@ export interface CreateUserInput {
   national_id?: string;
   email?: string;
   password: string;
-  role: "doctor" | "student";
+  role: "doctor" | "student" | "ta";
   subjectId?: string | null;
 }
 

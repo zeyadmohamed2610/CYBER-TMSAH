@@ -11,7 +11,7 @@ interface UserRequest {
   national_id?: string;
   email?: string;
   password: string;
-  role: "doctor" | "student";
+  role: "doctor" | "student" | "ta";
   subject_id?: string;
 }
 
@@ -102,8 +102,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (role === 'doctor' && !subject_id) {
-      return new Response(JSON.stringify({ error: 'Subject is required for doctors' }), {
+    if ((role === 'doctor' || role === 'ta') && !subject_id) {
+      return new Response(JSON.stringify({ error: 'Subject is required for doctors and TAs' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
       authEmail = `${national_id}@nid.local`;
     } else {
       if (!email || !email.includes('@')) {
-        return new Response(JSON.stringify({ error: 'Valid email required for doctors' }), {
+        return new Response(JSON.stringify({ error: 'Valid email required for doctors and TAs' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });

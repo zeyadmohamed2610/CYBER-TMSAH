@@ -1,4 +1,4 @@
-export type AttendanceRole = "owner" | "doctor" | "student";
+export type AttendanceRole = "owner" | "doctor" | "student" | "ta";
 
 export interface AttendanceApiResponse<T> {
   data: T | null;
