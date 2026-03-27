@@ -92,6 +92,24 @@ CREATE INDEX IF NOT EXISTS idx_sessions_subject_id ON public.sessions (subject_i
 CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON public.sessions (expires_at);
 
 -- ─────────────────────────────────────────────
+-- TABLE: lectures
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.lectures (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  subject_id   UUID NOT NULL REFERENCES public.subjects(id) ON DELETE CASCADE,
+  title        TEXT NOT NULL DEFAULT 'Lecture',
+  lecture_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  created_by   UUID REFERENCES public.users(id),
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Link sessions to lectures
+ALTER TABLE public.sessions ADD COLUMN IF NOT EXISTS lecture_id UUID REFERENCES public.lectures(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_lectures_subject_date ON public.lectures (subject_id, lecture_date DESC);
+CREATE INDEX IF NOT EXISTS idx_sessions_lecture ON public.sessions (lecture_id);
+
+-- ─────────────────────────────────────────────
 -- TABLE: attendance
 -- ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.attendance (
