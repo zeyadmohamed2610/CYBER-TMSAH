@@ -19,6 +19,7 @@ import type { Lecture } from "../types";
 export const OwnerDashboard = () => {
   const { error, metrics } = useAttendanceDashboardData("owner");
   const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
+  const [activeTab, setActiveTab] = useState("lectures");
 
   if (selectedLecture) {
     return <LectureDetailView lecture={selectedLecture} onBack={() => setSelectedLecture(null)} />;
@@ -41,7 +42,7 @@ export const OwnerDashboard = () => {
         <StatCard title="Attendance Rate" value={`${metrics.attendanceRate.toFixed(1)}%`} description="Overall" icon={Activity} />
       </div>
 
-      <Tabs defaultValue="lectures" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid h-auto w-full grid-cols-2 gap-2 lg:grid-cols-4 xl:grid-cols-8">
           <TabsTrigger value="lectures">Lectures</TabsTrigger>
           <TabsTrigger value="schedule">Schedule</TabsTrigger>
