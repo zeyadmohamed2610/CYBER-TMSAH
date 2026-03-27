@@ -70,7 +70,7 @@ export const OwnerLiveSessionDetails = ({ sessions, records }: OwnerLiveSessionD
                     <div>
                       <p className="font-medium">{selectedSession.subjectName}</p>
                       <p className="text-xs text-muted-foreground">
-                        الكود: <span className="font-mono">{selectedSession.rotatingHash ?? "—"}</span>
+                        الكود: <span className="font-mono">{selectedSession.shortCode ?? "—"}</span>
                       </p>
                     </div>
                     <Badge variant="default">نشطة</Badge>
