@@ -110,6 +110,50 @@ CREATE INDEX IF NOT EXISTS idx_lectures_subject_date ON public.lectures (subject
 CREATE INDEX IF NOT EXISTS idx_sessions_lecture ON public.sessions (lecture_id);
 
 -- ─────────────────────────────────────────────
+-- TABLE: course_schedule (weekly timetable per section)
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.course_schedule (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  section     INTEGER NOT NULL CHECK (section BETWEEN 1 AND 15),
+  day_of_week TEXT NOT NULL CHECK (day_of_week IN ('saturday','sunday','monday','tuesday','wednesday','thursday','friday')),
+  time_slot   TEXT NOT NULL DEFAULT '',
+  subject     TEXT NOT NULL DEFAULT '',
+  instructor  TEXT NOT NULL DEFAULT '',
+  room        TEXT NOT NULL DEFAULT '',
+  entry_type  TEXT NOT NULL DEFAULT 'lecture' CHECK (entry_type IN ('lecture','section')),
+  is_holiday  BOOLEAN NOT NULL DEFAULT false,
+  is_training BOOLEAN NOT NULL DEFAULT false,
+  sort_order  INTEGER NOT NULL DEFAULT 0,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT uq_schedule_slot UNIQUE (section, day_of_week, time_slot),
+  CONSTRAINT chk_time_slot_format CHECK (time_slot = '' OR time_slot ~ '^\d{2}:\d{2} - \d{2}:\d{2}$')
+);
+
+CREATE INDEX IF NOT EXISTS idx_course_schedule_section_day ON public.course_schedule (section, day_of_week);
+
+-- ─────────────────────────────────────────────
+-- TABLE: course_materials (subjects with articles/sections)
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.course_materials (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug                TEXT NOT NULL UNIQUE,
+  title               TEXT NOT NULL,
+  icon                TEXT NOT NULL DEFAULT '📚',
+  instructor          TEXT NOT NULL,
+  second_instructor   TEXT,
+  teaching_assistants TEXT[] DEFAULT '{}',
+  articles            JSONB DEFAULT '[]',
+  sections_content    JSONB DEFAULT '[]',
+  pdf_url             TEXT,
+  sort_order          INTEGER NOT NULL DEFAULT 0,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_course_materials_slug ON public.course_materials (slug);
+
+-- ─────────────────────────────────────────────
 -- TABLE: attendance
 -- ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.attendance (
