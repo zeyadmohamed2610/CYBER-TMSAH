@@ -60,7 +60,7 @@ const Footer = () => {
                 الحضور
               </Link>
               <span className="w-1 h-1 rounded-full bg-primary/50" />
-              <a href={UNIVERSITY_PLATFORM_URL} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+              <a href={UNIVERSITY_PLATFORM_URL} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                 المنصة
               </a>
               <span className="w-1 h-1 rounded-full bg-primary/50" />
