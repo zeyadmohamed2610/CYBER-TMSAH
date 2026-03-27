@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Clock, MapPin, User, Calendar, Moon } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, User, Calendar, Moon, ExternalLink } from "lucide-react";
 import Layout from "@/components/Layout";
 import ScrollReveal from "@/components/ScrollReveal";
 import FounderCard from "@/components/FounderCard";
@@ -9,6 +9,7 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import FAQSection from "@/components/FAQSection";
 const heroBg = "/hero-bg.jpg";
 import { sections, getTodaySchedule, getTodayDate } from "@/data/mockData";
+import { UNIVERSITY_PLATFORM_URL } from "@/lib/externalLinks";
 /**
  * Home Page Component
  * Displays hero section, today's schedule, and founder information
@@ -87,6 +88,13 @@ const Index = () => {
                 <Calendar className="h-5 w-5 text-primary" />
                 <span>الجدول الدراسي</span>
               </Link>
+              <a
+                href={UNIVERSITY_PLATFORM_URL}
+                className="group inline-flex items-center gap-3 rounded-xl border-2 border-cyan-400/40 bg-cyan-400/10 backdrop-blur-sm px-8 py-4 text-base font-bold text-cyan-300 transition-all duration-300 hover:border-cyan-300 hover:bg-cyan-400/15 hover:scale-105 hover:shadow-[0_0_30px_hsl(187_72%_50%/0.25)]"
+              >
+                <ExternalLink className="h-5 w-5" />
+                <span>المنصة</span>
+              </a>
             </div>
 
             {/* Stats */}

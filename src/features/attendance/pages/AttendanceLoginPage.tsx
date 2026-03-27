@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabaseClient";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
+import { getAttendanceDashboardRoute } from "../utils/dashboardRoutes";
 
 /** Maps national ID → internal auth email. Hidden from the user. */
 const toAuthEmail = (nationalId: string) =>
@@ -22,10 +23,14 @@ const AttendanceLoginPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && user && role) navigate("/attendance", { replace: true });
+    if (!loading && user && role) {
+      navigate(getAttendanceDashboardRoute(role), { replace: true });
+    }
   }, [loading, navigate, role, user]);
 
-  if (!loading && user && role) return <Navigate to="/attendance" replace />;
+  if (!loading && user && role) {
+    return <Navigate to={getAttendanceDashboardRoute(role)} replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

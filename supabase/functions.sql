@@ -293,6 +293,10 @@ GRANT EXECUTE ON FUNCTION public.cleanup_expired_sessions() TO authenticated;
 -- These functions align the database API with the frontend code.
 -- ===========================================================
 
+-- Remove legacy overloads that confuse PostgREST RPC resolution.
+DROP FUNCTION IF EXISTS public.log_login_session(TEXT, TEXT);
+DROP FUNCTION IF EXISTS public.submit_attendance(TEXT, TEXT, TEXT, TEXT);
+
 CREATE OR REPLACE FUNCTION private.request_headers()
 RETURNS JSONB
 LANGUAGE sql

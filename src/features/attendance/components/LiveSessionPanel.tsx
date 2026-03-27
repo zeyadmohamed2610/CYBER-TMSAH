@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type { ActiveSession } from "../hooks/useSessionManager";
+import { useRotatingHash } from "../hooks/useRotatingHash";
 
 interface Props {
   session: ActiveSession;
@@ -20,20 +21,19 @@ interface Props {
 
 export function LiveSessionPanel({ session, onStop, onUpdateDuration, onRefreshHash }: Props) {
   const canvasRef   = useRef<HTMLCanvasElement>(null);
-  const [countdown, setCountdown]   = useState(session.expires_in_seconds);
   const [newMinutes, setNewMinutes] = useState(session.duration_minutes);
   const [durationError, setDurationError] = useState<string | null>(null);
   const [stopping, setStopping]     = useState(false);
   const [updating, setUpdating]     = useState(false);
+  const { secondsUntilExpiry } = useRotatingHash({
+    rotatingHash: session.rotating_hash,
+    expiresAt: session.expires_at,
+  });
+  const countdown = secondsUntilExpiry ?? session.expires_in_seconds;
 
-  // Countdown timer
   useEffect(() => {
-    setCountdown(session.expires_in_seconds);
-    const timer = setInterval(() => {
-      setCountdown((c) => (c > 0 ? c - 1 : 0));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [session.expires_in_seconds]);
+    setNewMinutes(session.duration_minutes);
+  }, [session.duration_minutes]);
 
   // Generate QR code whenever hash changes
   useEffect(() => {

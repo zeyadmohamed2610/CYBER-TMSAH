@@ -8,14 +8,14 @@
 -- PUBLIC SCHEMA: remove default CREATE privilege
 -- ─────────────────────────────────────────────
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
-GRANT USAGE ON SCHEMA public TO authenticated, anon;
+GRANT USAGE ON SCHEMA public TO authenticated, anon, service_role;
 
 -- ─────────────────────────────────────────────
 -- AUTHENTICATED ROLE — table grants
 -- RLS policies restrict which rows each role can see.
 -- ─────────────────────────────────────────────
 GRANT SELECT ON public.users        TO authenticated;
-GRANT SELECT ON public.subjects     TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.subjects TO authenticated;
 GRANT SELECT ON public.sessions     TO authenticated;
 GRANT SELECT ON public.attendance   TO authenticated;
 GRANT SELECT ON public.student_devices TO authenticated;
@@ -24,6 +24,11 @@ GRANT SELECT ON public.login_sessions  TO authenticated;
 -- system_logs: owner can SELECT via RLS; non-owners are blocked by
 -- RLS at query time. Grant is required or even owners cannot read.
 GRANT SELECT ON public.system_logs  TO authenticated;
+
+-- service_role backs server-side admin flows (Edge Functions / admin scripts)
+-- and bypasses RLS, but it still needs ordinary SQL privileges.
+GRANT SELECT, INSERT ON public.users TO service_role;
+GRANT INSERT ON public.system_logs TO service_role;
 
 -- No INSERT/UPDATE/DELETE granted on any table to authenticated.
 -- All mutations go through SECURITY DEFINER functions only.

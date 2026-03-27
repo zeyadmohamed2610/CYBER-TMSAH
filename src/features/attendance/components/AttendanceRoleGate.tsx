@@ -3,6 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { LoadingScreen } from "@/components/Loading";
 import type { AttendanceRole } from "../types";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
+import { getAttendanceDashboardRoute } from "../utils/dashboardRoutes";
 
 interface AttendanceRoleGateProps {
   allowedRole: AttendanceRole;
@@ -26,7 +27,7 @@ export const AttendanceRoleGate = ({ allowedRole, children }: AttendanceRoleGate
 
   // Check if user has the required role
   if (role !== allowedRole) {
-    return <Navigate to="/attendance" replace />;
+    return <Navigate to={getAttendanceDashboardRoute(role)} replace />;
   }
 
   return <>{children}</>;

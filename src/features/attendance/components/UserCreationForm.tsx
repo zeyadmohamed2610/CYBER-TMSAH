@@ -48,16 +48,17 @@ export const UserCreationForm = () => {
     resolver: zodResolver(doctorSchema),
     defaultValues: { name: "", email: "", password: "", subjectId: "" },
   });
+  const { setValue } = doctorForm;
 
   useEffect(() => {
     supabase.from("subjects").select("id, name, doctor_name").order("name")
       .then(({ data }) => {
         if (data) {
           setSubjects(data as Subject[]);
-          if (data.length > 0) doctorForm.setValue("subjectId", data[0].id);
+          if (data.length > 0) setValue("subjectId", data[0].id);
         }
       });
-  }, []);
+  }, [setValue]);
 
   /* ─── Student submit ─── */
   const onStudentSubmit = async (data: StudentFormData) => {

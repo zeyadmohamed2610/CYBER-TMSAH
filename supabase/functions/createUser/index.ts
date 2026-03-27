@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
       {
         headers: {
           'Authorization': `Bearer ${serviceKey}`,
-          'apikey': apikey!
+          'apikey': serviceKey
         }
       }
     );
@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${serviceKey}`,
-        'apikey': apikey!,
+        'apikey': serviceKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -177,7 +177,7 @@ Deno.serve(async (req) => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${serviceKey}`,
-          'apikey': apikey!,
+          'apikey': serviceKey,
           'Content-Type': 'application/json',
           'Prefer': 'return=representation'
         },
@@ -199,13 +199,17 @@ Deno.serve(async (req) => {
     }
 
     if (!insertRes.ok) {
-      const insertError = Array.isArray(insertData) ? insertData.map((e: any) => e.message).join(', ') : insertData.message || insertData.error || 'Unknown error';
+      const insertError = Array.isArray(insertData)
+        ? insertData
+            .map((entry) => (entry && typeof entry === 'object' && 'message' in entry ? String(entry.message) : 'Unknown error'))
+            .join(', ')
+        : insertData.message || insertData.error || 'Unknown error';
       // Cleanup: delete the auth user if insert fails
       await fetch(`${supabaseUrl}/auth/v1/admin/users/${authUserId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${serviceKey}`,
-          'apikey': apikey!,
+          'apikey': serviceKey,
         },
       });
       return new Response(JSON.stringify({ error: 'Failed to create user record', details: insertError }), {
@@ -222,7 +226,7 @@ Deno.serve(async (req) => {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${serviceKey}`,
-            'apikey': apikey!,
+            'apikey': serviceKey,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({

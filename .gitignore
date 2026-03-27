@@ -13,6 +13,11 @@ dist-ssr
 *.local
 .vercel
 .supabase
+supabase/.temp/
+.kilo/
+.kilocode/
+.vs/
+.private/
 
 # Editor directories and files
 .vscode/*

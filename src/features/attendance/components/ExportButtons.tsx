@@ -19,23 +19,23 @@ export const ExportButtons = ({ role }: ExportButtonsProps) => {
     if (result.error) {
       toast({
         variant: "destructive",
-        title: `Export ${format.toUpperCase()} failed`,
+        title: `فشل تصدير ${format.toUpperCase()}`,
         description: result.error,
       });
       return;
     }
 
     toast({
-      title: `Export ${format.toUpperCase()} requested`,
-      description: "Export job was triggered successfully.",
+      title: `تم تصدير ${format.toUpperCase()}`,
+      description: "تم إنشاء الملف وتنزيله على جهازك.",
     });
   };
 
   return (
     <Card className="bg-card/80">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg">Export Reports</CardTitle>
-        <CardDescription>UI triggers only. Backend export generation is not included in frontend scope.</CardDescription>
+        <CardTitle className="text-lg">تصدير التقارير</CardTitle>
+        <CardDescription>تصدير مباشر من بيانات الحضور الحالية بصيغ CSV وExcel المتوافق وPDF.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-3">
         {EXPORT_FORMATS.map((format) => (

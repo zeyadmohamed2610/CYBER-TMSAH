@@ -11,9 +11,8 @@ const NotFound = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Log 404 errors to analytics
-    if (typeof window !== "undefined" && (window as any).gtag) {
-      (window as any).gtag("event", "page_not_found", {
+    if (typeof window !== "undefined" && window.gtag) {
+      window.gtag("event", "page_not_found", {
         page_path: location.pathname,
       });
     }

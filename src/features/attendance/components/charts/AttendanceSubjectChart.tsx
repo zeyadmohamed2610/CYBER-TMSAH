@@ -16,7 +16,7 @@ export const AttendanceSubjectChart = ({ metrics }: AttendanceSubjectChartProps)
       labels: metrics.map((entry) => entry.subjectName),
       datasets: [
         {
-          label: "Attendance Rate",
+          label: "معدل الحضور",
           data: metrics.map((entry) => Number(entry.attendanceRate.toFixed(2))),
           backgroundColor: metrics.map((_, index) => PALETTE[index % PALETTE.length]),
           borderColor: "#0F172A",
@@ -31,7 +31,7 @@ export const AttendanceSubjectChart = ({ metrics }: AttendanceSubjectChartProps)
   return (
     <Card className="bg-card/80">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg">Attendance by Subject</CardTitle>
+        <CardTitle className="text-lg">الحضور حسب المادة</CardTitle>
       </CardHeader>
       <CardContent className="h-80">
         {hasData ? (
@@ -52,7 +52,7 @@ export const AttendanceSubjectChart = ({ metrics }: AttendanceSubjectChartProps)
           />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            Subject analytics will appear after backend integration.
+            ستظهر نسب الحضور لكل مادة هنا بعد توفر بيانات كافية.
           </div>
         )}
       </CardContent>

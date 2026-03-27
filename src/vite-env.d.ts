@@ -1,10 +1,15 @@
 /// <reference types="vite/client" />
 
-// Google Analytics gtag declaration
+type GtagCommand = "config" | "event";
+
+interface GtagParams {
+  [key: string]: string | number | boolean | undefined;
+}
+
 declare global {
   interface Window {
-    gtag?: (...args: any[]) => void;
-    dataLayer?: any[];
+    gtag?: (command: GtagCommand, targetOrName: string, params?: GtagParams) => void;
+    dataLayer?: unknown[];
   }
 }
 

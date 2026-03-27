@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { LoadingScreen } from "@/components/Loading";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
+import { getAttendanceDashboardRoute } from "../utils/dashboardRoutes";
 import AttendanceForbiddenPage from "./AttendanceForbiddenPage";
 
 /**
@@ -25,16 +26,8 @@ const AttendancePage = () => {
     return <Navigate to="/attendance/login" replace />;
   }
 
-  if (role === "owner") {
-    return <Navigate to="/attendance/owner-dashboard" replace />;
-  }
-
-  if (role === "doctor") {
-    return <Navigate to="/attendance/doctor-dashboard" replace />;
-  }
-
-  if (role === "student") {
-    return <Navigate to="/attendance/student-panel" replace />;
+  if (role === "owner" || role === "doctor" || role === "student") {
+    return <Navigate to={getAttendanceDashboardRoute(role)} replace />;
   }
 
   return <AttendanceForbiddenPage />;
