@@ -92,6 +92,10 @@ const Index = () => {
                 href={UNIVERSITY_PLATFORM_URL}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.open(UNIVERSITY_PLATFORM_URL, "_blank", "noopener");
+                }}
                 className="group inline-flex items-center gap-3 rounded-xl border-2 border-cyan-400/40 bg-cyan-400/10 backdrop-blur-sm px-8 py-4 text-base font-bold text-cyan-300 transition-all duration-300 hover:border-cyan-300 hover:bg-cyan-400/15 hover:scale-105 hover:shadow-[0_0_30px_hsl(187_72%_50%/0.25)]"
               >
                 <ExternalLink className="h-5 w-5" />

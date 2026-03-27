@@ -69,6 +69,10 @@ const Navbar = () => {
                     href={link.href}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      window.open(link.href, "_blank", "noopener");
+                    }}
                     className="group relative px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 overflow-hidden text-muted-foreground hover:text-primary hover:bg-primary/10"
                   >
                     <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/0 via-primary/10 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -115,7 +119,11 @@ const Navbar = () => {
                     href={link.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={() => setOpen(false)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setOpen(false);
+                      window.open(link.href, "_blank", "noopener");
+                    }}
                     className="text-base font-medium transition-colors text-muted-foreground hover:text-primary"
                   >
                     {link.label}
