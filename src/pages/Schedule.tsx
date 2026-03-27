@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Clock, MapPin, User, Calendar, GraduationCap, Sparkles, ChevronDown, Download, Image, FileText, Moon } from "lucide-react";
+import { Clock, MapPin, User, Calendar, GraduationCap, Sparkles, ChevronDown, Download, Image, FileText } from "lucide-react";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
@@ -118,11 +118,6 @@ const Schedule = () => {
           <div className="section-container relative py-16 md:py-20">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
               <div className="space-y-4">
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/30">
-                  <Moon className="h-4 w-4 text-amber-500" />
-                  <span className="text-sm font-semibold text-amber-500">رمضان 2026</span>
-                </div>
-
                 <h1 className="text-4xl md:text-5xl font-black text-foreground">
                   الجدول الدراسي
                   <span className="block text-primary mt-2 drop-shadow-[0_0_20px_hsl(var(--primary)/0.5)]">الأسبوعي</span>
@@ -131,8 +126,8 @@ const Schedule = () => {
                 <p className="text-lg text-muted-foreground max-w-md">
                   جميع محاضرات الأسبوع من السبت إلى الجمعة مع التفاصيل الكاملة
                 </p>
-                <p className="text-sm text-amber-500/80 font-medium">
-                  ⏰ المواعيد الرمضانية (40 دقيقة محاضرة + 5 دقائق راحة)
+                <p className="text-sm text-muted-foreground/70 font-medium">
+                  ⏰ 60 دقيقة محاضرة + 10 دقائق راحة بين كل محاضرة
                 </p>
 
                 <div className="flex flex-wrap gap-6 pt-4">
@@ -206,15 +201,6 @@ const Schedule = () => {
 
         {/* Schedule Grid */}
         <section className="section-container py-12 md:py-16" ref={scheduleRef}>
-          <div className="mb-8 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-600/5 to-amber-500/10 border border-amber-500/20">
-            <div className="flex items-center justify-center gap-3 text-amber-500">
-              <Moon className="h-5 w-5 animate-pulse" />
-              <span className="font-bold">المواعيد الرمضانية</span>
-              <span className="text-amber-500/70">|</span>
-              <span className="text-sm">40 دقيقة محاضرة + 5 دقائق راحة</span>
-            </div>
-          </div>
-
           {loading ? (
             <div className="text-center py-20 text-muted-foreground">Loading schedule...</div>
           ) : (
