@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { attendanceService } from "../services/attendanceService";
 import type {
@@ -18,9 +18,6 @@ const EMPTY_METRICS: DashboardMetrics = {
   pendingSubmissions: 0,
 };
 
-/** Fallback poll interval when Realtime is unavailable (e.g. offline). */
-const FALLBACK_POLL_MS = 60_000;
-
 export const useAttendanceDashboardData = (role: AttendanceRole) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,11 +26,10 @@ export const useAttendanceDashboardData = (role: AttendanceRole) => {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [trendPoints, setTrendPoints] = useState<AttendanceTrendPoint[]>([]);
   const [subjectMetrics, setSubjectMetrics] = useState<SubjectAttendanceMetric[]>([]);
+  const mountedRef = useRef(true);
 
-  const refetch = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
+  /** Core fetch — updates state silently (no loading spinner) */
+  const fetchData = useCallback(async () => {
     const [metricsResult, sessionsResult, recordsResult, subjectResult] = await Promise.all([
       attendanceService.fetchDashboardMetrics(role),
       attendanceService.fetchSessionsByRole(role),
@@ -41,8 +37,9 @@ export const useAttendanceDashboardData = (role: AttendanceRole) => {
       attendanceService.fetchSubjectMetrics(role),
     ]);
 
-    const fetchedRecords = recordsResult.data ?? [];
+    if (!mountedRef.current) return;
 
+    const fetchedRecords = recordsResult.data ?? [];
     setMetrics(metricsResult.data ?? EMPTY_METRICS);
     setSessions(sessionsResult.data ?? []);
     setRecords(fetchedRecords);
@@ -50,50 +47,42 @@ export const useAttendanceDashboardData = (role: AttendanceRole) => {
     setSubjectMetrics(subjectResult.data ?? []);
 
     const firstError =
-      metricsResult.error ||
-      sessionsResult.error ||
-      recordsResult.error ||
-      subjectResult.error ||
-      null;
-
+      metricsResult.error || sessionsResult.error || recordsResult.error || subjectResult.error || null;
     setError(firstError);
-    setLoading(false);
   }, [role]);
 
-  // Initial fetch
-  useEffect(() => {
-    void refetch();
-  }, [refetch]);
+  /** Initial fetch with loading spinner */
+  const initialFetch = useCallback(async () => {
+    setLoading(true);
+    await fetchData();
+    if (mountedRef.current) setLoading(false);
+  }, [fetchData]);
 
-  // Realtime subscriptions for live updates (sessions + attendance)
+  // Initial load only
   useEffect(() => {
-    const channelName = `dashboard-realtime-${Date.now()}`;
+    mountedRef.current = true;
+    void initialFetch();
+    return () => { mountedRef.current = false; };
+  }, [initialFetch]);
+
+  // Realtime subscriptions — silent refresh, NO loading state
+  useEffect(() => {
     const channel = supabase
-      .channel(channelName)
+      .channel(`dashboard-${role}-${Date.now()}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "sessions" },
-        () => { void refetch(); },
+        () => { void fetchData(); },
       )
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "attendance" },
-        () => { void refetch(); },
+        () => { void fetchData(); },
       )
       .subscribe();
 
-    // Fallback polling if Realtime connection fails
-    const fallbackTimer = setInterval(() => {
-      if (channel.state !== "joined") {
-        void refetch();
-      }
-    }, FALLBACK_POLL_MS);
-
-    return () => {
-      supabase.removeChannel(channel);
-      clearInterval(fallbackTimer);
-    };
-  }, [refetch]);
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchData, role]);
 
   return {
     loading,
@@ -103,6 +92,6 @@ export const useAttendanceDashboardData = (role: AttendanceRole) => {
     records,
     trendPoints,
     subjectMetrics,
-    refetch,
+    refetch: fetchData,
   };
 };
