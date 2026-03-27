@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { User, BookOpen, ArrowLeft, Users } from "lucide-react";
+import { User, BookOpen, ArrowLeft, Users, Search } from "lucide-react";
 import Layout from "@/components/Layout";
 import ScrollReveal from "@/components/ScrollReveal";
 import SEO from "@/components/SEO";
@@ -17,6 +18,23 @@ const Materials = () => {
     if (aHasTA && !bHasTA) return -1;
     if (!aHasTA && bHasTA) return 1;
     return 0;
+  });
+
+  // Count unique doctors
+  const uniqueDoctors = new Set(
+    subjects.flatMap((s) => [s.instructor, s.secondInstructor].filter(Boolean)),
+  );
+
+  // Search filter
+  const [search, setSearch] = useState("");
+  const filteredSubjects = sortedSubjects.filter((s) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      s.title.toLowerCase().includes(q) ||
+      s.instructor.toLowerCase().includes(q) ||
+      (s.secondInstructor?.toLowerCase().includes(q) ?? false)
+    );
   });
   
   return (
@@ -67,7 +85,7 @@ const Materials = () => {
               <div className="w-px h-6 bg-border" />
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <span className="text-primary font-bold">8</span>
+                  <span className="text-primary font-bold">{uniqueDoctors.size}</span>
                 </span>
                 <span>دكاترة</span>
               </div>
@@ -76,10 +94,26 @@ const Materials = () => {
         </div>
       </section>
 
-      {/* Subjects Grid */}
-      <section className="section-container pb-20">
+      {/* Search + Subjects Grid */}
+      <section className="section-container pb-20 space-y-6">
+        {/* Search bar */}
+        <div className="relative max-w-md mx-auto">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search by subject name or doctor..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-lg border border-border bg-card px-10 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            dir="auto"
+          />
+        </div>
+
+        {filteredSubjects.length === 0 ? (
+          <p className="text-center text-muted-foreground py-10">No subjects match your search.</p>
+        ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {sortedSubjects.map((subject, index) => <ScrollReveal key={subject.id}>
+          {filteredSubjects.map((subject, index) => <ScrollReveal key={subject.id}>
               <Link to={`/materials/${subject.id}`} className="group relative overflow-hidden rounded-2xl bg-card border border-border/50 transition-all duration-500 hover:border-primary/50 hover:shadow-[0_0_30px_hsl(var(--primary)/0.15)] block">
                 {/* Card Number */}
                 <div className="absolute top-3 left-3 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -156,6 +190,7 @@ const Materials = () => {
               </Link>
             </ScrollReveal>)}
         </div>
+        )}
       </section>
       </Layout>
     </>

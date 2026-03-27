@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useMemo } from "react";
 import { Clock, MapPin, User, Calendar, GraduationCap, Sparkles, ChevronDown, Download, Image, FileText, Moon } from "lucide-react";
+import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import Layout from "@/components/Layout";
@@ -54,7 +55,7 @@ const Schedule = () => {
       link.href = canvas.toDataURL("image/png");
       link.click();
     } catch (e) {
-      // Silent fail – user sees no download
+      toast.error("Failed to download image. Please try again.");
     } finally {
       setIsExporting(false);
     }
@@ -80,7 +81,7 @@ const Schedule = () => {
       pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
       pdf.save(`الجدول-الدراسي-${selectedSection}.pdf`);
     } catch (e) {
-      // Silent fail – user sees no download
+      toast.error("Failed to download PDF. Please try again.");
     } finally {
       setIsExporting(false);
     }
