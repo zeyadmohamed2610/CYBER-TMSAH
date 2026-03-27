@@ -11,6 +11,7 @@ import { StatCard } from "../components/StatCard";
 import { StudentDevicesPanel } from "../components/StudentDevicesPanel";
 import { SubjectManagementPanel } from "../components/SubjectManagementPanel";
 import { SystemLogsTable } from "../components/SystemLogsTable";
+import { TAManagementPanel } from "../components/TAManagementPanel";
 import { UserCreationForm } from "../components/UserCreationForm";
 import { useAttendanceDashboardData } from "../hooks/useAttendanceDashboardData";
 import type { Lecture } from "../types";
@@ -41,11 +42,12 @@ export const OwnerDashboard = () => {
       </div>
 
       <Tabs defaultValue="lectures" className="w-full">
-        <TabsList className="grid h-auto w-full grid-cols-2 gap-2 lg:grid-cols-4 xl:grid-cols-7">
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-2 lg:grid-cols-4 xl:grid-cols-8">
           <TabsTrigger value="lectures">Lectures</TabsTrigger>
           <TabsTrigger value="schedule">Schedule</TabsTrigger>
           <TabsTrigger value="materials">Materials</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="tas">TAs</TabsTrigger>
           <TabsTrigger value="subjects">Subjects</TabsTrigger>
           <TabsTrigger value="devices">Devices</TabsTrigger>
           <TabsTrigger value="logs">Logs</TabsTrigger>
@@ -66,6 +68,10 @@ export const OwnerDashboard = () => {
 
         <TabsContent value="users" className="space-y-6">
           <UserCreationForm />
+        </TabsContent>
+
+        <TabsContent value="tas" className="space-y-6">
+          <TAManagementPanel />
         </TabsContent>
 
         <TabsContent value="subjects" className="space-y-6">

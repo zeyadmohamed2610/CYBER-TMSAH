@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { userService } from "../services/userService";
 import { supabase } from "@/lib/supabaseClient";
 
-interface Subject { id: string; name: string; doctor_name: string; }
+interface Subject { id: string; name: string; }
 
 // Zod validation schemas
 const studentSchema = z.object({
@@ -65,7 +65,7 @@ export const UserCreationForm = () => {
   });
 
   useEffect(() => {
-    supabase.from("subjects").select("id, name, doctor_name").order("name")
+    supabase.from("subjects").select("id, name").order("name")
       .then(({ data }) => {
         if (data) {
           setSubjects(data as Subject[]);
@@ -252,7 +252,7 @@ export const UserCreationForm = () => {
                     <SelectContent>
                       {subjects.map(s => (
                         <SelectItem key={s.id} value={s.id}>
-                          {s.name}{s.doctor_name ? ` — ${s.doctor_name}` : ""}
+                          {s.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -302,7 +302,7 @@ export const UserCreationForm = () => {
                     <SelectTrigger><SelectValue placeholder="اختر المادة" /></SelectTrigger>
                     <SelectContent>
                       {subjects.map(s => (
-                        <SelectItem key={s.id} value={s.id}>{s.name}{s.doctor_name ? ` — ${s.doctor_name}` : ""}</SelectItem>
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
