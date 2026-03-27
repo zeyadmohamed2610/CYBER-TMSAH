@@ -7,7 +7,7 @@ import { CreateSessionForm } from "../components/CreateSessionForm";
 import { DataTable, type DataTableColumn } from "../components/DataTable";
 import { ExportButtons } from "../components/ExportButtons";
 import { LiveSessionPanel } from "../components/LiveSessionPanel";
-import { OwnerLiveSessionMap } from "../components/OwnerLiveSessionMap";
+import { OwnerLiveSessionDetails } from "../components/OwnerLiveSessionMap";
 import { StatCard } from "../components/StatCard";
 import { StudentDevicesPanel } from "../components/StudentDevicesPanel";
 import { SubjectManagementPanel } from "../components/SubjectManagementPanel";
@@ -77,7 +77,7 @@ export const OwnerDashboard = () => {
             <AttendanceStatusChart records={records} />
             <AttendanceSubjectChart metrics={subjectMetrics} />
           </div>
-          <OwnerLiveSessionMap sessions={sessions} records={records} />
+          <OwnerLiveSessionDetails sessions={sessions} records={records} />
           <DataTable
             title="سجل الحضور الكامل"
             caption={loading ? "جارٍ التحميل..." : "آخر تسجيلات الحضور."}

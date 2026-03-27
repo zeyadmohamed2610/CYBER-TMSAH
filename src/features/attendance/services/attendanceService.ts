@@ -29,8 +29,12 @@ type SessionRow = {
   id: string;
   subject_id: string;
   rotating_hash?: string | null;
+  short_code?: string | null;
   expires_at?: string | null;
   created_at: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  radius_meters?: number | null;
   subjects?: { name?: string | null } | Array<{ name?: string | null }> | null;
 };
 
@@ -93,9 +97,13 @@ const mapSessionSummary = (row: SessionRow): SessionSummary => {
     subjectId: row.subject_id,
     subjectName: subject?.name ?? "Unknown Subject",
     rotatingHash: row.rotating_hash ?? null,
+    shortCode: row.short_code ?? null,
     expiresAt,
     createdAt: row.created_at,
     isActive,
+    latitude: row.latitude ?? null,
+    longitude: row.longitude ?? null,
+    radiusMeters: row.radius_meters ?? 50,
   };
 };
 
@@ -140,11 +148,10 @@ export const attendanceService = {
   /** Fetch sessions filtered by role. Derives isActive from expires_at. */
   async fetchSessionsByRole(
     role: AttendanceRole,
-    _userId?: string,
   ): Promise<AttendanceApiResponse<SessionSummary[]>> {
     const operation = "attendanceService.fetchSessionsByRole";
     try {
-      const sessionSelect = "id, subject_id, rotating_hash, expires_at, created_at, subjects(name)";
+      const sessionSelect = "id, subject_id, rotating_hash, short_code, expires_at, created_at, latitude, longitude, radius_meters, subjects(name)";
 
       if (role === "owner") {
         const { data, error } = await supabase
@@ -191,7 +198,6 @@ export const attendanceService = {
   /** Fetch attendance records filtered by role. */
   async fetchAttendanceRecords(
     role: AttendanceRole,
-    _userId?: string,
     pagination?: { page?: number; pageSize?: number },
   ): Promise<AttendanceApiResponse<AttendanceRecord[]>> {
     const operation = "attendanceService.fetchAttendanceRecords";
@@ -256,7 +262,6 @@ export const attendanceService = {
   /** Dashboard metrics recomputed from real columns. */
   async fetchDashboardMetrics(
     role: AttendanceRole,
-    _userId?: string,
   ): Promise<AttendanceApiResponse<DashboardMetrics>> {
     const operation = "attendanceService.fetchDashboardMetrics";
     try {
@@ -278,13 +283,15 @@ export const attendanceService = {
         const totalStudents = studentsResult.count ?? 0;
         const attendanceCount = attendanceResult.count ?? 0;
 
+        // Attendance rate = actual records / possible records (1 per student per session)
+        const possibleAttendance = totalSessions * totalStudents;
         return ok<DashboardMetrics>({
           totalSessions,
           totalStudents,
           activeSessions,
           attendanceRate:
-            totalSessions > 0 && totalStudents > 0
-              ? Math.min(100, (attendanceCount / (totalSessions * totalStudents)) * 100)
+            possibleAttendance > 0
+              ? Math.min(100, (attendanceCount / possibleAttendance) * 100)
               : 0,
           pendingSubmissions: 0,
         });
@@ -388,26 +395,43 @@ export const attendanceService = {
   },
 
   /**
-   * M2 fix: Compute trend data from already-fetched records — no extra DB call.
-   * Pure synchronous function; call after fetchAttendanceRecords.
+   * Generate rotating hash for a subject via RPC with GPS coordinates.
    */
-  computeTrendData(records: AttendanceRecord[]): AttendanceTrendPoint[] {
-    const grouped = records.reduce<Record<string, AttendanceTrendPoint>>((acc, row) => {
-      const date = row.submittedAt?.slice(0, 10);
-      if (!date) return acc;
-      if (!acc[date]) {
-        acc[date] = { date, label: formatTrendLabel(date), count: 0 };
-      }
-      acc[date].count += 1;
-      return acc;
-    }, {});
-    return Object.values(grouped).sort((a, b) => a.date.localeCompare(b.date));
-  },
+  async generateRotatingHash(
+    subjectId: string,
+    subjectName?: string,
+    durationMinutes?: number,
+    latitude?: number | null,
+    longitude?: number | null,
+    radiusMeters?: number,
+  ): Promise<AttendanceApiResponse<SessionSummary>> {
+    const operation = "attendanceService.generateRotatingHash";
+    try {
+      const { data, error } = await supabase.rpc("generate_rotating_hash", {
+        p_subject_id: subjectId,
+        p_duration_minutes: durationMinutes ?? 10,
+        p_latitude: latitude ?? null,
+        p_longitude: longitude ?? null,
+        p_radius_meters: radiusMeters ?? 50,
+      });
 
-  /** Subject metrics (owner only effectively). */
+      if (error) throw error;
+
+      const row = data as SessionRow | null;
+      if (!row?.id) throw new Error("RPC returned unexpected response.");
+
+      const session = mapSessionSummary({
+        ...row,
+        subjects: subjectName ? { name: subjectName } : null,
+      });
+
+      return ok<SessionSummary>(session);
+    } catch (error) {
+      return fail<SessionSummary>(operation, error);
+    }
+  },
   async fetchSubjectMetrics(
     role: AttendanceRole,
-    _userId?: string,
   ): Promise<AttendanceApiResponse<SubjectAttendanceMetric[]>> {
     const operation = "attendanceService.fetchSubjectMetrics";
     try {
@@ -515,18 +539,43 @@ export const attendanceService = {
     }
   },
 
-  /** Submit attendance via RPC with device fingerprint for binding enforcement. */
-  async submitAttendance(hash: string): Promise<AttendanceApiResponse<AttendanceSubmissionResult>> {
+  /** Submit attendance via RPC with device fingerprint and GPS for verification. */
+  async submitAttendance(
+    hash: string,
+    latitude?: number | null,
+    longitude?: number | null,
+  ): Promise<AttendanceApiResponse<AttendanceSubmissionResult>> {
     const operation = "attendanceService.submitAttendance";
     try {
       // Compute a stable browser fingerprint from device characteristics
+      const canvasFingerprint = (() => {
+        try {
+          const c = document.createElement("canvas");
+          const ctx = c.getContext("2d");
+          if (!ctx) return "no-canvas";
+          ctx.textBaseline = "top";
+          ctx.font = "14px Arial";
+          ctx.fillStyle = "#f60";
+          ctx.fillRect(125, 1, 62, 20);
+          ctx.fillStyle = "#069";
+          ctx.fillText("cyber-tmsah", 2, 15);
+          return c.toDataURL();
+        } catch {
+          return "canvas-error";
+        }
+      })();
+
       const fpRaw = [
         navigator.userAgent,
         navigator.language,
+        navigator.platform,
         String(screen.width),
         String(screen.height),
-        String(navigator.hardwareConcurrency ?? 0),
         String(screen.colorDepth ?? 0),
+        String(navigator.hardwareConcurrency ?? 0),
+        String(Intl.DateTimeFormat().resolvedOptions().timeZone),
+        navigator.vendor,
+        canvasFingerprint,
       ].join("|");
       const encoder = new TextEncoder();
       const hashBuf = await crypto.subtle.digest("SHA-256", encoder.encode(fpRaw));
@@ -537,6 +586,8 @@ export const attendanceService = {
       const { data, error } = await supabase.rpc("submit_attendance", {
         p_hash: hash,
         p_device_fingerprint: deviceFingerprint,
+        p_student_latitude: latitude ?? null,
+        p_student_longitude: longitude ?? null,
       });
 
       if (error) throw error;
@@ -554,34 +605,19 @@ export const attendanceService = {
   },
 
   /**
-   * Generate rotating hash for a subject via RPC (owner only).
-   * M3 fix: accepts optional subjectName from the caller's already-loaded subjects list
-   * to avoid an extra DB round-trip.
+   * Compute trend data from already-fetched records.
    */
-  async generateRotatingHash(
-    subjectId: string,
-    subjectName?: string,
-  ): Promise<AttendanceApiResponse<SessionSummary>> {
-    const operation = "attendanceService.generateRotatingHash";
-    try {
-      const { data, error } = await supabase.rpc("generate_rotating_hash", {
-        p_subject_id: subjectId,
-      });
-
-      if (error) throw error;
-
-      const row = data as SessionRow | null;
-      if (!row?.id) throw new Error("RPC returned unexpected response.");
-
-      const session = mapSessionSummary({
-        ...row,
-        subjects: subjectName ? { name: subjectName } : null,
-      });
-
-      return ok<SessionSummary>(session);
-    } catch (error) {
-      return fail<SessionSummary>(operation, error);
-    }
+  computeTrendData(records: AttendanceRecord[]): AttendanceTrendPoint[] {
+    const grouped = records.reduce<Record<string, AttendanceTrendPoint>>((acc, row) => {
+      const date = row.submittedAt?.slice(0, 10);
+      if (!date) return acc;
+      if (!acc[date]) {
+        acc[date] = { date, label: formatTrendLabel(date), count: 0 };
+      }
+      acc[date].count += 1;
+      return acc;
+    }, {});
+    return Object.values(grouped).sort((a, b) => a.date.localeCompare(b.date));
   },
 
   /** Fetch system logs (owner only). */

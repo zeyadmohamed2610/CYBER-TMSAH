@@ -1,12 +1,13 @@
 import { useRef, useState } from "react";
 import jsQR from "jsqr";
-import { Camera, Loader2, Send } from "lucide-react";
+import { Camera, Loader2, MapPin, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { attendanceService } from "../services/attendanceService";
+import { useGps } from "../context/GpsContext";
 import type { SessionSummary } from "../types";
 
 interface Props {
@@ -16,14 +17,15 @@ interface Props {
 
 export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) => {
   const { toast }       = useToast();
-  const [hash, setHash] = useState("");
+  const { requestFresh } = useGps();
+  const [code, setCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [scanning, setScanning]         = useState(false);
+  const [gpsStatus, setGpsStatus]       = useState<string>("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const activeSessions = sessions.filter((s) => s.isActive);
 
-  /** Decode QR from a photo taken by the camera */
   const handleQrCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -45,10 +47,10 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
       const qr        = jsQR(imageData.data, imageData.width, imageData.height);
 
       if (qr?.data) {
-        setHash(qr.data);
+        setCode(qr.data.trim());
         toast({ title: "تم مسح الـ QR", description: "الكود جاهز — اضغط تسجيل الحضور." });
       } else {
-        toast({ variant: "destructive", title: "لم يُكتشف QR", description: "تأكد من وضوح الصورة وأن QR ظاهر كاملاً." });
+        toast({ variant: "destructive", title: "لم يُكتشف QR", description: "تأكد من وضوح الصورة." });
       }
     } catch {
       toast({ variant: "destructive", title: "خطأ", description: "فشل قراءة الصورة." });
@@ -60,20 +62,43 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const trimmedHash = hash.trim();
-    if (!trimmedHash) {
+    const trimmedCode = code.trim();
+    if (!trimmedCode) {
       toast({ variant: "destructive", title: "مطلوب", description: "أدخل الكود أو امسح الـ QR." });
       return;
     }
+
     setIsSubmitting(true);
-    const result = await attendanceService.submitAttendance(trimmedHash);
-    if (result.error) {
-      toast({ variant: "destructive", title: "فشل تسجيل الحضور", description: result.error });
-    } else {
-      toast({ title: "تم تسجيل الحضور ✓", description: "تم تسجيل حضورك بنجاح." });
-      setHash("");
-      onSubmitSuccess?.();
+    setGpsStatus("جاري تحديد الموقع...");
+
+    try {
+      // Get fresh GPS before submitting
+      const gps = await requestFresh();
+      setGpsStatus(`تم تحديد الموقع (${gps.lat.toFixed(4)}, ${gps.lng.toFixed(4)})`);
+
+      const result = await attendanceService.submitAttendance(trimmedCode, gps.lat, gps.lng);
+
+      if (result.error) {
+        toast({ variant: "destructive", title: "فشل تسجيل الحضور", description: result.error });
+        setGpsStatus("");
+      } else {
+        toast({ title: "تم تسجيل الحضور ✓", description: "تم تسجيل حضورك بنجاح." });
+        setCode("");
+        setGpsStatus("");
+        onSubmitSuccess?.();
+      }
+    } catch (gpsError) {
+      const msg = gpsError instanceof Error ? gpsError.message : "فشل تحديد الموقع";
+      toast({
+        variant: "destructive",
+        title: "فشل تحديد الموقع GPS",
+        description: msg.includes("denied")
+          ? "يجب تفعيل خدمة الموقع لتسجيل الحضور"
+          : msg,
+      });
+      setGpsStatus("فشل تحديد الموقع");
     }
+
     setIsSubmitting(false);
   };
 
@@ -81,7 +106,7 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
     <Card className="bg-card/80" dir="rtl">
       <CardHeader>
         <CardTitle className="text-lg">تسجيل الحضور</CardTitle>
-        <CardDescription>امسح الـ QR الخاص بالمحاضر أو اكتب الكود يدوياً.</CardDescription>
+        <CardDescription>أدخل كود الجلسة (6 أرقام) أو امسح الـ QR</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="grid gap-4">
@@ -96,7 +121,7 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
             <p className="text-sm text-muted-foreground">لا توجد جلسات نشطة حالياً.</p>
           )}
 
-          {/* QR Camera button */}
+          {/* QR Camera */}
           <div>
             <input
               ref={fileRef}
@@ -118,21 +143,33 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
             </Button>
           </div>
 
+          {/* Short code input */}
           <div className="grid gap-2">
-            <Label htmlFor="attendance-hash">أو أدخل الكود يدوياً</Label>
+            <Label htmlFor="attendance-code">أو أدخل الكود (6 أرقام)</Label>
             <Input
-              id="attendance-hash"
-              value={hash}
-              onChange={(e) => setHash(e.target.value)}
-              placeholder="الكود المكون من 64 حرفاً"
+              id="attendance-code"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="000000"
               dir="ltr"
-              className="font-mono text-xs"
+              className="font-mono text-2xl text-center tracking-[0.5em] h-14"
               disabled={isSubmitting}
               autoComplete="off"
+              maxLength={6}
+              inputMode="numeric"
+              pattern="[0-9]*"
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={isSubmitting || !hash.trim()}>
+          {/* GPS status */}
+          {gpsStatus && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <MapPin className="h-3 w-3" />
+              {gpsStatus}
+            </div>
+          )}
+
+          <Button type="submit" className="w-full" disabled={isSubmitting || !code.trim()}>
             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             تسجيل الحضور
           </Button>

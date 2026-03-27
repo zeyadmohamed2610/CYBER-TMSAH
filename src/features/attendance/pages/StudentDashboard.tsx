@@ -1,13 +1,9 @@
-import { Activity, AlertCircle, BookOpen, CalendarClock, ClipboardCheck, TrendingUp } from "lucide-react";
+import { Activity, AlertCircle, AlertTriangle, ClipboardCheck, TrendingUp } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { DataTable, type DataTableColumn } from "../components/DataTable";
 import { AttendanceSubmissionForm } from "../components/AttendanceSubmissionForm";
-import { ExportButtons } from "../components/ExportButtons";
-import { RotatingSessionDisplay } from "../components/RotatingSessionDisplay";
 import { StatCard } from "../components/StatCard";
 import { SubjectProgressCard } from "../components/SubjectProgressCard";
-import { AttendanceStatusChart } from "../components/charts/AttendanceStatusChart";
-import { AttendanceSubjectChart } from "../components/charts/AttendanceSubjectChart";
 import { AttendanceTrendChart } from "../components/charts/AttendanceTrendChart";
 import { useAttendanceDashboardData } from "../hooks/useAttendanceDashboardData";
 import type { AttendanceRecord } from "../types";
@@ -19,7 +15,9 @@ export const StudentDashboard = () => {
 
   const absenceRate = 100 - metrics.attendanceRate;
   const topSubjects = [...subjectMetrics].sort((a, b) => b.attendanceRate - a.attendanceRate).slice(0, 3);
-  const isLowAttendance = metrics.attendanceRate < 70;
+  const isCriticalAttendance = metrics.attendanceRate < 50;
+  const isWarningAttendance = metrics.attendanceRate >= 50 && metrics.attendanceRate < 70;
+  const isLowAttendance = isCriticalAttendance || isWarningAttendance;
 
   const columns: DataTableColumn<AttendanceRecord>[] = [
     { id: "subject", header: "المادة", cell: (row) => row.subjectName || "—" },
@@ -37,18 +35,44 @@ export const StudentDashboard = () => {
       ) : null}
 
       {isLowAttendance && (
-        <Alert variant="default" className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
-          <AlertCircle className="h-4 w-4 text-yellow-600" />
-          <AlertTitle>تنبيه معدل الحضور</AlertTitle>
-          <AlertDescription>
-            معدل حضورك الحالي {metrics.attendanceRate.toFixed(1)}% منخفض. يُنصح بحضور المزيد من الجلسات لتحسين أدائك.
+        <Alert
+          variant="default"
+          className={
+            isCriticalAttendance
+              ? "border-red-500 bg-red-50 dark:bg-red-950/30 dark:border-red-500/70 animate-pulse"
+              : "border-orange-400 bg-orange-50 dark:bg-orange-950/30 dark:border-orange-400/70"
+          }
+        >
+          {isCriticalAttendance ? (
+            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+          ) : (
+            <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+          )}
+          <AlertTitle
+            className={
+              isCriticalAttendance
+                ? "text-red-700 dark:text-red-300 text-base font-bold"
+                : "text-orange-700 dark:text-orange-300 text-base font-bold"
+            }
+          >
+            {isCriticalAttendance ? "⚠️ تحذير: معدل حضور منخفض جداً!" : "تنبيه معدل الحضور"}
+          </AlertTitle>
+          <AlertDescription
+            className={
+              isCriticalAttendance
+                ? "text-red-600 dark:text-red-400"
+                : "text-orange-600 dark:text-orange-400"
+            }
+          >
+            معدل حضورك الحالي <strong>{metrics.attendanceRate.toFixed(1)}%</strong>.
+            {isCriticalAttendance
+              ? " هذا المعدل خطير ويجب عليك حضور المزيد من الجلسات فوراً لتجنب رسوبك."
+              : " يُنصح بحضور المزيد من الجلسات لتحسين أدائك."}
           </AlertDescription>
         </Alert>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="جلساتي" value={metrics.totalSessions} description="جلسات مادتي" icon={BookOpen} />
-        <StatCard title="الجلسات النشطة" value={metrics.activeSessions} description="جلسات تقبل الحضور الآن" icon={CalendarClock} />
+      <div className="grid gap-4 sm:grid-cols-2">
         <StatCard
           title="معدل الحضور"
           value={`${metrics.attendanceRate.toFixed(1)}%`}
@@ -82,16 +106,12 @@ export const StudentDashboard = () => {
         </div>
       )}
 
-      <RotatingSessionDisplay sessions={sessions} />
-
       <div className="grid gap-4 xl:grid-cols-2">
         <AttendanceSubmissionForm sessions={sessions} onSubmitSuccess={refetch} />
         <AttendanceTrendChart points={trendPoints} />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-3">
-        <AttendanceStatusChart records={records} />
-        <AttendanceSubjectChart metrics={subjectMetrics} />
+      {topSubjects.length > 0 && (
         <div className="rounded-lg border bg-card p-4">
           <h3 className="mb-3 text-lg font-semibold">تفاصيل المواد</h3>
           {subjectMetrics.length > 0 ? (
@@ -104,7 +124,7 @@ export const StudentDashboard = () => {
             <p className="text-sm text-muted-foreground">لا توجد بيانات متاحة</p>
           )}
         </div>
-      </div>
+      )}
 
       <DataTable
         title="سجل حضوري"
@@ -114,8 +134,6 @@ export const StudentDashboard = () => {
         getRowId={(row) => row.id}
         emptyMessage="لا توجد سجلات حضور."
       />
-
-      <ExportButtons role="student" />
     </div>
   );
 };

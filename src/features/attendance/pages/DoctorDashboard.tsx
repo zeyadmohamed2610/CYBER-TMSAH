@@ -21,16 +21,24 @@ export const DoctorDashboard = () => {
 
   // Fetch the doctor's own subject_id from DB
   const [doctorSubjectId, setDoctorSubjectId] = useState<string | undefined>(undefined);
+  const [doctorDbId, setDoctorDbId] = useState<string | undefined>(undefined);
   const [loginSessions, setLoginSessions]     = useState<{ ip_address: string; user_agent: string; created_at: string }[]>([]);
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("users").select("subject_id").eq("auth_id", user.id).maybeSingle()
-      .then(({ data }) => { if (data?.subject_id) setDoctorSubjectId(data.subject_id); });
-
-    supabase.from("login_sessions")
-      .select("ip_address, user_agent, created_at").order("created_at", { ascending: false }).limit(5)
-      .then(({ data }) => { if (data) setLoginSessions(data); });
+    supabase.from("users").select("id, subject_id").eq("auth_id", user.id).maybeSingle()
+      .then(({ data }) => {
+        if (data?.subject_id) setDoctorSubjectId(data.subject_id);
+        if (data?.id) {
+          setDoctorDbId(data.id);
+          supabase.from("login_sessions")
+            .select("ip_address, user_agent, created_at")
+            .eq("user_id", data.id)
+            .order("created_at", { ascending: false })
+            .limit(5)
+            .then(({ data: sessions }) => { if (sessions) setLoginSessions(sessions); });
+        }
+      });
 
     // Log this login session (fire-and-forget)
     void supabase.rpc("log_login_session");

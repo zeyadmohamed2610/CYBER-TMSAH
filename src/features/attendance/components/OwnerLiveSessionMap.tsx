@@ -11,12 +11,12 @@ import {
 import type { AttendanceRecord, SessionSummary } from "../types";
 import { formatDateTime } from "../utils/rotatingSession";
 
-interface OwnerLiveSessionMapProps {
+interface OwnerLiveSessionDetailsProps {
   sessions: SessionSummary[];
   records: AttendanceRecord[];
 }
 
-export const OwnerLiveSessionMap = ({ sessions, records }: OwnerLiveSessionMapProps) => {
+export const OwnerLiveSessionDetails = ({ sessions, records }: OwnerLiveSessionDetailsProps) => {
   const [selectedSessionId, setSelectedSessionId] = useState<string>("");
 
   const activeSessions = useMemo(() => sessions.filter((s) => s.isActive), [sessions]);

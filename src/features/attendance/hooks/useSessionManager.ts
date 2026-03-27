@@ -11,15 +11,23 @@ export interface ActiveSession {
   expires_at: string;
   is_active: boolean;
   rotating_hash: string;
+  short_code: string;
   expires_in_seconds: number;
+  latitude: number | null;
+  longitude: number | null;
+  radius_meters: number;
 }
 
 interface SessionRow {
   id: string;
   subject_id: string;
   rotating_hash: string | null;
+  short_code: string | null;
   expires_at: string | null;
   created_at: string;
+  latitude: number | null;
+  longitude: number | null;
+  radius_meters: number | null;
 }
 
 interface UseSessionManagerReturn {
@@ -27,7 +35,13 @@ interface UseSessionManagerReturn {
   loading: boolean;
   error: string | null;
   creating: boolean;
-  createSession: (subjectId: string, durationMinutes: number) => Promise<void>;
+  createSession: (
+    subjectId: string,
+    durationMinutes: number,
+    latitude?: number | null,
+    longitude?: number | null,
+    radiusMeters?: number,
+  ) => Promise<void>;
   stopSession: (sessionId: string) => Promise<void>;
   updateDuration: (sessionId: string, durationMinutes: number) => Promise<{ error?: string }>;
   refreshHash: () => Promise<void>;
@@ -46,34 +60,79 @@ export function useSessionManager(): UseSessionManagerReturn {
     const { data, error: rpcErr } = await supabase.rpc("refresh_session_hash", {
       p_session_id: activeSession.id,
     });
-    if (rpcErr) return; // silent — will retry next cycle
+    if (rpcErr) return;
     const row = data as SessionRow | null;
-    if (row?.rotating_hash) {
+    if (row) {
       setActiveSession((prev) =>
-        prev ? { ...prev, rotating_hash: row.rotating_hash! } : prev,
+        prev ? {
+          ...prev,
+          rotating_hash: row.rotating_hash ?? prev.rotating_hash,
+          short_code: row.short_code ?? prev.short_code,
+        } : prev,
       );
     }
   }, [activeSession?.id]);
 
-  /** Auto-refresh every 60 seconds while session is active */
+  /** Auto-refresh every 60 seconds while session is active + handle tab visibility */
   useEffect(() => {
     if (hashRefreshTimer.current) clearInterval(hashRefreshTimer.current);
-    if (activeSession?.is_active) {
-      hashRefreshTimer.current = setInterval(refreshHash, 60_000);
-    }
+    if (!activeSession?.is_active) return;
+
+    const tick = () => {
+      // Only refresh when tab is visible to save resources
+      if (document.visibilityState === "visible") {
+        void refreshHash();
+      }
+    };
+
+    hashRefreshTimer.current = setInterval(tick, 60_000);
+
+    // Immediately refresh when tab becomes visible again (hash may have expired)
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        void refreshHash();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
       if (hashRefreshTimer.current) clearInterval(hashRefreshTimer.current);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [activeSession?.id, activeSession?.is_active, refreshHash]);
 
-  /** Create a new session via generate_rotating_hash RPC */
-  const createSession = useCallback(async (subjectId: string, durationMinutes: number) => {
+  /** Cleanup: stop session when page is unloaded (browser close / navigate away) */
+  useEffect(() => {
+    if (!activeSession?.id) return;
+
+    const handleUnload = () => {
+      // Use sendBeacon for reliable delivery on page unload
+      const url = `${supabase.supabaseUrl}/rest/v1/rpc/stop_session`;
+      const body = JSON.stringify({ p_session_id: activeSession.id });
+      navigator.sendBeacon?.(url, new Blob([body], { type: "application/json" }));
+    };
+
+    window.addEventListener("beforeunload", handleUnload);
+    return () => window.removeEventListener("beforeunload", handleUnload);
+  }, [activeSession?.id]);
+
+  /** Create a new session via generate_rotating_hash RPC with GPS */
+  const createSession = useCallback(async (
+    subjectId: string,
+    durationMinutes: number,
+    latitude?: number | null,
+    longitude?: number | null,
+    radiusMeters?: number,
+  ) => {
     setCreating(true);
     setError(null);
 
     const { data, error: rpcErr } = await supabase.rpc("generate_rotating_hash", {
-      p_subject_id:       subjectId,
+      p_subject_id: subjectId,
       p_duration_minutes: durationMinutes,
+      p_latitude: latitude ?? null,
+      p_longitude: longitude ?? null,
+      p_radius_meters: radiusMeters ?? 50,
     });
 
     if (rpcErr) {
@@ -82,7 +141,6 @@ export function useSessionManager(): UseSessionManagerReturn {
       return;
     }
 
-    // Fetch subject details for display
     const { data: subject } = await supabase
       .from("subjects")
       .select("name, doctor_name")
@@ -103,7 +161,11 @@ export function useSessionManager(): UseSessionManagerReturn {
       expires_at:       expiresAt,
       is_active:        new Date(expiresAt).getTime() > Date.now(),
       rotating_hash:    row.rotating_hash ?? "",
+      short_code:       row.short_code ?? "",
       expires_in_seconds: expiresInSeconds,
+      latitude:         row.latitude ?? latitude ?? null,
+      longitude:        row.longitude ?? longitude ?? null,
+      radius_meters:    row.radius_meters ?? radiusMeters ?? 50,
     });
     setCreating(false);
   }, []);

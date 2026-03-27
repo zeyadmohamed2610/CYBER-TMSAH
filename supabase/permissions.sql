@@ -84,7 +84,7 @@ GRANT EXECUTE ON FUNCTION public.generate_rotating_hash(UUID)
   TO authenticated;
 GRANT EXECUTE ON FUNCTION public.submit_attendance(TEXT)
   TO authenticated;
-GRANT EXECUTE ON FUNCTION public.cleanup_expired_sessions()
+GRANT EXECUTE ON FUNCTION public.submit_attendance(TEXT, TEXT, DOUBLE PRECISION, DOUBLE PRECISION)
   TO authenticated;
 GRANT EXECUTE ON FUNCTION public.generate_rotating_hash(UUID, INTEGER)
   TO authenticated;

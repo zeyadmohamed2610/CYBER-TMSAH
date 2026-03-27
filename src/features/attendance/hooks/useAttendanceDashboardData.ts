@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
 import { attendanceService } from "../services/attendanceService";
 import type {
   AttendanceRecord,
@@ -17,10 +18,10 @@ const EMPTY_METRICS: DashboardMetrics = {
   pendingSubmissions: 0,
 };
 
-/** M4: Poll every 30 seconds so expired sessions update without manual refresh. */
-const POLL_INTERVAL_MS = 30_000;
+/** Fallback poll interval when Realtime is unavailable (e.g. offline). */
+const FALLBACK_POLL_MS = 60_000;
 
-export const useAttendanceDashboardData = (role: AttendanceRole, userId?: string) => {
+export const useAttendanceDashboardData = (role: AttendanceRole) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<DashboardMetrics>(EMPTY_METRICS);
@@ -33,12 +34,11 @@ export const useAttendanceDashboardData = (role: AttendanceRole, userId?: string
     setLoading(true);
     setError(null);
 
-    // M2 fix: fetch records once, derive trend synchronously — no double network call.
     const [metricsResult, sessionsResult, recordsResult, subjectResult] = await Promise.all([
-      attendanceService.fetchDashboardMetrics(role, userId),
-      attendanceService.fetchSessionsByRole(role, userId),
-      attendanceService.fetchAttendanceRecords(role, userId),
-      attendanceService.fetchSubjectMetrics(role, userId),
+      attendanceService.fetchDashboardMetrics(role),
+      attendanceService.fetchSessionsByRole(role),
+      attendanceService.fetchAttendanceRecords(role),
+      attendanceService.fetchSubjectMetrics(role),
     ]);
 
     const fetchedRecords = recordsResult.data ?? [];
@@ -46,7 +46,6 @@ export const useAttendanceDashboardData = (role: AttendanceRole, userId?: string
     setMetrics(metricsResult.data ?? EMPTY_METRICS);
     setSessions(sessionsResult.data ?? []);
     setRecords(fetchedRecords);
-    // M2: compute trend from the already-fetched records — zero extra DB calls.
     setTrendPoints(attendanceService.computeTrendData(fetchedRecords));
     setSubjectMetrics(subjectResult.data ?? []);
 
@@ -59,19 +58,40 @@ export const useAttendanceDashboardData = (role: AttendanceRole, userId?: string
 
     setError(firstError);
     setLoading(false);
-  }, [role, userId]);
+  }, [role]);
 
   // Initial fetch
   useEffect(() => {
     void refetch();
   }, [refetch]);
 
-  // M4: Auto-refresh every 30s so session expiry reflects in real-time.
+  // Realtime subscriptions for live updates (sessions + attendance)
   useEffect(() => {
-    const interval = setInterval(() => {
-      void refetch();
-    }, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
+    const channel = supabase
+      .channel("dashboard-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "sessions" },
+        () => { void refetch(); },
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "attendance" },
+        () => { void refetch(); },
+      )
+      .subscribe();
+
+    // Fallback polling if Realtime connection fails
+    const fallbackTimer = setInterval(() => {
+      if (channel.state !== "joined") {
+        void refetch();
+      }
+    }, FALLBACK_POLL_MS);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(fallbackTimer);
+    };
   }, [refetch]);
 
   return {
