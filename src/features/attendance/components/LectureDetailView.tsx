@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, Download, RefreshCw, Users, Clock, Hash, StopCircle } from "lucide-react";
+import { ArrowRight, Download, RefreshCw, Users, Clock, Hash, StopCircle, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { attendanceService } from "../services/attendanceService";
 import { reportService } from "../services/reportService";
@@ -22,6 +24,9 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
   const [attendees, setAttendees] = useState<LectureAttendee[]>([]);
   const [loading, setLoading] = useState(true);
   const [ending, setEnding] = useState(false);
+  const [sessionDuration, setSessionDuration] = useState(10);
+  const [sessionRadius, setSessionRadius] = useState(50);
+  const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
   const { activeSession, creating, error, createSession, stopSession, updateDuration, refreshHash, restoreActiveSession } =
     useSessionManager();
 
@@ -39,6 +44,14 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
   // Restore active session on mount
   useEffect(() => {
     void restoreActiveSession(lecture.id);
+    // Capture GPS
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setGpsCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => {},
+        { enableHighAccuracy: true, timeout: 10000 },
+      );
+    }
   }, [lecture.id, restoreActiveSession]);
 
   // Load attendees
@@ -51,8 +64,8 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
     return () => clearInterval(timer);
   }, [activeSession?.is_active]);
 
-  const handleCreateSession = async (subjectId: string, duration: number, lat?: number | null, lng?: number | null, radius?: number) => {
-    await createSession(subjectId, duration, lat, lng, radius, lecture.id);
+  const handleCreateSession = async () => {
+    await createSession(lecture.subject_id, sessionDuration, gpsCoords?.lat, gpsCoords?.lng, sessionRadius, lecture.id);
   };
 
   const handleEndLecture = async () => {
@@ -220,12 +233,26 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
         />
       ) : (
         <Card>
-          <CardContent className="flex items-center justify-center gap-2 p-6">
-            <Button
-              onClick={() => handleCreateSession(lecture.subject_id, 10)}
-              disabled={creating}
-              className="gap-2"
-            >
+          <CardContent className="p-6 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label className="text-xs">Duration (min)</Label>
+                <Input type="number" min={5} max={180} value={sessionDuration}
+                  onChange={(e) => setSessionDuration(Number(e.target.value))}
+                  className="h-8 text-sm" dir="ltr" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">GPS Radius (m)</Label>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <Input type="number" min={10} max={500} value={sessionRadius}
+                    onChange={(e) => setSessionRadius(Number(e.target.value))}
+                    className="h-8 text-sm" dir="ltr" />
+                </div>
+                {gpsCoords && <p className="text-xs text-green-500">GPS captured</p>}
+              </div>
+            </div>
+            <Button onClick={handleCreateSession} disabled={creating} className="w-full gap-2">
               <Hash className="h-4 w-4" />
               {creating ? "Creating..." : "Start Attendance Session"}
             </Button>
