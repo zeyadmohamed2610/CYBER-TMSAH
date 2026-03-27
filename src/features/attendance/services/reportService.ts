@@ -9,6 +9,14 @@ const fail = <T>(error: string): AttendanceApiResponse<T> => ({ data: null, erro
 
 const escapeCsvCell = (value: string) => `"${value.replace(/"/g, '""')}"`;
 
+const escapeXml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+
 const escapeHtml = (value: string) =>
   value
     .replace(/&/g, "&amp;")
@@ -16,13 +24,27 @@ const escapeHtml = (value: string) =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
+/** Strip non-ASCII chars for PDF (jsPDF doesn't support Arabic/Unicode) */
+const toAscii = (value: string): string => {
+  const stripped = value.replace(/[^\x20-\x7E]/g, "").trim();
+  return stripped || value.replace(/[^\x20-\x7E]/g, "").length === 0 ? stripped || "[non-latin]" : stripped;
+};
+
 const roleLabels: Record<string, string> = {
   student: "Student",
   doctor: "Doctor",
   owner: "Owner",
 };
 
-const createExportRows = (records: AttendanceRecord[]) =>
+interface ExportRow {
+  number: number;
+  subject: string;
+  student: string;
+  submittedAt: string;
+  sessionId: string;
+}
+
+const createExportRows = (records: AttendanceRecord[]): ExportRow[] =>
   records.map((record, index) => ({
     number: index + 1,
     subject: record.subjectName || "N/A",
@@ -60,7 +82,7 @@ const BRAND = {
 };
 
 // ─── CSV Export ───────────────────────────────────────────────
-const exportCsv = (rows: ReturnType<typeof createExportRows>, role: ExportRequest["role"]) => {
+const exportCsv = (rows: ExportRow[], role: ExportRequest["role"]) => {
   const header = ["#", "Subject", "Student", "Submitted At", "Session ID"];
   const meta = [
     [`${BRAND.name} - Attendance Report`],
@@ -83,85 +105,65 @@ const exportCsv = (rows: ReturnType<typeof createExportRows>, role: ExportReques
   return new Blob([`\uFEFF${lines.join("\n")}`], { type: "text/csv;charset=utf-8;" });
 };
 
-// ─── Excel Export (styled HTML) ───────────────────────────────
-const exportExcel = (rows: ReturnType<typeof createExportRows>, role: ExportRequest["role"]) => {
+// ─── Excel Export (proper XML Spreadsheet) ────────────────────
+const exportExcel = (rows: ExportRow[], role: ExportRequest["role"]) => {
   const timestamp = new Date().toLocaleString("en-GB");
+  const xmlRows = rows
+    .map(
+      (row) => `
+      <Row>
+        <Cell><Data ss:Type="Number">${row.number}</Data></Cell>
+        <Cell><Data ss:Type="String">${escapeXml(row.subject)}</Data></Cell>
+        <Cell><Data ss:Type="String">${escapeXml(row.student)}</Data></Cell>
+        <Cell><Data ss:Type="String">${escapeXml(row.submittedAt)}</Data></Cell>
+        <Cell><Data ss:Type="String">${escapeXml(row.sessionId)}</Data></Cell>
+      </Row>`,
+    )
+    .join("");
 
-  const html = `
-<!DOCTYPE html>
-<html dir="ltr" lang="en">
-<head>
-<meta charset="UTF-8">
-<title>${BRAND.name} - Attendance Report</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #fff; color: #1a1a2e; }
-  .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
-  .header { background: linear-gradient(135deg, rgb(${BRAND.primary.join(",")}), rgb(${BRAND.accent.join(",")})); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }
-  .header h1 { font-size: 28px; margin-bottom: 8px; letter-spacing: 2px; }
-  .header p { font-size: 14px; opacity: 0.9; }
-  .meta { background: rgb(${BRAND.light.join(",")}); padding: 16px 30px; border-bottom: 2px solid rgb(${BRAND.primary.join(",")}); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-  .meta-item { font-size: 13px; color: #134e4a; }
-  .meta-item strong { color: rgb(${BRAND.primary.join(",")}); }
-  table { width: 100%; border-collapse: collapse; margin-top: 0; }
-  thead th { background: rgb(${BRAND.primary.join(",")}); color: white; padding: 14px 12px; font-size: 14px; text-align: left; font-weight: 600; }
-  tbody tr:nth-child(even) { background: rgb(${BRAND.light.join(",")}); }
-  tbody tr:hover { background: #ccfbf1; }
-  tbody td { padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #334155; }
-  .row-num { color: #94a3b8; font-weight: 600; text-align: center; width: 40px; }
-  .footer { background: rgb(${BRAND.dark.join(",")}); color: rgb(${BRAND.muted.join(",")}); padding: 16px 30px; text-align: center; font-size: 11px; border-radius: 0 0 12px 12px; }
-</style>
-</head>
-<body>
-<div class="container">
-  <div class="header">
-    <h1>${BRAND.name}</h1>
-    <p>${BRAND.tagline} - Attendance Report</p>
-  </div>
-  <div class="meta">
-    <span class="meta-item"><strong>Role:</strong> ${roleLabels[role] || role}</span>
-    <span class="meta-item"><strong>Export Date:</strong> ${timestamp}</span>
-    <span class="meta-item"><strong>Records:</strong> ${rows.length}</span>
-  </div>
-  <table>
-    <thead>
-      <tr>
-        <th style="width:40px">#</th>
-        <th>Subject</th>
-        <th>Student</th>
-        <th>Submitted At</th>
-        <th>Session ID</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${rows
-        .map(
-          (row) => `
-        <tr>
-          <td class="row-num">${row.number}</td>
-          <td>${escapeHtml(row.subject)}</td>
-          <td>${escapeHtml(row.student)}</td>
-          <td>${escapeHtml(row.submittedAt)}</td>
-          <td dir="ltr" style="font-family:monospace;font-size:11px;color:#64748b">${escapeHtml(row.sessionId)}</td>
-        </tr>`,
-        )
-        .join("")}
-    </tbody>
-  </table>
-  <div class="footer">
-    <p>${BRAND.name} &copy; ${new Date().getFullYear()} - ${BRAND.tagline}</p>
-  </div>
-</div>
-</body>
-</html>`;
+  const xml = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Styles>
+  <Style ss:ID="Default"><Font ss:FontName="Segoe UI" ss:Size="10"/></Style>
+  <Style ss:ID="Header">
+   <Font ss:FontName="Segoe UI" ss:Size="10" ss:Bold="1" ss:Color="FFFFFF"/>
+   <Interior ss:Color="0D9488" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="Title">
+   <Font ss:FontName="Segoe UI" ss:Size="16" ss:Bold="1" ss:Color="0D9488"/>
+   <Alignment ss:Horizontal="Center"/>
+  </Style>
+  <Style ss:ID="Meta">
+   <Font ss:FontName="Segoe UI" ss:Size="9" ss:Color="64748B"/>
+  </Style>
+  <Style ss:ID="EvenRow">
+   <Interior ss:Color="F0FDFA" ss:Pattern="Solid"/>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="Attendance Report">
+  <Table>
+   <Row><Cell ss:StyleID="Title"><Data ss:Type="String">${escapeXml(BRAND.name)} - Attendance Report</Data></Cell></Row>
+   <Row><Cell ss:StyleID="Meta"><Data ss:Type="String">Role: ${escapeXml(roleLabels[role] || role)} | Date: ${escapeXml(timestamp)} | Records: ${rows.length}</Data></Cell></Row>
+   <Row/>
+   <Row>
+    <Cell ss:StyleID="Header"><Data ss:Type="String">#</Data></Cell>
+    <Cell ss:StyleID="Header"><Data ss:Type="String">Subject</Data></Cell>
+    <Cell ss:StyleID="Header"><Data ss:Type="String">Student</Data></Cell>
+    <Cell ss:StyleID="Header"><Data ss:Type="String">Submitted At</Data></Cell>
+    <Cell ss:StyleID="Header"><Data ss:Type="String">Session ID</Data></Cell>
+   </Row>
+   ${xmlRows}
+  </Table>
+ </Worksheet>
+</Workbook>`;
 
-  return new Blob([`\uFEFF${html}`], {
-    type: "application/vnd.ms-excel;charset=utf-8;",
-  });
+  return new Blob([xml], { type: "application/vnd.ms-excel" });
 };
 
-// ─── PDF Export (professional branded layout) ─────────────────
-const exportPdf = (rows: ReturnType<typeof createExportRows>, role: ExportRequest["role"]) => {
+// ─── PDF Export (ASCII-only to avoid jsPDF Unicode issues) ────
+const exportPdf = (rows: ExportRow[], role: ExportRequest["role"]) => {
   const pdf = new jsPDF({ unit: "pt", format: "a4" });
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
@@ -169,7 +171,7 @@ const exportPdf = (rows: ReturnType<typeof createExportRows>, role: ExportReques
   const contentW = pageW - marginX * 2;
   let y = 0;
 
-  const drawHeader = (pageY: number) => {
+  const drawHeader = () => {
     pdf.setFillColor(...BRAND.primary);
     pdf.rect(0, 0, pageW, 100, "F");
 
@@ -226,14 +228,14 @@ const exportPdf = (rows: ReturnType<typeof createExportRows>, role: ExportReques
     pdf.text(`Page ${pdf.getCurrentPageInfo().pageNumber}`, pageW - marginX - 30, pageH - 18);
   };
 
-  y = drawHeader(0);
+  y = drawHeader();
   y = drawTableHeader(y);
 
   rows.forEach((row, index) => {
     if (y > pageH - 60) {
       drawFooter();
       pdf.addPage();
-      y = drawHeader(0);
+      y = drawHeader();
       y = drawTableHeader(y);
     }
 
@@ -252,9 +254,10 @@ const exportPdf = (rows: ReturnType<typeof createExportRows>, role: ExportReques
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(9);
 
+    // Use toAscii to strip Arabic/non-ASCII chars that jsPDF can't render
     pdf.text(String(row.number), marginX + 10, y + 16);
-    pdf.text(row.subject.slice(0, 25), marginX + 40, y + 16);
-    pdf.text(row.student.slice(0, 25), marginX + 170, y + 16);
+    pdf.text(toAscii(row.subject).slice(0, 25), marginX + 40, y + 16);
+    pdf.text(toAscii(row.student).slice(0, 25), marginX + 170, y + 16);
     pdf.text(row.submittedAt.slice(0, 22), marginX + 300, y + 16);
 
     pdf.setTextColor(...BRAND.muted);
