@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
@@ -15,23 +15,18 @@ interface AttendanceAuthContextValue {
 const AttendanceAuthContext = createContext<AttendanceAuthContextValue | undefined>(undefined);
 
 const isAttendanceRole = (value: unknown): value is AttendanceRole => {
-  return value === "owner" || value === "doctor" || value === "student";
+  return value === "owner" || value === "doctor" || value === "student" || value === "ta";
 };
 
-/** Fetch role from database — single source of truth. */
+/** Fetch role from database */
 const fetchUserRole = async (authId: string): Promise<AttendanceRole> => {
   const { data, error } = await supabase
     .from("users")
     .select("role")
     .eq("auth_id", authId)
     .maybeSingle();
-
   if (error) throw error;
-
-  if (!isAttendanceRole(data?.role)) {
-    throw new Error("Unable to resolve user role from public.users.");
-  }
-
+  if (!isAttendanceRole(data?.role)) throw new Error("Unable to resolve user role.");
   return data.role;
 };
 
@@ -49,11 +44,13 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<AttendanceRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const initializedRef = useRef(false);
 
   useEffect(() => {
     let active = true;
 
-    const applySession = async (sessionUser: User | null) => {
+    /** Full apply — fetches role, shows loading ONLY on first call */
+    const applySession = async (sessionUser: User | null, silent = false) => {
       if (!active) return;
 
       if (!sessionUser) {
@@ -63,15 +60,12 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
         return;
       }
 
-      setLoading(true);
+      // Only show loading spinner on first init, not on token refresh
+      if (!silent) setLoading(true);
       setUser(sessionUser);
 
       try {
-        const nextRole = await withTimeout(
-          fetchUserRole(sessionUser.id),
-          10_000,
-          "fetchUserRole",
-        );
+        const nextRole = await withTimeout(fetchUserRole(sessionUser.id), 10_000, "fetchUserRole");
         if (!active) return;
         setRole(nextRole);
       } catch (err) {
@@ -79,17 +73,14 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
         console.error("Failed to fetch attendance role:", err);
         setRole(null);
       } finally {
-        if (active) setLoading(false);
+        if (active && !silent) setLoading(false);
+        initializedRef.current = true;
       }
     };
 
     const initializeAuth = async () => {
       try {
-        const { data, error } = await withTimeout(
-          supabase.auth.getSession(),
-          8_000,
-          "getSession",
-        );
+        const { data, error } = await withTimeout(supabase.auth.getSession(), 8_000, "getSession");
         if (error) throw error;
         await applySession(data.session?.user ?? null);
       } catch (err) {
@@ -105,8 +96,24 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      void applySession(session?.user ?? null);
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!active) return;
+
+      // SIGNED_OUT: clear everything
+      if (event === "SIGNED_OUT") {
+        setUser(null);
+        setRole(null);
+        setLoading(false);
+        initializedRef.current = false;
+        return;
+      }
+
+      // After init, token refreshes and user updates should be SILENT
+      // They must NOT set loading=true (which would unmount the dashboard)
+      const isSilent = initializedRef.current &&
+        (event === "TOKEN_REFRESHED" || event === "USER_UPDATED");
+
+      void applySession(session?.user ?? null, isSilent);
     });
 
     return () => {
@@ -117,14 +124,11 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
 
   const refreshRole = useCallback(async (): Promise<void> => {
     if (!user) return;
-    setLoading(true);
     try {
       const nextRole = await withTimeout(fetchUserRole(user.id), 10_000, "refreshRole");
       setRole(nextRole);
     } catch (error) {
       console.error("Failed to refresh attendance role:", error);
-    } finally {
-      setLoading(false);
     }
   }, [user]);
 
@@ -146,8 +150,6 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
 
 export const useAttendanceAuth = () => {
   const context = useContext(AttendanceAuthContext);
-  if (!context) {
-    throw new Error("useAttendanceAuth must be used inside AttendanceAuthProvider.");
-  }
+  if (!context) throw new Error("useAttendanceAuth must be used inside AttendanceAuthProvider.");
   return context;
 };
