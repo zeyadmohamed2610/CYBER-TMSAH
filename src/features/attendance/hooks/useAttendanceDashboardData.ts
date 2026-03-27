@@ -67,8 +67,9 @@ export const useAttendanceDashboardData = (role: AttendanceRole) => {
 
   // Realtime subscriptions for live updates (sessions + attendance)
   useEffect(() => {
+    const channelName = `dashboard-realtime-${Date.now()}`;
     const channel = supabase
-      .channel("dashboard-realtime")
+      .channel(channelName)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "sessions" },

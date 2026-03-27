@@ -655,58 +655,28 @@ export const attendanceService = {
 
   // ─── Lecture Methods ─────────────────────────────────────────
 
-  /** Fetch lectures with session/attendee counts */
+  /** Fetch lectures with session/attendee counts via single RPC */
   async fetchLectures(
     subjectId?: string,
   ): Promise<AttendanceApiResponse<Lecture[]>> {
     const operation = "attendanceService.fetchLectures";
     try {
-      let query = supabase
-        .from("lectures")
-        .select("id, subject_id, title, lecture_date, created_by, created_at")
-        .order("lecture_date", { ascending: false })
-        .order("created_at", { ascending: false });
-
-      if (subjectId) query = query.eq("subject_id", subjectId);
-
-      const { data, error } = await query;
+      const { data, error } = await supabase.rpc("fetch_lectures", {
+        p_subject_id: subjectId ?? null,
+      });
       if (error) throw error;
 
-      // Fetch subject names and counts separately
-      const lectures: Lecture[] = await Promise.all(
-        (data ?? []).map(async (row) => {
-          const { data: subj } = await supabase
-            .from("subjects")
-            .select("name")
-            .eq("id", row.subject_id)
-            .maybeSingle();
-
-          const { count: sessionCount } = await supabase
-            .from("sessions")
-            .select("id", { head: true, count: "exact" })
-            .eq("lecture_id", row.id);
-
-          // Count distinct students who attended any session in this lecture
-          const { data: attendees } = await supabase
-            .from("attendance")
-            .select("student_id, sessions!inner(lecture_id)")
-            .eq("sessions.lecture_id", row.id);
-
-          const uniqueStudents = new Set((attendees ?? []).map((a) => a.student_id));
-
-          return {
-            id: row.id,
-            subject_id: row.subject_id,
-            title: row.title,
-            lecture_date: row.lecture_date,
-            created_by: row.created_by,
-            created_at: row.created_at,
-            subject_name: subj?.name ?? "Unknown",
-            session_count: sessionCount ?? 0,
-            attendee_count: uniqueStudents.size,
-          };
-        }),
-      );
+      const lectures: Lecture[] = (data ?? []).map((row: Record<string, unknown>) => ({
+        id: row.id as string,
+        subject_id: row.subject_id as string,
+        title: row.title as string,
+        lecture_date: row.lecture_date as string,
+        created_by: (row.created_by as string) ?? null,
+        created_at: row.created_at as string,
+        subject_name: (row.subject_name as string) ?? "Unknown",
+        session_count: Number(row.session_count ?? 0),
+        attendee_count: Number(row.attendee_count ?? 0),
+      }));
 
       return ok<Lecture[]>(lectures);
     } catch (error) {
