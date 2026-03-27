@@ -12,6 +12,30 @@ export interface Subject {
   createdAt: string;
 }
 
+export interface Lecture {
+  id: string;
+  subject_id: string;
+  title: string;
+  lecture_date: string;
+  created_by: string | null;
+  created_at: string;
+  subject_name?: string;
+  session_count?: number;
+  attendee_count?: number;
+}
+
+export interface LectureAttendee {
+  attendance_id: string;
+  student_name: string;
+  national_id: string | null;
+  session_id: string;
+  short_code: string | null;
+  submitted_at: string;
+  ip_address: string | null;
+  student_latitude: number | null;
+  student_longitude: number | null;
+}
+
 export interface SessionSummary {
   id: string;
   subjectId: string;
@@ -24,6 +48,7 @@ export interface SessionSummary {
   latitude: number | null;
   longitude: number | null;
   radiusMeters: number;
+  lectureId?: string | null;
 }
 
 export interface AttendanceRecord {
@@ -31,8 +56,10 @@ export interface AttendanceRecord {
   sessionId: string;
   studentId: string;
   studentName?: string;
+  nationalId?: string;
   subjectName?: string;
-  submittedAt: string; // maps to created_at
+  submittedAt: string;
+  ipAddress?: string | null;
 }
 
 export interface DashboardMetrics {

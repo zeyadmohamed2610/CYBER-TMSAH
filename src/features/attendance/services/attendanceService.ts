@@ -5,6 +5,8 @@ import type {
   AttendanceSubmissionResult,
   AttendanceTrendPoint,
   DashboardMetrics,
+  Lecture,
+  LectureAttendee,
   SessionSummary,
   SubjectAttendanceMetric,
   SystemLogEntry,
@@ -35,6 +37,7 @@ type SessionRow = {
   latitude?: number | null;
   longitude?: number | null;
   radius_meters?: number | null;
+  lecture_id?: string | null;
   subjects?: { name?: string | null } | Array<{ name?: string | null }> | null;
 };
 
@@ -104,6 +107,7 @@ const mapSessionSummary = (row: SessionRow): SessionSummary => {
     latitude: row.latitude ?? null,
     longitude: row.longitude ?? null,
     radiusMeters: row.radius_meters ?? 50,
+    lectureId: row.lecture_id ?? null,
   };
 };
 
@@ -646,6 +650,143 @@ export const attendanceService = {
       return ok<SystemLogEntry[]>(logs);
     } catch (error) {
       return fail<SystemLogEntry[]>(operation, error);
+    }
+  },
+
+  // ─── Lecture Methods ─────────────────────────────────────────
+
+  /** Fetch lectures with session/attendee counts */
+  async fetchLectures(
+    subjectId?: string,
+  ): Promise<AttendanceApiResponse<Lecture[]>> {
+    const operation = "attendanceService.fetchLectures";
+    try {
+      let query = supabase
+        .from("lectures")
+        .select("id, subject_id, title, lecture_date, created_by, created_at")
+        .order("lecture_date", { ascending: false })
+        .order("created_at", { ascending: false });
+
+      if (subjectId) query = query.eq("subject_id", subjectId);
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      // Fetch subject names and counts separately
+      const lectures: Lecture[] = await Promise.all(
+        (data ?? []).map(async (row) => {
+          const { data: subj } = await supabase
+            .from("subjects")
+            .select("name")
+            .eq("id", row.subject_id)
+            .maybeSingle();
+
+          const { count: sessionCount } = await supabase
+            .from("sessions")
+            .select("id", { head: true, count: "exact" })
+            .eq("lecture_id", row.id);
+
+          // Count distinct students who attended any session in this lecture
+          const { data: attendees } = await supabase
+            .from("attendance")
+            .select("student_id, sessions!inner(lecture_id)")
+            .eq("sessions.lecture_id", row.id);
+
+          const uniqueStudents = new Set((attendees ?? []).map((a) => a.student_id));
+
+          return {
+            id: row.id,
+            subject_id: row.subject_id,
+            title: row.title,
+            lecture_date: row.lecture_date,
+            created_by: row.created_by,
+            created_at: row.created_at,
+            subject_name: subj?.name ?? "Unknown",
+            session_count: sessionCount ?? 0,
+            attendee_count: uniqueStudents.size,
+          };
+        }),
+      );
+
+      return ok<Lecture[]>(lectures);
+    } catch (error) {
+      return fail<Lecture[]>(operation, error);
+    }
+  },
+
+  /** Create a new lecture */
+  async createLecture(
+    subjectId: string,
+    title: string,
+  ): Promise<AttendanceApiResponse<Lecture>> {
+    const operation = "attendanceService.createLecture";
+    try {
+      const { data, error } = await supabase.rpc("create_lecture", {
+        p_subject_id: subjectId,
+        p_title: title,
+      });
+      if (error) throw error;
+
+      const row = data as { id: string; subject_id: string; title: string; lecture_date: string; created_by: string | null; created_at: string };
+      return ok<Lecture>({
+        id: row.id,
+        subject_id: row.subject_id,
+        title: row.title,
+        lecture_date: row.lecture_date,
+        created_by: row.created_by,
+        created_at: row.created_at,
+      });
+    } catch (error) {
+      return fail<Lecture>(operation, error);
+    }
+  },
+
+  /** Get all attendees for a lecture with full details */
+  async getLectureAttendees(
+    lectureId: string,
+  ): Promise<AttendanceApiResponse<LectureAttendee[]>> {
+    const operation = "attendanceService.getLectureAttendees";
+    try {
+      const { data, error } = await supabase.rpc("get_lecture_attendees", {
+        p_lecture_id: lectureId,
+      });
+      if (error) throw error;
+
+      const attendees: LectureAttendee[] = (data ?? []).map((row: Record<string, unknown>) => ({
+        attendance_id: row.attendance_id as string,
+        student_name: row.student_name as string,
+        national_id: (row.national_id as string) ?? null,
+        session_id: row.session_id as string,
+        short_code: (row.short_code as string) ?? null,
+        submitted_at: row.submitted_at as string,
+        ip_address: (row.ip_address as string) ?? null,
+        student_latitude: (row.student_latitude as number) ?? null,
+        student_longitude: (row.student_longitude as number) ?? null,
+      }));
+
+      return ok<LectureAttendee[]>(attendees);
+    } catch (error) {
+      return fail<LectureAttendee[]>(operation, error);
+    }
+  },
+
+  /** Fetch sessions for a specific lecture */
+  async fetchSessionsForLecture(
+    lectureId: string,
+  ): Promise<AttendanceApiResponse<SessionSummary[]>> {
+    const operation = "attendanceService.fetchSessionsForLecture";
+    try {
+      const select = "id, subject_id, rotating_hash, short_code, expires_at, created_at, latitude, longitude, radius_meters, lecture_id, subjects(name)";
+      const { data, error } = await supabase
+        .from("sessions")
+        .select(select)
+        .eq("lecture_id", lectureId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return ok<SessionSummary[]>(((data ?? []) as SessionRow[]).map(mapSessionSummary));
+    } catch (error) {
+      return fail<SessionSummary[]>(operation, error);
     }
   },
 };

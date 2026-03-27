@@ -123,6 +123,7 @@ export function useSessionManager(): UseSessionManagerReturn {
     latitude?: number | null,
     longitude?: number | null,
     radiusMeters?: number,
+    lectureId?: string | null,
   ) => {
     setCreating(true);
     setError(null);
@@ -133,6 +134,7 @@ export function useSessionManager(): UseSessionManagerReturn {
       p_latitude: latitude ?? null,
       p_longitude: longitude ?? null,
       p_radius_meters: radiusMeters ?? 50,
+      p_lecture_id: lectureId ?? null,
     });
 
     if (rpcErr) {

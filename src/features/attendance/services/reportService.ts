@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas-pro";
-import type { AttendanceApiResponse, AttendanceRecord, ExportRequest, ExportResult } from "../types";
+import type { AttendanceApiResponse, AttendanceRecord, ExportRequest, ExportResult, Lecture, LectureAttendee } from "../types";
 import { attendanceService } from "./attendanceService";
 
 const EXPORT_ROW_LIMIT = 500;
@@ -250,5 +250,63 @@ export const reportService = {
       exportId,
       downloadUrl: null,
     });
+  },
+
+  /** Export a single lecture's attendance with full details */
+  async exportLecture(
+    attendees: LectureAttendee[],
+    lecture: Lecture,
+    format: "csv" | "xlsx" | "pdf",
+  ): Promise<AttendanceApiResponse<ExportResult>> {
+    const rows: ExportRow[] = attendees.map((a, i) => ({
+      number: i + 1,
+      subject: lecture.subject_name ?? lecture.title,
+      student: a.student_name,
+      submittedAt: new Date(a.submitted_at).toLocaleString("en-GB"),
+      sessionId: a.short_code ?? a.session_id,
+    }));
+
+    const lectureLabel = `${lecture.title}-${lecture.lecture_date}`;
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    const fileName = `CYBER-TMSAH-${lectureLabel}-${stamp}`;
+
+    if (format === "csv") {
+      // CSV with full details including national ID and IP
+      const header = ["#", "Student Name", "National ID", "Session Code", "Time", "IP Address"];
+      const meta = [
+        [`${BRAND.name} - Lecture Attendance`],
+        [`Lecture: ${lecture.title}`],
+        [`Subject: ${lecture.subject_name ?? ""}`],
+        [`Date: ${lecture.lecture_date}`],
+        [`Total Attendees: ${attendees.length}`],
+        [],
+      ];
+      const dataLines = attendees.map((a, i) =>
+        [
+          String(i + 1),
+          a.student_name,
+          a.national_id ?? "N/A",
+          a.short_code ?? "N/A",
+          new Date(a.submitted_at).toLocaleString("en-GB"),
+          a.ip_address ?? "N/A",
+        ]
+          .map(escapeCsvCell)
+          .join(","),
+      );
+      const lines = [
+        ...meta.map((r) => r.map(escapeCsvCell).join(",")),
+        header.map(escapeCsvCell).join(","),
+        ...dataLines,
+      ];
+      downloadBlob(new Blob([`\uFEFF${lines.join("\n")}`], { type: "text/csv;charset=utf-8;" }), `${fileName}.csv`);
+    } else if (format === "xlsx") {
+      const blob = await exportExcel(rows, "owner");
+      downloadBlob(blob, `${fileName}.xls`);
+    } else {
+      const blob = await exportPdf(rows, "owner");
+      downloadBlob(blob, `${fileName}.pdf`);
+    }
+
+    return ok<ExportResult>({ exportId: crypto.randomUUID?.() ?? `${Date.now()}`, downloadUrl: null });
   },
 };
