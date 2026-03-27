@@ -17,9 +17,13 @@ export interface SessionSummary {
   subjectId: string;
   subjectName: string;
   rotatingHash: string | null;
+  shortCode: string | null;
   expiresAt: string | null;
   createdAt: string;
   isActive: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  radiusMeters: number;
 }
 
 export interface AttendanceRecord {
