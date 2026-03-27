@@ -1,16 +1,16 @@
 import { Activity, AlertCircle, AlertTriangle, ClipboardCheck, TrendingUp } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { DataTable, type DataTableColumn } from "../components/DataTable";
+import { ActiveSessionsBar } from "../components/ActiveSessionsBar";
 import { AttendanceSubmissionForm } from "../components/AttendanceSubmissionForm";
 import { StatCard } from "../components/StatCard";
 import { SubjectProgressCard } from "../components/SubjectProgressCard";
-import { AttendanceTrendChart } from "../components/charts/AttendanceTrendChart";
 import { useAttendanceDashboardData } from "../hooks/useAttendanceDashboardData";
 import type { AttendanceRecord } from "../types";
 import { formatDateTime } from "../utils/rotatingSession";
 
 export const StudentDashboard = () => {
-  const { loading, error, metrics, records, sessions, trendPoints, subjectMetrics, refetch } =
+  const { loading, error, metrics, records, sessions, subjectMetrics, refetch } =
     useAttendanceDashboardData("student");
 
   const absenceRate = 100 - metrics.attendanceRate;
@@ -48,46 +48,29 @@ export const StudentDashboard = () => {
           ) : (
             <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
           )}
-          <AlertTitle
-            className={
-              isCriticalAttendance
-                ? "text-red-700 dark:text-red-300 text-base font-bold"
-                : "text-orange-700 dark:text-orange-300 text-base font-bold"
-            }
-          >
+          <AlertTitle className={isCriticalAttendance ? "text-red-700 dark:text-red-300 text-base font-bold" : "text-orange-700 dark:text-orange-300 text-base font-bold"}>
             {isCriticalAttendance ? "⚠️ تحذير: معدل حضور منخفض جداً!" : "تنبيه معدل الحضور"}
           </AlertTitle>
-          <AlertDescription
-            className={
-              isCriticalAttendance
-                ? "text-red-600 dark:text-red-400"
-                : "text-orange-600 dark:text-orange-400"
-            }
-          >
+          <AlertDescription className={isCriticalAttendance ? "text-red-600 dark:text-red-400" : "text-orange-600 dark:text-orange-400"}>
             معدل حضورك الحالي <strong>{metrics.attendanceRate.toFixed(1)}%</strong>.
-            {isCriticalAttendance
-              ? " هذا المعدل خطير ويجب عليك حضور المزيد من الجلسات فوراً لتجنب رسوبك."
-              : " يُنصح بحضور المزيد من الجلسات لتحسين أدائك."}
+            {isCriticalAttendance ? " هذا المعدل خطير ويجب عليك حضور المزيد من الجلسات فوراً لتجنب رسوبك." : " يُنصح بحضور المزيد من الجلسات لتحسين أدائك."}
           </AlertDescription>
         </Alert>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <StatCard
-          title="معدل الحضور"
-          value={`${metrics.attendanceRate.toFixed(1)}%`}
-          description="نسبة حضوري"
-          icon={Activity}
-          className={metrics.attendanceRate >= 70 ? "border-green-500/50" : "border-yellow-500/50"}
-        />
-        <StatCard
-          title="معدل الغياب"
-          value={`${absenceRate.toFixed(1)}%`}
-          description="نسبة الغياب"
-          icon={ClipboardCheck}
-          className={absenceRate > 30 ? "border-red-500/50" : ""}
-        />
+        <StatCard title="معدل الحضور" value={`${metrics.attendanceRate.toFixed(1)}%`} description="نسبة حضوري" icon={Activity} className={metrics.attendanceRate >= 70 ? "border-green-500/50" : "border-yellow-500/50"} />
+        <StatCard title="معدل الغياب" value={`${absenceRate.toFixed(1)}%`} description="نسبة الغياب" icon={ClipboardCheck} className={absenceRate > 30 ? "border-red-500/50" : ""} />
       </div>
+
+      {/* Active sessions — student picks which session to check into */}
+      <div className="rounded-2xl border bg-card p-6">
+        <h3 className="text-lg font-bold mb-4">الجلسات النشطة الآن</h3>
+        <ActiveSessionsBar />
+      </div>
+
+      {/* Manual code entry fallback */}
+      <AttendanceSubmissionForm sessions={sessions} onSubmitSuccess={refetch} />
 
       {topSubjects.length > 0 && (
         <div className="rounded-lg border bg-card p-4">
@@ -106,23 +89,14 @@ export const StudentDashboard = () => {
         </div>
       )}
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <AttendanceSubmissionForm sessions={sessions} onSubmitSuccess={refetch} />
-        <AttendanceTrendChart points={trendPoints} />
-      </div>
-
-      {topSubjects.length > 0 && (
+      {subjectMetrics.length > 0 && (
         <div className="rounded-lg border bg-card p-4">
           <h3 className="mb-3 text-lg font-semibold">تفاصيل المواد</h3>
-          {subjectMetrics.length > 0 ? (
-            <div className="space-y-3">
-              {subjectMetrics.map((subject) => (
-                <SubjectProgressCard key={subject.subjectName} metric={subject} />
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">لا توجد بيانات متاحة</p>
-          )}
+          <div className="space-y-3">
+            {subjectMetrics.map((subject) => (
+              <SubjectProgressCard key={subject.subjectName} metric={subject} />
+            ))}
+          </div>
         </div>
       )}
 

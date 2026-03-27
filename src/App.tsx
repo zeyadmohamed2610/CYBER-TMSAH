@@ -21,6 +21,7 @@ const AttendanceLoginPage = lazy(() => import("./features/attendance/pages/Atten
 const AttendanceOwnerPage = lazy(() => import("./features/attendance/pages/AttendanceOwnerPage"));
 const AttendanceDoctorPage = lazy(() => import("./features/attendance/pages/AttendanceDoctorPage"));
 const AttendanceStudentPage = lazy(() => import("./features/attendance/pages/AttendanceStudentPage"));
+const AttendanceTAPage = lazy(() => import("./features/attendance/pages/AttendanceTAPage"));
 
 const AppWrapper = ({ children }: { children: React.ReactNode }) => {
   usePerformanceMonitoring();
@@ -74,6 +75,14 @@ const App = () => (
                     element={
                       <AttendanceRoleGate allowedRole="student">
                         <AttendanceStudentPage />
+                      </AttendanceRoleGate>
+                    }
+                  />
+                  <Route
+                    path="/attendance/ta-dashboard"
+                    element={
+                      <AttendanceRoleGate allowedRole="ta">
+                        <AttendanceTAPage />
                       </AttendanceRoleGate>
                     }
                   />
