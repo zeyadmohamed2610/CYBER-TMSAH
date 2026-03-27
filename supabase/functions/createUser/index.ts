@@ -2,7 +2,7 @@
 // Simpler version with better error handling
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') || '*',
+  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
@@ -95,8 +95,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (password.length < 6) {
-      return new Response(JSON.stringify({ error: 'Password must be at least 6 characters' }), {
+    if (password.length < 8) {
+      return new Response(JSON.stringify({ error: 'Password must be at least 8 characters' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -134,6 +134,26 @@ Deno.serve(async (req) => {
         });
       }
       authEmail = email.toLowerCase();
+    }
+
+    // Check for duplicate national_id BEFORE creating auth user
+    if (national_id) {
+      const dupCheck = await fetch(
+        `${supabaseUrl}/rest/v1/users?national_id=eq.${national_id}&select=id`,
+        {
+          headers: {
+            'Authorization': `Bearer ${serviceKey}`,
+            'apikey': serviceKey,
+          },
+        }
+      );
+      const dupData = await dupCheck.json();
+      if (Array.isArray(dupData) && dupData.length > 0) {
+        return new Response(JSON.stringify({ error: 'National ID already registered' }), {
+          status: 409,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
 
     // Create auth user using admin API
