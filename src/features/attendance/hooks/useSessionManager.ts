@@ -16,6 +16,7 @@ export interface ActiveSession {
   latitude: number | null;
   longitude: number | null;
   radius_meters: number;
+  lecture_id?: string | null;
 }
 
 interface SessionRow {
@@ -28,6 +29,7 @@ interface SessionRow {
   latitude: number | null;
   longitude: number | null;
   radius_meters: number | null;
+  lecture_id?: string | null;
 }
 
 interface UseSessionManagerReturn {
@@ -41,10 +43,12 @@ interface UseSessionManagerReturn {
     latitude?: number | null,
     longitude?: number | null,
     radiusMeters?: number,
+    lectureId?: string | null,
   ) => Promise<void>;
   stopSession: (sessionId: string) => Promise<void>;
   updateDuration: (sessionId: string, durationMinutes: number) => Promise<{ error?: string }>;
   refreshHash: () => Promise<void>;
+  restoreActiveSession: (lectureId?: string) => Promise<void>;
 }
 
 export function useSessionManager(): UseSessionManagerReturn {
@@ -53,6 +57,55 @@ export function useSessionManager(): UseSessionManagerReturn {
   const [creating, setCreating] = useState(false);
   const [error, setError]       = useState<string | null>(null);
   const hashRefreshTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  /** Restore active session from DB (after page refresh or navigation) */
+  const restoreActiveSession = useCallback(async (lectureId?: string) => {
+    setLoading(true);
+    try {
+      let query = supabase
+        .from("sessions")
+        .select("id, subject_id, rotating_hash, short_code, expires_at, created_at, latitude, longitude, radius_meters, lecture_id, subjects(name, doctor_name)")
+        .gt("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (lectureId) query = query.eq("lecture_id", lectureId);
+
+      const { data } = await query;
+      const row = (data ?? [])[0] as (SessionRow & { subjects?: { name?: string; doctor_name?: string } }) | undefined;
+
+      if (row) {
+        const expiresAt = row.expires_at!;
+        const now = Date.now();
+        const expiresMs = new Date(expiresAt).getTime();
+        const isActive = expiresMs > now;
+        const expiresInSeconds = Math.max(0, Math.round((expiresMs - now) / 1000));
+
+        if (isActive) {
+          setActiveSession({
+            id: row.id,
+            subject_id: row.subject_id,
+            subject_name: row.subjects?.name ?? "",
+            doctor_name: row.subjects?.doctor_name ?? "",
+            duration_minutes: Math.round(expiresInSeconds / 60),
+            started_at: row.created_at,
+            expires_at: expiresAt,
+            is_active: true,
+            rotating_hash: row.rotating_hash ?? "",
+            short_code: row.short_code ?? "",
+            expires_in_seconds: expiresInSeconds,
+            latitude: row.latitude ?? null,
+            longitude: row.longitude ?? null,
+            radius_meters: row.radius_meters ?? 50,
+            lecture_id: row.lecture_id ?? null,
+          });
+        }
+      }
+    } catch {
+      // silently fail - session will just not be restored
+    }
+    setLoading(false);
+  }, []);
 
   /** Refresh hash on existing session (60-second rotation) */
   const refreshHash = useCallback(async () => {
@@ -79,7 +132,6 @@ export function useSessionManager(): UseSessionManagerReturn {
     if (!activeSession?.is_active) return;
 
     const tick = () => {
-      // Only refresh when tab is visible to save resources
       if (document.visibilityState === "visible") {
         void refreshHash();
       }
@@ -87,7 +139,6 @@ export function useSessionManager(): UseSessionManagerReturn {
 
     hashRefreshTimer.current = setInterval(tick, 60_000);
 
-    // Immediately refresh when tab becomes visible again (hash may have expired)
     const onVisible = () => {
       if (document.visibilityState === "visible") {
         void refreshHash();
@@ -100,21 +151,6 @@ export function useSessionManager(): UseSessionManagerReturn {
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [activeSession?.id, activeSession?.is_active, refreshHash]);
-
-  /** Cleanup: stop session when page is unloaded (browser close / navigate away) */
-  useEffect(() => {
-    if (!activeSession?.id) return;
-
-    const handleUnload = () => {
-      // Use sendBeacon for reliable delivery on page unload
-      const url = `${supabase.supabaseUrl}/rest/v1/rpc/stop_session`;
-      const body = JSON.stringify({ p_session_id: activeSession.id });
-      navigator.sendBeacon?.(url, new Blob([body], { type: "application/json" }));
-    };
-
-    window.addEventListener("beforeunload", handleUnload);
-    return () => window.removeEventListener("beforeunload", handleUnload);
-  }, [activeSession?.id]);
 
   /** Create a new session via generate_rotating_hash RPC with GPS */
   const createSession = useCallback(async (
@@ -168,6 +204,7 @@ export function useSessionManager(): UseSessionManagerReturn {
       latitude:         row.latitude ?? latitude ?? null,
       longitude:        row.longitude ?? longitude ?? null,
       radius_meters:    row.radius_meters ?? radiusMeters ?? 50,
+      lecture_id:       row.lecture_id ?? lectureId ?? null,
     });
     setCreating(false);
   }, []);
@@ -216,5 +253,5 @@ export function useSessionManager(): UseSessionManagerReturn {
     return {};
   }, []);
 
-  return { activeSession, loading, error, creating, createSession, stopSession, updateDuration, refreshHash };
+  return { activeSession, loading, error, creating, createSession, stopSession, updateDuration, refreshHash, restoreActiveSession };
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, Download, RefreshCw, Users, Clock, Globe, Hash, Fingerprint } from "lucide-react";
+import { ArrowRight, Download, RefreshCw, Users, Clock, Hash, StopCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +21,8 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
   const { toast } = useToast();
   const [attendees, setAttendees] = useState<LectureAttendee[]>([]);
   const [loading, setLoading] = useState(true);
-  const { activeSession, creating, error, createSession, stopSession, updateDuration, refreshHash } =
+  const [ending, setEnding] = useState(false);
+  const { activeSession, creating, error, createSession, stopSession, updateDuration, refreshHash, restoreActiveSession } =
     useSessionManager();
 
   const load = async () => {
@@ -35,9 +36,15 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
     setLoading(false);
   };
 
+  // Restore active session on mount
+  useEffect(() => {
+    void restoreActiveSession(lecture.id);
+  }, [lecture.id, restoreActiveSession]);
+
+  // Load attendees
   useEffect(() => { void load(); }, [lecture.id]);
 
-  // Auto-refresh every 10 seconds when there's an active session
+  // Auto-refresh every 10 seconds when session is active
   useEffect(() => {
     if (!activeSession?.is_active) return;
     const timer = setInterval(() => void load(), 10_000);
@@ -46,6 +53,18 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
 
   const handleCreateSession = async (subjectId: string, duration: number, lat?: number | null, lng?: number | null, radius?: number) => {
     await createSession(subjectId, duration, lat, lng, radius, lecture.id);
+  };
+
+  const handleEndLecture = async () => {
+    setEnding(true);
+    const result = await attendanceService.endLecture(lecture.id);
+    if (result.error) {
+      toast({ variant: "destructive", title: "Error", description: result.error });
+    } else {
+      toast({ title: "Lecture Ended", description: "All sessions stopped. Empty sessions cleaned up." });
+      onBack();
+    }
+    setEnding(false);
   };
 
   const handleExport = async (format: "csv" | "xlsx" | "pdf") => {
@@ -58,11 +77,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
   };
 
   const columns: DataTableColumn<LectureAttendee>[] = [
-    {
-      id: "num",
-      header: "#",
-      cell: (_row, index) => String((index ?? 0) + 1),
-    },
+    { id: "num", header: "#", cell: (_row, index) => String((index ?? 0) + 1) },
     {
       id: "name",
       header: "Student Name",
@@ -118,9 +133,15 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
             </p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
-          <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
+            <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+          <Button variant="destructive" size="sm" onClick={handleEndLecture} disabled={ending} className="gap-1">
+            <StopCircle className="h-3 w-3" />
+            {ending ? "Ending..." : "End Lecture"}
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -217,7 +238,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
       {/* Attendees table */}
       <DataTable
         title={`Attendance List (${attendees.length})`}
-        caption={loading ? "Loading..." : attendees.length === 0 ? "No attendance records yet. Start a session above." : undefined}
+        caption={loading ? "Loading..." : attendees.length === 0 ? "No attendance records yet." : undefined}
         columns={columns}
         rows={attendees}
         getRowId={(row) => row.attendance_id}

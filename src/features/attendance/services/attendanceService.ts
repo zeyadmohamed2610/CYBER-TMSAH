@@ -789,4 +789,16 @@ export const attendanceService = {
       return fail<SessionSummary[]>(operation, error);
     }
   },
+
+  /** End a lecture: stop all sessions, delete empty ones */
+  async endLecture(lectureId: string): Promise<AttendanceApiResponse<null>> {
+    const operation = "attendanceService.endLecture";
+    try {
+      const { error } = await supabase.rpc("end_lecture", { p_lecture_id: lectureId });
+      if (error) throw error;
+      return ok<null>(null);
+    } catch (error) {
+      return fail<null>(operation, error);
+    }
+  },
 };
