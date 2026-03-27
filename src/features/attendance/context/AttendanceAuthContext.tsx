@@ -35,6 +35,16 @@ const fetchUserRole = async (authId: string): Promise<AttendanceRole> => {
   return data.role;
 };
 
+/** Wrap a promise with a timeout */
+const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms),
+    ),
+  ]);
+};
+
 export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<AttendanceRole | null>(null);
@@ -57,12 +67,16 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
       setUser(sessionUser);
 
       try {
-        const nextRole = await fetchUserRole(sessionUser.id);
+        const nextRole = await withTimeout(
+          fetchUserRole(sessionUser.id),
+          10_000,
+          "fetchUserRole",
+        );
         if (!active) return;
         setRole(nextRole);
-      } catch (error) {
+      } catch (err) {
         if (!active) return;
-        console.error("Failed to fetch attendance role:", error);
+        console.error("Failed to fetch attendance role:", err);
         setRole(null);
       } finally {
         if (active) setLoading(false);
@@ -71,12 +85,16 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
 
     const initializeAuth = async () => {
       try {
-        const { data, error } = await supabase.auth.getSession();
+        const { data, error } = await withTimeout(
+          supabase.auth.getSession(),
+          8_000,
+          "getSession",
+        );
         if (error) throw error;
         await applySession(data.session?.user ?? null);
-      } catch (error) {
+      } catch (err) {
         if (!active) return;
-        console.error("Failed to initialize attendance auth session:", error);
+        console.error("Failed to initialize attendance auth session:", err);
         setUser(null);
         setRole(null);
         setLoading(false);
@@ -101,7 +119,7 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
     if (!user) return;
     setLoading(true);
     try {
-      const nextRole = await fetchUserRole(user.id);
+      const nextRole = await withTimeout(fetchUserRole(user.id), 10_000, "refreshRole");
       setRole(nextRole);
     } catch (error) {
       console.error("Failed to refresh attendance role:", error);
