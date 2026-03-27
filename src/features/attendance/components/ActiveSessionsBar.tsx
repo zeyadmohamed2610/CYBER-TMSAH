@@ -135,9 +135,9 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
           </div>
 
           {/* Code display */}
-          <div className="rounded-xl bg-primary/10 border border-primary/30 p-6 space-y-3">
+          <div className="rounded-xl bg-primary/10 border border-primary/30 p-4 sm:p-6 space-y-2 sm:space-y-3">
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Session Code</p>
-            <p className="text-5xl font-bold font-mono tracking-[0.5em] text-primary">
+            <p className="text-4xl sm:text-5xl font-bold font-mono tracking-[0.3em] sm:tracking-[0.5em] text-primary">
               {selectedSession.short_code}
             </p>
             <div className="flex items-center justify-center gap-2">
@@ -150,8 +150,8 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
 
           {/* QR Code */}
           <div className="flex justify-center">
-            <div className="rounded-xl bg-white p-3">
-              <canvas ref={canvasRef} />
+            <div className="rounded-xl bg-white p-2 sm:p-3">
+              <canvas ref={canvasRef} style={{ maxWidth: "140px", height: "auto" }} />
             </div>
           </div>
 

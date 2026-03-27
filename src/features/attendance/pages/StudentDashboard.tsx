@@ -6,10 +6,12 @@ import { AttendanceSubmissionForm } from "../components/AttendanceSubmissionForm
 import { StatCard } from "../components/StatCard";
 import { SubjectProgressCard } from "../components/SubjectProgressCard";
 import { useAttendanceDashboardData } from "../hooks/useAttendanceDashboardData";
+import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 import type { AttendanceRecord } from "../types";
 import { formatDateTime } from "../utils/rotatingSession";
 
 export const StudentDashboard = () => {
+  const { fullName } = useAttendanceAuth();
   const { loading, error, metrics, records, sessions, subjectMetrics, refetch } =
     useAttendanceDashboardData("student");
 
@@ -27,6 +29,12 @@ export const StudentDashboard = () => {
 
   return (
     <div className="space-y-6">
+      {fullName && (
+        <p className="text-lg font-bold">
+          مرحباً يا <span className="text-primary">{fullName}</span> 👋
+        </p>
+      )}
+
       {error ? (
         <Alert variant="destructive">
           <AlertTitle>خطأ في الاتصال بقاعدة البيانات</AlertTitle>

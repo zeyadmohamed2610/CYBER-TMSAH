@@ -14,10 +14,12 @@ import { SystemLogsTable } from "../components/SystemLogsTable";
 import { TAManagementPanel } from "../components/TAManagementPanel";
 import { UserCreationForm } from "../components/UserCreationForm";
 import { useAttendanceDashboardData } from "../hooks/useAttendanceDashboardData";
+import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 import type { Lecture } from "../types";
 
 export const OwnerDashboard = () => {
   const { error, metrics } = useAttendanceDashboardData("owner");
+  const { fullName } = useAttendanceAuth();
   const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
   const [activeTab, setActiveTab] = useState("lectures");
 
@@ -35,6 +37,12 @@ export const OwnerDashboard = () => {
       )}
 
       {/* Stats */}
+      {fullName && (
+        <p className="text-lg font-bold">
+          مرحباً يا <span className="text-primary">{fullName}</span> 👋
+        </p>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard title="Total Sessions" value={metrics.totalSessions} description="All time" icon={BookOpenCheck} />
         <StatCard title="Total Students" value={metrics.totalStudents} description="Registered" icon={Users} />

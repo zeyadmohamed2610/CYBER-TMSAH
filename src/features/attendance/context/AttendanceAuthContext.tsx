@@ -7,6 +7,7 @@ import type { AttendanceRole } from "../types";
 interface AttendanceAuthContextValue {
   user: User | null;
   role: AttendanceRole | null;
+  fullName: string | null;
   loading: boolean;
   refreshRole: () => Promise<void>;
   signOut: () => Promise<{ error: string | null }>;
@@ -43,6 +44,7 @@ const withTimeout = <T extends unknown>(promise: Promise<T>, ms: number, label: 
 export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<AttendanceRole | null>(null);
+  const [fullName, setFullName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const initializedRef = useRef(false);
 
@@ -56,6 +58,7 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
       if (!sessionUser) {
         setUser(null);
         setRole(null);
+        setFullName(null);
         setLoading(false);
         return;
       }
@@ -65,13 +68,23 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
       setUser(sessionUser);
 
       try {
-        const nextRole = await withTimeout(fetchUserRole(sessionUser.id), 10_000, "fetchUserRole");
+        const { data, error } = await supabase
+          .from("users")
+          .select("role, full_name")
+          .eq("auth_id", sessionUser.id)
+          .maybeSingle();
+
+        if (error) throw error;
+        if (!isAttendanceRole(data?.role)) throw new Error("Unable to resolve user role.");
         if (!active) return;
-        setRole(nextRole);
+
+        setRole(data.role);
+        setFullName(data.full_name ?? null);
       } catch (err) {
         if (!active) return;
         console.error("Failed to fetch attendance role:", err);
         setRole(null);
+        setFullName(null);
       } finally {
         if (active && !silent) setLoading(false);
         initializedRef.current = true;
@@ -137,12 +150,13 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
     if (error) return { error: error.message };
     setUser(null);
     setRole(null);
+    setFullName(null);
     return { error: null };
   }, []);
 
   const value = useMemo<AttendanceAuthContextValue>(
-    () => ({ user, role, loading, refreshRole, signOut }),
-    [loading, role, user, refreshRole, signOut],
+    () => ({ user, role, fullName, loading, refreshRole, signOut }),
+    [loading, role, fullName, user, refreshRole, signOut],
   );
 
   return <AttendanceAuthContext.Provider value={value}>{children}</AttendanceAuthContext.Provider>;

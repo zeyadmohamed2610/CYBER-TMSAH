@@ -10,7 +10,7 @@ import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 import type { Lecture } from "../types";
 
 export const DoctorDashboard = () => {
-  const { user } = useAttendanceAuth();
+  const { user, fullName } = useAttendanceAuth();
   const { metrics, error } = useAttendanceDashboardData("doctor");
   const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
   const [doctorSubjectId, setDoctorSubjectId] = useState<string | undefined>(undefined);
@@ -33,6 +33,12 @@ export const DoctorDashboard = () => {
 
   return (
     <div className="space-y-6">
+      {fullName && (
+        <p className="text-lg font-bold">
+          مرحباً يا <span className="text-primary">{fullName}</span> 👋
+        </p>
+      )}
+
       {error && (
         <Alert variant="destructive">
           <AlertTitle>Database Error</AlertTitle>
@@ -40,33 +46,13 @@ export const DoctorDashboard = () => {
         </Alert>
       )}
 
-      {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard
-          label="Total Sessions"
-          value={String(metrics.totalSessions)}
-          description="All time"
-          icon={BarChart3}
-        />
-        <StatCard
-          label="Active Sessions"
-          value={String(metrics.activeSessions)}
-          description="Right now"
-          icon={BarChart3}
-        />
-        <StatCard
-          label="Attendance Rate"
-          value={`${Math.round(metrics.attendanceRate)}%`}
-          description="Overall"
-          icon={BarChart3}
-        />
+        <StatCard title="Total Sessions" value={String(metrics.totalSessions)} description="All time" icon={BarChart3} />
+        <StatCard title="Active Sessions" value={String(metrics.activeSessions)} description="Right now" icon={BarChart3} />
+        <StatCard title="Attendance Rate" value={`${Math.round(metrics.attendanceRate)}%`} description="Overall" icon={BarChart3} />
       </div>
 
-      {/* Lecture Management */}
-      <LectureManagementPanel
-        fixedSubjectId={doctorSubjectId}
-        onSelectLecture={setSelectedLecture}
-      />
+      <LectureManagementPanel fixedSubjectId={doctorSubjectId} onSelectLecture={setSelectedLecture} />
     </div>
   );
 };

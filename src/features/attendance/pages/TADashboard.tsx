@@ -10,7 +10,7 @@ import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 import type { Lecture } from "../types";
 
 export const TADashboard = () => {
-  const { user } = useAttendanceAuth();
+  const { user, fullName } = useAttendanceAuth();
   const { metrics, error } = useAttendanceDashboardData("student");
   const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
   const [taSubjectId, setTaSubjectId] = useState<string | undefined>(undefined);
@@ -40,6 +40,12 @@ export const TADashboard = () => {
 
   return (
     <div className="space-y-6">
+      {fullName && (
+        <p className="text-lg font-bold">
+          مرحباً يا <span className="text-primary">{fullName}</span> 👋
+        </p>
+      )}
+
       {error && (
         <Alert variant="destructive">
           <AlertTitle>Database Error</AlertTitle>
