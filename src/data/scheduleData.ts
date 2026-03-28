@@ -1,14 +1,14 @@
-// Time slots (8 periods, 60 min each + 10 min break)
-// First period starts at 9:00 AM
+// Time slots (8 periods, 60 min each + 5 min break)
+// 12-hour format with AM/PM
 export const timeSlots = [
-  "09:00 - 10:00",
-  "10:10 - 11:10",
-  "11:20 - 12:20",
-  "12:30 - 13:30",
-  "13:40 - 14:40",
-  "14:50 - 15:50",
-  "16:00 - 17:00",
-  "17:10 - 18:10",
+  "9:00 AM - 10:00 AM",
+  "10:05 AM - 11:05 AM",
+  "11:10 AM - 12:10 PM",
+  "12:15 PM - 1:15 PM",
+  "1:20 PM - 2:20 PM",
+  "2:25 PM - 3:25 PM",
+  "3:30 PM - 4:30 PM",
+  "4:35 PM - 5:35 PM",
 ];
 
 // Get current week dates starting from Saturday

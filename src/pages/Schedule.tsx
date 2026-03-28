@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Clock, MapPin, User, Calendar, GraduationCap, Sparkles, ChevronDown, Image as ImageIcon, FileText } from "lucide-react";
+import { Clock, MapPin, User, Calendar, GraduationCap, Sparkles, ChevronDown, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
@@ -14,7 +14,7 @@ const dayIcons: Record<string, string> = {
   "الاثنين": "💪",
   "الثلاثاء": "📖",
   "الأربعاء": "📚",
-  "الخمис": "🎯",
+  "الخميس": "🎯",
   "الجمعة": "🎉",
 };
 
@@ -26,6 +26,7 @@ const Schedule = () => {
   const [schedule, setSchedule] = useState<DaySchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const scheduleRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,35 +52,76 @@ const Schedule = () => {
     (acc, day) => acc + day.entries.filter((e) => e.entry_type === "section").length, 0,
   );
 
-  const handleDownloadImage = useCallback(async () => {
+  const exportAsImage = useCallback(async () => {
     if (!scheduleRef.current) return;
     setIsExporting(true);
+    setShowExportMenu(false);
     try {
-      const canvas = await html2canvas(scheduleRef.current, { backgroundColor: "#0a0a0f", scale: 2, useCORS: true });
+      const canvas = await html2canvas(scheduleRef.current, {
+        backgroundColor: "#0a0a0f",
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
       const link = document.createElement("a");
-      link.download = `الجدول-${selectedSection}.png`;
+      link.download = `جدول-${selectedSection}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
-    } catch { toast.error("فشل تحميل الصورة."); }
-    finally { setIsExporting(false); }
+      toast.success("تم تحميل الصورة بنجاح");
+    } catch {
+      toast.error("فشل تحميل الصورة");
+    } finally {
+      setIsExporting(false);
+    }
   }, [selectedSection]);
 
-  const handleDownloadPDF = useCallback(async () => {
+  const exportAsPDF = useCallback(async () => {
     if (!scheduleRef.current) return;
     setIsExporting(true);
+    setShowExportMenu(false);
     try {
-      const canvas = await html2canvas(scheduleRef.current, { backgroundColor: "#0a0a0f", scale: 2, useCORS: true });
+      const el = scheduleRef.current;
+      const canvas = await html2canvas(el, {
+        backgroundColor: "#0a0a0f",
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        width: el.scrollWidth,
+        height: el.scrollHeight,
+      });
+
       const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? "landscape" : "portrait", unit: "px", format: [canvas.width, canvas.height] });
-      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
-      pdf.save(`الجدول-${selectedSection}.pdf`);
-    } catch { toast.error("فشل تحميل PDF."); }
-    finally { setIsExporting(false); }
+      const pdf = new jsPDF("landscape", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      const imgRatio = canvas.width / canvas.height;
+      let imgW = pageWidth - 16;
+      let imgH = imgW / imgRatio;
+
+      if (imgH > pageHeight - 16) {
+        imgH = pageHeight - 16;
+        imgW = imgH * imgRatio;
+      }
+
+      const x = (pageWidth - imgW) / 2;
+      const y = (pageHeight - imgH) / 2;
+
+      pdf.setFillColor(10, 10, 15);
+      pdf.rect(0, 0, pageWidth, pageHeight, "F");
+      pdf.addImage(imgData, "PNG", x, y, imgW, imgH);
+      pdf.save(`جدول-${selectedSection}.pdf`);
+      toast.success("تم تحميل PDF بنجاح");
+    } catch {
+      toast.error("فشل تحميل PDF");
+    } finally {
+      setIsExporting(false);
+    }
   }, [selectedSection]);
 
-  const timePeriod = (i: number) => {
-    const periods = ["الأولى", "الثانية", "الثالثة", "الرابعة", "الخامسة", "السادسة", "السابعة", "الثامنة"];
-    return periods[i] || `${i + 1}`;
+  const periodLabel = (i: number) => {
+    const labels = ["الأولى", "الثانية", "الثالثة", "الرابعة", "الخامسة", "السادسة", "السابعة", "الثامنة"];
+    return labels[i] || `${i + 1}`;
   };
 
   return (
@@ -95,47 +137,33 @@ const Schedule = () => {
           }} />
           <div className="absolute top-20 right-20 w-64 h-64 bg-primary/20 rounded-full blur-[100px] animate-pulse" />
 
-          <div className="section-container relative py-14 md:py-18">
+          <div className="section-container relative py-14">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
               <div className="space-y-4">
                 <h1 className="text-4xl md:text-5xl font-black text-foreground">
                   الجدول الدراسي
-                  <span className="block text-primary mt-2">الأسبوعي</span>
+                  <span className="block text-primary mt-1">الأسبوعي</span>
                 </h1>
-                <p className="text-lg text-muted-foreground max-w-md">
-                  جميع محاضرات الأسبوع من السبت إلى الجمعة
-                </p>
+                <p className="text-lg text-muted-foreground">جميع محاضرات الأسبوع من السبت إلى الجمعة</p>
                 <p className="text-sm text-muted-foreground/70">
-                  ⏰ كل محاضرة ساعة واحدة + 10 دقائق راحة
+                  ⏰ كل محاضرة ساعة + 5 دقائق راحة بين الفترات
                 </p>
-                <div className="flex flex-wrap gap-5 pt-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <Calendar className="h-5 w-5 text-primary" />
+                <div className="flex flex-wrap gap-5 pt-1">
+                  {[
+                    { icon: Calendar, label: "أيام", value: 7, color: "text-primary" },
+                    { icon: GraduationCap, label: "محاضرة", value: loading ? "..." : totalLectures, color: "text-primary" },
+                    { icon: Sparkles, label: "سكشن", value: loading ? "..." : totalSections, color: "text-cyan-400" },
+                  ].map((s) => (
+                    <div key={s.label} className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <s.icon className={`h-5 w-5 ${s.color}`} />
+                      </div>
+                      <div>
+                        <div className={`text-xl font-bold ${s.color}`}>{s.value}</div>
+                        <div className="text-xs text-muted-foreground">{s.label}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-xl font-bold text-foreground">7</div>
-                      <div className="text-xs text-muted-foreground">أيام</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <GraduationCap className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <div className="text-xl font-bold text-foreground">{loading ? "..." : totalLectures}</div>
-                      <div className="text-xs text-muted-foreground">محاضرة</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-cyan-500/10 flex items-center justify-center">
-                      <Sparkles className="h-5 w-5 text-cyan-400" />
-                    </div>
-                    <div>
-                      <div className="text-xl font-bold text-cyan-400">{loading ? "..." : totalSections}</div>
-                      <div className="text-xs text-muted-foreground">سكشن</div>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
 
@@ -151,15 +179,44 @@ const Schedule = () => {
                   </select>
                   <ChevronDown className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
                 </div>
-                <div className="flex gap-2">
-                  <button onClick={handleDownloadImage} disabled={isExporting || loading}
-                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-sm font-bold text-primary transition-all hover:bg-primary/20 disabled:opacity-50">
-                    <ImageIcon className="h-4 w-4" />صورة
+
+                {/* Export dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowExportMenu(!showExportMenu)}
+                    disabled={isExporting || loading}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-sm font-bold text-primary transition-all hover:bg-primary/20 disabled:opacity-50"
+                  >
+                    {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                    {isExporting ? "جاري التصدير..." : "تحميل الجدول"}
                   </button>
-                  <button onClick={handleDownloadPDF} disabled={isExporting || loading}
-                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-sm font-bold text-primary transition-all hover:bg-primary/20 disabled:opacity-50">
-                    <FileText className="h-4 w-4" />PDF
-                  </button>
+                  {showExportMenu && !isExporting && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
+                      <div className="absolute bottom-full mb-2 left-0 right-0 z-50 rounded-xl border border-border bg-card shadow-xl overflow-hidden">
+                        <button
+                          onClick={exportAsImage}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-foreground hover:bg-primary/10 transition-colors"
+                        >
+                          <span className="text-lg">🖼️</span>
+                          <div className="text-right">
+                            <span className="block font-bold">صورة PNG</span>
+                            <span className="block text-[10px] text-muted-foreground">مناسبة للمشاركة</span>
+                          </div>
+                        </button>
+                        <button
+                          onClick={exportAsPDF}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-foreground hover:bg-primary/10 transition-colors border-t border-border/50"
+                        >
+                          <span className="text-lg">📄</span>
+                          <div className="text-right">
+                            <span className="block font-bold">ملف PDF</span>
+                            <span className="block text-[10px] text-muted-foreground">مناسب للطباعة</span>
+                          </div>
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -169,7 +226,10 @@ const Schedule = () => {
         {/* Schedule */}
         <section className="section-container py-10 md:py-14" ref={scheduleRef}>
           {loading ? (
-            <div className="text-center py-20 text-muted-foreground">جاري تحميل الجدول...</div>
+            <div className="flex items-center justify-center py-20 gap-3 text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span>جاري تحميل الجدول...</span>
+            </div>
           ) : (
             <div className="space-y-4">
               {schedule.map((day, di) => {
@@ -181,7 +241,6 @@ const Schedule = () => {
                         ? "bg-primary/5 border-primary/40 shadow-[0_0_20px_hsl(var(--primary)/0.1)]"
                         : "bg-card/50 border-border/50 hover:border-primary/30"
                     }`}>
-                      {/* Today badge */}
                       {isToday && (
                         <div className="absolute top-3 left-3 z-10">
                           <span className="text-[10px] font-bold bg-primary text-primary-foreground px-2.5 py-1 rounded-full animate-pulse">
@@ -190,7 +249,6 @@ const Schedule = () => {
                         </div>
                       )}
 
-                      {/* Day header */}
                       <div className="flex items-center gap-3 p-4 md:p-5 border-b border-border/30">
                         <span className="text-2xl">{dayIcons[day.day] ?? "📅"}</span>
                         <div className="flex-1">
@@ -212,7 +270,6 @@ const Schedule = () => {
                         </div>
                       </div>
 
-                      {/* Day content */}
                       <div className="p-4 md:p-5">
                         {day.isHoliday ? (
                           <div className="text-center py-8 rounded-xl bg-primary/5 border border-dashed border-primary/20">
@@ -238,17 +295,15 @@ const Schedule = () => {
                                 <div key={entry.id || li} className={`flex items-center gap-3 md:gap-4 rounded-xl p-3 md:p-4 border transition-all hover:border-primary/30 ${
                                   isSec ? "bg-cyan-500/5 border-cyan-500/20" : "bg-secondary/20 border-border/40"
                                 }`}>
-                                  {/* Period number + time */}
-                                  <div className="text-center min-w-[70px]">
+                                  <div className="text-center min-w-[80px]">
                                     <div className={`text-[10px] font-bold mb-0.5 ${isSec ? "text-cyan-400" : "text-primary"}`}>
-                                      الفترة {timePeriod(li)}
+                                      الفترة {periodLabel(li)}
                                     </div>
-                                    <div className="text-sm font-bold text-foreground" dir="ltr">{entry.time_slot}</div>
+                                    <div className="text-xs font-bold text-foreground" dir="ltr">{entry.time_slot}</div>
                                   </div>
 
                                   <div className="w-px h-10 bg-border/40 hidden sm:block" />
 
-                                  {/* Subject + details */}
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
                                       <h3 className={`font-bold text-sm md:text-base truncate ${isSec ? "text-cyan-400" : "text-foreground"}`}>
