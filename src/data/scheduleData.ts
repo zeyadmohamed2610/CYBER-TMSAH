@@ -1,14 +1,14 @@
-// Time slots (8 periods, 40 min each + 5 min break in Ramadan)
+// Time slots (8 periods, 60 min each + 10 min break)
 // First period starts at 9:00 AM
 export const timeSlots = [
-  "09:00 - 09:40",
-  "09:45 - 10:25",
-  "10:30 - 11:10",
-  "11:15 - 11:55",
-  "12:00 - 12:40",
-  "12:45 - 13:25",
-  "13:30 - 14:10",
-  "14:15 - 14:55",
+  "09:00 - 10:00",
+  "10:10 - 11:10",
+  "11:20 - 12:20",
+  "12:30 - 13:30",
+  "13:40 - 14:40",
+  "14:50 - 15:50",
+  "16:00 - 17:00",
+  "17:10 - 18:10",
 ];
 
 // Get current week dates starting from Saturday
