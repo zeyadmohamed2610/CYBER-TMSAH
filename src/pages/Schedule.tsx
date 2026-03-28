@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Clock, MapPin, User, Calendar, GraduationCap, Sparkles, ChevronDown, Download, Image, FileText } from "lucide-react";
+import { Clock, MapPin, User, Calendar, GraduationCap, Sparkles, ChevronDown, Image, FileText, Loader2, Inbox } from "lucide-react";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
@@ -7,6 +7,33 @@ import Layout from "@/components/Layout";
 import ScrollReveal from "@/components/ScrollReveal";
 import SEO from "@/components/SEO";
 import { scheduleService, type DaySchedule } from "@/features/attendance/services/scheduleService";
+
+function DayCardSkeleton() {
+  return (
+    <div className="rounded-2xl bg-card/50 border border-border/50 overflow-hidden">
+      <div className="flex items-center gap-4 p-6 border-b border-border/30">
+        <div className="w-14 h-14 rounded-2xl bg-muted animate-pulse" />
+        <div className="space-y-2">
+          <div className="h-5 w-24 bg-muted rounded animate-pulse" />
+          <div className="h-3 w-16 bg-muted rounded animate-pulse" />
+        </div>
+      </div>
+      <div className="p-6 space-y-3">
+        {[1, 2].map(i => (
+          <div key={i} className="rounded-xl bg-muted/50 p-4 animate-pulse">
+            <div className="flex gap-4 items-center">
+              <div className="w-10 h-10 rounded-xl bg-muted" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-32 bg-muted rounded" />
+                <div className="h-3 w-20 bg-muted rounded" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const Schedule = () => {
   const [selectedSection, setSelectedSection] = useState("سكشن 1");
@@ -16,34 +43,27 @@ const Schedule = () => {
   const [isExporting, setIsExporting] = useState(false);
   const scheduleRef = useRef<HTMLDivElement>(null);
 
-  // Fetch sections list from DB on mount
   useEffect(() => {
     scheduleService.fetchSections().then((secs) => {
       if (secs.length > 0) setSections(secs);
     });
   }, []);
 
-  // Fetch schedule when section changes
   useEffect(() => {
     setLoading(true);
     const sectionNum = parseInt(selectedSection.replace(/\D/g, "")) || 1;
     scheduleService.fetchSchedule(sectionNum).then(({ data, error }) => {
-      if (error) {
-        toast.error("فشل تحميل الجدول.");
-      }
+      if (error) toast.error("فشل تحميل الجدول.");
       setSchedule(data ?? []);
       setLoading(false);
     });
   }, [selectedSection]);
 
-  // Compute stats
   const totalLectures = schedule.reduce(
-    (acc, day) => acc + day.entries.filter((e) => e.entry_type === "lecture").length,
-    0,
+    (acc, day) => acc + day.entries.filter((e) => e.entry_type === "lecture").length, 0
   );
   const totalSections = schedule.reduce(
-    (acc, day) => acc + day.entries.filter((e) => e.entry_type === "section").length,
-    0,
+    (acc, day) => acc + day.entries.filter((e) => e.entry_type === "section").length, 0
   );
 
   const handleDownloadImage = useCallback(async () => {
@@ -51,9 +71,7 @@ const Schedule = () => {
     setIsExporting(true);
     try {
       const canvas = await html2canvas(scheduleRef.current, {
-        backgroundColor: "#0a0a0f",
-        scale: 2,
-        useCORS: true,
+        backgroundColor: "#0a0a0f", scale: 2, useCORS: true,
       });
       const link = document.createElement("a");
       link.download = `الجدول-الدراسي-${selectedSection}.png`;
@@ -71,19 +89,14 @@ const Schedule = () => {
     setIsExporting(true);
     try {
       const canvas = await html2canvas(scheduleRef.current, {
-        backgroundColor: "#0a0a0f",
-        scale: 2,
-        useCORS: true,
+        backgroundColor: "#0a0a0f", scale: 2, useCORS: true,
       });
       const imgData = canvas.toDataURL("image/png");
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
       const pdf = new jsPDF({
-        orientation: imgWidth > imgHeight ? "landscape" : "portrait",
-        unit: "px",
-        format: [imgWidth, imgHeight],
+        orientation: canvas.width > canvas.height ? "landscape" : "portrait",
+        unit: "px", format: [canvas.width, canvas.height],
       });
-      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
       pdf.save(`الجدول-الدراسي-${selectedSection}.pdf`);
     } catch {
       toast.error("فشل تحميل PDF. يرجى المحاولة مرة أخرى.");
@@ -103,20 +116,12 @@ const Schedule = () => {
         {/* Hero Section */}
         <section className="relative overflow-hidden border-b border-border/50">
           <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
-          <div
-            className="absolute inset-0 opacity-30"
-            style={{ backgroundImage: `radial-gradient(circle at 50% 50%, hsl(var(--primary) / 0.1) 0%, transparent 50%)` }}
-          />
-          <div
-            className="absolute inset-0 opacity-10"
-            style={{
-              backgroundImage: `linear-gradient(hsl(var(--primary) / 0.3) 1px, transparent 1px),
-                                linear-gradient(90deg, hsl(var(--primary) / 0.3) 1px, transparent 1px)`,
-              backgroundSize: "50px 50px",
-            }}
-          />
+          <div className="absolute inset-0 opacity-10" style={{
+            backgroundImage: `linear-gradient(hsl(var(--primary) / 0.3) 1px, transparent 1px),
+                              linear-gradient(90deg, hsl(var(--primary) / 0.3) 1px, transparent 1px)`,
+            backgroundSize: "50px 50px",
+          }} />
           <div className="absolute top-20 right-20 w-64 h-64 bg-primary/20 rounded-full blur-[100px] animate-pulse" />
-          <div className="absolute bottom-10 left-10 w-48 h-48 bg-cyan-500/10 rounded-full blur-[80px]" />
 
           <div className="section-container relative py-16 md:py-20">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
@@ -125,12 +130,11 @@ const Schedule = () => {
                   الجدول الدراسي
                   <span className="block text-primary mt-2 drop-shadow-[0_0_20px_hsl(var(--primary)/0.5)]">الأسبوعي</span>
                 </h1>
-
                 <p className="text-lg text-muted-foreground max-w-md">
-                  جميع محاضرات الأسبوع من السبت إلى الجمعة مع التفاصيل الكاملة
+                  جميع محاضرات الأسبوع من السبت إلى الجمعة
                 </p>
                 <p className="text-sm text-muted-foreground/70 font-medium">
-                  ⏰ 60 دقيقة محاضرة + 10 دقائق راحة بين كل محاضرة
+                  ⏰ 40 دقيقة محاضرة + 5 دقائق راحة
                 </p>
 
                 <div className="flex flex-wrap gap-6 pt-4">
@@ -184,17 +188,19 @@ const Schedule = () => {
                 <div className="flex gap-2">
                   <button
                     onClick={handleDownloadImage}
-                    disabled={isExporting || loading}
-                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-bold text-primary transition-all duration-300 hover:bg-primary/20 hover:shadow-[0_0_20px_hsl(var(--primary)/0.2)] disabled:opacity-50"
+                    disabled={isExporting || loading || schedule.length === 0}
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-bold text-primary transition-all duration-300 hover:bg-primary/20 hover:shadow-[0_0_20px_hsl(var(--primary)/0.2)] disabled:opacity-40"
                   >
-                    <Image className="h-4 w-4" />صورة
+                    {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Image className="h-4 w-4" />}
+                    صورة
                   </button>
                   <button
                     onClick={handleDownloadPDF}
-                    disabled={isExporting || loading}
-                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-bold text-primary transition-all duration-300 hover:bg-primary/20 hover:shadow-[0_0_20px_hsl(var(--primary)/0.2)] disabled:opacity-50"
+                    disabled={isExporting || loading || schedule.length === 0}
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-bold text-primary transition-all duration-300 hover:bg-primary/20 hover:shadow-[0_0_20px_hsl(var(--primary)/0.2)] disabled:opacity-40"
                   >
-                    <FileText className="h-4 w-4" />PDF
+                    {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                    PDF
                   </button>
                 </div>
               </div>
@@ -205,128 +211,140 @@ const Schedule = () => {
         {/* Schedule Grid */}
         <section className="section-container py-12 md:py-16" ref={scheduleRef}>
           {loading ? (
-            <div className="text-center py-20 text-muted-foreground">جاري تحميل الجدول...</div>
+            <div className="space-y-6">
+              {[1, 2, 3].map(i => <DayCardSkeleton key={i} />)}
+            </div>
+          ) : schedule.length === 0 || schedule.every(d => d.entries.length === 0 && !d.isHoliday && !d.isTraining) ? (
+            <div className="text-center py-20">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-muted/50 flex items-center justify-center">
+                <Inbox className="h-10 w-10 text-muted-foreground" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-2">لا توجد بيانات لهذا السكشن</h3>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                لم يتم إضافة جدول لهذا السكشن بعد. جرب اختيار سكشن آخر أو تحقق لاحقاً.
+              </p>
+            </div>
           ) : (
-          <div className="space-y-6">
-            {schedule.map((day, di) => (
-              <ScrollReveal key={di}>
-                <div className="group relative overflow-hidden rounded-2xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/30 transition-all duration-500">
-                  {day.isTraining && (
-                    <div className="absolute top-0 left-0 z-10">
-                      <div className="relative">
-                        <div className="absolute -top-1 -left-1 w-0 h-0 border-l-[40px] border-l-transparent border-t-[40px] border-t-amber-500" />
-                        <span className="absolute top-1 left-1 text-[8px] font-bold text-white rotate-45 -left-2">تدريب</span>
+            <div className="space-y-6">
+              {schedule.map((day, di) => (
+                <ScrollReveal key={di}>
+                  <div className="group relative overflow-hidden rounded-2xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/30 transition-all duration-500">
+                    {day.isTraining && (
+                      <div className="absolute top-0 left-0 z-10">
+                        <div className="relative">
+                          <div className="absolute -top-1 -left-1 w-0 h-0 border-l-[40px] border-l-transparent border-t-[40px] border-t-amber-500" />
+                          <span className="absolute top-1 left-1 text-[8px] font-bold text-white rotate-45 -left-2">تدريب</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                    <div className="relative flex items-center gap-4 p-6 border-b border-border/30">
+                      <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 shadow-[0_0_20px_hsl(var(--primary)/0.15)]">
+                        <Calendar className="h-6 w-6 text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.8)]" />
+                      </div>
+
+                      <div className="flex-1">
+                        <h2 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors duration-300">{day.day}</h2>
+                        {!day.isHoliday && !day.isTraining && day.entries.length > 0 && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                              {day.entries.filter((e) => e.entry_type === "lecture").length} محاضرة
+                            </span>
+                            {day.entries.some((e) => e.entry_type === "section") && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                                {day.entries.filter((e) => e.entry_type === "section").length} سكشن
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  )}
 
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="relative p-6">
+                      {day.entries.length === 0 && !day.isHoliday && !day.isTraining ? (
+                        <div className="flex items-center justify-center py-10 rounded-xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-dashed border-primary/30">
+                          <p className="text-muted-foreground">لا توجد محاضرات مجدولة.</p>
+                        </div>
+                      ) : day.isHoliday ? (
+                        <div className="flex items-center justify-center py-10 rounded-xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-dashed border-primary/30">
+                          <div className="text-center space-y-3">
+                            <div className="w-16 h-16 mx-auto rounded-2xl bg-primary/20 flex items-center justify-center animate-pulse">
+                              <span className="text-4xl">🎉</span>
+                            </div>
+                            <p className="text-xl font-bold text-primary drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]">إجازة</p>
+                            <p className="text-sm text-muted-foreground">استمتع بيومك!</p>
+                          </div>
+                        </div>
+                      ) : day.isTraining ? (
+                        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-2 border-dashed border-primary/30">
+                          <div className="relative flex flex-col items-center justify-center py-10 text-center space-y-4">
+                            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center shadow-[0_0_25px_hsl(var(--primary)/0.2)]">
+                              <span className="text-4xl">🏋️</span>
+                            </div>
+                            <div>
+                              <h3 className="text-xl font-black text-primary drop-shadow-[0_0_15px_hsl(var(--primary)/0.5)]">يوم التدريب</h3>
+                              <p className="text-muted-foreground mt-2 font-medium">قريباً سيتم تزويد التفاصيل</p>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {day.entries.map((entry, li) => {
+                            const isSection = entry.entry_type === "section";
+                            return (
+                              <div
+                                key={entry.id || li}
+                                className={`group/card relative overflow-hidden rounded-xl backdrop-blur-sm p-4 border transition-all duration-300 hover:border-primary/50 ${
+                                  isSection
+                                    ? "bg-cyan-500/10 border-cyan-500/30 hover:bg-cyan-500/20"
+                                    : "bg-secondary/30 border-border/50 hover:bg-secondary/50"
+                                }`}
+                              >
+                                <div className="flex flex-col md:flex-row md:items-center gap-4">
+                                  <div className="flex items-center gap-3 md:min-w-[140px]">
+                                    <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${
+                                      isSection ? "bg-cyan-500/10 border-cyan-500/30" : "bg-primary/10 border-primary/30"
+                                    }`}>
+                                      <Clock className={`h-5 w-5 ${isSection ? "text-cyan-400" : "text-primary"}`} />
+                                    </div>
+                                    <span className={`text-base font-bold ${isSection ? "text-cyan-400" : "text-primary"}`} dir="ltr">{entry.time_slot}</span>
+                                  </div>
 
-                  <div className="relative flex items-center gap-4 p-6 border-b border-border/30">
-                    <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 shadow-[0_0_20px_hsl(var(--primary)/0.15)]">
-                      <Calendar className="h-6 w-6 text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.8)]" />
-                    </div>
+                                  <div className="hidden md:block w-px h-10 bg-border/50" />
 
-                    <div className="flex-1">
-                      <h2 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors duration-300">{day.day}</h2>
-                      {!day.isHoliday && !day.isTraining && day.entries.length > 0 && (
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                            {day.entries.filter((e) => e.entry_type === "lecture").length} محاضرة
-                          </span>
-                          {day.entries.some((e) => e.entry_type === "section") && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                              {day.entries.filter((e) => e.entry_type === "section").length} سكشن
-                            </span>
-                          )}
+                                  <div className="flex-1 mt-4 md:mt-0">
+                                    <h3 className={`font-bold group-hover/card:text-primary transition-colors ${isSection ? "text-cyan-400" : "text-foreground"}`}>
+                                      {entry.subject}
+                                    </h3>
+                                  </div>
+
+                                  <div className="flex flex-wrap items-center gap-4 text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                        <User className="h-3.5 w-3.5 text-primary" />
+                                      </div>
+                                      <span className="text-muted-foreground">{entry.instructor}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                        <MapPin className="h-3.5 w-3.5 text-primary" />
+                                      </div>
+                                      <span className="text-muted-foreground">{entry.room}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
                   </div>
-
-                  <div className="relative p-6">
-                    {day.entries.length === 0 && !day.isHoliday && !day.isTraining ? (
-                      <div className="flex items-center justify-center py-12 rounded-xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-dashed border-primary/30">
-                        <p className="text-muted-foreground">لا توجد محاضرات مجدولة.</p>
-                      </div>
-                    ) : day.isHoliday ? (
-                      <div className="flex items-center justify-center py-12 rounded-xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-dashed border-primary/30">
-                        <div className="text-center space-y-3">
-                          <div className="w-16 h-16 mx-auto rounded-2xl bg-primary/20 flex items-center justify-center animate-pulse">
-                            <span className="text-4xl">🎉</span>
-                          </div>
-                          <p className="text-xl font-bold text-primary drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]">إجازة</p>
-                          <p className="text-sm text-muted-foreground">استمتع بيومك!</p>
-                        </div>
-                      </div>
-                    ) : day.isTraining ? (
-                      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-2 border-dashed border-primary/30">
-                        <div className="relative flex flex-col items-center justify-center py-12 text-center space-y-4">
-                          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center shadow-[0_0_25px_hsl(var(--primary)/0.2)]">
-                            <span className="text-4xl">🏋️</span>
-                          </div>
-                          <div>
-                            <h3 className="text-xl font-black text-primary drop-shadow-[0_0_15px_hsl(var(--primary)/0.5)]">يوم التدريب</h3>
-                            <p className="text-muted-foreground mt-2 font-medium">قريباً سيتم تزويد التفاصيل</p>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {day.entries.map((entry, li) => {
-                          const isSection = entry.entry_type === "section";
-                          return (
-                            <div
-                              key={entry.id || li}
-                              className={`group/card relative overflow-hidden rounded-xl backdrop-blur-sm p-4 border transition-all duration-300 hover:border-primary/50 ${
-                                isSection
-                                  ? "bg-cyan-500/10 border-cyan-500/30 hover:bg-cyan-500/20"
-                                  : "bg-secondary/30 border-border/50 hover:bg-secondary/50"
-                              }`}
-                            >
-                              <div className="flex flex-col md:flex-row md:items-center gap-4">
-                                <div className="flex items-center gap-3 md:min-w-[140px]">
-                                  <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${
-                                    isSection ? "bg-cyan-500/10 border-cyan-500/30" : "bg-primary/10 border-primary/30"
-                                  }`}>
-                                    <Clock className={`h-5 w-5 ${isSection ? "text-cyan-400" : "text-primary"}`} />
-                                  </div>
-                                  <span className={`text-base font-bold ${isSection ? "text-cyan-400" : "text-primary"}`} dir="ltr">{entry.time_slot}</span>
-                                </div>
-
-                                <div className="hidden md:block w-px h-10 bg-border/50" />
-
-                                <div className="flex-1 mt-4 md:mt-0">
-                                  <h3 className={`font-bold group-hover/card:text-primary transition-colors ${isSection ? "text-cyan-400" : "text-foreground"}`}>
-                                    {entry.subject}
-                                  </h3>
-                                </div>
-
-                                <div className="flex flex-wrap items-center gap-4 text-sm">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                      <User className="h-3.5 w-3.5 text-primary" />
-                                    </div>
-                                    <span className="text-muted-foreground">{entry.instructor}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                      <MapPin className="h-3.5 w-3.5 text-primary" />
-                                    </div>
-                                    <span className="text-muted-foreground">{entry.room}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </ScrollReveal>
-            ))}
-          </div>
+                </ScrollReveal>
+              ))}
+            </div>
           )}
         </section>
       </Layout>
