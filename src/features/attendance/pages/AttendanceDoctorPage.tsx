@@ -3,12 +3,8 @@ import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
 import { DoctorDashboard } from "./DoctorDashboard";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
+import { NotificationCenter } from "../components/NotificationCenter";
 
-/**
- * Doctor attendance page.
- * No mobile gate — doctors need desktop/laptop to project the rotating hash
- * code on the classroom display. Mobile restriction applies only to students.
- */
 const AttendanceDoctorPage = () => {
   const { signOut } = useAttendanceAuth();
 
@@ -24,10 +20,13 @@ const AttendanceDoctorPage = () => {
               مركز الحضور — الدكتور
             </h1>
           </div>
-          <Button variant="outline" size="sm" onClick={signOut} className="mt-2 shrink-0 gap-1.5">
-            <LogOut className="h-4 w-4" />
-            <span>تسجيل الخروج</span>
-          </Button>
+          <div className="flex items-center gap-2 mt-2">
+            <NotificationCenter />
+            <Button variant="outline" size="sm" onClick={signOut} className="shrink-0 gap-1.5">
+              <LogOut className="h-4 w-4" />
+              <span>تسجيل الخروج</span>
+            </Button>
+          </div>
         </div>
         <DoctorDashboard />
       </section>

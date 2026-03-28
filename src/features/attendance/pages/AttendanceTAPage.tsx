@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
 import { TADashboard } from "./TADashboard";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
+import { NotificationCenter } from "../components/NotificationCenter";
 
 const AttendanceTAPage = () => {
   const { signOut } = useAttendanceAuth();
@@ -19,10 +20,13 @@ const AttendanceTAPage = () => {
               مركز الحضور — المعيد
             </h1>
           </div>
-          <Button variant="outline" size="sm" onClick={signOut} className="mt-2 shrink-0 gap-1.5">
-            <LogOut className="h-4 w-4" />
-            <span>تسجيل الخروج</span>
-          </Button>
+          <div className="flex items-center gap-2 mt-2">
+            <NotificationCenter />
+            <Button variant="outline" size="sm" onClick={signOut} className="shrink-0 gap-1.5">
+              <LogOut className="h-4 w-4" />
+              <span>تسجيل الخروج</span>
+            </Button>
+          </div>
         </div>
         <TADashboard />
       </section>

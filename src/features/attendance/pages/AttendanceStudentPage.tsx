@@ -7,13 +7,12 @@ import { useIsDesktopDevice } from "../hooks/useIsDesktopDevice";
 import { StudentDashboard } from "./StudentDashboard";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 import { GpsProvider } from "../context/GpsContext";
+import { NotificationCenter } from "../components/NotificationCenter";
 
 const AttendanceStudentPage = () => {
   const isDesktopDevice = useIsDesktopDevice();
   const { signOut } = useAttendanceAuth();
 
-  // Students must submit attendance from their mobile phones.
-  // Desktop users see the mobile-only notice.
   if (isDesktopDevice) {
     return <AttendanceMobileOnlyBlock />;
   }
@@ -31,10 +30,13 @@ const AttendanceStudentPage = () => {
                 مركز الحضور — الطالب
               </h1>
             </div>
-            <Button variant="outline" size="sm" onClick={signOut} className="mt-2 shrink-0 gap-1.5">
-              <LogOut className="h-4 w-4" />
-              <span>تسجيل الخروج</span>
-            </Button>
+            <div className="flex items-center gap-2 mt-2">
+              <NotificationCenter />
+              <Button variant="outline" size="sm" onClick={signOut} className="shrink-0 gap-1.5">
+                <LogOut className="h-4 w-4" />
+                <span>تسجيل الخروج</span>
+              </Button>
+            </div>
           </div>
           <LocationGuard>
             <StudentDashboard />
