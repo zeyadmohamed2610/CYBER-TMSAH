@@ -5,6 +5,8 @@ const DAYS = ["السبت", "الأحد", "الاثنين", "الثلاثاء", 
 export interface SheetEntry {
   id: string;
   time_slot: string;
+  period: number;
+  period_label: string;
   subject: string;
   instructor: string;
   room: string;
@@ -15,6 +17,18 @@ export interface SheetDaySchedule {
   day: string;
   entries: SheetEntry[];
 }
+
+// 8 fixed periods — this is the source of truth
+const PERIODS = [
+  { num: 1, start: "09:00", end: "10:00", label: "الأولى",   start12: "9:00 AM",  end12: "10:00 AM" },
+  { num: 2, start: "10:05", end: "11:05", label: "الثانية",  start12: "10:05 AM", end12: "11:05 AM" },
+  { num: 3, start: "11:10", end: "12:10", label: "الثالثة",  start12: "11:10 AM", end12: "12:10 PM" },
+  { num: 4, start: "12:15", end: "13:15", label: "الرابعة",  start12: "12:15 PM", end12: "1:15 PM"  },
+  { num: 5, start: "13:20", end: "14:20", label: "الخامسة",  start12: "1:20 PM",  end12: "2:20 PM"  },
+  { num: 6, start: "14:25", end: "15:25", label: "السادسة",  start12: "2:25 PM",  end12: "3:25 PM"  },
+  { num: 7, start: "15:30", end: "16:30", label: "السابعة",  start12: "3:30 PM",  end12: "4:30 PM"  },
+  { num: 8, start: "16:35", end: "17:35", label: "الثامنة",  start12: "4:35 PM",  end12: "5:35 PM"  },
+];
 
 function parseCSV(csv: string): string[][] {
   const rows: string[][] = [];
@@ -56,20 +70,36 @@ function parseCell(raw: string): { subject: string; instructor: string; room: st
   };
 }
 
-function to12h(raw: string): string {
+function normalizeTime(raw: string): string {
   const t = raw.trim();
-  const match = t.match(/^(\d{1,2}):(\d{2})$/);
+  const match = t.match(/^(\d{1,2}):(\d{2})/);
   if (!match) return t;
   let h = parseInt(match[1]);
   const m = match[2];
-
   // Sheet uses 09:00, 10:05, 11:10, 12:15, 01:20, 02:25, 03:30, 04:35
-  // All times before 6 are PM (after noon), 9-12 are AM
-  if (h >= 1 && h <= 5) h += 12; // 01:20 → 13:20 → 1:20 PM
+  // Convert to 24h: 01:20 → 13:20, 02:25 → 14:25, etc.
+  if (h >= 1 && h <= 5) h += 12;
+  return `${String(h).padStart(2, "0")}:${m}`;
+}
 
-  const period = h >= 12 ? "PM" : "AM";
-  if (h > 12) h -= 12;
-  return `${h}:${m} ${period}`;
+function findPeriodByTime(timeStr: string): typeof PERIODS[0] | null {
+  const normalized = normalizeTime(timeStr);
+  for (const p of PERIODS) {
+    if (normalized === p.start || normalized === p.end) return p;
+    // Also check partial match (e.g., "11:10 " matches "11:10")
+    const h = parseInt(normalized.split(":")[0]);
+    const m = parseInt(normalized.split(":")[1] || "0");
+    const ph = parseInt(p.start.split(":")[0]);
+    const pm = parseInt(p.start.split(":")[1] || "0");
+    if (h === ph && m === pm) return p;
+  }
+  // Try matching by position in the hour
+  const h = parseInt(normalized.split(":")[0]);
+  for (const p of PERIODS) {
+    const ph = parseInt(p.start.split(":")[0]);
+    if (h === ph) return p;
+  }
+  return null;
 }
 
 function isSectionEntry(raw: string): boolean {
@@ -110,40 +140,31 @@ export const googleSheetsService = {
 
       const csv = await res.text();
       if (csv.includes("<!DOCTYPE") || csv.includes("<html>")) {
-        return { data: [], error: "الجدول غير متاح. Share → Anyone with the link → Viewer" };
+        return { data: [], error: "الجدول غير متاح. Share → Anyone with the link" };
       }
 
       const rows = parseCSV(csv);
       if (rows.length < 6) return { data: [], error: "الجدول فارغ" };
 
-      // Row indices:
-      // 0 = title + day headers
-      // 1 = period numbers (1-8 per day)
-      // 2 = start times
-      // 3 = end times
-      // 4+ = section data
-
+      // Row 2 = start times, Row 3 = end times
       const startRow = rows[2] || [];
       const endRow = rows[3] || [];
 
-      // Find section row in rows 4-18
+      // Find section row (column B = section number, rows 4-18)
       let dataRow: string[] | null = null;
       for (let i = 4; i < Math.min(rows.length, 20); i++) {
-        const colB = (rows[i][1] || "").trim();
-        if (colB === String(section)) {
+        if ((rows[i][1] || "").trim() === String(section)) {
           dataRow = rows[i];
           break;
         }
       }
       if (!dataRow) {
-        // fallback to section 1
         for (let i = 4; i < Math.min(rows.length, 20); i++) {
           if ((rows[i][1] || "").trim() === "1") { dataRow = rows[i]; break; }
         }
       }
       if (!dataRow) return { data: [], error: `السكشن ${section} غير موجود` };
 
-      // Data columns: col C (index 2) onward, 8 columns per day
       const result: SheetDaySchedule[] = [];
 
       for (let d = 0; d < 6; d++) {
@@ -159,13 +180,22 @@ export const googleSheetsService = {
           const { subject, instructor, room } = parseCell(raw);
           if (!subject) continue;
 
-          const sTime = to12h(startRow[ci] || "");
-          const eTime = to12h(endRow[ci] || "");
-          const timeSlot = sTime && eTime ? `${sTime} - ${eTime}` : `الفترة ${p + 1}`;
+          // Determine period from the START TIME in the sheet
+          const sheetStartTime = (startRow[ci] || "").trim();
+          const sheetEndTime = (endRow[ci] || "").trim();
+          const period = findPeriodByTime(sheetStartTime);
+
+          const periodNum = period?.num || (p + 1);
+          const periodLabel = period?.label || `الثانية`;
+          const timeSlot = period
+            ? `${period.start12} - ${period.end12}`
+            : `${sheetStartTime} - ${sheetEndTime}`;
 
           entries.push({
-            id: `${dayName}-${p}-${subject}`,
+            id: `${dayName}-${periodNum}-${subject}`,
             time_slot: timeSlot,
+            period: periodNum,
+            period_label: periodLabel,
             subject,
             instructor,
             room,

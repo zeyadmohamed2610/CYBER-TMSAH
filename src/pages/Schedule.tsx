@@ -301,7 +301,7 @@ const Schedule = () => {
                                 }`}>
                                   <div className="text-center min-w-[80px]">
                                     <div className={`text-[10px] font-bold mb-0.5 ${isSec ? "text-cyan-400" : "text-primary"}`}>
-                                      الفترة {periodLabel(li)}
+                                      الفترة {(entry as Record<string, unknown>).period_label as string || periodLabel(li)}
                                     </div>
                                     <div className="text-xs font-bold text-foreground" dir="ltr">{entry.time_slot}</div>
                                   </div>
