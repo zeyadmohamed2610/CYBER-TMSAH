@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Clock, MapPin, User, Calendar, Moon, ExternalLink } from "lucide-react";
 import Layout from "@/components/Layout";
@@ -16,7 +16,7 @@ import { UNIVERSITY_PLATFORM_URL } from "@/lib/externalLinks";
  */
 const Index = () => {
   const [selectedSection, setSelectedSection] = useState(sections[0]);
-  const todaySchedule = getTodaySchedule(selectedSection);
+  const todaySchedule = useMemo(() => getTodaySchedule(selectedSection), [selectedSection]);
   const todayDate = getTodayDate();
   
   return (

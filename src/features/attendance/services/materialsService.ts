@@ -1,4 +1,11 @@
 import { supabase } from "@/lib/supabaseClient";
+import type { AttendanceApiResponse } from "../types";
+
+const ok = <T>(data: T): AttendanceApiResponse<T> => ({ data, error: null });
+const fail = <T>(operation: string, error: unknown): AttendanceApiResponse<T> => ({
+  data: null,
+  error: typeof error === "object" && error && "message" in error ? String((error as Record<string, unknown>).message) : String(error),
+});
 
 export interface Article {
   id: string;
@@ -28,18 +35,17 @@ export interface CourseMaterial {
 
 export const materialsService = {
   /** Fetch all course materials from DB */
-  async fetchMaterials(): Promise<CourseMaterial[]> {
+  async fetchMaterials(): Promise<AttendanceApiResponse<CourseMaterial[]>> {
     const { data, error } = await supabase
       .from("course_materials")
       .select("*")
       .order("sort_order", { ascending: true });
 
     if (error) {
-      console.error("Failed to fetch materials:", error);
-      return [];
+      return fail("fetchMaterials", error);
     }
 
-    return (data ?? []).map((row: Record<string, unknown>) => ({
+    return ok((data ?? []).map((row: Record<string, unknown>) => ({
       id: row.id as string,
       slug: row.slug as string,
       title: row.title as string,
@@ -51,24 +57,27 @@ export const materialsService = {
       sections_content: (row.sections_content as SectionContent[]) ?? [],
       pdf_url: (row.pdf_url as string) ?? null,
       sort_order: (row.sort_order as number) ?? 0,
-    }));
+    })));
   },
 
   /** Fetch a single material by slug */
-  async fetchMaterialBySlug(slug: string): Promise<CourseMaterial | null> {
+  async fetchMaterialBySlug(slug: string): Promise<AttendanceApiResponse<CourseMaterial | null>> {
     const { data, error } = await supabase
       .from("course_materials")
       .select("*")
       .eq("slug", slug)
       .maybeSingle();
 
-    if (error || !data) {
-      console.error("Failed to fetch material:", error);
-      return null;
+    if (error) {
+      return fail("fetchMaterialBySlug", error);
+    }
+
+    if (!data) {
+      return ok(null);
     }
 
     const row = data as Record<string, unknown>;
-    return {
+    return ok({
       id: row.id as string,
       slug: row.slug as string,
       title: row.title as string,
@@ -80,6 +89,6 @@ export const materialsService = {
       sections_content: (row.sections_content as SectionContent[]) ?? [],
       pdf_url: (row.pdf_url as string) ?? null,
       sort_order: (row.sort_order as number) ?? 0,
-    };
+    });
   },
 };

@@ -35,22 +35,6 @@ const disableDevToolsShortcuts = () => {
   });
 };
 
-/** Detect DevTools opening via timing attack (best-effort) */
-const detectDevTools = () => {
-  if (!import.meta.env.PROD) return;
-
-  const threshold = 160;
-  setInterval(() => {
-    const start = performance.now();
-    debugger; // eslint-disable-line no-debugger
-    const duration = performance.now() - start;
-    if (duration > threshold) {
-      console.clear();
-      console.log("%c⚠️ تم اكتشاف أدوات التطوير", "color: red; font-size: 20px; font-weight: bold;");
-    }
-  }, 1000);
-};
-
 /** Clear sensitive data from console periodically */
 const sanitizeConsole = () => {
   if (!import.meta.env.PROD) return;
@@ -96,6 +80,5 @@ export const rpcRateLimiter = new RpcRateLimiter(60_000, 30);
 export const initProtection = () => {
   disableContextMenu();
   disableDevToolsShortcuts();
-  detectDevTools();
   sanitizeConsole();
 };

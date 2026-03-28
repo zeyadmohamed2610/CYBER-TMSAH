@@ -70,7 +70,7 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
   const handleCopy = (code: string) => {
     navigator.clipboard.writeText(code).then(() => {
       setCopied(true);
-      toast.success("Code copied!");
+      toast.success("تم نسخ الكود!");
       setTimeout(() => setCopied(false), 2000);
     });
   };
@@ -86,8 +86,8 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
   if (sessions.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        <p className="text-sm">No active sessions right now.</p>
-        <p className="text-xs mt-1">Wait for your doctor to start a session.</p>
+        <p className="text-sm">لا توجد جلسات نشطة حالياً.</p>
+        <p className="text-xs mt-1">انتظر بدء الدكتور للجلسة.</p>
       </div>
     );
   }
@@ -131,7 +131,7 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
 
           {/* Code display */}
           <div className="rounded-xl bg-primary/10 border border-primary/30 p-4 sm:p-6 space-y-2 sm:space-y-3">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">Session Code</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">كود الجلسة</p>
             <p className="text-4xl sm:text-5xl font-bold font-mono tracking-[0.3em] sm:tracking-[0.5em] text-primary">
               {selectedSession.short_code}
             </p>
@@ -154,7 +154,7 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
           {selectedSession.latitude && (
             <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <MapPin className="h-3 w-3" />
-              <span>GPS required · {selectedSession.radius_meters}m radius</span>
+               <span>مطلوب GPS · {selectedSession.radius_meters}m نصف القطر</span>
             </div>
           )}
 
@@ -166,7 +166,7 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
             className="gap-2"
           >
             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            {copied ? "Copied!" : "Copy Code"}
+            {copied ? "تم النسخ!" : "نسخ الكود"}
           </Button>
         </div>
       )}

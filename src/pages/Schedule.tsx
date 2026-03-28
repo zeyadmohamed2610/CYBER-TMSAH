@@ -27,8 +27,11 @@ const Schedule = () => {
   useEffect(() => {
     setLoading(true);
     const sectionNum = parseInt(selectedSection.replace(/\D/g, "")) || 1;
-    scheduleService.fetchSchedule(sectionNum).then((data) => {
-      setSchedule(data);
+    scheduleService.fetchSchedule(sectionNum).then(({ data, error }) => {
+      if (error) {
+        toast.error("فشل تحميل الجدول.");
+      }
+      setSchedule(data ?? []);
       setLoading(false);
     });
   }, [selectedSection]);
@@ -57,7 +60,7 @@ const Schedule = () => {
       link.href = canvas.toDataURL("image/png");
       link.click();
     } catch {
-      toast.error("Failed to download image. Please try again.");
+      toast.error("فشل تحميل الصورة. يرجى المحاولة مرة أخرى.");
     } finally {
       setIsExporting(false);
     }
@@ -83,7 +86,7 @@ const Schedule = () => {
       pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
       pdf.save(`الجدول-الدراسي-${selectedSection}.pdf`);
     } catch {
-      toast.error("Failed to download PDF. Please try again.");
+      toast.error("فشل تحميل PDF. يرجى المحاولة مرة أخرى.");
     } finally {
       setIsExporting(false);
     }
@@ -202,7 +205,7 @@ const Schedule = () => {
         {/* Schedule Grid */}
         <section className="section-container py-12 md:py-16" ref={scheduleRef}>
           {loading ? (
-            <div className="text-center py-20 text-muted-foreground">Loading schedule...</div>
+            <div className="text-center py-20 text-muted-foreground">جاري تحميل الجدول...</div>
           ) : (
           <div className="space-y-6">
             {schedule.map((day, di) => (
@@ -244,7 +247,7 @@ const Schedule = () => {
                   <div className="relative p-6">
                     {day.entries.length === 0 && !day.isHoliday && !day.isTraining ? (
                       <div className="flex items-center justify-center py-12 rounded-xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-dashed border-primary/30">
-                        <p className="text-muted-foreground">No lectures scheduled.</p>
+                        <p className="text-muted-foreground">لا توجد محاضرات مجدولة.</p>
                       </div>
                     ) : day.isHoliday ? (
                       <div className="flex items-center justify-center py-12 rounded-xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-dashed border-primary/30">

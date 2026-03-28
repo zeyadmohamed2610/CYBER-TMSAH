@@ -1,5 +1,7 @@
-import { Activity, AlertCircle, AlertTriangle, ClipboardCheck, TrendingUp } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Activity, AlertCircle, AlertTriangle, ClipboardCheck, CloudOff, TrendingUp } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { DataTable, type DataTableColumn } from "../components/DataTable";
 import { ActiveSessionsBar } from "../components/ActiveSessionsBar";
 import { AttendanceSubmissionForm } from "../components/AttendanceSubmissionForm";
@@ -9,14 +11,34 @@ import { useAttendanceDashboardData } from "../hooks/useAttendanceDashboardData"
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 import type { AttendanceRecord } from "../types";
 import { formatDateTime } from "../utils/rotatingSession";
+import { offlineAttendanceService } from "../services/offlineAttendanceService";
 
 export const StudentDashboard = () => {
   const { fullName } = useAttendanceAuth();
   const { loading, error, metrics, records, sessions, subjectMetrics, refetch } =
     useAttendanceDashboardData("student");
 
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const syncAndRefresh = useCallback(async () => {
+    await offlineAttendanceService.syncPending();
+    setPendingCount(offlineAttendanceService.getPendingCount());
+    refetch();
+  }, [refetch]);
+
+  useEffect(() => {
+    setPendingCount(offlineAttendanceService.getPendingCount());
+    syncAndRefresh();
+
+    const handleOnline = () => syncAndRefresh();
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+  }, [syncAndRefresh]);
+
   const absenceRate = 100 - metrics.attendanceRate;
-  const topSubjects = [...subjectMetrics].sort((a, b) => b.attendanceRate - a.attendanceRate).slice(0, 3);
+  const topSubjects = useMemo(() =>
+    [...subjectMetrics].sort((a, b) => b.attendanceRate - a.attendanceRate).slice(0, 3),
+  [subjectMetrics]);
   const isCriticalAttendance = metrics.attendanceRate < 50;
   const isWarningAttendance = metrics.attendanceRate >= 50 && metrics.attendanceRate < 70;
   const isLowAttendance = isCriticalAttendance || isWarningAttendance;
@@ -33,6 +55,13 @@ export const StudentDashboard = () => {
         <p className="text-lg font-bold">
           مرحباً يا <span className="text-primary">{fullName}</span> 👋
         </p>
+      )}
+
+      {pendingCount > 0 && (
+        <Badge variant="outline" className="gap-1.5 border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+          <CloudOff className="h-3.5 w-3.5" />
+          {pendingCount} تسجيل في انتظار المزامنة
+        </Badge>
       )}
 
       {error ? (

@@ -61,7 +61,7 @@ export function TAManagementPanel() {
         full_name: ta.full_name as string,
         national_id: (ta.national_id as string) ?? null,
         subject_id: ta.subject_id as string,
-        subject_name: subj?.name ?? "Unknown",
+        subject_name: subj?.name ?? "غير معروف",
       });
     }
     setTas(taList);
@@ -72,14 +72,14 @@ export function TAManagementPanel() {
 
   const handleCreateTa = async () => {
     if (!form.name || !form.email || !form.password || !form.subjectId) {
-      toast({ variant: "destructive", title: "Error", description: "All fields are required." });
+      toast({ variant: "destructive", title: "خطأ", description: "جميع الحقول مطلوبة." });
       return;
     }
     setSubmitting(true);
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) {
-      toast({ variant: "destructive", title: "Error", description: "Session expired." });
+      toast({ variant: "destructive", title: "خطأ", description: "انتهت الجلسة." });
       setSubmitting(false);
       return;
     }
@@ -95,9 +95,9 @@ export function TAManagementPanel() {
     });
 
     if (res.error || res.data?.error) {
-      toast({ variant: "destructive", title: "Failed", description: res.data?.error || res.error?.message });
+      toast({ variant: "destructive", title: "فشل", description: res.data?.error || res.error?.message });
     } else {
-      toast({ title: "Created", description: `TA "${form.name}" created.` });
+      toast({ title: "تم الإنشاء", description: `تم إنشاء المعيد "${form.name}".` });
       setForm({ name: "", email: "", password: "", subjectId: "" });
       setShowAdd(false);
       await load();
@@ -108,16 +108,16 @@ export function TAManagementPanel() {
   const handleDeleteTa = async (taId: string, name: string) => {
     const { error } = await supabase.rpc("delete_user_by_id", { p_user_id: taId });
     if (error) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
+      toast({ variant: "destructive", title: "خطأ", description: error.message });
     } else {
-      toast({ title: "Deleted", description: `TA "${name}" deleted.` });
+      toast({ title: "تم الحذف", description: `تم حذف المعيد "${name}".` });
       await load();
     }
   };
 
   const handleAssignSections = async () => {
     if (!assignTa || assignSections.length === 0) {
-      toast({ variant: "destructive", title: "Error", description: "Select TA and sections." });
+      toast({ variant: "destructive", title: "خطأ", description: "اختر المعيد والأقسام." });
       return;
     }
 
@@ -146,9 +146,9 @@ export function TAManagementPanel() {
       .eq("slug", assignSubject);
 
     if (error) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
+      toast({ variant: "destructive", title: "خطأ", description: error.message });
     } else {
-      toast({ title: "Assigned", description: `${ta.full_name} assigned to ${assignSections.length} sections.` });
+      toast({ title: "تم التعيين", description: `تم تعيين ${ta.full_name} إلى ${assignSections.length} أقسام.` });
       setAssignTa("");
       setAssignSections([]);
     }
@@ -172,10 +172,10 @@ export function TAManagementPanel() {
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">
             <Users className="h-4 w-4 text-primary" />
-            TA Management
+            إدارة المعيدين
           </CardTitle>
           <Button size="sm" onClick={() => setShowAdd(!showAdd)} className="gap-1">
-            <Plus className="h-3 w-3" /> Create TA
+            <Plus className="h-3 w-3" /> إنشاء معيد
           </Button>
         </div>
       </CardHeader>
@@ -185,23 +185,23 @@ export function TAManagementPanel() {
           <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Name</Label>
+                <Label className="text-xs">الاسم</Label>
                 <Input className="h-8 text-sm" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="م. اسم المعيد" />
               </div>
               <div>
-                <Label className="text-xs">Email</Label>
+                <Label className="text-xs">البريد الإلكتروني</Label>
                 <Input className="h-8 text-sm" type="email" dir="ltr" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="ta@university.edu" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Password</Label>
-                <Input className="h-8 text-sm" type="password" dir="ltr" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="8+ characters" />
+                <Label className="text-xs">كلمة المرور</Label>
+                <Input className="h-8 text-sm" type="password" dir="ltr" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="8+ أحرف" />
               </div>
               <div>
-                <Label className="text-xs">Primary Subject</Label>
+                <Label className="text-xs">المادة الأساسية</Label>
                 <Select value={form.subjectId} onValueChange={(v) => setForm({ ...form, subjectId: v })}>
-                  <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select subject" /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="اختر المادة" /></SelectTrigger>
                   <SelectContent>
                     {subjects.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                   </SelectContent>
@@ -209,9 +209,9 @@ export function TAManagementPanel() {
               </div>
             </div>
             <div className="flex gap-2 justify-end">
-              <Button variant="ghost" size="sm" onClick={() => setShowAdd(false)}>Cancel</Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowAdd(false)}>إلغاء</Button>
               <Button size="sm" onClick={handleCreateTa} disabled={submitting}>
-                {submitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />} Create
+                {submitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />} إنشاء
               </Button>
             </div>
           </div>
@@ -219,28 +219,28 @@ export function TAManagementPanel() {
 
         {/* Section Assignment */}
         <div className="rounded-lg border bg-card p-4 space-y-3">
-          <p className="text-sm font-medium">Assign Sections</p>
+          <p className="text-sm font-medium">تعيين الأقسام</p>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <Label className="text-xs">Subject</Label>
+              <Label className="text-xs">المادة</Label>
               <Select value={assignSubject} onValueChange={setAssignSubject}>
-                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Subject" /></SelectTrigger>
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="المادة" /></SelectTrigger>
                 <SelectContent>
                   {subjects.map((s) => <SelectItem key={s.id} value={s.name.toLowerCase().replace(/\s+/g, "-")}>{s.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="text-xs">TA</Label>
+              <Label className="text-xs">المعيد</Label>
               <Select value={assignTa} onValueChange={setAssignTa}>
-                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select TA" /></SelectTrigger>
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="اختر المعيد" /></SelectTrigger>
                 <SelectContent>
                   {tas.map((t) => <SelectItem key={t.id} value={t.id}>{t.full_name} ({t.subject_name})</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="text-xs">Sections</Label>
+              <Label className="text-xs">الأقسام</Label>
               <div className="flex flex-wrap gap-1 mt-1">
                 {ALL_SECTIONS.map((s) => (
                   <button
@@ -260,16 +260,16 @@ export function TAManagementPanel() {
           </div>
           <div className="flex justify-end">
             <Button size="sm" onClick={handleAssignSections} disabled={!assignTa || assignSections.length === 0}>
-              Assign Sections
+              تعيين الأقسام
             </Button>
           </div>
         </div>
 
         {/* TAs by Subject */}
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <p className="text-sm text-muted-foreground">جاري التحميل...</p>
         ) : tasBySubject.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">No TAs created yet.</p>
+          <p className="text-sm text-muted-foreground text-center py-4">لا يوجد معيدين بعد.</p>
         ) : (
           <div className="space-y-4">
             {tasBySubject.map((group) => (

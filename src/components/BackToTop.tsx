@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrowUp } from "lucide-react";
+import { scrollToTop } from "@/lib/utils";
 
 /**
  * Back to Top Button
@@ -20,13 +21,6 @@ export const BackToTop = () => {
     window.addEventListener("scroll", toggleVisibility, { passive: true });
     return () => window.removeEventListener("scroll", toggleVisibility);
   }, []);
-
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  };
 
   if (!isVisible) return null;
 

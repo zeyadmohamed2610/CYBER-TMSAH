@@ -73,9 +73,9 @@ export function MaterialsEditor() {
       p_pdf_url: form.pdf_url || null,
     });
     if (error) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
+      toast({ variant: "destructive", title: "خطأ", description: error.message });
     } else {
-      toast({ title: "Added", description: `Material "${form.title}" added.` });
+      toast({ title: "تمت الإضافة", description: `تمت إضافة المادة "${form.title}".` });
       resetForm();
       await load();
     }
@@ -96,9 +96,9 @@ export function MaterialsEditor() {
       p_pdf_url: form.pdf_url || null,
     });
     if (error) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
+      toast({ variant: "destructive", title: "خطأ", description: error.message });
     } else {
-      toast({ title: "Updated", description: "Material updated." });
+      toast({ title: "تم التحديث", description: "تم تحديث المادة." });
       resetForm();
       await load();
     }
@@ -107,9 +107,9 @@ export function MaterialsEditor() {
   const handleDelete = async (id: string, title: string) => {
     const { error } = await supabase.rpc("delete_material", { p_id: id });
     if (error) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
+      toast({ variant: "destructive", title: "خطأ", description: error.message });
     } else {
-      toast({ title: "Deleted", description: `"${title}" deleted.` });
+      toast({ title: "تم الحذف", description: `تم حذف "${title}".` });
       await load();
     }
   };
@@ -136,10 +136,10 @@ export function MaterialsEditor() {
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">
             <BookOpen className="h-4 w-4 text-primary" />
-            Materials Editor
+            محرر المواد
           </CardTitle>
           <Button size="sm" onClick={() => { resetForm(); setShowAdd(true); }} className="gap-1">
-            <Plus className="h-3 w-3" /> Add Material
+            <Plus className="h-3 w-3" /> إضافة مادة
           </Button>
         </div>
       </CardHeader>
@@ -150,53 +150,53 @@ export function MaterialsEditor() {
             <div className="grid grid-cols-3 gap-3">
               {showAdd && (
                 <div>
-                  <Label className="text-xs">Slug (ID)</Label>
-                  <Input className="h-8 text-sm" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="e.g. networking" />
+                  <Label className="text-xs">المعرف (Slug)</Label>
+                  <Input className="h-8 text-sm" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="مثال: networking" />
                 </div>
               )}
               <div>
-                <Label className="text-xs">Title</Label>
-                <Input className="h-8 text-sm" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Subject name" />
+                <Label className="text-xs">العنوان</Label>
+                <Input className="h-8 text-sm" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="اسم المادة" />
               </div>
               <div>
-                <Label className="text-xs">Icon (emoji)</Label>
+                <Label className="text-xs">الأيقونة (emoji)</Label>
                 <Input className="h-8 text-sm" value={form.icon} onChange={(e) => setForm({ ...form, icon: e.target.value })} placeholder="📚" />
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <Label className="text-xs">Instructor</Label>
+                <Label className="text-xs">المحاضر</Label>
                 <Input className="h-8 text-sm" value={form.instructor} onChange={(e) => setForm({ ...form, instructor: e.target.value })} placeholder="د. ..." />
               </div>
               <div>
-                <Label className="text-xs">Second Instructor</Label>
-                <Input className="h-8 text-sm" value={form.second_instructor} onChange={(e) => setForm({ ...form, second_instructor: e.target.value })} placeholder="Optional" />
+                <Label className="text-xs">المحاضر الثاني</Label>
+                <Input className="h-8 text-sm" value={form.second_instructor} onChange={(e) => setForm({ ...form, second_instructor: e.target.value })} placeholder="اختياري" />
               </div>
               <div>
-                <Label className="text-xs">TAs (comma separated)</Label>
+                <Label className="text-xs">المعيدين (مفصولة بفاصلة)</Label>
                 <Input className="h-8 text-sm" value={form.teaching_assistants} onChange={(e) => setForm({ ...form, teaching_assistants: e.target.value })} placeholder="م. أحمد, م. سارة" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Articles (JSON)</Label>
+                <Label className="text-xs">المقالات (JSON)</Label>
                 <textarea className="w-full h-20 rounded-md border bg-background px-3 py-2 text-xs font-mono" value={form.articles} onChange={(e) => setForm({ ...form, articles: e.target.value })} placeholder='[{"id":"1","title":"...","blogUrl":"..."}]' />
               </div>
               <div>
-                <Label className="text-xs">Sections Content (JSON)</Label>
+                <Label className="text-xs">محتوى الأقسام (JSON)</Label>
                 <textarea className="w-full h-20 rounded-md border bg-background px-3 py-2 text-xs font-mono" value={form.sections_content} onChange={(e) => setForm({ ...form, sections_content: e.target.value })} placeholder='[{"id":"s1","title":"...","description":"..."}]' />
               </div>
             </div>
             <div className="flex gap-2 justify-end">
-              <Button variant="ghost" size="sm" onClick={resetForm}><X className="h-3 w-3" /> Cancel</Button>
-              <Button size="sm" onClick={editId ? handleEdit : handleAdd}><Check className="h-3 w-3" /> {editId ? "Update" : "Add"}</Button>
+              <Button variant="ghost" size="sm" onClick={resetForm}><X className="h-3 w-3" /> إلغاء</Button>
+              <Button size="sm" onClick={editId ? handleEdit : handleAdd}><Check className="h-3 w-3" /> {editId ? "تحديث" : "إضافة"}</Button>
             </div>
           </div>
         )}
 
         {/* Materials List */}
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <p className="text-sm text-muted-foreground">جاري التحميل...</p>
         ) : (
           <div className="space-y-2">
             {materials.map((m) => (

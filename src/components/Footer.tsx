@@ -1,11 +1,9 @@
 import { Link } from "react-router-dom";
 import { Github, Facebook, Linkedin, MessageCircle, ArrowUp } from "lucide-react";
 import { UNIVERSITY_PLATFORM_URL } from "@/lib/externalLinks";
+import { scrollToTop } from "@/lib/utils";
 
 const Footer = () => {
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
 
   return (
     <footer className="relative border-t border-border/50 mt-20 overflow-hidden">

@@ -33,7 +33,7 @@ export const DataTable = <T,>({
   columns,
   rows,
   getRowId,
-  emptyMessage = "No data available.",
+  emptyMessage = "لا توجد بيانات متاحة.",
 }: DataTableProps<T>) => {
   return (
     <Card className="bg-card/80">

@@ -1,4 +1,11 @@
 import { supabase } from "@/lib/supabaseClient";
+import type { AttendanceApiResponse } from "../types";
+
+const ok = <T>(data: T): AttendanceApiResponse<T> => ({ data, error: null });
+const fail = <T>(operation: string, error: unknown): AttendanceApiResponse<T> => ({
+  data: null,
+  error: typeof error === "object" && error && "message" in error ? String((error as Record<string, unknown>).message) : String(error),
+});
 
 export interface ScheduleEntry {
   id: string;
@@ -36,7 +43,7 @@ const DAY_ORDER = ["saturday", "sunday", "monday", "tuesday", "wednesday", "thur
 
 export const scheduleService = {
   /** Fetch schedule for a specific section from DB */
-  async fetchSchedule(sectionNum: number): Promise<DaySchedule[]> {
+  async fetchSchedule(sectionNum: number): Promise<AttendanceApiResponse<DaySchedule[]>> {
     const { data, error } = await supabase
       .from("course_schedule")
       .select("id, section, day_of_week, time_slot, subject, instructor, room, entry_type, is_holiday, is_training, sort_order")
@@ -44,13 +51,12 @@ export const scheduleService = {
       .order("sort_order", { ascending: true });
 
     if (error) {
-      console.error("Failed to fetch schedule:", error);
-      return [];
+      return fail("fetchSchedule", error);
     }
 
     const entries = (data ?? []) as ScheduleEntry[];
 
-    return DAY_ORDER.map((dayKey) => {
+    return ok(DAY_ORDER.map((dayKey) => {
       const dayEntries = entries.filter((e) => e.day_of_week === dayKey);
       const isHoliday = dayEntries.length > 0 && dayEntries[0].is_holiday;
       const isTraining = dayEntries.length > 0 && dayEntries[0].is_training;
@@ -62,7 +68,7 @@ export const scheduleService = {
         isHoliday,
         isTraining,
       };
-    });
+    }));
   },
 
   /** Fetch time slots from DB (unique, ordered) */

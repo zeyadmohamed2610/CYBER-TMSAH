@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { attendanceService } from "../services/attendanceService";
+import { offlineAttendanceService } from "../services/offlineAttendanceService";
 import { useGps } from "../context/GpsContext";
 import type { SessionSummary } from "../types";
 
@@ -72,31 +72,32 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
     setGpsStatus("جاري تحديد الموقع...");
 
     try {
-      // Get fresh GPS before submitting
       const gps = await requestFresh();
       setGpsStatus(`تم تحديد الموقع (${gps.lat.toFixed(4)}, ${gps.lng.toFixed(4)})`);
+    } catch {
+      setGpsStatus("سيتم تسجيل الحضور بدون موقع GPS");
+    }
 
-      const result = await attendanceService.submitAttendance(trimmedCode, gps.lat, gps.lng);
+    try {
+      const result = await offlineAttendanceService.queueSubmission(trimmedCode);
 
-      if (result.error) {
-        toast({ variant: "destructive", title: "فشل تسجيل الحضور", description: result.error });
+      if (result.success && result.offline) {
+        toast({ title: "تم حفظ الحضور ✓", description: "سيتم مزامنة التسجيل عند عودة الاتصال." });
+        setCode("");
         setGpsStatus("");
-      } else {
+        onSubmitSuccess?.();
+      } else if (result.success) {
         toast({ title: "تم تسجيل الحضور ✓", description: "تم تسجيل حضورك بنجاح." });
         setCode("");
         setGpsStatus("");
         onSubmitSuccess?.();
+      } else {
+        toast({ variant: "destructive", title: "فشل تسجيل الحضور", description: result.error ?? "حدث خطأ غير متوقع." });
+        setGpsStatus("");
       }
-    } catch (gpsError) {
-      const msg = gpsError instanceof Error ? gpsError.message : "فشل تحديد الموقع";
-      toast({
-        variant: "destructive",
-        title: "فشل تحديد الموقع GPS",
-        description: msg.includes("denied")
-          ? "يجب تفعيل خدمة الموقع لتسجيل الحضور"
-          : msg,
-      });
-      setGpsStatus("فشل تحديد الموقع");
+    } catch {
+      toast({ variant: "destructive", title: "خطأ", description: "فشل تسجيل الحضور." });
+      setGpsStatus("");
     }
 
     setIsSubmitting(false);

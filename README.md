@@ -1,7 +1,7 @@
 <div dir="rtl">
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/zeyadmohamed2610/CYBER-TMSAH/main/public/founder.jpeg" alt="CYBER TMSAH" width="120" height="160" style="border-radius: 16px; border: 3px solid #0d9488;" />
+  <img src="public/founder.jpeg" alt="CYBER TMSAH" width="120" height="160" style="border-radius: 16px; border: 3px solid #0d9488;" />
 </p>
 
 <h1 align="center">CYBER TMSAH</h1>
@@ -129,7 +129,7 @@ course_materials ─────── slug, title, icon, instructor, articles (
 ## المؤسس
 
 <div style="text-align: center;">
-  <img src="https://raw.githubusercontent.com/zeyadmohamed2610/CYBER-TMSAH/main/public/founder.jpeg" alt="Zeyad Mohamed" width="100" style="border-radius: 12px;" />
+  <img src="public/founder.jpeg" alt="Zeyad Mohamed" width="100" style="border-radius: 12px;" />
   <br/>
   <strong>Zeyad Mohamed</strong> — Cyber Security Student
   <br/>

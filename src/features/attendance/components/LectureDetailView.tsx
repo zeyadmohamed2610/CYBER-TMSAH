@@ -34,7 +34,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
     setLoading(true);
     const result = await attendanceService.getLectureAttendees(lecture.id);
     if (result.error) {
-      toast({ variant: "destructive", title: "Error", description: result.error });
+      toast({ variant: "destructive", title: "خطأ", description: result.error });
     } else {
       setAttendees(result.data ?? []);
     }
@@ -72,9 +72,9 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
     setEnding(true);
     const result = await attendanceService.endLecture(lecture.id);
     if (result.error) {
-      toast({ variant: "destructive", title: "Error", description: result.error });
+      toast({ variant: "destructive", title: "خطأ", description: result.error });
     } else {
-      toast({ title: "Lecture Ended", description: "All sessions stopped. Empty sessions cleaned up." });
+      toast({ title: "تم إنهاء المحاضرة", description: "تم إيقاف جميع الجلسات." });
       onBack();
     }
     setEnding(false);
@@ -83,9 +83,9 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
   const handleExport = async (format: "csv" | "xlsx" | "pdf") => {
     const result = await reportService.exportLecture(attendees, lecture, format);
     if (result.error) {
-      toast({ variant: "destructive", title: "Export failed", description: result.error });
+      toast({ variant: "destructive", title: "فشل التصدير", description: result.error });
     } else {
-      toast({ title: "Exported", description: `${format.toUpperCase()} downloaded.` });
+      toast({ title: "تم التصدير", description: `${format.toUpperCase()} downloaded.` });
     }
   };
 
@@ -93,26 +93,26 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
     { id: "num", header: "#", cell: (_row, index) => String((index ?? 0) + 1) },
     {
       id: "name",
-      header: "Student Name",
+      header: "اسم الطالب",
       cell: (row) => <span className="font-medium">{row.student_name}</span>,
     },
     {
       id: "nid",
-      header: "National ID",
+      header: "الرقم القومي",
       cell: (row) => (
         <span className="font-mono text-xs text-muted-foreground">{row.national_id ?? "\u2014"}</span>
       ),
     },
     {
       id: "code",
-      header: "Session Code",
+      header: "كود الجلسة",
       cell: (row) => (
         <Badge variant="outline" className="font-mono">{row.short_code ?? "\u2014"}</Badge>
       ),
     },
     {
       id: "time",
-      header: "Time",
+      header: "الوقت",
       cell: (row) => (
         <span className="text-xs text-muted-foreground" dir="ltr">
           {new Date(row.submitted_at).toLocaleString("en-GB")}
@@ -121,7 +121,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
     },
     {
       id: "ip",
-      header: "IP Address",
+      header: "عنوان IP",
       cell: (row) => (
         <span className="font-mono text-xs text-muted-foreground" dir="ltr">
           {row.ip_address ?? "\u2014"}
@@ -137,7 +137,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={onBack} className="gap-1">
             <ArrowRight className="h-4 w-4 rtl:rotate-180" />
-            Back
+            رجوع
           </Button>
           <div>
             <h2 className="text-lg font-bold">{lecture.title}</h2>
@@ -152,7 +152,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
           </Button>
           <Button variant="destructive" size="sm" onClick={handleEndLecture} disabled={ending} className="gap-1">
             <StopCircle className="h-3 w-3" />
-            {ending ? "Ending..." : "End Lecture"}
+            {ending ? "جاري الإنهاء..." : "إنهاء المحاضرة"}
           </Button>
         </div>
       </div>
@@ -166,7 +166,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
             </div>
             <div>
               <p className="text-2xl font-bold">{attendees.length}</p>
-              <p className="text-xs text-muted-foreground">Attendees</p>
+              <p className="text-xs text-muted-foreground">الحضور</p>
             </div>
           </CardContent>
         </Card>
@@ -177,7 +177,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
             </div>
             <div>
               <p className="text-2xl font-bold">{new Set(attendees.map((a) => a.session_id)).size}</p>
-              <p className="text-xs text-muted-foreground">Sessions</p>
+              <p className="text-xs text-muted-foreground">الجلسات</p>
             </div>
           </CardContent>
         </Card>
@@ -192,7 +192,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
                   ? new Date(attendees[attendees.length - 1].submitted_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
                   : "\u2014"}
               </p>
-              <p className="text-xs text-muted-foreground">Last Check-in</p>
+              <p className="text-xs text-muted-foreground">آخر تسجيل</p>
             </div>
           </CardContent>
         </Card>
@@ -203,7 +203,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <Download className="h-4 w-4" />
-            Export Attendance
+            تصدير الحضور
           </CardTitle>
         </CardHeader>
         <CardContent className="flex gap-2">
@@ -236,25 +236,25 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
           <CardContent className="p-6 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label className="text-xs">Duration (min)</Label>
+                <Label className="text-xs">المدة (دقائق)</Label>
                 <Input type="number" min={5} max={180} value={sessionDuration}
                   onChange={(e) => setSessionDuration(Number(e.target.value))}
                   className="h-8 text-sm" dir="ltr" />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">GPS Radius (m)</Label>
+                <Label className="text-xs">نصف القطر GPS (متر)</Label>
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
                   <Input type="number" min={10} max={500} value={sessionRadius}
                     onChange={(e) => setSessionRadius(Number(e.target.value))}
                     className="h-8 text-sm" dir="ltr" />
                 </div>
-                {gpsCoords && <p className="text-xs text-green-500">GPS captured</p>}
+                {gpsCoords && <p className="text-xs text-green-500">تم تحديد الموقع</p>}
               </div>
             </div>
             <Button onClick={handleCreateSession} disabled={creating} className="w-full gap-2">
               <Hash className="h-4 w-4" />
-              {creating ? "Creating..." : "Start Attendance Session"}
+              {creating ? "جاري الإنشاء..." : "بدء جلسة الحضور"}
             </Button>
           </CardContent>
         </Card>
@@ -264,12 +264,12 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
 
       {/* Attendees table */}
       <DataTable
-        title={`Attendance List (${attendees.length})`}
-        caption={loading ? "Loading..." : attendees.length === 0 ? "No attendance records yet." : undefined}
+        title={`قائمة الحضور (${attendees.length})`}
+        caption={loading ? "جاري التحميل..." : attendees.length === 0 ? "لا يوجد سجلات حضور بعد." : undefined}
         columns={columns}
         rows={attendees}
         getRowId={(row) => row.attendance_id}
-        emptyMessage="No attendance records"
+        emptyMessage="لا يوجد سجلات حضور"
       />
     </div>
   );

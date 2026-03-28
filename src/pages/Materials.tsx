@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { User, BookOpen, ArrowLeft, Users, Search } from "lucide-react";
 import { toast } from "sonner";
@@ -14,28 +14,35 @@ const Materials = () => {
 
   // Fetch from DB on mount
   useEffect(() => {
-    materialsService.fetchMaterials().then((data) => {
-      setMaterials(data);
+    materialsService.fetchMaterials().then(({ data, error }) => {
+      if (error) {
+        toast.error("فشل تحميل المواد.");
+      }
+      setMaterials(data ?? []);
       setLoading(false);
     }).catch(() => {
-      toast.error("Failed to load materials.");
+      toast.error("فشل تحميل المواد.");
       setLoading(false);
     });
   }, []);
 
   // Sort: those with TAs first
-  const sorted = [...materials].sort((a, b) => {
-    const aHasTA = (a.teaching_assistants?.length || 0) > 0;
-    const bHasTA = (b.teaching_assistants?.length || 0) > 0;
-    if (aHasTA && !bHasTA) return -1;
-    if (!aHasTA && bHasTA) return 1;
-    return 0;
-  });
+  const sorted = useMemo(() =>
+    [...materials].sort((a, b) => {
+      const aHasTA = (a.teaching_assistants?.length || 0) > 0;
+      const bHasTA = (b.teaching_assistants?.length || 0) > 0;
+      if (aHasTA && !bHasTA) return -1;
+      if (!aHasTA && bHasTA) return 1;
+      return 0;
+    }),
+  [materials]);
 
   // Unique doctors count
-  const uniqueDoctors = new Set(
-    materials.flatMap((m) => [m.instructor, m.second_instructor].filter(Boolean)),
-  );
+  const uniqueDoctors = useMemo(() =>
+    new Set(
+      materials.flatMap((m) => [m.instructor, m.second_instructor].filter(Boolean)),
+    ),
+  [materials]);
 
   // Search filter
   const filtered = sorted.filter((m) => {
@@ -107,7 +114,7 @@ const Materials = () => {
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search by subject name or doctor..."
+            placeholder="ابحث عن مادة أو دكتور..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-lg border border-border bg-card px-10 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
@@ -116,9 +123,9 @@ const Materials = () => {
         </div>
 
         {loading ? (
-          <p className="text-center text-muted-foreground py-10">Loading materials...</p>
+          <p className="text-center text-muted-foreground py-10">جاري تحميل المواد...</p>
         ) : filtered.length === 0 ? (
-          <p className="text-center text-muted-foreground py-10">No subjects match your search.</p>
+          <p className="text-center text-muted-foreground py-10">لا توجد مواد مطابقة لبحثك.</p>
         ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map((subject, index) => (

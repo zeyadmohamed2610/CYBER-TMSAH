@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { UNIVERSITY_PLATFORM_URL } from "@/lib/externalLinks";
 
 type NavItem =
@@ -102,11 +103,15 @@ const Navbar = () => {
                 </NavLink>
               );
             })}
+            <ThemeToggle />
           </div>
 
-          <button className="md:hidden text-foreground p-2" onClick={() => setOpen((value) => !value)}>
-            {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
+          <div className="md:hidden flex items-center gap-2">
+            <ThemeToggle />
+            <button className="text-foreground p-2" onClick={() => setOpen((value) => !value)}>
+              {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          </div>
         </div>
 
         {open && (
