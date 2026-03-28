@@ -32,7 +32,7 @@ const fetchUserRole = async (authId: string): Promise<AttendanceRole> => {
 };
 
 /** Wrap a promise with a timeout */
-const withTimeout = <T extends unknown>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+const withTimeout = <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
   return Promise.race([
     promise,
     new Promise<T>((_, reject) =>

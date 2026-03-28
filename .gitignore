@@ -44,3 +44,12 @@ functions/lib/
 # Secrets
 functions/.env
 functions/.env.*
+
+# Build artifacts
+tsconfig.tsbuildinfo
+
+# Accidental Windows null file
+nul
+
+# Plans (local planning files)
+plans/
