@@ -86,28 +86,22 @@ export function GoogleSheetsConnector({ onConnected }: Props) {
 
         <div className="space-y-2">
           <Label>تنسيق الجدول المطلوب</Label>
-          <div className="rounded-xl bg-muted/50 p-3 text-[11px] font-mono text-muted-foreground overflow-x-auto">
-            <table className="w-full text-center">
-              <thead>
-                <tr className="border-b border-border/50">
-                  <th className="pb-1 px-2">يوم</th>
-                  <th className="pb-1 px-2">وقت</th>
-                  <th className="pb-1 px-2">مادة</th>
-                  <th className="pb-1 px-2">محاضر</th>
-                  <th className="pb-1 px-2">قاعة</th>
-                  <th className="pb-1 px-2">نوع</th>
-                  <th className="pb-1 px-2">سكشن</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td className="px-2 pt-1">السبت</td><td className="px-2">9:00 AM - 10:00 AM</td><td className="px-2">网络安全</td><td className="px-2">د. أحمد</td><td className="px-2">G201</td><td className="px-2">محاضرة</td><td className="px-2">0</td></tr>
-                <tr><td className="px-2">السبت</td><td className="px-2">10:05 AM - 11:05 AM</td><td className="px-2">نظم تشغيل</td><td className="px-2">م. محمد</td><td className="px-2">A02</td><td className="px-2">سكشن</td><td className="px-2">1</td></tr>
-              </tbody>
-            </table>
+          <div className="rounded-xl bg-muted/50 p-3 text-[11px] text-muted-foreground leading-relaxed">
+            <p className="font-bold text-foreground mb-2">الجدول على شكل شبكة (Grid):</p>
+            <ul className="space-y-1 list-disc list-inside">
+              <li>الصف الأول: عنوان الجدول</li>
+              <li>الصف الثاني: أسماء الأيام (السبت إلى الخميس) — كل يوم يمتد على 8 أعمدة</li>
+              <li>الصف الثالث: أرقام الفترات (1 إلى 8) لكل يوم</li>
+              <li>الصف الرابع: أوقات البداية (9:00, 10:05, ...)</li>
+              <li>الصف الخامس: أوقات النهاية (10:00, 11:05, ...)</li>
+              <li>من الصف السادس: بيانات السكاشن</li>
+            </ul>
+            <p className="mt-2 font-bold text-foreground">كل خلية تحتوي على 3 أسطر:</p>
+            <p>السطر 1: اسم المادة</p>
+            <p>السطر 2: اسم المحاضر</p>
+            <p>السطر 3: رقم القاعة</p>
+            <p className="mt-2 text-[10px] text-primary">العمود B يحتوي رقم السكشن</p>
           </div>
-          <p className="text-[10px] text-muted-foreground">
-            العمود "سكشن": 0 = لكل السكاشن، أو رقم السكشن المحدد
-          </p>
         </div>
 
         <div className="flex gap-2">

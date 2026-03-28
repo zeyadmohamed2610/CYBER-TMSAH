@@ -7,7 +7,14 @@ import Layout from "@/components/Layout";
 import ScrollReveal from "@/components/ScrollReveal";
 import SEO from "@/components/SEO";
 import { scheduleService, type DaySchedule } from "@/features/attendance/services/scheduleService";
-import { googleSheetsService } from "@/features/attendance/services/googleSheetsService";
+import { googleSheetsService, type SheetDaySchedule } from "@/features/attendance/services/googleSheetsService";
+
+type UnifiedDay = {
+  day: string;
+  entries: { id: string; time_slot: string; subject: string; instructor: string; room: string; entry_type: string }[];
+  isHoliday?: boolean;
+  isTraining?: boolean;
+};
 
 const dayIcons: Record<string, string> = {
   "السبت": "☀️", "الأحد": "🌅", "الاثنين": "💪", "الثلاثاء": "📖",
@@ -20,7 +27,7 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 const Schedule = () => {
   const [selectedSection, setSelectedSection] = useState("سكشن 1");
   const [sections, setSections] = useState<string[]>(["سكشن 1"]);
-  const [schedule, setSchedule] = useState<DaySchedule[]>([]);
+  const [schedule, setSchedule] = useState<UnifiedDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState("");
@@ -45,11 +52,20 @@ const Schedule = () => {
     const load = async () => {
       if (googleSheetsService.getSheetUrl()) {
         const { data, error } = await googleSheetsService.fetchScheduleForSection(sectionNum);
-        if (!error && data.length > 0) { setSchedule(data); setLoading(false); return; }
+        if (!error && data.length > 0) {
+          const unified: UnifiedDay[] = data.map(d => ({
+            day: d.day,
+            entries: d.entries.map(e => ({ ...e, entry_type: e.entry_type as string })),
+            isHoliday: d.day === "الجمعة",
+          }));
+          setSchedule(unified);
+          setLoading(false);
+          return;
+        }
       }
       const { data, error } = await scheduleService.fetchSchedule(sectionNum);
       if (error) toast.error("فشل تحميل الجدول.");
-      setSchedule(data ?? []);
+      setSchedule((data ?? []).map(d => ({ ...d, entries: d.entries.map(e => ({ ...e, entry_type: e.entry_type as string })) })));
       setLoading(false);
     };
     load();
