@@ -117,6 +117,8 @@ export function ScheduleEditor() {
       p_instructor: form.instructor,
       p_room: form.room,
       p_entry_type: form.entry_type,
+      p_is_holiday: form.is_holiday,
+      p_is_training: form.is_training,
     });
     if (error) {
       toast({ variant: "destructive", title: "Error", description: error.message });

@@ -11,7 +11,7 @@ import type { Lecture } from "../types";
 
 export const TADashboard = () => {
   const { user, fullName } = useAttendanceAuth();
-  const { metrics, error } = useAttendanceDashboardData("student");
+  const { metrics, error } = useAttendanceDashboardData("ta");
   const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
   const [taSubjectId, setTaSubjectId] = useState<string | undefined>(undefined);
   const [taSubjectName, setTaSubjectName] = useState<string>("");

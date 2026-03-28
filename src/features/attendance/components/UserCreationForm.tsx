@@ -29,13 +29,6 @@ const doctorSchema = z.object({
   subjectId: z.string().min(1, "يرجى اختيار مادة"),
 });
 
-const taSchema = z.object({
-  name: z.string().min(5, "الاسم يجب أن يكون 5 أحرف على الأقل"),
-  email: z.string().email("يرجى إدخال بريد إلكتروني صحيح"),
-  password: z.string().min(8, "كلمة المرور يجب أن تكون 8 أحرف على الأقل"),
-  subjectId: z.string().min(1, "يرجى اختيار مادة"),
-});
-
 type StudentFormData = z.infer<typeof studentSchema>;
 type DoctorFormData = z.infer<typeof doctorSchema>;
 
@@ -152,7 +145,7 @@ export const UserCreationForm = () => {
                   type="password"
                   dir="ltr"
                   {...studentForm.register("password")}
-                  placeholder="6 أحرف على الأقل"
+                  placeholder="8 أحرف على الأقل"
                   disabled={submitting}
                 />
                 {studentErrors.password && (
@@ -202,7 +195,7 @@ export const UserCreationForm = () => {
                   type="password"
                   dir="ltr"
                   {...doctorForm.register("password")}
-                  placeholder="6 أحرف على الأقل"
+                  placeholder="8 أحرف على الأقل"
                   disabled={submitting}
                 />
                 {doctorErrors.password && (

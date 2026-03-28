@@ -33,11 +33,6 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
   const load = async () => {
     const { data } = await supabase.rpc("get_active_sessions");
     setSessions((data ?? []) as ActiveSession[]);
-
-    // Auto-select first if none selected and sessions exist
-    if (!selectedSession && data && data.length > 0) {
-      setSelectedSession(data[0] as ActiveSession);
-    }
   };
 
   // Load on mount + refresh every 5 seconds for live code updates

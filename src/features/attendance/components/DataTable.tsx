@@ -13,7 +13,7 @@ import {
 export interface DataTableColumn<T> {
   id: string;
   header: string;
-  cell: (row: T) => ReactNode;
+  cell: (row: T, index?: number) => ReactNode;
   headClassName?: string;
   cellClassName?: string;
 }
@@ -60,11 +60,11 @@ export const DataTable = <T,>({
                 </TableCell>
               </TableRow>
             ) : (
-              rows.map((row) => (
+              rows.map((row, idx) => (
                 <TableRow key={getRowId(row)}>
                   {columns.map((column) => (
                     <TableCell key={column.id} className={column.cellClassName}>
-                      {column.cell(row)}
+                      {column.cell(row, idx)}
                     </TableCell>
                   ))}
                 </TableRow>

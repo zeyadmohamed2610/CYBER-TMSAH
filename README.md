@@ -134,7 +134,7 @@ course_materials ─────── slug, title, icon, instructor, articles (
   <strong>Zeyad Mohamed</strong> — Cyber Security Student
   <br/>
   <a href="https://github.com/zeyadmohamed2610">GitHub</a> ·
-  <a href="https://wa.me/201068868549">WhatsApp</a>
+  <a href="https://wa.me/201553450232">WhatsApp</a>
 </div>
 
 </div>
