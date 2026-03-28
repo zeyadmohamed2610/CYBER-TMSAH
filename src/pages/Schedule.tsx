@@ -277,7 +277,7 @@ const Schedule = () => {
                                   <div className="w-px h-10 bg-border/40 hidden sm:block" />
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
-                                      <h3 className={`font-bold text-sm md:text-base truncate ${isSec ? "text-cyan-400" : "text-foreground"}`}>{entry.subject}</h3>
+                                      <h3 className={`font-bold text-sm md:text-base leading-snug ${isSec ? "text-cyan-400" : "text-foreground"}`}>{entry.subject}</h3>
                                       {isSec && <span className="text-[9px] font-bold bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded shrink-0">سكشن</span>}
                                     </div>
                                     <div className="flex flex-wrap items-center gap-3 mt-1">
