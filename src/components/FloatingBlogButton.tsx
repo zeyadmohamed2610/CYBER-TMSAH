@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ExternalLink, X, Newspaper, GraduationCap } from "lucide-react";
 
-const PLATFORM_URL = "https://e-books.hitu.edu.eg/login";
+const PLATFORM_URL = "https://e-books.hitu.edu.eg";
 
 const FloatingBlogButton = () => {
   const [isExpanded, setIsExpanded] = useState(false);
