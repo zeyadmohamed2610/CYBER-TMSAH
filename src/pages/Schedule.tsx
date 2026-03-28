@@ -7,6 +7,7 @@ import Layout from "@/components/Layout";
 import ScrollReveal from "@/components/ScrollReveal";
 import SEO from "@/components/SEO";
 import { scheduleService, type DaySchedule } from "@/features/attendance/services/scheduleService";
+import { googleSheetsService } from "@/features/attendance/services/googleSheetsService";
 
 const dayIcons: Record<string, string> = {
   "السبت": "☀️", "الأحد": "🌅", "الاثنين": "💪", "الثلاثاء": "📖",
@@ -27,17 +28,31 @@ const Schedule = () => {
   const scheduleRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    scheduleService.fetchSections().then((secs) => { if (secs.length > 0) setSections(secs); });
+    const loadSections = async () => {
+      if (googleSheetsService.getSheetUrl()) {
+        const secs = await googleSheetsService.fetchAllSections();
+        if (secs.length > 0) { setSections(secs); return; }
+      }
+      const secs = await scheduleService.fetchSections();
+      if (secs.length > 0) setSections(secs);
+    };
+    loadSections();
   }, []);
 
   useEffect(() => {
     setLoading(true);
     const sectionNum = parseInt(selectedSection.replace(/\D/g, "")) || 1;
-    scheduleService.fetchSchedule(sectionNum).then(({ data, error }) => {
+    const load = async () => {
+      if (googleSheetsService.getSheetUrl()) {
+        const { data, error } = await googleSheetsService.fetchScheduleForSection(sectionNum);
+        if (!error && data.length > 0) { setSchedule(data); setLoading(false); return; }
+      }
+      const { data, error } = await scheduleService.fetchSchedule(sectionNum);
       if (error) toast.error("فشل تحميل الجدول.");
       setSchedule(data ?? []);
       setLoading(false);
-    });
+    };
+    load();
   }, [selectedSection]);
 
   const totalLectures = schedule.reduce((a, d) => a + d.entries.filter(e => e.entry_type === "lecture").length, 0);
