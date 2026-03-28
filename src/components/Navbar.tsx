@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { UNIVERSITY_PLATFORM_URL } from "@/lib/externalLinks";
 
 type NavItem =
@@ -70,10 +69,6 @@ const Navbar = () => {
                     href={link.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      window.open(link.href, "_blank", "noopener");
-                    }}
                     className="group relative px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 overflow-hidden text-muted-foreground hover:text-primary hover:bg-primary/10"
                   >
                     <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/0 via-primary/10 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -103,15 +98,11 @@ const Navbar = () => {
                 </NavLink>
               );
             })}
-            <ThemeToggle />
           </div>
 
-          <div className="md:hidden flex items-center gap-2">
-            <ThemeToggle />
-            <button className="text-foreground p-2" onClick={() => setOpen((value) => !value)}>
-              {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </button>
-          </div>
+          <button className="md:hidden text-foreground p-2" onClick={() => setOpen((value) => !value)}>
+            {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
         </div>
 
         {open && (
@@ -124,11 +115,7 @@ const Navbar = () => {
                     href={link.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setOpen(false);
-                      window.open(link.href, "_blank", "noopener");
-                    }}
+                    onClick={() => setOpen(false)}
                     className="text-base font-medium transition-colors text-muted-foreground hover:text-primary"
                   >
                     {link.label}

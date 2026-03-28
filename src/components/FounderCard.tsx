@@ -1,6 +1,5 @@
-import { Facebook, MessageCircle, Linkedin, Github, Shield, Sparkles, User } from "lucide-react";
+import { Facebook, MessageCircle, Linkedin, Github, Shield, Sparkles } from "lucide-react";
 import { founderSocials } from "@/data/mockData";
-import OptimizedImage from "@/components/OptimizedImage";
 
 const FounderCard = () => {
   const socials = [
@@ -48,10 +47,11 @@ const FounderCard = () => {
                 {/* Decorative Border */}
                 <div className="absolute -inset-1 bg-gradient-to-br from-primary via-cyan-400 to-primary rounded-3xl opacity-70" />
                 
-                <OptimizedImage
+                <img
                   src="/founder.jpeg"
                   alt={founderSocials.name}
-                  className="relative w-40 h-52 md:w-48 md:h-64 rounded-3xl border-4 border-background"
+                  className="relative w-40 h-52 md:w-48 md:h-64 rounded-3xl border-4 border-background object-cover"
+                  loading="eager"
                   width={192}
                   height={256}
                 />

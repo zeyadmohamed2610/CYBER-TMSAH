@@ -9,11 +9,11 @@ interface FAQItem {
 const faqData: FAQItem[] = [
   {
     question: "ما هي منصة CYBER TMSAH؟",
-    answer: "CYBER TMSAH (سايبر تمساح) هي منصة أكاديمية متكاملة لطلاب الأمن السيبراني في جامعة العاصمة التكنولوجية، توفر مواد دراسية، جداول محاضرات، ومراجعات شاملة في مكان واحد."
+    answer: "CYBER TMSAH (سايبر تمساح) هي منصة أكاديمية متكاملة لطلاب الأمن السيبراني في جامعة حلوان التكنولوجية الدولية، توفر مواد دراسية، جداول محاضرات، ومراجعات شاملة في مكان واحد."
   },
   {
     question: "هل المنصة مجانية؟",
-    answer: "نعم، منصة CYBER TMSAH مجانية بالكامل لجميع طلاب الأمن السيبراني في جامعة العاصمة التكنولوجية. الهدف هو تسهيل الوصول للمواد الدراسية والمراجعات."
+    answer: "نعم، منصة CYBER TMSAH مجانية بالكامل لجميع طلاب الأمن السيبراني في جامعة حلوان التكنولوجية الدولية. الهدف هو تسهيل الوصول للمواد الدراسية والمراجعات."
   },
   {
     question: "ما هي المواد المتاحة على المنصة؟",
@@ -29,10 +29,6 @@ const faqData: FAQItem[] = [
   }
 ];
 
-/**
- * FAQ Section Component
- * Displays frequently asked questions with SEO-friendly structured data
- */
 export const FAQSection = () => {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
@@ -52,31 +48,37 @@ export const FAQSection = () => {
           <h2 className="text-3xl md:text-4xl font-black text-foreground mb-4">
             أسئلة <span className="text-primary">متكررة</span>
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground max-w-xl mx-auto">
             إليك إجابات على أكثر الأسئلة شيوعاً حول منصة CYBER TMSAH
           </p>
         </div>
 
         {/* FAQ Items */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           {faqData.map((item, index) => (
             <div 
               key={index}
               property="mainEntity" 
               typeof="Question"
-              className="border border-border/50 rounded-2xl overflow-hidden bg-card/50 backdrop-blur-sm"
+              className={`border rounded-2xl overflow-hidden transition-all duration-300 ${
+                openIndex === index 
+                  ? "border-primary/50 bg-primary/5 shadow-[0_0_20px_hsl(var(--primary)/0.1)]" 
+                  : "border-border/50 bg-card/50 hover:border-border"
+              }`}
             >
               <button
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
-                className="w-full flex items-center justify-between p-5 text-right hover:bg-card/80 transition-colors"
+                className="w-full flex items-center justify-between gap-4 p-5 text-right transition-colors"
                 aria-expanded={openIndex === index}
                 aria-controls={`faq-answer-${index}`}
               >
-                <h3 property="name" className="font-bold text-foreground text-lg">
+                <h3 property="name" className={`font-bold text-base md:text-lg transition-colors ${
+                  openIndex === index ? "text-primary" : "text-foreground"
+                }`}>
                   {item.question}
                 </h3>
                 <ChevronDown 
-                  className={`w-5 h-5 text-primary transition-transform duration-300 ${
+                  className={`w-5 h-5 shrink-0 text-primary transition-transform duration-300 ${
                     openIndex === index ? "rotate-180" : ""
                   }`}
                 />
@@ -86,12 +88,12 @@ export const FAQSection = () => {
                 id={`faq-answer-${index}`}
                 property="acceptedAnswer" 
                 typeof="Answer"
-                className={`overflow-hidden transition-all duration-300 ${
+                className={`overflow-hidden transition-all duration-300 ease-in-out ${
                   openIndex === index ? "max-h-96" : "max-h-0"
                 }`}
               >
-                <div className="p-5 pt-0 border-t border-border/30">
-                  <p property="text" className="text-muted-foreground leading-relaxed">
+                <div className="px-5 pb-5 pt-0 border-t border-primary/10">
+                  <p property="text" className="text-muted-foreground leading-relaxed pt-4">
                     {item.answer}
                   </p>
                 </div>

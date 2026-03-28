@@ -50,7 +50,7 @@ const Index = () => {
             {/* Badge */}
             <div className="animate-fade-up inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 mb-8">
               <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-sm font-medium text-primary">جامعة العاصمة التكنولوجية</span>
+              <span className="text-sm font-medium text-primary">جامعة حلوان التكنولوجية الدولية</span>
             </div>
 
             {/* Main Title */}
