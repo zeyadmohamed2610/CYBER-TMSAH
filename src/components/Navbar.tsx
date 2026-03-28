@@ -2,17 +2,13 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { UNIVERSITY_PLATFORM_URL } from "@/lib/externalLinks";
 
-type NavItem =
-  | { label: string; path: string }
-  | { label: string; href: string };
+type NavItem = { label: string; path: string };
 
 const navLinks: NavItem[] = [
   { label: "الجدول الدراسي", path: "/schedule" },
   { label: "المواد الدراسية", path: "/materials" },
   { label: "الحضور", path: "/attendance" },
-  { label: "المنصة", href: UNIVERSITY_PLATFORM_URL },
 ];
 
 const Navbar = () => {
@@ -62,24 +58,7 @@ const Navbar = () => {
 
           <div className="hidden md:flex items-center gap-2">
             {navLinks.map((link) => {
-              if ("href" in link) {
-                return (
-                  <a
-                    key={link.label}
-                    href={link.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group relative px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 overflow-hidden text-muted-foreground hover:text-primary hover:bg-primary/10"
-                  >
-                    <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/0 via-primary/10 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <span className="relative z-10">{link.label}</span>
-                    <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-primary rounded-full group-hover:w-2/3 transition-all duration-300" />
-                  </a>
-                );
-              }
-
               const isActive = location.pathname === link.path;
-
               return (
                 <NavLink
                   key={link.path}
@@ -108,30 +87,17 @@ const Navbar = () => {
         {open && (
           <div className="md:hidden border-t border-border bg-background animate-fade-up">
             <div className="section-container flex flex-col gap-4 py-6">
-              {navLinks.map((link) =>
-                "href" in link ? (
-                  <a
-                    key={link.label}
-                    href={link.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setOpen(false)}
-                    className="text-base font-medium transition-colors text-muted-foreground hover:text-primary"
-                  >
-                    {link.label}
-                  </a>
-                ) : (
-                  <NavLink
-                    key={link.path}
-                    to={link.path}
-                    onClick={() => setOpen(false)}
-                    className="text-base font-medium transition-colors text-muted-foreground"
-                    activeClassName="text-primary"
-                  >
-                    {link.label}
-                  </NavLink>
-                ),
-              )}
+              {navLinks.map((link) => (
+                <NavLink
+                  key={link.path}
+                  to={link.path}
+                  onClick={() => setOpen(false)}
+                  className="text-base font-medium transition-colors text-muted-foreground"
+                  activeClassName="text-primary"
+                >
+                  {link.label}
+                </NavLink>
+              ))}
             </div>
           </div>
         )}

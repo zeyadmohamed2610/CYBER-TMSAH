@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import { Github, Facebook, Linkedin, MessageCircle } from "lucide-react";
-import { UNIVERSITY_PLATFORM_URL } from "@/lib/externalLinks";
 
 const Footer = () => {
 
@@ -56,10 +55,6 @@ const Footer = () => {
               <Link to="/attendance" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                 الحضور
               </Link>
-              <span className="w-1 h-1 rounded-full bg-primary/50" />
-              <a href={UNIVERSITY_PLATFORM_URL} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                المنصة
-              </a>
               <span className="w-1 h-1 rounded-full bg-primary/50" />
               <a
                 href="https://cyber-tmsah.blogspot.com"
