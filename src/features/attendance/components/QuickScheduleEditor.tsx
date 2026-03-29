@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Pencil, Save, Globe, CheckCircle2, Trash2, ChevronDown, Calendar, GraduationCap, Coffee, Loader2 } from "lucide-react";
+import { Pencil, Save, Globe, CheckCircle2, Trash2, ChevronDown, Calendar, GraduationCap, Coffee, Loader2, RefreshCw, Link2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -42,6 +42,9 @@ export function QuickScheduleEditor() {
   const [hasChanges, setHasChanges] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [sheetUrl, setSheetUrl] = useState(localStorage.getItem("cyber_sheet_url") || "");
+  const [showSheetInput, setShowSheetInput] = useState(false);
 
   const current = allSections[selectedSection] || makeEmpty();
 
@@ -123,6 +126,40 @@ export function QuickScheduleEditor() {
     setPublishing(false);
   };
 
+  const handleSync = async () => {
+    if (!sheetUrl) { toast.error("الرجاء ادخال رابط الشيت"); return; }
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("import-schedule", {
+        body: { sheet_url: sheetUrl },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      localStorage.setItem("cyber_sheet_url", sheetUrl);
+
+      // Reload from DB
+      const { data: dbData } = await supabase.from("published_schedule").select("*");
+      if (dbData && dbData.length > 0) {
+        const init = initAll();
+        for (const row of dbData) {
+          const di = DAYS.indexOf(row.day);
+          if (di === -1 || !init[row.section]) continue;
+          init[row.section][di].entries[row.period - 1] = {
+            subject: row.subject, instructor: row.instructor, room: row.room,
+            entry_type: (row.entry_type as "lecture" | "section") || "lecture",
+          };
+        }
+        setAllSections(init);
+      }
+      setHasChanges(false);
+      toast.success(`تم الاستيراد: ${data.sections} سكشن، ${data.entries} خلية`);
+    } catch (e) {
+      toast.error("فشل الاستيراد: " + String(e));
+    }
+    setSyncing(false);
+  };
+
   const stats = {
     lec: current.reduce((a, d) => a + d.entries.filter(e => e?.entry_type === "lecture").length, 0),
     sec: current.reduce((a, d) => a + d.entries.filter(e => e?.entry_type === "section").length, 0),
@@ -148,14 +185,32 @@ export function QuickScheduleEditor() {
             <Calendar className="h-4 w-4 text-primary" />
             ادارة الجدول الدراسي
           </CardTitle>
-          <div className="flex items-center gap-3">
-            {hasChanges && <span className="text-xs text-amber-500 font-medium">تغييرات غير منشورة</span>}
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowSheetInput(!showSheetInput)} className="gap-1">
+              <Link2 className="h-3.5 w-3.5" />ربط شيت
+            </Button>
+            {sheetUrl && (
+              <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing} className="gap-1">
+                {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                {syncing ? "جاري المزامنة" : "مزامنة"}
+              </Button>
+            )}
+            {hasChanges && <span className="text-xs text-amber-500 font-medium">غير منشور</span>}
             {!hasChanges && <span className="flex items-center gap-1 text-xs text-green-500"><CheckCircle2 className="h-3.5 w-3.5" />منشور</span>}
             <Button onClick={handlePublish} disabled={publishing} className="gap-2">
-              <Globe className="h-4 w-4" />{publishing ? "جاري النشر" : "نشر الجدول"}
+              <Globe className="h-4 w-4" />{publishing ? "جاري النشر" : "نشر"}
             </Button>
           </div>
         </div>
+        {showSheetInput && (
+          <div className="flex gap-2 mt-3">
+            <Input value={sheetUrl} onChange={e => setSheetUrl(e.target.value)} placeholder="الصق رابط Google Sheet هنا..." dir="ltr" className="flex-1 h-9 text-sm" />
+            <Button onClick={handleSync} disabled={syncing || !sheetUrl} size="sm" className="gap-1">
+              {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              {syncing ? "جاري الاستيراد" : "استيراد ونشر"}
+            </Button>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
