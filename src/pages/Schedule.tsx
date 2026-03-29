@@ -71,7 +71,7 @@ const Schedule = () => {
         for (const row of data) {
           if (row.is_holiday) { dayFlags[row.day] = { isHoliday: true, isTraining: false }; continue; }
           if (row.is_training) { dayFlags[row.day] = { isHoliday: false, isTraining: true }; continue; }
-          if (!row.subject) continue;
+          if (!row.subject || row.subject.trim() === "") continue;
           if (!grouped[row.day]) grouped[row.day] = [];
           grouped[row.day].push({ subject: row.subject, instructor: row.instructor, room: row.room, entry_type: row.entry_type, period: row.period });
         }
