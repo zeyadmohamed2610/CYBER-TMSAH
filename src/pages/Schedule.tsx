@@ -12,6 +12,7 @@ type UnifiedDay = {
   day: string;
   entries: { id: string; time_slot: string; subject: string; instructor: string; room: string; entry_type: string; period_label?: string }[];
   isHoliday?: boolean;
+  isTraining?: boolean;
 };
 
 function normalizeDay(raw: string): string {
@@ -55,7 +56,7 @@ const Schedule = () => {
       try {
         const { data, error } = await supabase
           .from("published_schedule")
-          .select("section, day, period, subject, instructor, room, entry_type")
+          .select("section, day, period, subject, instructor, room, entry_type, is_holiday, is_training")
           .eq("section", sectionNum);
 
         if (error || !data || data.length === 0) {
@@ -65,12 +66,18 @@ const Schedule = () => {
         }
 
         const grouped: Record<string, { subject: string; instructor: string; room: string; entry_type: string; period: number }[]> = {};
+        const dayFlags: Record<string, { isHoliday: boolean; isTraining: boolean }> = {};
+
         for (const row of data) {
+          if (row.is_holiday) { dayFlags[row.day] = { isHoliday: true, isTraining: false }; continue; }
+          if (row.is_training) { dayFlags[row.day] = { isHoliday: false, isTraining: true }; continue; }
+          if (!row.subject) continue;
           if (!grouped[row.day]) grouped[row.day] = [];
           grouped[row.day].push({ subject: row.subject, instructor: row.instructor, room: row.room, entry_type: row.entry_type, period: row.period });
         }
 
         const baseData: UnifiedDay[] = DAYS_ORDER.filter(d => d !== "الجمعة").map(day => {
+          const flags = dayFlags[day] || { isHoliday: false, isTraining: false };
           const entries = (grouped[day] || []).sort((a, b) => a.period - b.period);
           return {
             day,
@@ -83,7 +90,8 @@ const Schedule = () => {
               entry_type: e.entry_type,
               period_label: PERIODS_LABEL[e.period - 1] || "",
             })),
-            isHoliday: false,
+            isHoliday: flags.isHoliday,
+            isTraining: flags.isTraining,
           };
         });
 
@@ -286,10 +294,15 @@ const Schedule = () => {
 
                       <div className="p-4 md:p-5">
                         {day.isHoliday ? (
-                          <div className="text-center py-8 rounded-xl bg-primary/5 border border-dashed border-primary/20">
-                            <Calendar className="h-8 w-8 mx-auto mb-2 text-primary/50" />
-                            <p className="font-bold text-primary">إجازة</p>
-                            <p className="text-xs text-muted-foreground mt-1">استمتع بيومك!</p>
+                          <div className="text-center py-8 rounded-xl bg-amber-500/5 border border-dashed border-amber-500/20">
+                            <Calendar className="h-8 w-8 mx-auto mb-2 text-amber-500/50" />
+                            <p className="font-bold text-amber-500">اجازة</p>
+                            <p className="text-xs text-muted-foreground mt-1">استمتع بيومك</p>
+                          </div>
+                        ) : day.isTraining ? (
+                          <div className="text-center py-8 rounded-xl bg-cyan-500/5 border border-dashed border-cyan-500/20">
+                            <GraduationCap className="h-8 w-8 mx-auto mb-2 text-cyan-500/50" />
+                            <p className="font-bold text-cyan-500">يوم التدريب</p>
                           </div>
                         ) : day.entries.length === 0 ? (
                           <div className="text-center py-8 rounded-xl bg-muted/30 border border-dashed border-border/50">

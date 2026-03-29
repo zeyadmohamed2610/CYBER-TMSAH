@@ -103,13 +103,21 @@ export function QuickScheduleEditor() {
   const handlePublish = async () => {
     setPublishing(true);
     try {
-      const rows: { section: number; day: string; period: number; subject: string; instructor: string; room: string; entry_type: string }[] = [];
+      const rows: { section: number; day: string; period: number; subject: string; instructor: string; room: string; entry_type: string; is_holiday: boolean; is_training: boolean }[] = [];
       for (const [sec, days] of Object.entries(allSections)) {
         for (let di = 0; di < DAYS.length; di++) {
+          const dayData = days[di];
+          const isHoliday = dayData.isHoliday || false;
+          const isTraining = dayData.isTraining || false;
+
+          if (isHoliday || isTraining) {
+            rows.push({ section: Number(sec), day: DAYS[di], period: 1, subject: "", instructor: "", room: "", entry_type: "lecture", is_holiday: isHoliday, is_training: isTraining });
+          }
+
           for (let pi = 0; pi < 8; pi++) {
-            const e = days[di].entries[pi];
+            const e = dayData.entries[pi];
             if (e && e.subject) {
-              rows.push({ section: Number(sec), day: DAYS[di], period: pi + 1, subject: e.subject, instructor: e.instructor, room: e.room, entry_type: e.entry_type });
+              rows.push({ section: Number(sec), day: DAYS[di], period: pi + 1, subject: e.subject, instructor: e.instructor, room: e.room, entry_type: e.entry_type, is_holiday: false, is_training: false });
             }
           }
         }
