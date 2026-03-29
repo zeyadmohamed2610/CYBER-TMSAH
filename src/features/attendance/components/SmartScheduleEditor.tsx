@@ -158,7 +158,7 @@ export function SmartScheduleEditor() {
         sectionSchedule.push({ day: "الجمعة", entries: [] });
 
         for (let d = 0; d < 6; d++) {
-          const baseCol = 2 + d * 8;
+          const baseCol = 1 + d * 8;
           for (let p = 0; p < 8; p++) {
             const ci = baseCol + p;
             const raw = (dataRow[ci] || "").trim();

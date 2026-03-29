@@ -243,7 +243,7 @@ export const googleSheetsService = {
 
       for (let d = 0; d < 6; d++) {
         const dayName = DAYS[d];
-        const baseCol = 2 + d * 8;
+        const baseCol = 1 + d * 8;
         const entries: SheetEntry[] = [];
 
         for (let p = 0; p < 8; p++) {
