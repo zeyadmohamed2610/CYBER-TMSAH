@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, AlertCircle, AlertTriangle, ClipboardCheck, CloudOff, TrendingUp } from "lucide-react";
+import { Activity, AlertCircle, AlertTriangle, ClipboardCheck, CloudOff, TrendingUp, Smartphone, CheckCircle2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { DataTable, type DataTableColumn } from "../components/DataTable";
 import { ActiveSessionsBar } from "../components/ActiveSessionsBar";
 import { AttendanceSubmissionForm } from "../components/AttendanceSubmissionForm";
@@ -12,13 +13,26 @@ import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 import type { AttendanceRecord } from "../types";
 import { formatDateTime } from "../utils/rotatingSession";
 import { offlineAttendanceService } from "../services/offlineAttendanceService";
+import { supabase } from "@/lib/supabaseClient";
+import { toast } from "sonner";
+
+async function computeFingerprint(): Promise<string> {
+  try {
+    const raw = [navigator.userAgent, navigator.language, navigator.platform, String(screen.width), String(screen.height), String(navigator.hardwareConcurrency ?? 0), Intl.DateTimeFormat().resolvedOptions().timeZone, navigator.vendor].join("|");
+    const hashBuf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
+    return [...new Uint8Array(hashBuf)].map(b => b.toString(16).padStart(2, "0")).join("");
+  } catch { return "no-fp"; }
+}
 
 export const StudentDashboard = () => {
-  const { fullName } = useAttendanceAuth();
+  const { fullName, user } = useAttendanceAuth();
   const { loading, error, metrics, records, sessions, subjectMetrics, refetch } =
     useAttendanceDashboardData("student");
 
   const [pendingCount, setPendingCount] = useState(0);
+  const [isDeviceLocked, setIsDeviceLocked] = useState(false);
+  const [lockLabel, setLockLabel] = useState("");
+  const [locking, setLocking] = useState(false);
 
   const syncAndRefresh = useCallback(async () => {
     await offlineAttendanceService.syncPending();
@@ -32,8 +46,36 @@ export const StudentDashboard = () => {
 
     const handleOnline = () => syncAndRefresh();
     window.addEventListener("online", handleOnline);
+
+    // Check device lock
+    if (user) {
+      supabase.from("device_locks").select("device_label").eq("student_auth_id", user.id).maybeSingle().then(({ data }) => {
+        if (data) { setIsDeviceLocked(true); setLockLabel(data.device_label); }
+      });
+    }
+
     return () => window.removeEventListener("online", handleOnline);
-  }, [syncAndRefresh]);
+  }, [syncAndRefresh, user]);
+
+  const handleLockDevice = async () => {
+    if (!user) return;
+    setLocking(true);
+    try {
+      const fp = await computeFingerprint();
+      const ua = navigator.userAgent;
+      const label = ua.includes("Mobile") ? "هاتف محمول" : "جهاز كمبيوتر";
+      const { error } = await supabase.from("device_locks").upsert({
+        student_auth_id: user.id,
+        device_fingerprint: fp,
+        device_label: label + " - " + new Date().toLocaleDateString("ar-EG"),
+      });
+      if (error) throw error;
+      setIsDeviceLocked(true);
+      setLockLabel(label);
+      toast.success("تم قفل هذا الجهاز بنجاح");
+    } catch { toast.error("فشل قفل الجهاز"); }
+    setLocking(false);
+  };
 
   const absenceRate = 100 - metrics.attendanceRate;
   const topSubjects = useMemo(() =>
@@ -62,6 +104,18 @@ export const StudentDashboard = () => {
           <CloudOff className="h-3.5 w-3.5" />
           {pendingCount} تسجيل في انتظار المزامنة
         </Badge>
+      )}
+
+      {isDeviceLocked ? (
+        <Badge variant="outline" className="gap-1.5 border-green-500 bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400">
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          جهازك مغلق ({lockLabel})
+        </Badge>
+      ) : (
+        <Button size="sm" variant="outline" onClick={handleLockDevice} disabled={locking} className="gap-1.5">
+          <Smartphone className="h-3.5 w-3.5" />
+          {locking ? "جاري القفل..." : "قفل هذا الجهاز"}
+        </Button>
       )}
 
       {error ? (
