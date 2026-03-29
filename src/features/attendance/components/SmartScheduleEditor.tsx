@@ -18,20 +18,19 @@ interface DayData {
   entries: (Entry | null)[];
 }
 
-// section number → schedule
 type AllSections = Record<number, DayData[]>;
 
 const DAYS = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
 
 const PERIODS = [
-  { num: 1, time: "9:00 AM - 10:00 AM", label: "الأولى" },
-  { num: 2, time: "10:05 AM - 11:05 AM", label: "الثانية" },
-  { num: 3, time: "11:10 AM - 12:10 PM", label: "الثالثة" },
-  { num: 4, time: "12:15 PM - 1:15 PM",  label: "الرابعة" },
-  { num: 5, time: "1:20 PM - 2:20 PM",   label: "الخامسة" },
-  { num: 6, time: "2:25 PM - 3:25 PM",   label: "السادسة" },
-  { num: 7, time: "3:30 PM - 4:30 PM",   label: "السابعة" },
-  { num: 8, time: "4:35 PM - 5:35 PM",   label: "الثامنة" },
+  { time: "9:00 AM - 10:00 AM", label: "الأولى" },
+  { time: "10:05 AM - 11:05 AM", label: "الثانية" },
+  { time: "11:10 AM - 12:10 PM", label: "الثالثة" },
+  { time: "12:15 PM - 1:15 PM",  label: "الرابعة" },
+  { time: "1:20 PM - 2:20 PM",   label: "الخامسة" },
+  { time: "2:25 PM - 3:25 PM",   label: "السادسة" },
+  { time: "3:30 PM - 4:30 PM",   label: "السابعة" },
+  { time: "4:35 PM - 5:35 PM",   label: "الثامنة" },
 ];
 
 const SUBJECT_MAP: Record<string, string> = {
@@ -39,6 +38,7 @@ const SUBJECT_MAP: Record<string, string> = {
   "negotiation": "مهارات التفاوض", "net": "شبكات وتراسل البيانات",
   "networking": "شبكات وتراسل البيانات", "engineering drawing": "رسم هندسي واسقاط",
   "technology": "مبادئ تكنولوجيا", "english": "لغة انجليزية",
+  "رسم هندسي": "رسم هندسي واسقاط", "网络安全": "网络安全",
 };
 
 function mapSubject(raw: string): string {
@@ -49,29 +49,18 @@ function mapSubject(raw: string): string {
   return raw;
 }
 
-function parseCSV(csv: string): string[][] {
-  const rows: string[][] = [];
-  let current: string[] = [];
-  let cell = "";
-  let inQ = false;
-  for (let i = 0; i < csv.length; i++) {
-    const c = csv[i];
-    if (c === '"') { inQ = !inQ; }
-    else if (c === ',' && !inQ) { current.push(cell.trim()); cell = ""; }
-    else if ((c === '\n' || c === '\r') && !inQ) {
-      if (c === '\r' && csv[i + 1] === '\n') i++;
-      current.push(cell.trim());
-      if (current.some(x => x !== "")) rows.push(current);
-      current = []; cell = "";
-    } else { cell += c; }
-  }
-  if (cell || current.length) { current.push(cell.trim()); rows.push(current); }
-  return rows;
+function cleanText(raw: string): string {
+  return raw.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ").replace(/&#10;/g, "\n").replace(/\s+/g, " ").trim();
 }
 
 function parseCell(raw: string): Entry {
-  const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const text = cleanText(raw);
+  if (!text || text === " ") return { subject: "", instructor: "", room: "", entry_type: "lecture" };
+
+  const lines = text.split(/\s*<br\s*\/?\s*>\s*/i).map(l => cleanText(l)).filter(Boolean);
+
   if (lines.length === 0) return { subject: "", instructor: "", room: "", entry_type: "lecture" };
+
   if (lines.length === 1 && lines[0].includes(" - ")) {
     const parts = lines[0].split(" - ").map(p => p.trim());
     return {
@@ -81,6 +70,7 @@ function parseCell(raw: string): Entry {
       entry_type: /lab|معمل/i.test(raw) ? "section" : "lecture",
     };
   }
+
   return {
     subject: mapSubject(lines[0] || ""),
     instructor: lines[1] || "",
@@ -89,26 +79,100 @@ function parseCell(raw: string): Entry {
   };
 }
 
-function makeEmptyDay(day: string): DayData {
-  return { day, entries: new Array(8).fill(null) };
-}
-
-function makeEmptySection(): DayData[] {
-  return [...DAYS.map(d => makeEmptyDay(d)), { day: "الجمعة", entries: [] }];
-}
-
 const PUBLISH_KEY = "cyber_published_schedule";
 const SHEET_KEY = "cyber_google_sheet_url";
 
 function loadPublished(): AllSections {
-  try {
-    const raw = localStorage.getItem(PUBLISH_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch { return {}; }
+  try { const r = localStorage.getItem(PUBLISH_KEY); return r ? JSON.parse(r) : {}; }
+  catch { return {}; }
 }
 
 function savePublished(data: AllSections): void {
   localStorage.setItem(PUBLISH_KEY, JSON.stringify(data));
+}
+
+function extractSheetId(url: string): string | null {
+  const m = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  return m ? m[1] : null;
+}
+
+// Parse HTML table from Google Sheets
+function parseHTMLTable(html: string): string[][] {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  const table = doc.querySelector("table");
+  if (!table) return [];
+
+  const rows: string[][] = [];
+  const trs = table.querySelectorAll("tr");
+
+  trs.forEach(tr => {
+    const cells: string[] = [];
+    tr.querySelectorAll("td, th").forEach(cell => {
+      cells.push(cell.textContent?.trim() || "");
+    });
+    if (cells.some(c => c !== "")) rows.push(cells);
+  });
+
+  return rows;
+}
+
+// Also try CSV parsing as fallback
+function parseCSV(csv: string): string[][] {
+  const rows: string[][] = [];
+  let current: string[] = [];
+  let cell = "";
+  let inQ = false;
+  for (let i = 0; i < csv.length; i++) {
+    const c = csv[i];
+    if (c === '"') {
+      if (inQ && csv[i + 1] === '"') { cell += '"'; i++; }
+      else { inQ = !inQ; }
+    } else if (c === ',' && !inQ) {
+      current.push(cell.replace(/\s+/g, " ").trim());
+      cell = "";
+    } else if ((c === '\n' || c === '\r') && !inQ) {
+      if (c === '\r' && csv[i + 1] === '\n') i++;
+      current.push(cell.replace(/\s+/g, " ").trim());
+      if (current.some(x => x !== "")) rows.push(current);
+      current = []; cell = "";
+    } else {
+      cell += c;
+    }
+  }
+  if (cell || current.length) {
+    current.push(cell.replace(/\s+/g, " ").trim());
+    rows.push(current);
+  }
+  return rows;
+}
+
+function buildScheduleFromRows(rows: string[][]): AllSections {
+  const imported: AllSections = {};
+
+  for (let i = 4; i < Math.min(rows.length, 20); i++) {
+    const secNum = parseInt((rows[i][1] || "").replace(/\s+/g, "").trim());
+    if (isNaN(secNum) || secNum < 1) continue;
+
+    const dataRow = rows[i];
+    const sectionSchedule: DayData[] = DAYS.map(day => ({ day, entries: new Array(8).fill(null) }));
+    sectionSchedule.push({ day: "الجمعة", entries: [] });
+
+    for (let d = 0; d < 6; d++) {
+      const baseCol = 1 + d * 8;
+      for (let p = 0; p < 8; p++) {
+        const ci = baseCol + p;
+        const raw = (dataRow[ci] || "").replace(/\s+/g, " ").trim();
+        if (!raw || raw === " ") continue;
+        const entry = parseCell(raw);
+        if (entry.subject) sectionSchedule[d].entries[p] = entry;
+      }
+    }
+
+    imported[secNum] = sectionSchedule;
+  }
+
+  return imported;
 }
 
 export function SmartScheduleEditor() {
@@ -123,66 +187,73 @@ export function SmartScheduleEditor() {
   const [status, setStatus] = useState<"idle" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
-  const currentSchedule = allSections[selectedSection] || makeEmptySection();
+  const currentSchedule = allSections[selectedSection] || [...DAYS.map(d => ({ day: d, entries: new Array(8).fill(null) })), { day: "الجمعة", entries: [] }];
   const sectionNumbers = Object.keys(allSections).map(Number).sort((a, b) => a - b);
 
   const handleImport = async () => {
     if (!sheetUrl) return;
     setImporting(true);
     setStatus("idle");
+    setErrorMsg("");
 
-    const id = (sheetUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/) || [])[1];
+    const id = extractSheetId(sheetUrl);
     if (!id) { setStatus("error"); setErrorMsg("رابط غير صحيح"); setImporting(false); return; }
 
+    let imported: AllSections = {};
+    let success = false;
+
+    // Try 1: HTML format (best for multiline cells)
     try {
-      const res = await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv`);
-      if (!res.ok) { setStatus("error"); setErrorMsg("فشل الاتصال. تأكد أن الجدول مشار للعامة"); setImporting(false); return; }
-
-      const csv = await res.text();
-      if (csv.includes("<!DOCTYPE")) { setStatus("error"); setErrorMsg("الجدول غير متاح"); setImporting(false); return; }
-
-      const rows = parseCSV(csv);
-      if (rows.length < 6) { setStatus("error"); setErrorMsg("الجدول فارغ"); setImporting(false); return; }
-
-      localStorage.setItem(SHEET_KEY, sheetUrl);
-
-      // Import ALL sections
-      const imported: AllSections = {};
-
-      for (let i = 4; i < Math.min(rows.length, 20); i++) {
-        const secNum = parseInt((rows[i][1] || "").trim());
-        if (isNaN(secNum) || secNum < 1) continue;
-
-        const dataRow = rows[i];
-        const sectionSchedule: DayData[] = DAYS.map(day => ({ day, entries: new Array(8).fill(null) }));
-        sectionSchedule.push({ day: "الجمعة", entries: [] });
-
-        for (let d = 0; d < 6; d++) {
-          const baseCol = 1 + d * 8;
-          for (let p = 0; p < 8; p++) {
-            const ci = baseCol + p;
-            const raw = (dataRow[ci] || "").replace(/\s+/g, " ").trim();
-            if (!raw || raw === " ") continue;
-            const entry = parseCell(raw);
-            if (entry.subject) sectionSchedule[d].entries[p] = entry;
+      const htmlUrl = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:html`;
+      const res = await fetch(htmlUrl);
+      if (res.ok) {
+        const html = await res.text();
+        if (!html.includes("<!DOCTYPE") && html.includes("<table")) {
+          const rows = parseHTMLTable(html);
+          if (rows.length >= 6) {
+            imported = buildScheduleFromRows(rows);
+            if (Object.keys(imported).length > 0) success = true;
           }
         }
-
-        imported[secNum] = sectionSchedule;
       }
+    } catch { /* try next method */ }
 
-      setAllSections(imported);
-      setSelectedSection(Math.min(...Object.keys(imported).map(Number)));
-      setHasChanges(true);
-      toast.success(`تم استيراد ${Object.keys(imported).length} سكشن`);
-    } catch {
-      setStatus("error"); setErrorMsg("فشل الاتصال. تحقق من الإنترنت");
+    // Try 2: CSV format (fallback)
+    if (!success) {
+      try {
+        const csvUrl = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv`;
+        const res = await fetch(csvUrl);
+        if (res.ok) {
+          const csv = await res.text();
+          if (!csv.includes("<!DOCTYPE")) {
+            const rows = parseCSV(csv);
+            if (rows.length >= 6) {
+              imported = buildScheduleFromRows(rows);
+              if (Object.keys(imported).length > 0) success = true;
+            }
+          }
+        }
+      } catch { /* failed */ }
     }
+
+    if (!success) {
+      setStatus("error");
+      setErrorMsg("فشل الاستيراد. تأكد أن الجدول مشار للعامة (Share → Anyone with the link → Viewer)");
+      setImporting(false);
+      return;
+    }
+
+    localStorage.setItem(SHEET_KEY, sheetUrl);
+    setAllSections(imported);
+    const secs = Object.keys(imported).map(Number).sort((a, b) => a - b);
+    setSelectedSection(secs[0] || 1);
+    setHasChanges(true);
+    toast.success(`تم استيراد ${secs.length} سكشن`);
     setImporting(false);
   };
 
-  const updateCurrentSchedule = (newDayData: DayData[]) => {
-    setAllSections(prev => ({ ...prev, [selectedSection]: newDayData }));
+  const updateCurrentSchedule = (newDays: DayData[]) => {
+    setAllSections(prev => ({ ...prev, [selectedSection]: newDays }));
     setHasChanges(true);
   };
 
@@ -194,16 +265,14 @@ export function SmartScheduleEditor() {
 
   const saveEdit = () => {
     if (!editing) return;
-    const newDays = [...currentSchedule];
-    newDays[editing.day] = { ...newDays[editing.day], entries: [...newDays[editing.day].entries] };
+    const newDays = [...currentSchedule.map(d => ({ ...d, entries: [...d.entries] }))];
     newDays[editing.day].entries[editing.period] = { ...editForm };
     updateCurrentSchedule(newDays);
     setEditing(null);
   };
 
   const clearEntry = (dayIdx: number, periodIdx: number) => {
-    const newDays = [...currentSchedule];
-    newDays[dayIdx] = { ...newDays[dayIdx], entries: [...newDays[dayIdx].entries] };
+    const newDays = [...currentSchedule.map(d => ({ ...d, entries: [...d.entries] }))];
     newDays[dayIdx].entries[periodIdx] = null;
     updateCurrentSchedule(newDays);
   };
@@ -212,10 +281,7 @@ export function SmartScheduleEditor() {
     setPublishing(true);
     savePublished(allSections);
     setHasChanges(false);
-    setTimeout(() => {
-      setPublishing(false);
-      toast.success("تم نشر كل السكاشن! يظهر الآن للطلاب");
-    }, 500);
+    setTimeout(() => { setPublishing(false); toast.success("تم نشر كل السكاشن!"); }, 500);
   };
 
   return (
@@ -245,7 +311,7 @@ export function SmartScheduleEditor() {
           )}
         </div>
 
-        {/* Section selector + publish */}
+        {/* Controls */}
         {sectionNumbers.length > 0 && (
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2">
@@ -259,7 +325,6 @@ export function SmartScheduleEditor() {
               </div>
               <span className="text-xs text-muted-foreground">({sectionNumbers.length} سكشن)</span>
             </div>
-
             <div className="flex items-center gap-3">
               {hasChanges && <span className="text-xs text-amber-500 font-medium">تغييرات غير منشورة</span>}
               {!hasChanges && sectionNumbers.length > 0 && (
@@ -280,18 +345,12 @@ export function SmartScheduleEditor() {
               سكشن {selectedSection} — {DAYS[editing.day]} — الفترة {PERIODS[editing.period]?.label}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">المادة</Label>
-                <Input value={editForm.subject} onChange={(e) => setEditForm({ ...editForm, subject: e.target.value })} className="h-9 text-sm" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">المحاضر</Label>
-                <Input value={editForm.instructor} onChange={(e) => setEditForm({ ...editForm, instructor: e.target.value })} className="h-9 text-sm" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">القاعة</Label>
-                <Input value={editForm.room} onChange={(e) => setEditForm({ ...editForm, room: e.target.value })} className="h-9 text-sm" />
-              </div>
+              <div className="space-y-1"><Label className="text-xs">المادة</Label>
+                <Input value={editForm.subject} onChange={(e) => setEditForm({ ...editForm, subject: e.target.value })} className="h-9 text-sm" /></div>
+              <div className="space-y-1"><Label className="text-xs">المحاضر</Label>
+                <Input value={editForm.instructor} onChange={(e) => setEditForm({ ...editForm, instructor: e.target.value })} className="h-9 text-sm" /></div>
+              <div className="space-y-1"><Label className="text-xs">القاعة</Label>
+                <Input value={editForm.room} onChange={(e) => setEditForm({ ...editForm, room: e.target.value })} className="h-9 text-sm" /></div>
             </div>
             <div className="flex gap-2">
               <Button onClick={saveEdit} size="sm" className="gap-1"><Save className="h-3.5 w-3.5" />حفظ</Button>
@@ -300,8 +359,8 @@ export function SmartScheduleEditor() {
           </div>
         )}
 
-        {/* Schedule grid */}
-        {currentSchedule.length > 0 && (
+        {/* Grid */}
+        {sectionNumbers.length > 0 && (
           <div className="overflow-x-auto rounded-xl border border-border">
             <table className="w-full text-sm">
               <thead>
@@ -334,12 +393,10 @@ export function SmartScheduleEditor() {
                                 {entry.entry_type === "section" && <span className="text-[8px] bg-cyan-500/10 text-cyan-400 px-1 rounded">سكشن</span>}
                               </div>
                               <div className="absolute top-0.5 left-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
-                                <button onClick={(e) => { e.stopPropagation(); startEdit(di, pi); }}
-                                  className="p-0.5 rounded bg-primary/10 hover:bg-primary/20">
+                                <button onClick={(e) => { e.stopPropagation(); startEdit(di, pi); }} className="p-0.5 rounded bg-primary/10 hover:bg-primary/20">
                                   <Pencil className="h-2.5 w-2.5 text-primary" />
                                 </button>
-                                <button onClick={(e) => { e.stopPropagation(); clearEntry(di, pi); }}
-                                  className="p-0.5 rounded bg-destructive/10 hover:bg-destructive/20">
+                                <button onClick={(e) => { e.stopPropagation(); clearEntry(di, pi); }} className="p-0.5 rounded bg-destructive/10 hover:bg-destructive/20">
                                   <Trash2 className="h-2.5 w-2.5 text-destructive" />
                                 </button>
                               </div>
