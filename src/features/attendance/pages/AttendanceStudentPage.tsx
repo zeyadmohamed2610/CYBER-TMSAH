@@ -9,29 +9,31 @@ import { StudentDashboard } from "./StudentDashboard";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 import { GpsProvider } from "../context/GpsContext";
 import { NotificationCenter } from "../components/NotificationCenter";
-import { deviceWhitelistService } from "../services/deviceWhitelistService";
+
+const DESKTOP_ALLOWED_KEY = "cyber_desktop_allowed";
+
+function isDesktopAllowedForUser(authId: string): boolean {
+  try {
+    const list = JSON.parse(localStorage.getItem(DESKTOP_ALLOWED_KEY) || "[]") as string[];
+    return list.includes(authId);
+  } catch { return false; }
+}
 
 const AttendanceStudentPage = () => {
   const isDesktopDevice = useIsDesktopDevice();
   const { signOut, user } = useAttendanceAuth();
-  const [isWhitelisted, setIsWhitelisted] = useState(false);
-  const [checkingWhitelist, setCheckingWhitelist] = useState(true);
+  const [allowed, setAllowed] = useState(false);
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    if (!user) { setCheckingWhitelist(false); return; }
-    let active = true;
-    deviceWhitelistService.isDeviceWhitelisted(user.id).then((result) => {
-      if (active) {
-        setIsWhitelisted(result);
-        setCheckingWhitelist(false);
-      }
-    });
-    return () => { active = false; };
+    if (!user) { setChecking(false); return; }
+    setAllowed(isDesktopAllowedForUser(user.id));
+    setChecking(false);
   }, [user]);
 
-  if (checkingWhitelist) return null;
+  if (checking) return null;
 
-  if (isDesktopDevice && !isWhitelisted) {
+  if (isDesktopDevice && !allowed) {
     return <AttendanceMobileOnlyBlock />;
   }
 

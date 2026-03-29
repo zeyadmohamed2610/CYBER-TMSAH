@@ -17,7 +17,6 @@ export interface Subject {
   instructor: string;
   secondInstructor?: string;
   teachingAssistants?: string[];
-  pdfUrl?: string;
   articles: Article[];
   sections?: SectionContent[];
 }

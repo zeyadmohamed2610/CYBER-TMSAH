@@ -29,7 +29,6 @@ export interface CourseMaterial {
   teaching_assistants: string[];
   articles: Article[];
   sections_content: SectionContent[];
-  pdf_url: string | null;
   sort_order: number;
 }
 
@@ -55,7 +54,6 @@ export const materialsService = {
       teaching_assistants: (row.teaching_assistants as string[]) ?? [],
       articles: (row.articles as Article[]) ?? [],
       sections_content: (row.sections_content as SectionContent[]) ?? [],
-      pdf_url: (row.pdf_url as string) ?? null,
       sort_order: (row.sort_order as number) ?? 0,
     })));
   },
@@ -87,7 +85,6 @@ export const materialsService = {
       teaching_assistants: (row.teaching_assistants as string[]) ?? [],
       articles: (row.articles as Article[]) ?? [],
       sections_content: (row.sections_content as SectionContent[]) ?? [],
-      pdf_url: (row.pdf_url as string) ?? null,
       sort_order: (row.sort_order as number) ?? 0,
     });
   },

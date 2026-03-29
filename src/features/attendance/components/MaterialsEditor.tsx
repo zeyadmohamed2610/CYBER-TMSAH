@@ -17,7 +17,6 @@ interface Material {
   teaching_assistants: string[];
   articles: { id: string; title: string; blogUrl: string }[];
   sections_content: { id: string; title: string; description: string }[];
-  pdf_url: string | null;
   sort_order: number;
 }
 
@@ -37,7 +36,6 @@ export function MaterialsEditor() {
     teaching_assistants: "",
     articles: "",
     sections_content: "",
-    pdf_url: "",
   });
 
   const load = async () => {
@@ -50,7 +48,7 @@ export function MaterialsEditor() {
   useEffect(() => { void load(); }, []);
 
   const resetForm = () => {
-    setForm({ slug: "", title: "", icon: "📚", instructor: "", second_instructor: "", teaching_assistants: "", articles: "", sections_content: "", pdf_url: "" });
+    setForm({ slug: "", title: "", icon: "📚", instructor: "", second_instructor: "", teaching_assistants: "", articles: "", sections_content: "" });
     setShowAdd(false);
     setEditId(null);
   };
@@ -70,7 +68,7 @@ export function MaterialsEditor() {
       p_teaching_assistants: tas,
       p_articles: parseJSON(form.articles, []),
       p_sections_content: parseJSON(form.sections_content, []),
-      p_pdf_url: form.pdf_url || null,
+      p_pdf_url: null,
     });
     if (error) {
       toast({ variant: "destructive", title: "خطأ", description: error.message });
@@ -93,7 +91,7 @@ export function MaterialsEditor() {
       p_teaching_assistants: tas,
       p_articles: form.articles ? parseJSON(form.articles, []) : null,
       p_sections_content: form.sections_content ? parseJSON(form.sections_content, []) : null,
-      p_pdf_url: form.pdf_url || null,
+      p_pdf_url: null,
     });
     if (error) {
       toast({ variant: "destructive", title: "خطأ", description: error.message });
@@ -125,7 +123,6 @@ export function MaterialsEditor() {
       teaching_assistants: (m.teaching_assistants ?? []).join(", "),
       articles: JSON.stringify(m.articles ?? [], null, 2),
       sections_content: JSON.stringify(m.sections_content ?? [], null, 2),
-      pdf_url: m.pdf_url ?? "",
     });
     setShowAdd(false);
   };
