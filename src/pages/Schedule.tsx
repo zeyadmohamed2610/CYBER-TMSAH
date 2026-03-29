@@ -30,24 +30,52 @@ const Schedule = () => {
   const scheduleRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const loadSections = async () => {
-      if (googleSheetsService.getSheetUrl()) {
-        const secs = await googleSheetsService.fetchAllSections();
-        if (secs.length > 0) { setSections(secs); return; }
-      }
-      const secs = await scheduleService.fetchSections();
-      if (secs.length > 0) setSections(secs);
-    };
-    loadSections();
-  }, []);
-
-  useEffect(() => {
     setLoading(true);
-    const sectionNum = parseInt(selectedSection.replace(/\D/g, "")) || 1;
     const load = async () => {
       let baseData: UnifiedDay[] = [];
 
+      // 1. Try published data from SmartScheduleEditor
+      try {
+        const published = localStorage.getItem("cyber_published_schedule");
+        if (published) {
+          const parsed = JSON.parse(published);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const DAYS_MAP = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
+            const PERIODS_TIME = [
+              "9:00 AM - 10:00 AM", "10:05 AM - 11:05 AM", "11:10 AM - 12:10 PM", "12:15 PM - 1:15 PM",
+              "1:20 PM - 2:20 PM", "2:25 PM - 3:25 PM", "3:30 PM - 4:30 PM", "4:35 PM - 5:35 PM",
+            ];
+            const PERIODS_LABEL = ["الأولى", "الثانية", "الثالثة", "الرابعة", "الخامسة", "السادسة", "السابعة", "الثامنة"];
+
+            baseData = parsed.map((d: { day: string; entries: ({ subject: string; instructor: string; room: string; entry_type: string } | null)[] }) => ({
+              day: d.day,
+              entries: (d.entries || [])
+                .filter((e): e is { subject: string; instructor: string; room: string; entry_type: string } => e !== null && e.subject)
+                .map((e, i) => ({
+                  id: `${d.day}-${i}-${e.subject}`,
+                  time_slot: PERIODS_TIME[i] || "",
+                  subject: e.subject,
+                  instructor: e.instructor || "",
+                  room: e.room || "",
+                  entry_type: e.entry_type || "lecture",
+                  period_label: PERIODS_LABEL[i] || "",
+                })),
+              isHoliday: d.day === "الجمعة",
+            }));
+            // Add Friday
+            if (!baseData.find(d => d.day === "الجمعة")) {
+              baseData.push({ day: "الجمعة", entries: [], isHoliday: true });
+            }
+            setSchedule(baseData);
+            setLoading(false);
+            return;
+          }
+        }
+      } catch { /* ignore */ }
+
+      // 2. Fallback: Google Sheets directly
       if (googleSheetsService.getSheetUrl()) {
+        const sectionNum = parseInt(selectedSection.replace(/\D/g, "")) || 1;
         const { data, error } = await googleSheetsService.fetchScheduleForSection(sectionNum);
         if (!error && data.length > 0) {
           baseData = data.map(d => ({
@@ -58,29 +86,13 @@ const Schedule = () => {
         }
       }
 
+      // 3. Fallback: Database
       if (baseData.length === 0) {
+        const sectionNum = parseInt(selectedSection.replace(/\D/g, "")) || 1;
         const { data, error } = await scheduleService.fetchSchedule(sectionNum);
         if (error) toast.error("فشل تحميل الجدول.");
         baseData = (data ?? []).map(d => ({ ...d, entries: d.entries.map(e => ({ ...e, entry_type: e.entry_type as string })) }));
       }
-
-      // Merge manual entries
-      try {
-        const manual = JSON.parse(localStorage.getItem("cyber_manual_schedule") || "[]");
-        for (const m of manual) {
-          const dayEntry = baseData.find(d => d.day === m.day);
-          if (dayEntry) {
-            dayEntry.entries.push({
-              id: m.id,
-              time_slot: m.time_slot,
-              subject: m.subject,
-              instructor: m.instructor,
-              room: m.room,
-              entry_type: m.entry_type,
-            });
-          }
-        }
-      } catch { /* ignore */ }
 
       setSchedule(baseData);
       setLoading(false);

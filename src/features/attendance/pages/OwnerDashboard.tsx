@@ -3,7 +3,7 @@ import { Activity, BellPlus, BookOpenCheck, Clock3, Users } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ExportButtons } from "../components/ExportButtons";
-import { GoogleSheetsConnector } from "../components/GoogleSheetsConnector";
+import { SmartScheduleEditor } from "../components/SmartScheduleEditor";
 import { LectureManagementPanel } from "../components/LectureManagementPanel";
 import { LectureDetailView } from "../components/LectureDetailView";
 import { MaterialsEditor } from "../components/MaterialsEditor";
@@ -69,7 +69,7 @@ export const OwnerDashboard = () => {
         </TabsContent>
 
         <TabsContent value="schedule" className="space-y-6">
-          <GoogleSheetsConnector />
+          <SmartScheduleEditor />
         </TabsContent>
 
         <TabsContent value="materials" className="space-y-6">
