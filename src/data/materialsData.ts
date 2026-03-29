@@ -60,7 +60,7 @@ export const subjects: Subject[] = [
     title: "شبكات وتراسل البيانات", 
     icon: "🌐", 
     instructor: "د. سيمون عزت",
-    teachingAssistants: ["م. ولاء جمعه", "م. رضوي شعبان"],
+    teachingAssistants: ["م. ولاء جمعه", "م. دينا علي"],
     articles: [
       { id: "1", title: "المحاضرة 1 -  شرح كامل لنظم الأعداد في الحاسوب ", blogUrl: "https://cyber-tmsah.blogspot.com/2026/02/networks-data-communication-lecture-1-number-systems.html" },
     ],
