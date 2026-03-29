@@ -14,10 +14,10 @@ const AttendanceOwnerPage = () => {
         <div className="mb-8 flex items-start justify-between gap-4">
           <div className="space-y-2">
             <p className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-              لوحة تحكم المالك
+              لوحة تحكم رئيس المنصة
             </p>
             <h1 className="text-3xl font-bold text-foreground md:text-4xl">
-              مركز الحضور — المالك
+              مركز الحضور — رئيس المنصة
             </h1>
           </div>
           <div className="flex items-center gap-2 mt-2">

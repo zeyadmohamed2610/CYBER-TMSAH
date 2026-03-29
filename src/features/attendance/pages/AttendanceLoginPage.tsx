@@ -7,9 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabaseClient";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
-import { useIsDesktopDevice } from "../hooks/useIsDesktopDevice";
 import { getAttendanceDashboardRoute } from "../utils/dashboardRoutes";
-import { deviceWhitelistService } from "../services/deviceWhitelistService";
 
 /** Maps national ID → internal auth email. Hidden from the user. */
 const toAuthEmail = (nationalId: string) =>
@@ -44,7 +42,6 @@ function recordAttempt(success: boolean): void {
 const AttendanceLoginPage = () => {
   const navigate = useNavigate();
   const { user, role, loading } = useAttendanceAuth();
-  const isDesktopDevice = useIsDesktopDevice();
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword]   = useState("");

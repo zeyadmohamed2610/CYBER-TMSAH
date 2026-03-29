@@ -1,21 +1,14 @@
 import { useEffect, useState } from "react";
-import { LogOut, ShieldOff } from "lucide-react";
+import { LogOut, ShieldOff, Smartphone, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Layout from "@/components/Layout";
-import { useIsDesktopDevice } from "../hooks/useIsDesktopDevice";
 import { StudentDashboard } from "./StudentDashboard";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 import { GpsProvider } from "../context/GpsContext";
 import { NotificationCenter } from "../components/NotificationCenter";
 import { supabase } from "@/lib/supabaseClient";
-
-const DESKTOP_ALLOWED_KEY = "cyber_desktop_allowed";
-
-function isDesktopAllowed(authId: string): boolean {
-  try { return (JSON.parse(localStorage.getItem(DESKTOP_ALLOWED_KEY) || "[]") as string[]).includes(authId); }
-  catch { return false; }
-}
+import { toast } from "sonner";
 
 async function computeFingerprint(): Promise<string> {
   try {
@@ -26,54 +19,99 @@ async function computeFingerprint(): Promise<string> {
 }
 
 const AttendanceStudentPage = () => {
-  const isDesktop = useIsDesktopDevice();
   const { signOut, user } = useAttendanceAuth();
   const [checking, setChecking] = useState(true);
-  const [blocked, setBlocked] = useState(false);
-  const [blockedReason, setBlockedReason] = useState("");
+  const [deviceLocked, setDeviceLocked] = useState(false);
+  const [wrongDevice, setWrongDevice] = useState(false);
+  const [locking, setLocking] = useState(false);
 
   useEffect(() => {
     if (!user) { setChecking(false); return; }
 
     const check = async () => {
-      // Check device lock
       const { data: lock } = await supabase.from("device_locks").select("device_fingerprint").eq("student_auth_id", user.id).maybeSingle();
 
       if (lock) {
-        // Device is locked - verify fingerprint
         const currentFp = await computeFingerprint();
         if (currentFp !== lock.device_fingerprint) {
-          setBlocked(true);
-          setBlockedReason("جهازك مغلق. يمكنك فقط تسجيل الحضور من الجهاز المربوط.");
+          setWrongDevice(true);
           setChecking(false);
           return;
         }
-      }
-
-      // Check desktop restriction
-      if (isDesktop && !isDesktopAllowed(user.id)) {
-        // Desktop not allowed
+        setDeviceLocked(true);
       }
 
       setChecking(false);
     };
 
     check();
-  }, [user, isDesktop]);
+  }, [user]);
+
+  const handleLockDevice = async () => {
+    if (!user) return;
+    setLocking(true);
+    try {
+      const fp = await computeFingerprint();
+      const ua = navigator.userAgent;
+      const label = ua.includes("Mobile") ? "هاتف محمول" : "جهاز محمول";
+      const { error } = await supabase.from("device_locks").upsert({
+        student_auth_id: user.id,
+        device_fingerprint: fp,
+        device_label: label + " - " + new Date().toLocaleDateString("ar-EG"),
+      });
+      if (error) throw error;
+      setDeviceLocked(true);
+      toast.success("تم قفل جهازك بنجاح");
+    } catch { toast.error("فشل قفل الجهاز"); }
+    setLocking(false);
+  };
 
   if (checking) return null;
 
-  if (blocked) {
+  if (wrongDevice) {
     return (
       <Layout>
         <section className="section-container py-20">
-          <Alert variant="destructive" className="max-w-md mx-auto">
-            <ShieldOff className="h-5 w-5" />
-            <AlertTitle>تم قفل حسابك على جهاز آخر</AlertTitle>
-            <AlertDescription>{blockedReason}</AlertDescription>
-          </Alert>
-          <div className="text-center mt-6">
+          <div className="max-w-md mx-auto text-center space-y-4">
+            <ShieldOff className="h-12 w-12 mx-auto text-destructive" />
+            <h2 className="text-xl font-bold text-foreground">جهازك مغلق</h2>
+            <p className="text-muted-foreground">حسابك مربوط بجهاز آخر. يمكنك فقط تسجيل الحضور من الجهاز المربوط.</p>
+            <p className="text-sm text-muted-foreground">لو غيرت هاتفك، تواصل مع رئيس المنصة لإلغاء القفل.</p>
             <Button variant="outline" onClick={signOut}>تسجيل الخروج</Button>
+          </div>
+        </section>
+      </Layout>
+    );
+  }
+
+  if (!deviceLocked) {
+    return (
+      <Layout>
+        <section className="section-container py-20">
+          <div className="max-w-md mx-auto text-center space-y-6">
+            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+              <Lock className="h-10 w-10 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold text-foreground">قفل جهازك مطلوب</h2>
+            <p className="text-muted-foreground">
+              يجب قفل حسابك على هذا الجهاز قبل استخدام نظام الحضور.
+              هذا يحمي حسابك من الاستخدام على أجهزة أخرى.
+            </p>
+            <div className="bg-card rounded-xl border p-4 text-sm text-muted-foreground text-right">
+              <p className="font-bold text-foreground mb-2">ملاحظات مهمة:</p>
+              <ul className="space-y-1 list-disc list-inside">
+                <li>بعد القفل، يمكنك فقط تسجيل الحضور من هذا الجهاز</li>
+                <li>لو غيرت هاتفك، تواصل مع رئيس المنصة</li>
+                <li>القفل يعمل مرة واحدة فقط</li>
+              </ul>
+            </div>
+            <Button onClick={handleLockDevice} disabled={locking} className="gap-2" size="lg">
+              <Smartphone className="h-5 w-5" />
+              {locking ? "جاري القفل..." : "قفل هذا الجهاز"}
+            </Button>
+            <div>
+              <Button variant="ghost" size="sm" onClick={signOut}>تسجيل الخروج</Button>
+            </div>
           </div>
         </section>
       </Layout>
