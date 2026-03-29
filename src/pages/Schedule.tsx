@@ -6,22 +6,26 @@ import { jsPDF } from "jspdf";
 import Layout from "@/components/Layout";
 import ScrollReveal from "@/components/ScrollReveal";
 import SEO from "@/components/SEO";
-import { scheduleService, type DaySchedule } from "@/features/attendance/services/scheduleService";
-import { googleSheetsService, type SheetDaySchedule } from "@/features/attendance/services/googleSheetsService";
 
 type UnifiedDay = {
   day: string;
   entries: { id: string; time_slot: string; subject: string; instructor: string; room: string; entry_type: string; period_label?: string }[];
   isHoliday?: boolean;
-  isTraining?: boolean;
 };
 
+const DAYS_ORDER = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
 const todayName = new Date().toLocaleDateString("ar-EG", { weekday: "long" });
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
+const PERIODS_TIME = [
+  "9:00 AM - 10:00 AM", "10:05 AM - 11:05 AM", "11:10 AM - 12:10 PM", "12:15 PM - 1:15 PM",
+  "1:20 PM - 2:20 PM", "2:25 PM - 3:25 PM", "3:30 PM - 4:30 PM", "4:35 PM - 5:35 PM",
+];
+const PERIODS_LABEL = ["الأولى", "الثانية", "الثالثة", "الرابعة", "الخامسة", "السادسة", "السابعة", "الثامنة"];
+
 const Schedule = () => {
   const [selectedSection, setSelectedSection] = useState("سكشن 1");
-  const [sections, setSections] = useState<string[]>(["سكشن 1"]);
+  const [sections, setSections] = useState<string[]>(Array.from({ length: 15 }, (_, i) => `سكشن ${i + 1}`));
   const [schedule, setSchedule] = useState<UnifiedDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
@@ -32,26 +36,24 @@ const Schedule = () => {
   useEffect(() => {
     setLoading(true);
     const sectionNum = parseInt(selectedSection.replace(/\D/g, "")) || 1;
-    const load = async () => {
-      let baseData: UnifiedDay[] = [];
 
-      // 1. Published data from SmartScheduleEditor
-      try {
-        const published = localStorage.getItem("cyber_published_schedule");
-        if (published) {
-          const allSections = JSON.parse(published);
-          const sectionData = allSections[String(sectionNum)] || allSections[sectionNum];
-          if (sectionData && Array.isArray(sectionData)) {
-            const PERIODS_TIME = [
-              "9:00 AM - 10:00 AM", "10:05 AM - 11:05 AM", "11:10 AM - 12:10 PM", "12:15 PM - 1:15 PM",
-              "1:20 PM - 2:20 PM", "2:25 PM - 3:25 PM", "3:30 PM - 4:30 PM", "4:35 PM - 5:35 PM",
-            ];
-            const PERIODS_LABEL = ["الأولى", "الثانية", "الثالثة", "الرابعة", "الخامسة", "السادسة", "السابعة", "الثامنة"];
+    try {
+      const published = localStorage.getItem("cyber_published_schedule");
+      if (published) {
+        const allSections = JSON.parse(published);
 
-            baseData = sectionData.map((d: { day: string; entries: ({ subject: string; instructor: string; room: string; entry_type: string } | null)[] }) => ({
+        // Build sections list
+        const secs = Object.keys(allSections).map(Number).sort((a, b) => a - b);
+        if (secs.length > 0) setSections(secs.map(n => `سكشن ${n}`));
+
+        const sectionData = allSections[String(sectionNum)] || allSections[sectionNum];
+        if (sectionData && Array.isArray(sectionData)) {
+          const baseData: UnifiedDay[] = sectionData
+            .filter((d: { day: string }) => d.day !== "الجمعة")
+            .map((d: { day: string; entries: ({ subject: string; instructor: string; room: string; entry_type: string } | null)[] }) => ({
               day: d.day,
               entries: (d.entries || [])
-                .filter((e): e is { subject: string; instructor: string; room: string; entry_type: string } => e !== null && e.subject)
+                .filter((e): e is { subject: string; instructor: string; room: string; entry_type: string } => e !== null && !!e.subject)
                 .map((e, i) => ({
                   id: `${d.day}-${i}-${e.subject}`,
                   time_slot: PERIODS_TIME[i] || "",
@@ -61,46 +63,22 @@ const Schedule = () => {
                   entry_type: e.entry_type || "lecture",
                   period_label: PERIODS_LABEL[i] || "",
                 })),
-              isHoliday: d.day === "الجمعة",
+              isHoliday: false,
             }));
 
-            // Build sections list from published data
-            const secs = Object.keys(allSections).map(Number).sort((a: number, b: number) => a - b);
-            if (secs.length > 0) setSections(secs.map(n => `سكشن ${n}`));
+          // Sort by day order
+          baseData.sort((a, b) => DAYS_ORDER.indexOf(a.day) - DAYS_ORDER.indexOf(b.day));
+          baseData.push({ day: "الجمعة", entries: [], isHoliday: true });
 
-            if (!baseData.find(d => d.day === "الجمعة")) {
-              baseData.push({ day: "الجمعة", entries: [], isHoliday: true });
-            }
-            setSchedule(baseData);
-            setLoading(false);
-            return;
-          }
-        }
-      } catch { /* ignore */ }
-
-      // 2. Fallback: Google Sheets
-      if (googleSheetsService.getSheetUrl()) {
-        const { data, error } = await googleSheetsService.fetchScheduleForSection(sectionNum);
-        if (!error && data.length > 0) {
-          baseData = data.map(d => ({
-            day: d.day,
-            entries: d.entries.map(e => ({ ...e, entry_type: e.entry_type as string })),
-            isHoliday: d.day === "الجمعة",
-          }));
+          setSchedule(baseData);
+          setLoading(false);
+          return;
         }
       }
+    } catch { /* ignore */ }
 
-      // 3. Fallback: Database
-      if (baseData.length === 0) {
-        const { data, error } = await scheduleService.fetchSchedule(sectionNum);
-        if (error) toast.error("فشل تحميل الجدول.");
-        baseData = (data ?? []).map(d => ({ ...d, entries: d.entries.map(e => ({ ...e, entry_type: e.entry_type as string })) }));
-      }
-
-      setSchedule(baseData);
-      setLoading(false);
-    };
-    load();
+    setSchedule([]);
+    setLoading(false);
   }, [selectedSection]);
 
   const totalLectures = schedule.reduce((a, d) => a + d.entries.filter(e => e.entry_type === "lecture").length, 0);
@@ -127,13 +105,9 @@ const Schedule = () => {
         link.click();
         if (i < dayEls.length - 1) await sleep(500);
       }
-      toast.success(`تم تحميل ${dayEls.length} صورة بنجاح`);
-    } catch {
-      toast.error("فشل تحميل الصور");
-    } finally {
-      setIsExporting(false);
-      setExportProgress("");
-    }
+      toast.success(`تم تحميل ${dayEls.length} صورة`);
+    } catch { toast.error("فشل التصدير"); }
+    finally { setIsExporting(false); setExportProgress(""); }
   }, [selectedSection]);
 
   const exportAsPDF = useCallback(async () => {
@@ -145,40 +119,25 @@ const Schedule = () => {
       const pdf = new jsPDF("landscape", "mm", "a4");
       const pw = pdf.internal.pageSize.getWidth();
       const ph = pdf.internal.pageSize.getHeight();
-
       for (let i = 0; i < dayEls.length; i++) {
         const el = dayEls[i];
         const dayName = el.dataset.day || `يوم-${i + 1}`;
         setExportProgress(`جاري تصدير ${dayName}...`);
-
         const canvas = await captureDay(el);
         const imgData = canvas.toDataURL("image/png");
         const ratio = canvas.width / canvas.height;
-
         if (i > 0) pdf.addPage();
         pdf.setFillColor(10, 10, 15);
         pdf.rect(0, 0, pw, ph, "F");
-
-        let w = pw - 16;
-        let h = w / ratio;
+        let w = pw - 16, h = w / ratio;
         if (h > ph - 16) { h = ph - 16; w = h * ratio; }
-
         pdf.addImage(imgData, "PNG", (pw - w) / 2, (ph - h) / 2, w, h);
       }
       pdf.save(`جدول-${selectedSection}.pdf`);
-      toast.success(`تم تحميل PDF بـ ${dayEls.length} صفحات`);
-    } catch {
-      toast.error("فشل تحميل PDF");
-    } finally {
-      setIsExporting(false);
-      setExportProgress("");
-    }
+      toast.success(`تم تحميل PDF`);
+    } catch { toast.error("فشل التصدير"); }
+    finally { setIsExporting(false); setExportProgress(""); }
   }, [selectedSection]);
-
-  const periodLabel = (i: number) => {
-    const l = ["الأولى", "الثانية", "الثالثة", "الرابعة", "الخامسة", "السادسة", "السابعة", "الثامنة"];
-    return l[i] || `${i + 1}`;
-  };
 
   return (
     <>
@@ -199,7 +158,7 @@ const Schedule = () => {
                   الجدول الدراسي<span className="block text-primary mt-1">الأسبوعي</span>
                 </h1>
                 <p className="text-lg text-muted-foreground">جميع محاضرات الأسبوع من السبت إلى الجمعة</p>
-                <p className="text-sm text-muted-foreground/70">⏰ كل محاضرة ساعة + 5 دقائق راحة بين الفترات</p>
+                <p className="text-sm text-muted-foreground/70">⏰ كل محاضرة ساعة + 5 دقائق راحة</p>
                 <div className="flex flex-wrap gap-5 pt-1">
                   {[
                     { icon: Calendar, label: "أيام", value: 7 },
@@ -230,10 +189,10 @@ const Schedule = () => {
                 </div>
 
                 <div className="relative">
-                  <button onClick={() => setShowExportMenu(!showExportMenu)} disabled={isExporting || loading}
+                  <button onClick={() => setShowExportMenu(!showExportMenu)} disabled={isExporting || loading || schedule.length === 0}
                     className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-sm font-bold text-primary transition-all hover:bg-primary/20 disabled:opacity-50">
                     {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                    {isExporting ? exportProgress || "جاري التصدير..." : "تحميل الجدول"}
+                    {isExporting ? exportProgress : "تحميل الجدول"}
                   </button>
                   {showExportMenu && !isExporting && (
                     <>
@@ -242,18 +201,12 @@ const Schedule = () => {
                         <button onClick={exportAsImage}
                           className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-foreground hover:bg-primary/10 transition-colors">
                           <span className="text-lg">🖼️</span>
-                          <div className="text-right">
-                            <span className="block font-bold">صور PNG</span>
-                            <span className="block text-[10px] text-muted-foreground">صورة لكل يوم على حدة</span>
-                          </div>
+                          <div className="text-right"><span className="block font-bold">صور PNG</span><span className="block text-[10px] text-muted-foreground">صورة لكل يوم</span></div>
                         </button>
                         <button onClick={exportAsPDF}
                           className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-foreground hover:bg-primary/10 transition-colors border-t border-border/50">
                           <span className="text-lg">📄</span>
-                          <div className="text-right">
-                            <span className="block font-bold">ملف PDF</span>
-                            <span className="block text-[10px] text-muted-foreground">صفحة لكل يوم على حدة</span>
-                          </div>
+                          <div className="text-right"><span className="block font-bold">ملف PDF</span><span className="block text-[10px] text-muted-foreground">صفحة لكل يوم</span></div>
                         </button>
                       </div>
                     </>
@@ -268,6 +221,12 @@ const Schedule = () => {
           {loading ? (
             <div className="flex items-center justify-center py-20 gap-3 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" /><span>جاري تحميل الجدول...</span>
+            </div>
+          ) : schedule.length === 0 ? (
+            <div className="text-center py-20">
+              <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+              <p className="text-lg text-muted-foreground">لا يوجد جدول منشور حالياً</p>
+              <p className="text-sm text-muted-foreground mt-2">المدير يحتاج لنشر الجدول أولاً من لوحة التحكم</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -291,7 +250,7 @@ const Schedule = () => {
                         </div>
                         <div className="flex-1">
                           <h2 className={`text-lg font-bold ${isToday ? "text-primary" : "text-foreground"}`}>{day.day}</h2>
-                          {!day.isHoliday && !day.isTraining && day.entries.length > 0 && (
+                          {!day.isHoliday && day.entries.length > 0 && (
                             <div className="flex items-center gap-2 mt-0.5">
                               {day.entries.filter(e => e.entry_type === "lecture").length > 0 && (
                                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">
@@ -315,12 +274,6 @@ const Schedule = () => {
                             <p className="font-bold text-primary">إجازة</p>
                             <p className="text-xs text-muted-foreground mt-1">استمتع بيومك!</p>
                           </div>
-                        ) : day.isTraining ? (
-                          <div className="text-center py-8 rounded-xl bg-amber-500/5 border border-dashed border-amber-500/20">
-                            <GraduationCap className="h-8 w-8 mx-auto mb-2 text-amber-500/50" />
-                            <p className="font-bold text-amber-500">يوم التدريب</p>
-                            <p className="text-xs text-muted-foreground mt-1">قريباً سيتم تزويد التفاصيل</p>
-                          </div>
                         ) : day.entries.length === 0 ? (
                           <div className="text-center py-8 rounded-xl bg-muted/30 border border-dashed border-border/50">
                             <p className="text-sm text-muted-foreground">لا توجد محاضرات</p>
@@ -335,7 +288,7 @@ const Schedule = () => {
                                 }`}>
                                   <div className="text-center min-w-[80px]">
                                     <div className={`text-[10px] font-bold mb-0.5 ${isSec ? "text-cyan-400" : "text-primary"}`}>
-                                      الفترة {entry.period_label || periodLabel(li)}
+                                      الفترة {entry.period_label || PERIODS_LABEL[li] || ""}
                                     </div>
                                     <div className="text-xs font-bold text-foreground" dir="ltr">{entry.time_slot}</div>
                                   </div>
@@ -346,8 +299,8 @@ const Schedule = () => {
                                       {isSec && <span className="text-[9px] font-bold bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded shrink-0">سكشن</span>}
                                     </div>
                                     <div className="flex flex-wrap items-center gap-3 mt-1">
-                                      <span className="flex items-center gap-1 text-xs text-muted-foreground"><User className="h-3 w-3" />{entry.instructor}</span>
-                                      <span className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="h-3 w-3" />{entry.room}</span>
+                                      {entry.instructor && <span className="flex items-center gap-1 text-xs text-muted-foreground"><User className="h-3 w-3" />{entry.instructor}</span>}
+                                      {entry.room && <span className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="h-3 w-3" />{entry.room}</span>}
                                     </div>
                                   </div>
                                 </div>

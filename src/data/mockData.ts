@@ -1,7 +1,3 @@
-// Re-export from separate data files for backward compatibility
-// Schedule data
-export * from './scheduleData';
-
 // Materials/Subjects data
 export * from './materialsData';
 

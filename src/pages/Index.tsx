@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Clock, MapPin, User, Calendar, BookOpen, Shield, Zap, GraduationCap } from "lucide-react";
 import Layout from "@/components/Layout";
@@ -7,7 +7,6 @@ import FounderCard from "@/components/FounderCard";
 import SEO from "@/components/SEO";
 import FAQSection from "@/components/FAQSection";
 const heroBg = "/hero-bg.jpg";
-import { sections, getTodaySchedule, getTodayDate } from "@/data/mockData";
 
 const features = [
   { icon: BookOpen, title: "مواد دراسية", desc: "محاضرات ومراجعات شاملة لكل المواد" },
@@ -18,11 +17,66 @@ const features = [
   { icon: Clock, title: "يعمل بدون نت", desc: "تسجيل حضور حتى بدون إنترنت" },
 ];
 
+const PERIODS_TIME = [
+  "9:00 AM - 10:00 AM", "10:05 AM - 11:05 AM", "11:10 AM - 12:10 PM", "12:15 PM - 1:15 PM",
+  "1:20 PM - 2:20 PM", "2:25 PM - 3:25 PM", "3:30 PM - 4:30 PM", "4:35 PM - 5:35 PM",
+];
+
+interface TodayLecture {
+  time: string;
+  subject: string;
+  instructor: string;
+  room: string;
+}
+
+function getTodayDate(): string {
+  return new Date().toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
 const Index = () => {
-  const [selectedSection, setSelectedSection] = useState(sections[0]);
-  const todaySchedule = useMemo(() => getTodaySchedule(selectedSection), [selectedSection]);
+  const [selectedSection, setSelectedSection] = useState("سكشن 1");
+  const [sections, setSections] = useState<string[]>(Array.from({ length: 15 }, (_, i) => `سكشن ${i + 1}`));
+  const [todayLectures, setTodayLectures] = useState<TodayLecture[]>([]);
+  const todayName = new Date().toLocaleDateString("ar-EG", { weekday: "long" });
   const todayDate = getTodayDate();
-  
+
+  useEffect(() => {
+    try {
+      const published = localStorage.getItem("cyber_published_schedule");
+      if (!published) return;
+      const allSections = JSON.parse(published);
+      const secs = Object.keys(allSections).map(Number).sort((a, b) => a - b);
+      if (secs.length > 0) setSections(secs.map(n => `سكشن ${n}`));
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const published = localStorage.getItem("cyber_published_schedule");
+      if (!published) { setTodayLectures([]); return; }
+      const allSections = JSON.parse(published);
+      const sectionNum = parseInt(selectedSection.replace(/\D/g, "")) || 1;
+      const sectionData = allSections[String(sectionNum)] || allSections[sectionNum];
+      if (!sectionData) { setTodayLectures([]); return; }
+
+      const todayData = sectionData.find((d: { day: string }) => d.day === todayName);
+      if (!todayData) { setTodayLectures([]); return; }
+
+      const lectures: TodayLecture[] = [];
+      (todayData.entries || []).forEach((e: { subject?: string; instructor?: string; room?: string } | null, i: number) => {
+        if (e && e.subject) {
+          lectures.push({
+            time: PERIODS_TIME[i] || "",
+            subject: e.subject,
+            instructor: e.instructor || "",
+            room: e.room || "",
+          });
+        }
+      });
+      setTodayLectures(lectures);
+    } catch { setTodayLectures([]); }
+  }, [selectedSection, todayName]);
+
   return (
     <>
       <SEO 
@@ -89,7 +143,6 @@ const Index = () => {
               </Link>
             </div>
 
-            {/* Stats */}
             <div className="animate-fade-up-delay-2 mt-14 grid grid-cols-3 gap-4 max-w-md mx-auto">
               <div className="text-center p-3 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50">
                 <div className="text-2xl md:text-3xl font-black text-primary">7</div>
@@ -136,7 +189,6 @@ const Index = () => {
         <section className="section-container py-16">
           <div className="relative mb-10">
             <div className="absolute -top-10 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
-            
             <div className="relative flex flex-col lg:flex-row lg:items-end justify-between gap-6">
               <div>
                 <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 mb-4">
@@ -170,31 +222,18 @@ const Index = () => {
             </div>
           </div>
 
-          {todaySchedule?.isTraining ? (
-            <div className="relative rounded-2xl bg-gradient-to-br from-amber-500/10 to-amber-500/5 p-10 text-center border border-amber-500/30 overflow-hidden">
-              <div className="absolute inset-0 bg-amber-500/5" />
-              <div className="relative">
-                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-amber-500/10 flex items-center justify-center">
-                  <span className="text-4xl">🏋️</span>
-                </div>
-                <h3 className="text-2xl font-bold text-amber-500 mb-2">يوم تدريب</h3>
-                <p className="text-muted-foreground">{todaySchedule.trainingMessage || "قريباً سيتم تزويد التفاصيل"}</p>
-              </div>
-            </div>
-          ) : todaySchedule?.isHoliday ? (
+          {todayName === "الجمعة" ? (
             <div className="relative rounded-2xl bg-gradient-to-br from-card to-card/50 p-10 text-center border border-border/50 overflow-hidden">
               <div className="absolute inset-0 bg-primary/5" />
               <div className="relative">
-                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-4xl">🎉</span>
-                </div>
+                <Calendar className="w-16 h-16 mx-auto mb-4 text-primary/40" />
                 <h3 className="text-2xl font-bold text-foreground mb-2">يوم إجازة!</h3>
                 <p className="text-muted-foreground">استمتع بوقتك، لا توجد محاضرات اليوم</p>
               </div>
             </div>
-          ) : todaySchedule?.lectures && todaySchedule.lectures.length > 0 ? (
+          ) : todayLectures.length > 0 ? (
             <div className="grid gap-3">
-              {todaySchedule.lectures.map((lecture, i) => (
+              {todayLectures.map((lecture, i) => (
                 <div key={i} className="group relative rounded-2xl p-4 md:p-5 transition-all duration-300 overflow-hidden bg-card border border-border/50 hover:border-primary/30">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
                     <div className="flex items-center gap-3 sm:min-w-[150px]">
@@ -212,19 +251,18 @@ const Index = () => {
                         {lecture.subject}
                       </h4>
                       <div className="flex flex-wrap items-center gap-3 mt-1">
-                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <User className="h-3 w-3 text-primary" />
-                          {lecture.instructor}
-                        </span>
-                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <MapPin className="h-3 w-3 text-primary" />
-                          {lecture.room}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="hidden sm:flex">
-                      <div className="w-8 h-8 rounded-full bg-secondary/50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                        <ArrowLeft className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                        {lecture.instructor && (
+                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <User className="h-3 w-3 text-primary" />
+                            {lecture.instructor}
+                          </span>
+                        )}
+                        {lecture.room && (
+                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <MapPin className="h-3 w-3 text-primary" />
+                            {lecture.room}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -236,7 +274,7 @@ const Index = () => {
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
                 <Calendar className="h-7 w-7 text-muted-foreground" />
               </div>
-              <p className="text-lg font-medium text-muted-foreground">لا توجد محاضرات مسجلة لهذا اليوم</p>
+              <p className="text-lg font-medium text-muted-foreground">لا توجد محاضرات اليوم</p>
             </div>
           )}
 
