@@ -130,21 +130,69 @@ export function QuickScheduleEditor() {
     if (!sheetUrl) { toast.error("الرجاء ادخال رابط الشيت"); return; }
     setSyncing(true);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
+      // Extract sheet ID
+      const m = sheetUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+      if (!m) throw new Error("رابط غير صحيح");
 
-      const res = await fetch(`${supabaseUrl}/functions/v1/import-schedule`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-          "apikey": supabaseAnonKey,
-        },
-        body: JSON.stringify({ sheet_url: sheetUrl }),
-      });
+      // Fetch CSV from Google Sheets
+      const csvRes = await fetch(`https://docs.google.com/spreadsheets/d/${m[1]}/gviz/tq?tqx=out:csv`);
+      if (!csvRes.ok) throw new Error("فشل جلب البيانات - تاكد ان الشيت مشارك للعامة");
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "فشل الاستيراد");
+      const csv = await csvRes.text();
+      if (csv.includes("<!DOCTYPE")) throw new Error("الشيت غير متاح - شارك: Anyone with the link");
+
+      // Parse CSV
+      const rows: string[][] = [];
+      let current: string[] = [];
+      let cell = "";
+      let inQ = false;
+      for (let i = 0; i < csv.length; i++) {
+        const c = csv[i];
+        if (c === '"') { inQ = !inQ; }
+        else if (c === "," && !inQ) { current.push(cell.replace(/\s+/g, " ").trim()); cell = ""; }
+        else if ((c === "\n" || c === "\r") && !inQ) {
+          if (c === "\r" && csv[i + 1] === "\n") i++;
+          current.push(cell.replace(/\s+/g, " ").trim());
+          if (current.some((x) => x !== "")) rows.push(current);
+          current = []; cell = "";
+        } else { cell += c; }
+      }
+      if (cell || current.length) { current.push(cell.replace(/\s+/g, " ").trim()); rows.push(current); }
+
+      if (rows.length < 6) throw new Error("الجدول فارغ");
+
+      // Parse all sections
+      const DAYS_LOCAL = ["السبت", "الاحد", "الاثنين", "الثلاثاء", "الاربعاء", "الخميس"];
+      const entries: { section: number; day: string; period: number; subject: string; instructor: string; room: string; entry_type: string }[] = [];
+
+      for (let i = 4; i < Math.min(rows.length, 20); i++) {
+        const secNum = parseInt((rows[i][1] || "").replace(/\s+/g, "").trim());
+        if (isNaN(secNum) || secNum < 1) continue;
+        const dataRow = rows[i];
+        for (let d = 0; d < 6; d++) {
+          const baseCol = 1 + d * 8;
+          for (let p = 0; p < 8; p++) {
+            const raw = (dataRow[baseCol + p] || "").replace(/\s+/g, " ").trim();
+            if (!raw || raw === " ") continue;
+            const lines = raw.replace(/<br\s*\/?>/gi, "\n").split("\n").map((l: string) => l.trim()).filter(Boolean);
+            if (lines.length === 0) continue;
+            let subject = lines[0] || "", instructor = lines[1] || "", room = lines[2] || "";
+            if (lines.length === 1 && lines[0].includes(" - ")) {
+              const parts = lines[0].split(" - ").map((s: string) => s.trim());
+              subject = parts[0]; instructor = parts[1] || ""; room = parts[2] || "";
+            }
+            if (!subject) continue;
+            const isSec = /ai lab|simulation lab|معمل/i.test(raw) && !/مدرج|f-sem/i.test(lines[0]);
+            entries.push({ section: secNum, day: DAYS_LOCAL[d], period: p + 1, subject, instructor, room, entry_type: isSec ? "section" : "lecture" });
+          }
+        }
+      }
+
+      if (entries.length === 0) throw new Error("لم يتم العثور على بيانات");
+
+      // Save to Supabase
+      const { error } = await supabase.rpc("publish_all_schedule", { p_rows: entries });
+      if (error) throw error;
 
       localStorage.setItem("cyber_sheet_url", sheetUrl);
 
@@ -163,7 +211,8 @@ export function QuickScheduleEditor() {
         setAllSections(init);
       }
       setHasChanges(false);
-      toast.success("تم الاستيراد: " + (data.sections || 0) + " سكشن، " + (data.entries || 0) + " خلية");
+      const secs = [...new Set(entries.map(e => e.section))];
+      toast.success("تم الاستيراد: " + secs.length + " سكشن، " + entries.length + " خلية");
     } catch (e) {
       toast.error("فشل الاستيراد: " + String(e));
     }
