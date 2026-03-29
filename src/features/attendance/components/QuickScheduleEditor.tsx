@@ -219,9 +219,22 @@ export function QuickScheduleEditor() {
               <tr className="bg-muted/50">
                 <th className="p-2 text-right font-bold text-xs text-muted-foreground border-b border-border min-w-[90px]">الفترة</th>
                 {DAYS.map((day, di) => {
+                  const dd = current[di];
+                  const isHoliday = dd?.isHoliday;
+                  const isTraining = dd?.isTraining;
                   return (
-                    <th key={day} className="p-2 text-center border-b border-border min-w-[130px]">
+                    <th key={day} className={"p-2 text-center border-b border-border min-w-[130px] " + (isHoliday ? "bg-amber-500/10" : isTraining ? "bg-cyan-500/10" : "")}>
                       <div className="font-bold text-xs text-foreground">{day}</div>
+                      <div className="flex items-center justify-center gap-1 mt-1">
+                        <button onClick={() => toggleHoliday(di)}
+                          className={"text-[9px] px-2 py-0.5 rounded-full border transition-colors " + (isHoliday ? "bg-amber-500/20 border-amber-500/40 text-amber-400 font-bold" : "border-border/50 text-muted-foreground hover:border-amber-500/30")}>
+                          اجازة
+                        </button>
+                        <button onClick={() => toggleTraining(di)}
+                          className={"text-[9px] px-2 py-0.5 rounded-full border transition-colors " + (isTraining ? "bg-cyan-500/20 border-cyan-500/40 text-cyan-400 font-bold" : "border-border/50 text-muted-foreground hover:border-cyan-500/30")}>
+                          تدريب
+                        </button>
+                      </div>
                     </th>
                   );
                 })}
@@ -235,8 +248,20 @@ export function QuickScheduleEditor() {
                     <div className="text-[9px] text-muted-foreground" dir="ltr">{period.time}</div>
                   </td>
                   {DAYS.map((_, di) => {
-                    const entry = current[di]?.entries[pi];
+                    const dd = current[di];
+                    const entry = dd?.entries[pi];
                     const isEdit = editing?.day === di && editing?.period === pi;
+                    const disabled = dd?.isHoliday || dd?.isTraining;
+
+                    if (disabled) {
+                      return (
+                        <td key={di} className="p-1.5">
+                          <div className="rounded-lg border border-dashed border-border/20 p-3 text-center">
+                            <span className="text-[10px] text-muted-foreground/50">{dd.isHoliday ? "اجازة" : "تدريب"}</span>
+                          </div>
+                        </td>
+                      );
+                    }
 
                     return (
                       <td key={di} className={"p-1.5 " + (isEdit ? "bg-primary/10" : "")}>
