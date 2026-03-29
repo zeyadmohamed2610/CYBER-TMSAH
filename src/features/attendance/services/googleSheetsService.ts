@@ -18,6 +18,35 @@ export interface SheetDaySchedule {
   entries: SheetEntry[];
 }
 
+// Subject mapping: sheet English names → Arabic names from materials page
+const SUBJECT_MAP: Record<string, string> = {
+  "os": "نظم تشغيل",
+  "cybersecurity": "مبادئ الأمن السيبراني",
+  "negotiation": "مهارات التفاوض",
+  "networking": "شبكات وتراسل البيانات",
+  "engineering drawing": "رسم هندسي واسقاط",
+  "engineering-drawing": "رسم هندسي واسقاط",
+  "technology": "مبادئ تكنولوجيا",
+  "english": "لغة انجليزية",
+  "net": "شبكات وتراسل البيانات",
+  "رسم هندسي": "رسم هندسي واسقاط",
+  "مبادئ الأمن": "مبادئ الأمن السيبراني",
+  "مهارات التفاوض": "مهارات التفاوض",
+  "شبكات": "شبكات وتراسل البيانات",
+  "لغة انجليزية": "لغة انجليزية",
+  "نظم تشغيل": "نظم تشغيل",
+  "مبادئ تكنولوجيا": "مبادئ تكنولوجيا",
+};
+
+// Map sheet subject to Arabic name
+function mapSubject(sheetSubject: string): string {
+  const lower = sheetSubject.toLowerCase().trim();
+  for (const [key, value] of Object.entries(SUBJECT_MAP)) {
+    if (lower.includes(key.toLowerCase())) return value;
+  }
+  return sheetSubject;
+}
+
 // 8 fixed periods — 60 min lecture + 5 min break
 const PERIODS = [
   { num: 1, start12: "9:00 AM",  end12: "10:00 AM", label: "الأولى" },
@@ -61,14 +90,32 @@ function parseCSV(csv: string): string[][] {
   return rows;
 }
 
-// Google Sheets cell has 3 lines: subject, instructor, room
-// e.g. "OS - ENG hamdy\nAI LAB" or "مبادئ الأمن السيبراني\nد. سامح\nG201"
+// Google Sheets cell: first line is subject (may be English or Arabic)
+// e.g. "OS - ENG hamdy - AI LAB" or "网络安全"
 function parseCell(raw: string): { subject: string; instructor: string; room: string } {
   const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const sheetSubject = lines[0] || "";
+  // Extract instructor: "OS - ENG hamdy - AI LAB" → "ENG hamdy"
+  // Or direct: "د. سامح" 
+  let instructor = lines[1] || "";
+  // Extract room: "AI LAB", "G201", "D102", etc.
+  const room = lines[2] || "";
+
+  // If first line has " - " separators, extract parts
+  // e.g. "OS - ENG hamdy - AI LAB" → subject="OS", instructor="ENG hamdy", room="AI LAB"
+  if (lines.length === 1 && sheetSubject.includes(" - ")) {
+    const parts = sheetSubject.split(" - ").map(p => p.trim());
+    return {
+      subject: mapSubject(parts[0]),
+      instructor: parts[1] || "",
+      room: parts[2] || "",
+    };
+  }
+
   return {
-    subject: lines[0] || "",
-    instructor: lines[1] || "",
-    room: lines[2] || "",
+    subject: mapSubject(sheetSubject),
+    instructor,
+    room,
   };
 }
 

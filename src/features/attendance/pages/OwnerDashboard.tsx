@@ -4,7 +4,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ExportButtons } from "../components/ExportButtons";
 import { GoogleSheetsConnector } from "../components/GoogleSheetsConnector";
-import { ManualScheduleEditor } from "../components/ManualScheduleEditor";
 import { LectureManagementPanel } from "../components/LectureManagementPanel";
 import { LectureDetailView } from "../components/LectureDetailView";
 import { MaterialsEditor } from "../components/MaterialsEditor";
@@ -71,7 +70,6 @@ export const OwnerDashboard = () => {
 
         <TabsContent value="schedule" className="space-y-6">
           <GoogleSheetsConnector />
-          <ManualScheduleEditor />
         </TabsContent>
 
         <TabsContent value="materials" className="space-y-6">
