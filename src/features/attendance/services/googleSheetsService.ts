@@ -248,7 +248,7 @@ export const googleSheetsService = {
 
         for (let p = 0; p < 8; p++) {
           const ci = baseCol + p;
-          const raw = (dataRow[ci] || "").trim();
+          const raw = (dataRow[ci] || "").replace(/\s+/g, " ").trim();
           if (!raw) continue;
 
           const { subject, instructor, room } = parseCell(raw);

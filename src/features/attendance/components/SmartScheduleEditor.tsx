@@ -161,8 +161,8 @@ export function SmartScheduleEditor() {
           const baseCol = 1 + d * 8;
           for (let p = 0; p < 8; p++) {
             const ci = baseCol + p;
-            const raw = (dataRow[ci] || "").trim();
-            if (!raw) continue;
+            const raw = (dataRow[ci] || "").replace(/\s+/g, " ").trim();
+            if (!raw || raw === " ") continue;
             const entry = parseCell(raw);
             if (entry.subject) sectionSchedule[d].entries[p] = entry;
           }
