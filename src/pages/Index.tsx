@@ -137,7 +137,7 @@ const Index = () => {
 
             <div className="animate-fade-up-delay-2 mt-8 flex flex-wrap justify-center gap-4">
               <Link to="/materials" className="group relative inline-flex items-center gap-3 rounded-xl bg-primary px-8 py-4 text-base font-bold text-primary-foreground overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_hsl(var(--primary)/0.5)]">
-                <span className="relative z-10">ابدأ الآن</span>
+                <span className="relative z-10">المواد الدراسية</span>
                 <ArrowLeft className="h-5 w-5 relative z-10 transition-transform group-hover:-translate-x-1" />
                 <div className="absolute inset-0 bg-gradient-to-r from-primary via-cyan-500 to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </Link>
