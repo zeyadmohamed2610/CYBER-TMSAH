@@ -54,9 +54,10 @@ function makeEmptySection(): DayData[] {
 export function QuickScheduleEditor() {
   const [allSections, setAllSections] = useState<AllSections>(() => {
     const saved = loadPublished();
-    if (Object.keys(saved).length > 0) return saved;
     const init: AllSections = {};
-    for (let i = 1; i <= 15; i++) init[i] = makeEmptySection();
+    for (let i = 1; i <= 15; i++) {
+      init[i] = saved[i] || makeEmptySection();
+    }
     return init;
   });
 
