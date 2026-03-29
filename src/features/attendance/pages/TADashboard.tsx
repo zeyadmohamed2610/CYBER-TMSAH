@@ -48,22 +48,22 @@ export const TADashboard = () => {
 
       {error && (
         <Alert variant="destructive">
-          <AlertTitle>Database Error</AlertTitle>
+          <AlertTitle>خطأ في قاعدة البيانات</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
       {taSubjectName && (
         <Alert>
-          <AlertTitle>المادة المُسندة: {taSubjectName}</AlertTitle>
-          <AlertDescription>يمكنك إنشاء وإدارة السكاشن لهذه المادة.</AlertDescription>
+          <AlertTitle>المادة المسندة: {taSubjectName}</AlertTitle>
+          <AlertDescription>يمكنك انشاء وادارة السكاشن لهذه المادة.</AlertDescription>
         </Alert>
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard title="Total Sessions" value={String(metrics.totalSessions)} description="All time" icon={BarChart3} />
-        <StatCard title="Active Sessions" value={String(metrics.activeSessions)} description="Right now" icon={BarChart3} />
-        <StatCard title="Attendance Rate" value={`${Math.round(metrics.attendanceRate)}%`} description="Overall" icon={BarChart3} />
+        <StatCard title="اجمالي الجلسات" value={String(metrics.totalSessions)} description="منذ البداية" icon={BarChart3} />
+        <StatCard title="جلسات نشطة" value={String(metrics.activeSessions)} description="الان" icon={BarChart3} />
+        <StatCard title="نسبة الحضور" value={Math.round(metrics.attendanceRate) + "%"} description="الاجمالي" icon={BarChart3} />
       </div>
 
       <LectureManagementPanel
