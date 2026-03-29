@@ -17,6 +17,10 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.png", "rss.xml", "sitemap.xml", "robots.txt", "browserconfig.xml"],
+      devOptions: {
+        enabled: true,
+        type: "module",
+      },
       manifest: {
         name: "CYBER TMSAH - منصة الأمن السيبراني",
         short_name: "CYBER TMSAH",
