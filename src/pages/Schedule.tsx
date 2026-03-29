@@ -11,14 +11,9 @@ import { googleSheetsService, type SheetDaySchedule } from "@/features/attendanc
 
 type UnifiedDay = {
   day: string;
-  entries: { id: string; time_slot: string; subject: string; instructor: string; room: string; entry_type: string }[];
+  entries: { id: string; time_slot: string; subject: string; instructor: string; room: string; entry_type: string; period_label?: string }[];
   isHoliday?: boolean;
   isTraining?: boolean;
-};
-
-const dayIcons: Record<string, string> = {
-  "السبت": "☀️", "الأحد": "🌅", "الاثنين": "💪", "الثلاثاء": "📖",
-  "الأربعاء": "📚", "الخميس": "🎯", "الجمعة": "🎉",
 };
 
 const todayName = new Date().toLocaleDateString("ar-EG", { weekday: "long" });
@@ -254,7 +249,9 @@ const Schedule = () => {
                       )}
 
                       <div className="flex items-center gap-3 p-4 md:p-5 border-b border-border/30">
-                        <span className="text-2xl">{dayIcons[day.day] ?? "📅"}</span>
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isToday ? "bg-primary/20" : "bg-primary/10"}`}>
+                          <Calendar className={`h-5 w-5 ${isToday ? "text-primary" : "text-primary/70"}`} />
+                        </div>
                         <div className="flex-1">
                           <h2 className={`text-lg font-bold ${isToday ? "text-primary" : "text-foreground"}`}>{day.day}</h2>
                           {!day.isHoliday && !day.isTraining && day.entries.length > 0 && (
@@ -277,13 +274,13 @@ const Schedule = () => {
                       <div className="p-4 md:p-5">
                         {day.isHoliday ? (
                           <div className="text-center py-8 rounded-xl bg-primary/5 border border-dashed border-primary/20">
-                            <span className="text-3xl block mb-2">🎉</span>
+                            <Calendar className="h-8 w-8 mx-auto mb-2 text-primary/50" />
                             <p className="font-bold text-primary">إجازة</p>
                             <p className="text-xs text-muted-foreground mt-1">استمتع بيومك!</p>
                           </div>
                         ) : day.isTraining ? (
                           <div className="text-center py-8 rounded-xl bg-amber-500/5 border border-dashed border-amber-500/20">
-                            <span className="text-3xl block mb-2">🏋️</span>
+                            <GraduationCap className="h-8 w-8 mx-auto mb-2 text-amber-500/50" />
                             <p className="font-bold text-amber-500">يوم التدريب</p>
                             <p className="text-xs text-muted-foreground mt-1">قريباً سيتم تزويد التفاصيل</p>
                           </div>
@@ -301,7 +298,7 @@ const Schedule = () => {
                                 }`}>
                                   <div className="text-center min-w-[80px]">
                                     <div className={`text-[10px] font-bold mb-0.5 ${isSec ? "text-cyan-400" : "text-primary"}`}>
-                                      الفترة {(entry as Record<string, unknown>).period_label as string || periodLabel(li)}
+                                      الفترة {entry.period_label || periodLabel(li)}
                                     </div>
                                     <div className="text-xs font-bold text-foreground" dir="ltr">{entry.time_slot}</div>
                                   </div>
