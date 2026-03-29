@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { Pencil, Save, Globe, CheckCircle2, Trash2, ChevronDown, Calendar, GraduationCap, Coffee, Loader2, RefreshCw, Link2, AlertCircle } from "lucide-react";
+import { Pencil, Save, Globe, CheckCircle2, Trash2, ChevronDown, Calendar, GraduationCap, Coffee, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { supabase, supabaseUrl, supabaseAnonKey } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/supabaseClient";
 
 interface Entry { subject: string; instructor: string; room: string; entry_type: "lecture" | "section" }
 interface DayData { day: string; entries: (Entry | null)[]; isHoliday?: boolean; isTraining?: boolean }
@@ -42,9 +42,6 @@ export function QuickScheduleEditor() {
   const [hasChanges, setHasChanges] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [sheetUrl, setSheetUrl] = useState(localStorage.getItem("cyber_sheet_url") || "");
-  const [showSheetInput, setShowSheetInput] = useState(false);
 
   const current = allSections[selectedSection] || makeEmpty();
 
@@ -61,7 +58,6 @@ export function QuickScheduleEditor() {
           };
         }
         setAllSections(init);
-        setHasChanges(false);
       }
       setLoading(false);
     });
@@ -122,101 +118,8 @@ export function QuickScheduleEditor() {
       if (error) throw error;
       setHasChanges(false);
       toast.success("تم نشر الجدول للطلاب");
-    } catch (e) { toast.error("فشل النشر"); }
+    } catch { toast.error("فشل النشر"); }
     setPublishing(false);
-  };
-
-  const handleSync = async () => {
-    if (!sheetUrl) { toast.error("الرجاء ادخال رابط الشيت"); return; }
-    setSyncing(true);
-    try {
-      // Extract sheet ID
-      const m = sheetUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
-      if (!m) throw new Error("رابط غير صحيح");
-
-      // Fetch CSV from Google Sheets
-      const csvRes = await fetch(`https://docs.google.com/spreadsheets/d/${m[1]}/gviz/tq?tqx=out:csv`);
-      if (!csvRes.ok) throw new Error("فشل جلب البيانات - تاكد ان الشيت مشارك للعامة");
-
-      const csv = await csvRes.text();
-      if (csv.includes("<!DOCTYPE")) throw new Error("الشيت غير متاح - شارك: Anyone with the link");
-
-      // Parse CSV
-      const rows: string[][] = [];
-      let current: string[] = [];
-      let cell = "";
-      let inQ = false;
-      for (let i = 0; i < csv.length; i++) {
-        const c = csv[i];
-        if (c === '"') { inQ = !inQ; }
-        else if (c === "," && !inQ) { current.push(cell.replace(/\s+/g, " ").trim()); cell = ""; }
-        else if ((c === "\n" || c === "\r") && !inQ) {
-          if (c === "\r" && csv[i + 1] === "\n") i++;
-          current.push(cell.replace(/\s+/g, " ").trim());
-          if (current.some((x) => x !== "")) rows.push(current);
-          current = []; cell = "";
-        } else { cell += c; }
-      }
-      if (cell || current.length) { current.push(cell.replace(/\s+/g, " ").trim()); rows.push(current); }
-
-      if (rows.length < 6) throw new Error("الجدول فارغ");
-
-      // Parse all sections
-      const DAYS_LOCAL = ["السبت", "الاحد", "الاثنين", "الثلاثاء", "الاربعاء", "الخميس"];
-      const entries: { section: number; day: string; period: number; subject: string; instructor: string; room: string; entry_type: string }[] = [];
-
-      for (let i = 4; i < Math.min(rows.length, 20); i++) {
-        const secNum = parseInt((rows[i][1] || "").replace(/\s+/g, "").trim());
-        if (isNaN(secNum) || secNum < 1) continue;
-        const dataRow = rows[i];
-        for (let d = 0; d < 6; d++) {
-          const baseCol = 1 + d * 8;
-          for (let p = 0; p < 8; p++) {
-            const raw = (dataRow[baseCol + p] || "").replace(/\s+/g, " ").trim();
-            if (!raw || raw === " ") continue;
-            const lines = raw.replace(/<br\s*\/?>/gi, "\n").split("\n").map((l: string) => l.trim()).filter(Boolean);
-            if (lines.length === 0) continue;
-            let subject = lines[0] || "", instructor = lines[1] || "", room = lines[2] || "";
-            if (lines.length === 1 && lines[0].includes(" - ")) {
-              const parts = lines[0].split(" - ").map((s: string) => s.trim());
-              subject = parts[0]; instructor = parts[1] || ""; room = parts[2] || "";
-            }
-            if (!subject) continue;
-            const isSec = /ai lab|simulation lab|معمل/i.test(raw) && !/مدرج|f-sem/i.test(lines[0]);
-            entries.push({ section: secNum, day: DAYS_LOCAL[d], period: p + 1, subject, instructor, room, entry_type: isSec ? "section" : "lecture" });
-          }
-        }
-      }
-
-      if (entries.length === 0) throw new Error("لم يتم العثور على بيانات");
-
-      // Save to Supabase
-      const { error } = await supabase.rpc("publish_all_schedule", { p_rows: entries });
-      if (error) throw error;
-
-      localStorage.setItem("cyber_sheet_url", sheetUrl);
-
-      // Reload from DB
-      const { data: dbData } = await supabase.from("published_schedule").select("*");
-      if (dbData && dbData.length > 0) {
-        const init = initAll();
-        for (const row of dbData) {
-          const di = DAYS.indexOf(row.day);
-          if (di === -1 || !init[row.section]) continue;
-          init[row.section][di].entries[row.period - 1] = {
-            subject: row.subject, instructor: row.instructor, room: row.room,
-            entry_type: (row.entry_type as "lecture" | "section") || "lecture",
-          };
-        }
-        setAllSections(init);
-      }
-      setHasChanges(false);
-      const secs = [...new Set(entries.map(e => e.section))];
-      toast.success("تم الاستيراد: " + secs.length + " سكشن، " + entries.length + " خلية");
-    } catch (e) {
-      toast.error("فشل الاستيراد: " + String(e));
-    }
-    setSyncing(false);
   };
 
   const stats = {
@@ -229,8 +132,7 @@ export function QuickScheduleEditor() {
     return (
       <Card dir="rtl">
         <CardContent className="flex items-center justify-center py-16 gap-3 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          <span>جاري تحميل البيانات</span>
+          <Loader2 className="h-5 w-5 animate-spin" /><span>جاري تحميل</span>
         </CardContent>
       </Card>
     );
@@ -244,16 +146,7 @@ export function QuickScheduleEditor() {
             <Calendar className="h-4 w-4 text-primary" />
             ادارة الجدول الدراسي
           </CardTitle>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setShowSheetInput(!showSheetInput)} className="gap-1">
-              <Link2 className="h-3.5 w-3.5" />ربط شيت
-            </Button>
-            {sheetUrl && (
-              <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing} className="gap-1">
-                {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                {syncing ? "جاري المزامنة" : "مزامنة"}
-              </Button>
-            )}
+          <div className="flex items-center gap-3">
             {hasChanges && <span className="text-xs text-amber-500 font-medium">غير منشور</span>}
             {!hasChanges && <span className="flex items-center gap-1 text-xs text-green-500"><CheckCircle2 className="h-3.5 w-3.5" />منشور</span>}
             <Button onClick={handlePublish} disabled={publishing} className="gap-2">
@@ -261,15 +154,6 @@ export function QuickScheduleEditor() {
             </Button>
           </div>
         </div>
-        {showSheetInput && (
-          <div className="flex gap-2 mt-3">
-            <Input value={sheetUrl} onChange={e => setSheetUrl(e.target.value)} placeholder="الصق رابط Google Sheet هنا..." dir="ltr" className="flex-1 h-9 text-sm" />
-            <Button onClick={handleSync} disabled={syncing || !sheetUrl} size="sm" className="gap-1">
-              {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-              {syncing ? "جاري الاستيراد" : "استيراد ونشر"}
-            </Button>
-          </div>
-        )}
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
@@ -380,10 +264,8 @@ export function QuickScheduleEditor() {
                       );
                     }
 
-                    const tdCls = "p-1.5 " + (isEdit ? "bg-primary/10" : "");
-
                     return (
-                      <td key={di} className={tdCls}>
+                      <td key={di} className={"p-1.5 " + (isEdit ? "bg-primary/10" : "")}>
                         {entry ? (
                           <div className="group relative rounded-lg border border-border/50 p-2 cursor-pointer hover:border-primary/50 transition-colors bg-card" onClick={() => startEdit(di, pi)}>
                             <div className="font-bold text-xs text-foreground leading-tight">{entry.subject}</div>
