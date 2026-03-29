@@ -42,6 +42,8 @@ const Index = () => {
   const [selectedSection, setSelectedSection] = useState("سكشن 1");
   const [sections, setSections] = useState<string[]>(Array.from({ length: 15 }, (_, i) => `سكشن ${i + 1}`));
   const [todayLectures, setTodayLectures] = useState<TodayLecture[]>([]);
+  const [isHoliday, setIsHoliday] = useState(false);
+  const [isTraining, setIsTraining] = useState(false);
   const todayName = normalizeDay(new Date().toLocaleDateString("ar-EG", { weekday: "long" }));
   const todayDate = getTodayDate();
 
@@ -57,18 +59,29 @@ const Index = () => {
   useEffect(() => {
     const sectionNum = parseInt(selectedSection.replace(/\D/g, "")) || 1;
     supabase.from("published_schedule")
-      .select("period, subject, instructor, room, entry_type")
+      .select("period, subject, instructor, room, entry_type, is_holiday, is_training")
       .eq("section", sectionNum)
       .eq("day", todayName)
       .order("period")
       .then(({ data }) => {
-        if (!data) { setTodayLectures([]); return; }
-        setTodayLectures(data.map(r => ({
-          time: PERIODS_TIME[r.period - 1] || "",
-          subject: r.subject,
-          instructor: r.instructor,
-          room: r.room,
-        })));
+        if (!data || data.length === 0) { setTodayLectures([]); setIsHoliday(false); setIsTraining(false); return; }
+
+        const hasHoliday = data.some(r => r.is_holiday);
+        const hasTraining = data.some(r => r.is_training);
+        setIsHoliday(hasHoliday);
+        setIsTraining(hasTraining);
+
+        if (hasHoliday || hasTraining) { setTodayLectures([]); return; }
+
+        const lectures = data
+          .filter(r => r.subject && r.subject.trim() !== "" && !r.is_holiday && !r.is_training)
+          .map(r => ({
+            time: PERIODS_TIME[r.period - 1] || "",
+            subject: r.subject,
+            instructor: r.instructor,
+            room: r.room,
+          }));
+        setTodayLectures(lectures);
       });
   }, [selectedSection, todayName]);
 
@@ -217,13 +230,22 @@ const Index = () => {
             </div>
           </div>
 
-          {todayName === "الجمعة" ? (
+          {todayName === "الجمعة" || isHoliday ? (
             <div className="relative rounded-2xl bg-gradient-to-br from-card to-card/50 p-10 text-center border border-border/50 overflow-hidden">
-              <div className="absolute inset-0 bg-primary/5" />
+              <div className="absolute inset-0 bg-amber-500/5" />
               <div className="relative">
-                <Calendar className="w-16 h-16 mx-auto mb-4 text-primary/40" />
-                <h3 className="text-2xl font-bold text-foreground mb-2">يوم إجازة!</h3>
+                <Calendar className="w-16 h-16 mx-auto mb-4 text-amber-500/40" />
+                <h3 className="text-2xl font-bold text-foreground mb-2">يوم اجازة!</h3>
                 <p className="text-muted-foreground">استمتع بوقتك، لا توجد محاضرات اليوم</p>
+              </div>
+            </div>
+          ) : isTraining ? (
+            <div className="relative rounded-2xl bg-gradient-to-br from-card to-card/50 p-10 text-center border border-cyan-500/30 overflow-hidden">
+              <div className="absolute inset-0 bg-cyan-500/5" />
+              <div className="relative">
+                <GraduationCap className="w-16 h-16 mx-auto mb-4 text-cyan-500/40" />
+                <h3 className="text-2xl font-bold text-foreground mb-2">يوم التدريب</h3>
+                <p className="text-muted-foreground">لا توجد محاضرات اليوم</p>
               </div>
             </div>
           ) : todayLectures.length > 0 ? (
