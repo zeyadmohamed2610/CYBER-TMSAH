@@ -31,23 +31,24 @@ const Schedule = () => {
 
   useEffect(() => {
     setLoading(true);
+    const sectionNum = parseInt(selectedSection.replace(/\D/g, "")) || 1;
     const load = async () => {
       let baseData: UnifiedDay[] = [];
 
-      // 1. Try published data from SmartScheduleEditor
+      // 1. Published data from SmartScheduleEditor
       try {
         const published = localStorage.getItem("cyber_published_schedule");
         if (published) {
-          const parsed = JSON.parse(published);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const DAYS_MAP = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
+          const allSections = JSON.parse(published);
+          const sectionData = allSections[String(sectionNum)] || allSections[sectionNum];
+          if (sectionData && Array.isArray(sectionData)) {
             const PERIODS_TIME = [
               "9:00 AM - 10:00 AM", "10:05 AM - 11:05 AM", "11:10 AM - 12:10 PM", "12:15 PM - 1:15 PM",
               "1:20 PM - 2:20 PM", "2:25 PM - 3:25 PM", "3:30 PM - 4:30 PM", "4:35 PM - 5:35 PM",
             ];
             const PERIODS_LABEL = ["الأولى", "الثانية", "الثالثة", "الرابعة", "الخامسة", "السادسة", "السابعة", "الثامنة"];
 
-            baseData = parsed.map((d: { day: string; entries: ({ subject: string; instructor: string; room: string; entry_type: string } | null)[] }) => ({
+            baseData = sectionData.map((d: { day: string; entries: ({ subject: string; instructor: string; room: string; entry_type: string } | null)[] }) => ({
               day: d.day,
               entries: (d.entries || [])
                 .filter((e): e is { subject: string; instructor: string; room: string; entry_type: string } => e !== null && e.subject)
@@ -62,7 +63,11 @@ const Schedule = () => {
                 })),
               isHoliday: d.day === "الجمعة",
             }));
-            // Add Friday
+
+            // Build sections list from published data
+            const secs = Object.keys(allSections).map(Number).sort((a: number, b: number) => a - b);
+            if (secs.length > 0) setSections(secs.map(n => `سكشن ${n}`));
+
             if (!baseData.find(d => d.day === "الجمعة")) {
               baseData.push({ day: "الجمعة", entries: [], isHoliday: true });
             }
@@ -73,9 +78,8 @@ const Schedule = () => {
         }
       } catch { /* ignore */ }
 
-      // 2. Fallback: Google Sheets directly
+      // 2. Fallback: Google Sheets
       if (googleSheetsService.getSheetUrl()) {
-        const sectionNum = parseInt(selectedSection.replace(/\D/g, "")) || 1;
         const { data, error } = await googleSheetsService.fetchScheduleForSection(sectionNum);
         if (!error && data.length > 0) {
           baseData = data.map(d => ({
@@ -88,7 +92,6 @@ const Schedule = () => {
 
       // 3. Fallback: Database
       if (baseData.length === 0) {
-        const sectionNum = parseInt(selectedSection.replace(/\D/g, "")) || 1;
         const { data, error } = await scheduleService.fetchSchedule(sectionNum);
         if (error) toast.error("فشل تحميل الجدول.");
         baseData = (data ?? []).map(d => ({ ...d, entries: d.entries.map(e => ({ ...e, entry_type: e.entry_type as string })) }));
