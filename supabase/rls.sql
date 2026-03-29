@@ -14,7 +14,6 @@ ALTER TABLE public.subjects    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sessions    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.attendance  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.system_logs      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.course_schedule  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.course_materials ENABLE ROW LEVEL SECURITY;
 
 
@@ -186,37 +185,6 @@ CREATE POLICY "security_definer_insert_logs"
   ON public.system_logs
   FOR INSERT
   WITH CHECK ( true );
-
-
--- ═══════════════════════════════════════════════
--- TABLE: course_schedule
--- ═══════════════════════════════════════════════
-
-DROP POLICY IF EXISTS "owner_all_course_schedule"    ON public.course_schedule;
-DROP POLICY IF EXISTS "doctor_read_course_schedule"  ON public.course_schedule;
-DROP POLICY IF EXISTS "student_read_course_schedule" ON public.course_schedule;
-DROP POLICY IF EXISTS "ta_read_course_schedule"      ON public.course_schedule;
-
-CREATE POLICY "owner_all_course_schedule"
-  ON public.course_schedule
-  FOR ALL
-  USING      ( private.current_user_role() = 'owner' )
-  WITH CHECK ( private.current_user_role() = 'owner' );
-
-CREATE POLICY "doctor_read_course_schedule"
-  ON public.course_schedule
-  FOR SELECT
-  USING ( private.current_user_role() = 'doctor' );
-
-CREATE POLICY "student_read_course_schedule"
-  ON public.course_schedule
-  FOR SELECT
-  USING ( private.current_user_role() = 'student' );
-
-CREATE POLICY "ta_read_course_schedule"
-  ON public.course_schedule
-  FOR SELECT
-  USING ( private.current_user_role() = 'ta' );
 
 
 -- ═══════════════════════════════════════════════
