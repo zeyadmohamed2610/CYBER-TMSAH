@@ -4,11 +4,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ExportButtons } from "../components/ExportButtons";
 import { GoogleSheetsConnector } from "../components/GoogleSheetsConnector";
+import { ManualScheduleEditor } from "../components/ManualScheduleEditor";
 import { LectureManagementPanel } from "../components/LectureManagementPanel";
 import { LectureDetailView } from "../components/LectureDetailView";
 import { MaterialsEditor } from "../components/MaterialsEditor";
 import { NotificationForm } from "../components/NotificationForm";
-import { ScheduleEditor } from "../components/ScheduleEditor";
 import { StatCard } from "../components/StatCard";
 import { StudentDevicesPanel } from "../components/StudentDevicesPanel";
 import { SubjectManagementPanel } from "../components/SubjectManagementPanel";
@@ -38,10 +38,9 @@ export const OwnerDashboard = () => {
         </Alert>
       )}
 
-      {/* Stats */}
       {fullName && (
         <p className="text-lg font-bold">
-          مرحباً يا <span className="text-primary">{fullName}</span> 👋
+          مرحباً يا <span className="text-primary">{fullName}</span>
         </p>
       )}
 
@@ -72,7 +71,7 @@ export const OwnerDashboard = () => {
 
         <TabsContent value="schedule" className="space-y-6">
           <GoogleSheetsConnector />
-          <ScheduleEditor />
+          <ManualScheduleEditor />
         </TabsContent>
 
         <TabsContent value="materials" className="space-y-6">

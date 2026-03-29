@@ -45,22 +45,44 @@ const Schedule = () => {
     setLoading(true);
     const sectionNum = parseInt(selectedSection.replace(/\D/g, "")) || 1;
     const load = async () => {
+      let baseData: UnifiedDay[] = [];
+
       if (googleSheetsService.getSheetUrl()) {
         const { data, error } = await googleSheetsService.fetchScheduleForSection(sectionNum);
         if (!error && data.length > 0) {
-          const unified: UnifiedDay[] = data.map(d => ({
+          baseData = data.map(d => ({
             day: d.day,
             entries: d.entries.map(e => ({ ...e, entry_type: e.entry_type as string })),
             isHoliday: d.day === "الجمعة",
           }));
-          setSchedule(unified);
-          setLoading(false);
-          return;
         }
       }
-      const { data, error } = await scheduleService.fetchSchedule(sectionNum);
-      if (error) toast.error("فشل تحميل الجدول.");
-      setSchedule((data ?? []).map(d => ({ ...d, entries: d.entries.map(e => ({ ...e, entry_type: e.entry_type as string })) })));
+
+      if (baseData.length === 0) {
+        const { data, error } = await scheduleService.fetchSchedule(sectionNum);
+        if (error) toast.error("فشل تحميل الجدول.");
+        baseData = (data ?? []).map(d => ({ ...d, entries: d.entries.map(e => ({ ...e, entry_type: e.entry_type as string })) }));
+      }
+
+      // Merge manual entries
+      try {
+        const manual = JSON.parse(localStorage.getItem("cyber_manual_schedule") || "[]");
+        for (const m of manual) {
+          const dayEntry = baseData.find(d => d.day === m.day);
+          if (dayEntry) {
+            dayEntry.entries.push({
+              id: m.id,
+              time_slot: m.time_slot,
+              subject: m.subject,
+              instructor: m.instructor,
+              room: m.room,
+              entry_type: m.entry_type,
+            });
+          }
+        }
+      } catch { /* ignore */ }
+
+      setSchedule(baseData);
       setLoading(false);
     };
     load();
