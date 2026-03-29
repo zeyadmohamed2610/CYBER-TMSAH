@@ -111,12 +111,7 @@ export const StudentDashboard = () => {
           <CheckCircle2 className="h-3.5 w-3.5" />
           جهازك مغلق ({lockLabel})
         </Badge>
-      ) : (
-        <Button size="sm" variant="outline" onClick={handleLockDevice} disabled={locking} className="gap-1.5">
-          <Smartphone className="h-3.5 w-3.5" />
-          {locking ? "جاري القفل..." : "قفل هذا الجهاز"}
-        </Button>
-      )}
+      ) : null}
 
       {error ? (
         <Alert variant="destructive">

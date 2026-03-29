@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import jsQR from "jsqr";
-import { Camera, Loader2, MapPin, Send } from "lucide-react";
+import { Camera, Loader2, Lock, MapPin, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { offlineAttendanceService } from "../services/offlineAttendanceService";
 import { useGps } from "../context/GpsContext";
+import { supabase } from "@/lib/supabaseClient";
 import type { SessionSummary } from "../types";
 
 interface Props {
@@ -25,6 +26,15 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
   const fileRef = useRef<HTMLInputElement>(null);
 
   const activeSessions = sessions.filter((s) => s.isActive);
+
+  const verifyDeviceLock = async (): Promise<boolean> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+      const { data } = await supabase.from("device_locks").select("student_auth_id").eq("student_auth_id", user.id).maybeSingle();
+      return !!data;
+    } catch { return false; }
+  };
 
   const handleQrCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -69,11 +79,19 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
     }
 
     setIsSubmitting(true);
+
+    const locked = await verifyDeviceLock();
+    if (!locked) {
+      toast({ variant: "destructive", title: "ممنوع", description: "يجب قفل جهازك أولاً قبل تسجيل الحضور." });
+      setIsSubmitting(false);
+      return;
+    }
+
     setGpsStatus("جاري تحديد الموقع...");
 
     try {
       const gps = await requestFresh();
-      setGpsStatus(`تم تحديد الموقع (${gps.lat.toFixed(4)}, ${gps.lng.toFixed(4)})`);
+      setGpsStatus("تم تحديد الموقع (" + gps.lat.toFixed(4) + ", " + gps.lng.toFixed(4) + ")");
     } catch {
       setGpsStatus("سيتم تسجيل الحضور بدون موقع GPS");
     }
@@ -82,17 +100,13 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
       const result = await offlineAttendanceService.queueSubmission(trimmedCode);
 
       if (result.success && result.offline) {
-        toast({ title: "تم حفظ الحضور ✓", description: "سيتم مزامنة التسجيل عند عودة الاتصال." });
-        setCode("");
-        setGpsStatus("");
-        onSubmitSuccess?.();
+        toast({ title: "تم حفظ الحضور", description: "سيتم مزامنة التسجيل عند عودة الاتصال." });
+        setCode(""); setGpsStatus(""); onSubmitSuccess?.();
       } else if (result.success) {
-        toast({ title: "تم تسجيل الحضور ✓", description: "تم تسجيل حضورك بنجاح." });
-        setCode("");
-        setGpsStatus("");
-        onSubmitSuccess?.();
+        toast({ title: "تم تسجيل الحضور", description: "تم تسجيل حضورك بنجاح." });
+        setCode(""); setGpsStatus(""); onSubmitSuccess?.();
       } else {
-        toast({ variant: "destructive", title: "فشل تسجيل الحضور", description: result.error ?? "حدث خطأ غير متوقع." });
+        toast({ variant: "destructive", title: "فشل تسجيل الحضور", description: result.error ?? "حدث خطأ." });
         setGpsStatus("");
       }
     } catch {
