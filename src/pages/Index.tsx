@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Clock, MapPin, User, Calendar, BookOpen, Shield, Zap, GraduationCap } from "lucide-react";
 import Layout from "@/components/Layout";
@@ -6,6 +6,7 @@ import ScrollReveal from "@/components/ScrollReveal";
 import FounderCard from "@/components/FounderCard";
 import SEO from "@/components/SEO";
 import FAQSection from "@/components/FAQSection";
+import { supabase } from "@/lib/supabaseClient";
 const heroBg = "/hero-bg.jpg";
 
 const features = [
@@ -33,48 +34,42 @@ function getTodayDate(): string {
   return new Date().toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 }
 
+function normalizeDay(raw: string): string {
+  return raw.replace("الإثنين", "الاثنين").replace("الاحد", "الاحد").replace("الأحد", "الاحد").replace("الأربعاء", "الاربعاء");
+}
+
 const Index = () => {
   const [selectedSection, setSelectedSection] = useState("سكشن 1");
   const [sections, setSections] = useState<string[]>(Array.from({ length: 15 }, (_, i) => `سكشن ${i + 1}`));
   const [todayLectures, setTodayLectures] = useState<TodayLecture[]>([]);
-  const todayName = new Date().toLocaleDateString("ar-EG", { weekday: "long" });
+  const todayName = normalizeDay(new Date().toLocaleDateString("ar-EG", { weekday: "long" }));
   const todayDate = getTodayDate();
 
   useEffect(() => {
-    try {
-      const published = localStorage.getItem("cyber_published_schedule");
-      if (!published) return;
-      const allSections = JSON.parse(published);
-      const secs = Object.keys(allSections).map(Number).sort((a, b) => a - b);
-      if (secs.length > 0) setSections(secs.map(n => `سكشن ${n}`));
-    } catch { /* ignore */ }
+    supabase.from("published_schedule").select("section").then(({ data }) => {
+      if (data && data.length > 0) {
+        const secs = [...new Set(data.map(r => r.section))].sort((a, b) => a - b);
+        setSections(secs.map(n => `سكشن ${n}`));
+      }
+    });
   }, []);
 
   useEffect(() => {
-    try {
-      const published = localStorage.getItem("cyber_published_schedule");
-      if (!published) { setTodayLectures([]); return; }
-      const allSections = JSON.parse(published);
-      const sectionNum = parseInt(selectedSection.replace(/\D/g, "")) || 1;
-      const sectionData = allSections[String(sectionNum)] || allSections[sectionNum];
-      if (!sectionData) { setTodayLectures([]); return; }
-
-      const todayData = sectionData.find((d: { day: string }) => d.day === todayName);
-      if (!todayData) { setTodayLectures([]); return; }
-
-      const lectures: TodayLecture[] = [];
-      (todayData.entries || []).forEach((e: { subject?: string; instructor?: string; room?: string } | null, i: number) => {
-        if (e && e.subject) {
-          lectures.push({
-            time: PERIODS_TIME[i] || "",
-            subject: e.subject,
-            instructor: e.instructor || "",
-            room: e.room || "",
-          });
-        }
+    const sectionNum = parseInt(selectedSection.replace(/\D/g, "")) || 1;
+    supabase.from("published_schedule")
+      .select("period, subject, instructor, room, entry_type")
+      .eq("section", sectionNum)
+      .eq("day", todayName)
+      .order("period")
+      .then(({ data }) => {
+        if (!data) { setTodayLectures([]); return; }
+        setTodayLectures(data.map(r => ({
+          time: PERIODS_TIME[r.period - 1] || "",
+          subject: r.subject,
+          instructor: r.instructor,
+          room: r.room,
+        })));
       });
-      setTodayLectures(lectures);
-    } catch { setTodayLectures([]); }
   }, [selectedSection, todayName]);
 
   return (

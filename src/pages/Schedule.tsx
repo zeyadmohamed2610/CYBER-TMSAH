@@ -6,6 +6,7 @@ import { jsPDF } from "jspdf";
 import Layout from "@/components/Layout";
 import ScrollReveal from "@/components/ScrollReveal";
 import SEO from "@/components/SEO";
+import { supabase } from "@/lib/supabaseClient";
 
 type UnifiedDay = {
   day: string;
@@ -13,8 +14,12 @@ type UnifiedDay = {
   isHoliday?: boolean;
 };
 
-const DAYS_ORDER = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
-const todayName = new Date().toLocaleDateString("ar-EG", { weekday: "long" });
+function normalizeDay(raw: string): string {
+  return raw.replace("الإثنين", "الاثنين").replace("الأحد", "الاحد").replace("الأربعاء", "الاربعاء");
+}
+
+const DAYS_ORDER = ["السبت", "الاحد", "الاثنين", "الثلاثاء", "الاربعاء", "الخميس", "الجمعة"];
+const todayName = normalizeDay(new Date().toLocaleDateString("ar-EG", { weekday: "long" }));
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 const PERIODS_TIME = [
@@ -34,51 +39,63 @@ const Schedule = () => {
   const scheduleRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    supabase.from("published_schedule").select("section").then(({ data }) => {
+      if (data && data.length > 0) {
+        const secs = [...new Set(data.map(r => r.section))].sort((a, b) => a - b);
+        setSections(secs.map(n => `سكشن ${n}`));
+      }
+    });
+  }, []);
+
+  useEffect(() => {
     setLoading(true);
     const sectionNum = parseInt(selectedSection.replace(/\D/g, "")) || 1;
 
-    try {
-      const published = localStorage.getItem("cyber_published_schedule");
-      if (published) {
-        const allSections = JSON.parse(published);
+    const load = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("published_schedule")
+          .select("section, day, period, subject, instructor, room, entry_type")
+          .eq("section", sectionNum);
 
-        // Build sections list
-        const secs = Object.keys(allSections).map(Number).sort((a, b) => a - b);
-        if (secs.length > 0) setSections(secs.map(n => `سكشن ${n}`));
-
-        const sectionData = allSections[String(sectionNum)] || allSections[sectionNum];
-        if (sectionData && Array.isArray(sectionData)) {
-          const baseData: UnifiedDay[] = sectionData
-            .filter((d: { day: string }) => d.day !== "الجمعة")
-            .map((d: { day: string; entries: ({ subject: string; instructor: string; room: string; entry_type: string } | null)[] }) => ({
-              day: d.day,
-              entries: (d.entries || [])
-                .filter((e): e is { subject: string; instructor: string; room: string; entry_type: string } => e !== null && !!e.subject)
-                .map((e, i) => ({
-                  id: `${d.day}-${i}-${e.subject}`,
-                  time_slot: PERIODS_TIME[i] || "",
-                  subject: e.subject,
-                  instructor: e.instructor || "",
-                  room: e.room || "",
-                  entry_type: e.entry_type || "lecture",
-                  period_label: PERIODS_LABEL[i] || "",
-                })),
-              isHoliday: false,
-            }));
-
-          // Sort by day order
-          baseData.sort((a, b) => DAYS_ORDER.indexOf(a.day) - DAYS_ORDER.indexOf(b.day));
-          baseData.push({ day: "الجمعة", entries: [], isHoliday: true });
-
-          setSchedule(baseData);
+        if (error || !data || data.length === 0) {
+          setSchedule([]);
           setLoading(false);
           return;
         }
-      }
-    } catch { /* ignore */ }
 
-    setSchedule([]);
-    setLoading(false);
+        const grouped: Record<string, { subject: string; instructor: string; room: string; entry_type: string; period: number }[]> = {};
+        for (const row of data) {
+          if (!grouped[row.day]) grouped[row.day] = [];
+          grouped[row.day].push({ subject: row.subject, instructor: row.instructor, room: row.room, entry_type: row.entry_type, period: row.period });
+        }
+
+        const baseData: UnifiedDay[] = DAYS_ORDER.filter(d => d !== "الجمعة").map(day => {
+          const entries = (grouped[day] || []).sort((a, b) => a.period - b.period);
+          return {
+            day,
+            entries: entries.map((e) => ({
+              id: `${day}-${e.period}-${e.subject}`,
+              time_slot: PERIODS_TIME[e.period - 1] || "",
+              subject: e.subject,
+              instructor: e.instructor,
+              room: e.room,
+              entry_type: e.entry_type,
+              period_label: PERIODS_LABEL[e.period - 1] || "",
+            })),
+            isHoliday: false,
+          };
+        });
+
+        baseData.push({ day: "الجمعة", entries: [], isHoliday: true });
+        setSchedule(baseData);
+      } catch {
+        setSchedule([]);
+      }
+      setLoading(false);
+    };
+
+    load();
   }, [selectedSection]);
 
   const totalLectures = schedule.reduce((a, d) => a + d.entries.filter(e => e.entry_type === "lecture").length, 0);
