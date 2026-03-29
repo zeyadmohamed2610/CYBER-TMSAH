@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase, supabaseUrl, supabaseAnonKey } from "@/lib/supabaseClient";
 
 interface Entry { subject: string; instructor: string; room: string; entry_type: "lecture" | "section" }
 interface DayData { day: string; entries: (Entry | null)[]; isHoliday?: boolean; isTraining?: boolean }
@@ -130,11 +130,21 @@ export function QuickScheduleEditor() {
     if (!sheetUrl) { toast.error("الرجاء ادخال رابط الشيت"); return; }
     setSyncing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("import-schedule", {
-        body: { sheet_url: sheetUrl },
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/import-schedule`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+          "apikey": supabaseAnonKey,
+        },
+        body: JSON.stringify({ sheet_url: sheetUrl }),
       });
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "فشل الاستيراد");
 
       localStorage.setItem("cyber_sheet_url", sheetUrl);
 
@@ -153,7 +163,7 @@ export function QuickScheduleEditor() {
         setAllSections(init);
       }
       setHasChanges(false);
-      toast.success(`تم الاستيراد: ${data.sections} سكشن، ${data.entries} خلية`);
+      toast.success("تم الاستيراد: " + (data.sections || 0) + " سكشن، " + (data.entries || 0) + " خلية");
     } catch (e) {
       toast.error("فشل الاستيراد: " + String(e));
     }
