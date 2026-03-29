@@ -23,7 +23,7 @@ export function GoogleSheetsConnector({ onConnected }: Props) {
     setStatus("idle");
     setErrorMsg("");
 
-    const { rows, error } = await googleSheetsService.fetchAndParse(url);
+    const { count, error } = await googleSheetsService.fetchAndParse(url);
     setTesting(false);
 
     if (error) {
@@ -34,7 +34,7 @@ export function GoogleSheetsConnector({ onConnected }: Props) {
 
     setStatus("ok");
     googleSheetsService.setSheetUrl(url);
-    toast.success(`تم الاتصال بنجاح! تم استيراد ${rows.length} صف`);
+    toast.success(`تم الاتصال! تم العثور على ${count} سكشن`);
     onConnected?.();
   };
 

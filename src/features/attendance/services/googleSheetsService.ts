@@ -171,6 +171,36 @@ export const googleSheetsService = {
     return match ? match[1] : null;
   },
 
+  async fetchAndParse(url: string): Promise<{ count: number; error?: string }> {
+    const sheetId = this.extractSheetId(url);
+    if (!sheetId) return { count: 0, error: "رابط غير صحيح" };
+
+    try {
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv`;
+      const res = await fetch(csvUrl);
+      if (!res.ok) return { count: 0, error: "فشل الاتصال. تأكد أن الجدول مشار للعامة (Anyone with the link → Viewer)" };
+
+      const csv = await res.text();
+      if (csv.includes("<!DOCTYPE") || csv.includes("<html>")) {
+        return { count: 0, error: "الجدول غير متاح. شارك الجدول: Share → Anyone with the link" };
+      }
+
+      const rows = parseCSV(csv);
+      if (rows.length < 6) return { count: 0, error: "الجدول لا يحتوي بيانات كافية" };
+
+      // Count how many section rows exist
+      let sectionCount = 0;
+      for (let i = 4; i < Math.min(rows.length, 20); i++) {
+        const colB = (rows[i][1] || "").trim();
+        if (colB && !isNaN(parseInt(colB))) sectionCount++;
+      }
+
+      return { count: sectionCount };
+    } catch {
+      return { count: 0, error: "فشل الاتصال. تحقق من الإنترنت" };
+    }
+  },
+
   async fetchScheduleForSection(section: number): Promise<{ data: SheetDaySchedule[]; error?: string }> {
     const url = this.getSheetUrl();
     if (!url) return { data: [], error: "لم يتم ربط Google Sheet" };
