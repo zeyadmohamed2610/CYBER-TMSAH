@@ -673,9 +673,10 @@ export const attendanceService = {
         lecture_date: row.lecture_date as string,
         created_by: (row.created_by as string) ?? null,
         created_at: row.created_at as string,
-        subject_name: (row.subject_name as string) ?? "Unknown",
+        subject_name: (row.subject_name as string) ?? "غير معروف",
         session_count: Number(row.session_count ?? 0),
         attendee_count: Number(row.attendee_count ?? 0),
+        is_ended: (row.is_ended as boolean) ?? false,
       }));
 
       return ok<Lecture[]>(lectures);

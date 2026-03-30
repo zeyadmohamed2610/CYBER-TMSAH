@@ -224,7 +224,15 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
       </Card>
 
       {/* Active session or create new */}
-      {activeSession && activeSession.is_active ? (
+      {lecture.is_ended ? (
+        <Card>
+          <CardContent className="p-6 text-center space-y-3">
+            <StopCircle className="h-10 w-10 mx-auto text-muted-foreground/50" />
+            <p className="font-bold text-lg text-foreground">تم انهاء هذه المحاضرة</p>
+            <p className="text-sm text-muted-foreground">لا يمكن انشاء جلسات جديدة. يمكنك مشاهدة وتصدير بيانات الحضور.</p>
+          </CardContent>
+        </Card>
+      ) : activeSession && activeSession.is_active ? (
         <LiveSessionPanel
           session={activeSession}
           onStop={stopSession}

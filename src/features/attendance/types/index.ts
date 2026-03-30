@@ -22,6 +22,7 @@ export interface Lecture {
   subject_name?: string;
   session_count?: number;
   attendee_count?: number;
+  is_ended?: boolean;
 }
 
 export interface LectureAttendee {

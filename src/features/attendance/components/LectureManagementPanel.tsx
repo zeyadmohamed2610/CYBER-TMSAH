@@ -152,13 +152,16 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
               <button
                 key={lec.id}
                 onClick={() => onSelectLecture(lec)}
-                className="flex w-full items-center gap-4 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-muted/50"
+                className={"flex w-full items-center gap-4 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-muted/50 " + (lec.is_ended ? "opacity-60" : "")}
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <Calendar className="h-5 w-5 text-primary" />
+                <div className={"flex h-10 w-10 items-center justify-center rounded-lg " + (lec.is_ended ? "bg-muted" : "bg-primary/10")}>
+                  <Calendar className={"h-5 w-5 " + (lec.is_ended ? "text-muted-foreground" : "text-primary")} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-sm">{lec.title}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-sm">{lec.title}</p>
+                    {lec.is_ended && <Badge variant="secondary" className="text-[9px]">منتهية</Badge>}
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     {lec.subject_name} — {formatDate(lec.lecture_date)}
                   </p>
@@ -172,10 +175,12 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
                     <Users className="h-3 w-3" />
                     {lec.attendee_count ?? 0}
                   </Badge>
-                  <Button variant="destructive" size="sm" className="h-7 gap-1" onClick={(e) => handleEndLecture(lec.id, e)}>
-                    <StopCircle className="h-3 w-3" />
-                    انهاء
-                  </Button>
+                  {!lec.is_ended && (
+                    <Button variant="destructive" size="sm" className="h-7 gap-1" onClick={(e) => handleEndLecture(lec.id, e)}>
+                      <StopCircle className="h-3 w-3" />
+                      انهاء
+                    </Button>
+                  )}
                 </div>
               </button>
             ))}
