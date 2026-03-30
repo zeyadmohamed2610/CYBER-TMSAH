@@ -51,12 +51,10 @@ export function ManualAttendancePanel() {
     setAdding(true);
     setAdded(false);
 
-    const { error } = await supabase.from("attendance").upsert({
-      student_id: selectedStudent,
-      session_id: selectedSession,
-      ip_address: "manual-entry",
-      device_fingerprint: "manual-owner-entry",
-    }, { onConflict: "student_id,session_id" });
+    const { error } = await supabase.rpc("add_manual_attendance", {
+      p_student_id: selectedStudent,
+      p_session_id: selectedSession,
+    });
 
     if (error) {
       toast.error("فشل: " + error.message);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BookOpen, Calendar, Plus, Users, Layers } from "lucide-react";
+import { BookOpen, Calendar, Plus, Users, Layers, StopCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,6 +69,17 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString("ar-EG", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+
+  const handleEndLecture = async (lectureId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const result = await attendanceService.endLecture(lectureId);
+    if (result.error) {
+      toast({ variant: "destructive", title: "خطأ", description: result.error });
+    } else {
+      toast({ title: "تم", description: "تم انهاء المحاضرة و ايقاف جميع الجلسات" });
+      await load();
+    }
+  };
 
   return (
     <Card>
@@ -161,6 +172,10 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
                     <Users className="h-3 w-3" />
                     {lec.attendee_count ?? 0}
                   </Badge>
+                  <Button variant="destructive" size="sm" className="h-7 gap-1" onClick={(e) => handleEndLecture(lec.id, e)}>
+                    <StopCircle className="h-3 w-3" />
+                    انهاء
+                  </Button>
                 </div>
               </button>
             ))}
