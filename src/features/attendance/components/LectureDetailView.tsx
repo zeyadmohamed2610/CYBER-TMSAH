@@ -142,7 +142,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
           <div>
             <h2 className="text-lg font-bold">{lecture.title}</h2>
             <p className="text-xs text-muted-foreground">
-              {lecture.subject_name} &middot; {new Date(lecture.lecture_date).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+              {lecture.subject_name} — {new Date(lecture.lecture_date).toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
             </p>
           </div>
         </div>

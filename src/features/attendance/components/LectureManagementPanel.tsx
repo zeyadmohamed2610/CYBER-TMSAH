@@ -32,7 +32,7 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
     setLoading(true);
     const result = await attendanceService.fetchLectures(fixedSubjectId);
     if (result.error) {
-      toast({ variant: "destructive", title: "Error", description: result.error });
+      toast({ variant: "destructive", title: "خطأ", description: result.error });
     } else {
       setLectures(result.data ?? []);
     }
@@ -41,7 +41,6 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
 
   useEffect(() => { void load(); }, [fixedSubjectId]);
 
-  // Owner needs subject list; doctor has fixed subject
   useEffect(() => {
     if (fixedSubjectId) return;
     supabase.from("subjects").select("id, name, doctor_name").order("name")
@@ -52,15 +51,15 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
     e.preventDefault();
     const subjectId = fixedSubjectId || selectedSubject;
     if (!subjectId) {
-      toast({ variant: "destructive", title: "Error", description: "Select a subject first" });
+      toast({ variant: "destructive", title: "خطأ", description: "اختر مادة اولاً" });
       return;
     }
     setCreating(true);
-    const result = await attendanceService.createLecture(subjectId, title || "Lecture");
+    const result = await attendanceService.createLecture(subjectId, title || "محاضرة");
     if (result.error) {
-      toast({ variant: "destructive", title: "Error", description: result.error });
+      toast({ variant: "destructive", title: "خطأ", description: result.error });
     } else {
-      toast({ title: "Created", description: `Lecture "${title || "Lecture"}" created.` });
+      toast({ title: "تم", description: "تم انشاء المحاضرة بنجاح" });
       setTitle("");
       setShowCreate(false);
       await load();
@@ -69,7 +68,7 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
   };
 
   const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+    new Date(dateStr).toLocaleDateString("ar-EG", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
 
   return (
     <Card>
@@ -77,7 +76,7 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">
             <BookOpen className="h-4 w-4 text-primary" />
-            Lectures
+            المحاضرات
           </CardTitle>
           <Button
             variant={showCreate ? "secondary" : "default"}
@@ -86,20 +85,19 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
             className="gap-1"
           >
             <Plus className="h-3 w-3" />
-            New Lecture
+            محاضرة جديدة
           </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {showCreate && (
           <form onSubmit={handleCreate} className="space-y-3 rounded-lg border bg-muted/30 p-4">
-            {/* Subject selector — only for owner (no fixedSubjectId) */}
             {!fixedSubjectId && (
               <div className="space-y-1">
-                <Label className="text-xs">Subject</Label>
+                <Label className="text-xs">المادة</Label>
                 <Select value={selectedSubject} onValueChange={setSelectedSubject}>
                   <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder="Select subject..." />
+                    <SelectValue placeholder="اختر مادة..." />
                   </SelectTrigger>
                   <SelectContent>
                     {subjects.map((s) => (
@@ -113,29 +111,29 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
             )}
             <div className="flex items-end gap-3">
               <div className="flex-1 space-y-1">
-                <Label htmlFor="lecture-title" className="text-xs">Lecture Title</Label>
+                <Label htmlFor="lecture-title" className="text-xs">عنوان المحاضرة</Label>
                 <Input
                   id="lecture-title"
-                  placeholder="e.g. Lecture 5 - Network Security"
+                  placeholder="مثال: المحاضرة 5 - امن الشبكات"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="h-8 text-sm"
                 />
               </div>
               <Button type="submit" size="sm" disabled={creating || (!fixedSubjectId && !selectedSubject)} className="h-8">
-                {creating ? "Creating..." : "Create"}
+                {creating ? "جاري الانشاء" : "انشاء"}
               </Button>
             </div>
           </form>
         )}
 
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <p className="text-sm text-muted-foreground">جاري التحميل...</p>
         ) : lectures.length === 0 ? (
           <div className="rounded-lg border border-dashed p-8 text-center">
             <BookOpen className="mx-auto h-8 w-8 text-muted-foreground/50" />
-            <p className="mt-2 text-sm text-muted-foreground">No lectures yet</p>
-            <p className="text-xs text-muted-foreground/70">Click "New Lecture" to start</p>
+            <p className="mt-2 text-sm text-muted-foreground">لا توجد محاضرات بعد</p>
+            <p className="text-xs text-muted-foreground/70">اضغط "محاضرة جديدة" للبدء</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -151,7 +149,7 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-sm">{lec.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {lec.subject_name} &middot; {formatDate(lec.lecture_date)}
+                    {lec.subject_name} — {formatDate(lec.lecture_date)}
                   </p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
