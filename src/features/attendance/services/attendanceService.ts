@@ -728,8 +728,8 @@ export const attendanceService = {
         national_id: (row.national_id as string) ?? null,
         session_id: row.session_id as string,
         short_code: (row.short_code as string) ?? null,
-        submitted_at: row.submitted_at as string,
-        ip_address: (row.ip_address as string) ?? null,
+        submitted_at: (row.submitted_at as string) ?? (row.created_at as string),
+        ip_address: row.ip_address != null ? String(row.ip_address) : null,
         student_latitude: (row.student_latitude as number) ?? null,
         student_longitude: (row.student_longitude as number) ?? null,
       }));
