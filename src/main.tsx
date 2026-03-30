@@ -3,13 +3,20 @@ import App from "./App.tsx";
 import "./index.css";
 import { initProtection } from "./lib/protection";
 
-// Force service worker update on every page load
+// Unregister ALL old service workers and clear caches on every load
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.getRegistrations().then((regs) => {
     for (const reg of regs) {
-      reg.update();
+      reg.unregister();
     }
   });
+  if ("caches" in window) {
+    caches.keys().then((names) => {
+      for (const name of names) {
+        caches.delete(name);
+      }
+    });
+  }
 }
 
 initProtection();
