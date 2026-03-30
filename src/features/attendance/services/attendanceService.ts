@@ -723,8 +723,8 @@ export const attendanceService = {
       if (error) throw error;
 
       const attendees: LectureAttendee[] = (data ?? []).map((row: Record<string, unknown>) => ({
-        attendance_id: row.attendance_id as string,
-        student_name: row.student_name as string,
+        attendance_id: (row.attendance_id as string) ?? (row.id as string),
+        student_name: (row.student_name as string) ?? (row.full_name as string),
         national_id: (row.national_id as string) ?? null,
         session_id: row.session_id as string,
         short_code: (row.short_code as string) ?? null,
