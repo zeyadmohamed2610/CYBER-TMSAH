@@ -6,6 +6,7 @@ import { ExportButtons } from "../components/ExportButtons";
 import { QuickScheduleEditor } from "../components/QuickScheduleEditor";
 import { LectureManagementPanel } from "../components/LectureManagementPanel";
 import { LectureDetailView } from "../components/LectureDetailView";
+import { ManualAttendancePanel } from "../components/ManualAttendancePanel";
 import { MaterialsEditor } from "../components/MaterialsEditor";
 import { NotificationForm } from "../components/NotificationForm";
 import { StatCard } from "../components/StatCard";
@@ -48,13 +49,14 @@ export const OwnerDashboard = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4 lg:grid-cols-8">
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-9">
           <TabsTrigger value="lectures">المحاضرات</TabsTrigger>
           <TabsTrigger value="schedule">الجدول</TabsTrigger>
           <TabsTrigger value="materials">المواد</TabsTrigger>
           <TabsTrigger value="users">المستخدمين</TabsTrigger>
           <TabsTrigger value="tas">المعيدين</TabsTrigger>
           <TabsTrigger value="devices">الأجهزة</TabsTrigger>
+          <TabsTrigger value="manual-attendance">تسجيل يدوي</TabsTrigger>
           <TabsTrigger value="notifications">الإشعارات</TabsTrigger>
           <TabsTrigger value="logs">السجلات</TabsTrigger>
         </TabsList>
@@ -73,6 +75,8 @@ export const OwnerDashboard = () => {
         <TabsContent value="tas"><TAManagementPanel /></TabsContent>
 
         <TabsContent value="devices"><DeviceLockPanel /></TabsContent>
+
+        <TabsContent value="manual-attendance"><ManualAttendancePanel /></TabsContent>
 
         <TabsContent value="notifications"><NotificationForm createdBy={fullName ?? "المدير"} /></TabsContent>
 

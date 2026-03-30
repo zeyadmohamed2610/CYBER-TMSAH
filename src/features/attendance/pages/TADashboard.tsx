@@ -18,7 +18,7 @@ export const TADashboard = () => {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("users").select("id, subject_id").eq("auth_id", user.id).maybeSingle()
+    supabase.from("users").select("subject_id").eq("auth_id", user.id).maybeSingle()
       .then(({ data }) => {
         if (data?.subject_id) {
           setTaSubjectId(data.subject_id);
@@ -42,7 +42,7 @@ export const TADashboard = () => {
     <div className="space-y-6">
       {fullName && (
         <p className="text-lg font-bold">
-          مرحباً يا <span className="text-primary">{fullName}</span> 👋
+          مرحباً يا <span className="text-primary">{fullName}</span>
         </p>
       )}
 
@@ -55,21 +55,18 @@ export const TADashboard = () => {
 
       {taSubjectName && (
         <Alert>
-          <AlertTitle>المادة المسندة: {taSubjectName}</AlertTitle>
+          <AlertTitle>مادة السكشن: {taSubjectName}</AlertTitle>
           <AlertDescription>يمكنك انشاء وادارة السكاشن لهذه المادة.</AlertDescription>
         </Alert>
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard title="اجمالي الجلسات" value={String(metrics.totalSessions)} description="منذ البداية" icon={BarChart3} />
-        <StatCard title="جلسات نشطة" value={String(metrics.activeSessions)} description="الان" icon={BarChart3} />
+        <StatCard title="اجمالي السكاشن" value={String(metrics.totalSessions)} description="منذ البداية" icon={BarChart3} />
+        <StatCard title="سكاشن نشطة" value={String(metrics.activeSessions)} description="الان" icon={BarChart3} />
         <StatCard title="نسبة الحضور" value={Math.round(metrics.attendanceRate) + "%"} description="الاجمالي" icon={BarChart3} />
       </div>
 
-      <LectureManagementPanel
-        fixedSubjectId={taSubjectId}
-        onSelectLecture={setSelectedLecture}
-      />
+      <LectureManagementPanel fixedSubjectId={taSubjectId} onSelectLecture={setSelectedLecture} />
     </div>
   );
 };
