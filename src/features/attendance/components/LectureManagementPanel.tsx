@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BookOpen, Calendar, Plus, Users, Layers, StopCircle } from "lucide-react";
+import { BookOpen, Calendar, Plus, Users, Layers, StopCircle, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -77,6 +77,17 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
       toast({ variant: "destructive", title: "خطأ", description: result.error });
     } else {
       toast({ title: "تم", description: "تم انهاء المحاضرة و ايقاف جميع الجلسات" });
+      await load();
+    }
+  };
+
+  const handleDeleteLecture = async (lectureId: string, lectureTitle: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const { error } = await supabase.rpc("delete_lecture", { p_lecture_id: lectureId });
+    if (error) {
+      toast({ variant: "destructive", title: "خطأ", description: error.message });
+    } else {
+      toast({ title: "تم", description: "تم حذف المحاضرة: " + lectureTitle });
       await load();
     }
   };
@@ -179,6 +190,12 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
                     <Button variant="destructive" size="sm" className="h-7 gap-1" onClick={(e) => handleEndLecture(lec.id, e)}>
                       <StopCircle className="h-3 w-3" />
                       انهاء
+                    </Button>
+                  )}
+                  {lec.is_ended && (
+                    <Button variant="ghost" size="sm" className="h-7 gap-1 text-destructive hover:text-destructive" onClick={(e) => handleDeleteLecture(lec.id, lec.title, e)}>
+                      <Trash2 className="h-3 w-3" />
+                      حذف
                     </Button>
                   )}
                 </div>
