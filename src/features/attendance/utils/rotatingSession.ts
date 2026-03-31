@@ -1,4 +1,4 @@
-const ROTATING_WINDOW_SECONDS = 30;
+export const ROTATING_WINDOW_SECONDS = 10;
 
 export const getTimeWindow = (date: Date = new Date()): number => {
   return Math.floor(date.getTime() / 1000 / ROTATING_WINDOW_SECONDS);
@@ -10,8 +10,17 @@ export const getSecondsUntilNextWindow = (date: Date = new Date()): number => {
   return ROTATING_WINDOW_SECONDS - elapsedInWindow;
 };
 
-// M6: generateVisualRotatingHash removed — it was dead code disconnected from the
-// actual DB hash (gen_random_bytes(32)). Nothing in the codebase called it.
+export const generateTOTPCode = async (secret: string | null | undefined, date: Date = new Date()): Promise<string> => {
+  if (!secret) return "000000";
+  const window = getTimeWindow(date);
+  const encoder = new TextEncoder();
+  const data = encoder.encode(secret + window.toString());
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("").substring(0, 8);
+  const num = Number("0x" + hex);
+  return (num % 1000000).toString().padStart(6, "0");
+};
 
 export const formatDateTime = (value: string): string => {
   const date = new Date(value);

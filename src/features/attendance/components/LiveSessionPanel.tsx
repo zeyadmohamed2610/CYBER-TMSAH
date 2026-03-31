@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import type { ActiveSession } from "../hooks/useSessionManager";
 import { useRotatingHash } from "../hooks/useRotatingHash";
+import { generateTOTPCode } from "../utils/rotatingSession";
 
 interface Props {
   session: ActiveSession;
@@ -27,6 +28,9 @@ export function LiveSessionPanel({ session, onStop, onUpdateDuration, onRefreshH
   const [durationError, setDurationError] = useState<string | null>(null);
   const [stopping, setStopping]     = useState(false);
   const [updating, setUpdating]     = useState(false);
+  const [totpCode, setTotpCode]     = useState<string>("------");
+  const [refreshIn, setRefreshIn]   = useState<number>(10);
+
   const { secondsUntilExpiry } = useRotatingHash({
     rotatingHash: session.rotating_hash,
     expiresAt: session.expires_at,
@@ -37,15 +41,37 @@ export function LiveSessionPanel({ session, onStop, onUpdateDuration, onRefreshH
     setNewMinutes(session.duration_minutes);
   }, [session.duration_minutes]);
 
-  // Generate QR code from short_code (what student actually types)
+  // Generate TOTP code every second
   useEffect(() => {
-    if (!session.short_code || !canvasRef.current) return;
-    QRCode.toCanvas(canvasRef.current, session.short_code, {
+    let mounted = true;
+    const updateCode = async () => {
+      const code = await generateTOTPCode(session.rotating_hash);
+      const seconds = Math.floor(Date.now() / 1000);
+      const remaining = 10 - (seconds % 10);
+      
+      if (mounted) {
+        setTotpCode(code);
+        setRefreshIn(remaining);
+      }
+    };
+    
+    updateCode();
+    const interval = window.setInterval(updateCode, 1000);
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+    };
+  }, [session.rotating_hash]);
+
+  // Generate QR code from TOTP code
+  useEffect(() => {
+    if (!totpCode || totpCode === "------" || !canvasRef.current) return;
+    QRCode.toCanvas(canvasRef.current, totpCode, {
       width: 220,
       margin: 1,
       color: { dark: "#0f172a", light: "#ffffff" },
     }).catch(console.error);
-  }, [session.short_code]);
+  }, [totpCode]);
 
   const handleStop = async () => {
     setStopping(true);
@@ -62,9 +88,9 @@ export function LiveSessionPanel({ session, onStop, onUpdateDuration, onRefreshH
   };
 
   const handleCopyCode = () => {
-    if (session.short_code) {
-      navigator.clipboard.writeText(session.short_code).then(() => {
-        toast({ title: "تم نسخ الكود", description: session.short_code ?? "" });
+    if (totpCode && totpCode !== "------") {
+      navigator.clipboard.writeText(totpCode).then(() => {
+        toast({ title: "تم نسخ الكود", description: totpCode });
       });
     }
   };
@@ -74,10 +100,6 @@ export function LiveSessionPanel({ session, onStop, onUpdateDuration, onRefreshH
     const sec = s % 60;
     return `${m}:${sec.toString().padStart(2, "0")}`;
   };
-
-  // Hash refresh countdown (60s cycle)
-  const hashAge = 60 - (countdown % 60);
-  const hashRefreshIn = 60 - hashAge;
 
   return (
     <Card className="border-primary/40 bg-primary/5" dir="rtl">
@@ -102,7 +124,7 @@ export function LiveSessionPanel({ session, onStop, onUpdateDuration, onRefreshH
               className="font-mono text-5xl font-black tracking-[0.4em] text-primary select-all"
               style={{ textShadow: "0 0 20px hsl(var(--primary)/0.3)" }}
             >
-              {session.short_code || "------"}
+              {totpCode}
             </p>
             <p className="mt-2 text-xs text-muted-foreground">أدخل هذا الكود أو امسح QR</p>
           </div>
@@ -118,12 +140,9 @@ export function LiveSessionPanel({ session, onStop, onUpdateDuration, onRefreshH
           <canvas ref={canvasRef} className="rounded-xl border shadow-md" />
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
-              <RefreshCw className="h-3 w-3" />
-              يتجدد بعد {hashRefreshIn}ث
+              <RefreshCw className={`h-3 w-3 ${refreshIn <= 3 ? "text-destructive animate-spin" : ""}`} />
+              يتجدد بعد {refreshIn}ث
             </span>
-            <Button size="sm" variant="ghost" className="h-7 px-2" onClick={onRefreshHash}>
-              <RefreshCw className="h-3 w-3 ml-1" /> تحديث الآن
-            </Button>
           </div>
         </div>
 

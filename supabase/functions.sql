@@ -13,6 +13,17 @@
 -- SECURITY DEFINER bypasses RLS on public.users.
 -- NOT callable by any client role (revoked in permissions.sql).
 -- ─────────────────────────────────────────────
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE OR REPLACE FUNCTION public.generate_totp(p_secret TEXT, p_window BIGINT)
+RETURNS TEXT
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT lpad((
+    ('x' || substring(encode(digest(p_secret || p_window::text, 'sha256'), 'hex') from 1 for 8))::bit(32)::bigint % 1000000
+  )::text, 6, '0');
+$$;
 
 CREATE OR REPLACE FUNCTION private.get_caller_user()
 RETURNS public.users
@@ -342,7 +353,11 @@ $$;
 
 CREATE OR REPLACE FUNCTION public.generate_rotating_hash(
   p_subject_id UUID,
-  p_duration_minutes INTEGER
+  p_duration_minutes INTEGER,
+  p_latitude DOUBLE PRECISION DEFAULT NULL,
+  p_longitude DOUBLE PRECISION DEFAULT NULL,
+  p_radius_meters INTEGER DEFAULT 50,
+  p_lecture_id UUID DEFAULT NULL
 )
 RETURNS public.sessions
 LANGUAGE plpgsql
@@ -375,18 +390,21 @@ BEGIN
   v_hash := replace(gen_random_uuid()::text, '-', '') ||
             replace(gen_random_uuid()::text, '-', '');
 
-  INSERT INTO public.sessions (subject_id, rotating_hash, expires_at)
-  VALUES (p_subject_id, v_hash, now() + make_interval(mins => p_duration_minutes))
+  INSERT INTO public.sessions (
+    subject_id, rotating_hash, expires_at, latitude, longitude, radius_meters, lecture_id
+  )
+  VALUES (
+    p_subject_id, v_hash, now() + make_interval(mins => p_duration_minutes),
+    p_latitude, p_longitude, p_radius_meters, p_lecture_id
+  )
   RETURNING * INTO v_session;
 
   INSERT INTO public.system_logs (actor_id, action)
   VALUES (
     v_caller.id,
     format(
-      'generate_session: created session %s for subject %s (%s minutes)',
-      v_session.id,
-      p_subject_id,
-      p_duration_minutes
+      'generate_session: created session %s for subject %s (%s minutes, GPS enabled: %s)',
+      v_session.id, p_subject_id, p_duration_minutes, p_latitude IS NOT NULL
     )
   );
 
@@ -612,6 +630,7 @@ DECLARE
   v_ip       TEXT;
   v_recent   INTEGER;
   v_distance DOUBLE PRECISION;
+  v_window   BIGINT;
 BEGIN
   v_caller := private.get_caller_user();
 
@@ -641,10 +660,17 @@ BEGIN
 
   v_ip := private.current_request_ip();
 
+  v_window := EXTRACT(EPOCH FROM now())::bigint / 10;
+
   SELECT * INTO v_session
   FROM public.sessions
-  WHERE rotating_hash = trim(p_hash)
-    AND expires_at > now();
+  WHERE expires_at > now()
+    AND (
+      trim(p_hash) = public.generate_totp(rotating_hash, v_window)
+      OR
+      trim(p_hash) = public.generate_totp(rotating_hash, v_window - 1)
+    )
+  LIMIT 1;
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'invalid_or_expired: attendance hash is invalid or has expired';
@@ -652,10 +678,7 @@ BEGIN
 
   -- GPS verification: check student is within session radius
   IF v_session.latitude IS NOT NULL AND v_session.longitude IS NOT NULL THEN
-    -- GPS coords passed via p_student_latitude/p_student_longitude columns on attendance
-    -- We verify using the student's submitted GPS stored in the attendance row
-    -- For now, we accept and store; full verification happens in the GPS-aware overload
-    NULL;
+    RAISE EXCEPTION 'location_denied: this session requires GPS verification, please update your app or enable location.';
   END IF;
 
   SELECT * INTO v_device
@@ -770,6 +793,7 @@ DECLARE
   v_ip       TEXT;
   v_recent   INTEGER;
   v_distance DOUBLE PRECISION;
+  v_window   BIGINT;
 BEGIN
   v_caller := private.get_caller_user();
 
@@ -799,10 +823,17 @@ BEGIN
 
   v_ip := private.current_request_ip();
 
+  v_window := EXTRACT(EPOCH FROM now())::bigint / 10;
+
   SELECT * INTO v_session
   FROM public.sessions
-  WHERE rotating_hash = trim(p_hash)
-    AND expires_at > now();
+  WHERE expires_at > now()
+    AND (
+      trim(p_hash) = public.generate_totp(rotating_hash, v_window)
+      OR
+      trim(p_hash) = public.generate_totp(rotating_hash, v_window - 1)
+    )
+  LIMIT 1;
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'invalid_or_expired: attendance hash is invalid or has expired';
