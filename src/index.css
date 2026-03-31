@@ -238,7 +238,7 @@
 
 @layer utilities {
   .section-container {
-    @apply mx-auto w-full max-w-[1280px] px-6;
+    @apply mx-auto w-full max-w-[1280px] px-3 sm:px-6 md:px-8;
   }
 
   .cyber-glow {
@@ -296,6 +296,19 @@
   }
   .btn-cyber:active {
     transform: scale(0.98);
+  }
+
+  /* Premium UI Glassmorphism */
+  .glass-panel {
+    @apply bg-background/85 backdrop-blur-xl border shadow-xl dark:bg-[#0a0a0f]/80 dark:border-white/10;
+  }
+
+  .glass-card {
+    @apply bg-card/70 backdrop-blur-lg border shadow-sm transition-all duration-300 dark:bg-[#12121a]/60 dark:border-white/5;
+  }
+  
+  .glass-card:hover {
+    @apply dark:border-white/10 dark:bg-[#12121a]/80 shadow-md transform -translate-y-1;
   }
 }
 

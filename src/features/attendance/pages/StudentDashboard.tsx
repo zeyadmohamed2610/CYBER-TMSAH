@@ -150,8 +150,8 @@ export const StudentDashboard = () => {
       </div>
 
       {/* Active sessions — student picks which session to check into */}
-      <div className="rounded-2xl border bg-card p-6">
-        <h3 className="text-lg font-bold mb-4">الجلسات النشطة الآن</h3>
+      <div className="rounded-3xl glass-card p-4 sm:p-6 animate-fade-up-delay-1">
+        <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Activity className="h-5 w-5 text-primary"/> الجلسات النشطة الآن</h3>
         <ActiveSessionsBar />
       </div>
 
@@ -159,16 +159,16 @@ export const StudentDashboard = () => {
       <AttendanceSubmissionForm sessions={sessions} onSubmitSuccess={refetch} />
 
       {topSubjects.length > 0 && (
-        <div className="rounded-lg border bg-card p-4">
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-medium">
-            <TrendingUp className="h-4 w-4" />
+        <div className="rounded-2xl glass-card p-4 sm:p-6 shadow-sm">
+          <h3 className="mb-4 flex items-center gap-2 text-base font-bold">
+            <TrendingUp className="h-5 w-5 text-primary" />
             أفضل المواد في الحضور
           </h3>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             {topSubjects.map((subject) => (
-              <div key={subject.subjectName} className="flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-sm">
-                <span className="font-medium">{subject.subjectName}</span>
-                <span className="text-muted-foreground">{subject.attendanceRate.toFixed(0)}%</span>
+              <div key={subject.subjectName} className="flex items-center gap-2 rounded-xl bg-background/50 border border-white/5 px-4 py-2 text-sm shadow-inner transition hover:bg-background/80">
+                <span className="font-semibold">{subject.subjectName}</span>
+                <span className="text-primary font-bold bg-primary/10 px-2 py-0.5 rounded-md">{subject.attendanceRate.toFixed(0)}%</span>
               </div>
             ))}
           </div>
@@ -176,8 +176,8 @@ export const StudentDashboard = () => {
       )}
 
       {subjectMetrics.length > 0 && (
-        <div className="rounded-lg border bg-card p-4">
-          <h3 className="mb-3 text-lg font-semibold">تفاصيل المواد</h3>
+        <div className="rounded-2xl glass-card p-4 sm:p-6 animate-fade-up-delay-2">
+          <h3 className="mb-4 text-lg font-bold">التفاصيل الفردية للمواد</h3>
           <div className="space-y-3">
             {subjectMetrics.map((subject) => (
               <SubjectProgressCard key={subject.subjectName} metric={subject} />

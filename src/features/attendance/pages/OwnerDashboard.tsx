@@ -49,17 +49,19 @@ export const OwnerDashboard = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-9">
-          <TabsTrigger value="lectures">المحاضرات</TabsTrigger>
-          <TabsTrigger value="schedule">الجدول</TabsTrigger>
-          <TabsTrigger value="materials">المواد</TabsTrigger>
-          <TabsTrigger value="users">المستخدمين</TabsTrigger>
-          <TabsTrigger value="tas">المعيدين</TabsTrigger>
-          <TabsTrigger value="devices">الأجهزة</TabsTrigger>
-          <TabsTrigger value="manual-attendance">تسجيل يدوي</TabsTrigger>
-          <TabsTrigger value="notifications">الإشعارات</TabsTrigger>
-          <TabsTrigger value="logs">السجلات</TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto pb-2 custom-scrollbar mb-4 border-b border-white/10">
+          <TabsList className="flex h-auto w-max min-w-full justify-start gap-2 bg-transparent p-0">
+            <TabsTrigger className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary px-4 py-2 rounded-xl" value="lectures">المحاضرات</TabsTrigger>
+            <TabsTrigger className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary px-4 py-2 rounded-xl" value="schedule">الجدول</TabsTrigger>
+            <TabsTrigger className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary px-4 py-2 rounded-xl" value="materials">المواد</TabsTrigger>
+            <TabsTrigger className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary px-4 py-2 rounded-xl" value="users">المستخدمين</TabsTrigger>
+            <TabsTrigger className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary px-4 py-2 rounded-xl" value="tas">المعيدين</TabsTrigger>
+            <TabsTrigger className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary px-4 py-2 rounded-xl" value="devices">الأجهزة</TabsTrigger>
+            <TabsTrigger className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary px-4 py-2 rounded-xl" value="manual-attendance">تسجيل يدوي</TabsTrigger>
+            <TabsTrigger className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary px-4 py-2 rounded-xl" value="notifications">الإشعارات</TabsTrigger>
+            <TabsTrigger className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary px-4 py-2 rounded-xl" value="logs">السجلات</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="lectures">
           <LectureManagementPanel onSelectLecture={setSelectedLecture} />

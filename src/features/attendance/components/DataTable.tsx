@@ -36,12 +36,13 @@ export const DataTable = <T,>({
   emptyMessage = "لا توجد بيانات متاحة.",
 }: DataTableProps<T>) => {
   return (
-    <Card className="bg-card/80">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg">{title}</CardTitle>
+    <Card className="glass-card overflow-hidden">
+      <CardHeader className="pb-3 px-4 sm:px-6">
+        <CardTitle className="text-lg sm:text-xl font-bold">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="pt-0">
-        <Table>
+      <CardContent className="pt-0 px-2 sm:px-6">
+        <div className="w-full overflow-x-auto pb-4 custom-scrollbar">
+          <Table className="whitespace-nowrap sm:whitespace-normal">
           {caption ? <TableCaption>{caption}</TableCaption> : null}
           <TableHeader>
             <TableRow>
@@ -72,6 +73,7 @@ export const DataTable = <T,>({
             )}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
   );

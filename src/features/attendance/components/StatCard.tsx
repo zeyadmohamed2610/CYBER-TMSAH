@@ -11,8 +11,8 @@ interface StatCardProps {
 
 export const StatCard = ({ title, value, description, icon: Icon, className = "" }: StatCardProps) => {
   return (
-    <Card className={`border-border/60 bg-card/80 ${className}`}>
-      <CardContent className="p-5">
+    <Card className={`glass-card transition-all duration-300 hover:scale-[1.02] ${className}`}>
+      <CardContent className="p-5 sm:p-6">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-sm text-muted-foreground">{title}</p>

@@ -106,13 +106,16 @@ const AttendanceLoginPage = () => {
   const lockMinutes = Math.ceil(lockRemaining / 60_000);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4 py-8" dir="rtl">
-      <Card className="w-full max-w-md border-primary/30 bg-card/90 shadow-lg">
-        <CardHeader className="space-y-2 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-            <Hash className="h-6 w-6 text-primary" />
+    <main className="flex min-h-screen items-center justify-center bg-[var(--gradient-hero)] px-4 py-8 relative overflow-hidden" dir="rtl">
+      {/* Decorative Glow Elements */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-[100px] pointer-events-none"></div>
+
+      <Card className="w-full max-w-md border-0 glass-panel shadow-2xl relative z-10 p-2 sm:p-4 animate-fade-up">
+        <CardHeader className="space-y-4 text-center pb-6">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 cyber-glow">
+            <Hash className="h-8 w-8 text-primary" />
           </div>
-          <CardTitle className="text-2xl font-bold">نظام الحضور الجامعي</CardTitle>
+          <CardTitle className="text-2xl sm:text-3xl font-extrabold tracking-tight">نظام الحضور السيبراني</CardTitle>
           <CardDescription>
             الطلاب: أدخل رقمك القومي المكون من 14 رقماً<br />
             الدكاترة / الإدارة: أدخل البريد الإلكتروني
@@ -164,11 +167,11 @@ const AttendanceLoginPage = () => {
                 </div>
               )}
 
-              <Button className="w-full" type="submit" disabled={isSubmitting}>
+              <Button className="w-full h-12 text-lg font-medium rounded-xl btn-cyber shadow-lg" type="submit" disabled={isSubmitting}>
                 {isSubmitting
-                  ? <Loader2 className="h-4 w-4 animate-spin" />
-                  : <LogIn className="h-4 w-4" />}
-                <span>تسجيل الدخول</span>
+                  ? <Loader2 className="h-5 w-5 animate-spin" />
+                  : <LogIn className="h-5 w-5" />}
+                <span>تسجيل الدخول للنظام</span>
               </Button>
             </form>
           )}
