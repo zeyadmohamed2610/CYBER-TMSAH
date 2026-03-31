@@ -27,11 +27,20 @@ export function NotificationForm({ createdBy, onAdded }: Props) {
     if (!title) return;
     setSubmitting(true);
 
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData.user?.id;
+
+    if (!userId) {
+      toast.error("خطأ: تعذر التعرف على حسابك الحالي لإرسال الإشعار.");
+      setSubmitting(false);
+      return;
+    }
+
     const payload: any = {
       title,
       type,
-      created_by: createdBy,
-      user_id: createdBy, // MUST INCLUDE THIS IN DB BECAUSE IT IS NOT NULL
+      created_by: userId,
+      user_id: userId,
     };
     if (body) payload.body = body;
     if (subject) payload.subject = subject;
@@ -44,7 +53,7 @@ export function NotificationForm({ createdBy, onAdded }: Props) {
     if (error) {
       toast.error("فشل الإضافة: " + error.message);
     } else {
-      toast.success("تمت إضافة الإشعار");
+      toast.success("تم إرسال وتفعيل الإشعار بنجاح!");
       setTitle(""); setBody(""); setDate(""); setTime(""); setSubject("");
       onAdded?.();
     }
