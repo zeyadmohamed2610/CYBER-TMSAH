@@ -28,10 +28,23 @@ export function NotificationForm({ createdBy, onAdded }: Props) {
     setSubmitting(true);
 
     const { data: authData } = await supabase.auth.getUser();
-    const userId = authData.user?.id;
+    const authId = authData.user?.id;
 
-    if (!userId) {
+    if (!authId) {
       toast.error("خطأ: تعذر التعرف على حسابك الحالي لإرسال الإشعار.");
+      setSubmitting(false);
+      return;
+    }
+
+    // Fetch the correct public.users ID to satisfy the foreign key constraint
+    const { data: userData } = await supabase
+      .from("users")
+      .select("id")
+      .eq("auth_id", authId)
+      .single();
+
+    if (!userData?.id) {
+      toast.error("خطأ: لم يتم العثور على ملف المستخدم العام الخاص بك.");
       setSubmitting(false);
       return;
     }
@@ -39,8 +52,8 @@ export function NotificationForm({ createdBy, onAdded }: Props) {
     const payload: any = {
       title,
       type,
-      created_by: userId,
-      user_id: userId,
+      created_by: userData.id,
+      user_id: userData.id,
     };
     if (body) payload.body = body;
     if (subject) payload.subject = subject;
