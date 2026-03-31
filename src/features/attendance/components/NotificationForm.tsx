@@ -31,6 +31,7 @@ export function NotificationForm({ createdBy, onAdded }: Props) {
       title,
       type,
       created_by: createdBy,
+      user_id: createdBy, // MUST INCLUDE THIS IN DB BECAUSE IT IS NOT NULL
     };
     if (body) payload.body = body;
     if (subject) payload.subject = subject;
