@@ -1,8 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Clock, MapPin, User, Calendar, GraduationCap, Sparkles, ChevronDown, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
 import Layout from "@/components/Layout";
 import ScrollReveal from "@/components/ScrollReveal";
 import SEO from "@/components/SEO";
@@ -110,6 +108,7 @@ const Schedule = () => {
   const totalSections = schedule.reduce((a, d) => a + d.entries.filter(e => e.entry_type === "section").length, 0);
 
   const captureDay = async (el: HTMLElement) => {
+    const { default: html2canvas } = await import("html2canvas");
     return html2canvas(el, { backgroundColor: "#0a0a0f", scale: 2, useCORS: true, logging: false });
   };
 
@@ -140,6 +139,10 @@ const Schedule = () => {
     setIsExporting(true);
     setShowExportMenu(false);
     try {
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
       const dayEls = scheduleRef.current.querySelectorAll<HTMLElement>("[data-day]");
       const pdf = new jsPDF("landscape", "mm", "a4");
       const pw = pdf.internal.pageSize.getWidth();
@@ -148,7 +151,7 @@ const Schedule = () => {
         const el = dayEls[i];
         const dayName = el.dataset.day || `يوم-${i + 1}`;
         setExportProgress(`جاري تصدير ${dayName}...`);
-        const canvas = await captureDay(el);
+        const canvas = await html2canvas(el, { backgroundColor: "#0a0a0f", scale: 2, useCORS: true, logging: false });
         const imgData = canvas.toDataURL("image/png");
         const ratio = canvas.width / canvas.height;
         if (i > 0) pdf.addPage();
@@ -215,6 +218,8 @@ const Schedule = () => {
 
                 <div className="relative">
                   <button onClick={() => setShowExportMenu(!showExportMenu)} disabled={isExporting || loading || schedule.length === 0}
+                    aria-label="تحميل الجدول"
+                    aria-expanded={showExportMenu}
                     className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-sm font-bold text-primary transition-all hover:bg-primary/20 disabled:opacity-50">
                     {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                     {isExporting ? exportProgress : "تحميل الجدول"}
@@ -222,13 +227,13 @@ const Schedule = () => {
                   {showExportMenu && !isExporting && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
-                      <div className="absolute bottom-full mb-2 left-0 right-0 z-50 rounded-xl border border-border bg-card shadow-xl overflow-hidden">
-                        <button onClick={exportAsImage}
+                      <div className="absolute top-full mt-2 sm:top-auto sm:bottom-full sm:mt-0 sm:mb-2 left-0 right-0 z-50 rounded-xl border border-border bg-card shadow-xl overflow-hidden" role="menu">
+                        <button onClick={exportAsImage} role="menuitem"
                           className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-foreground hover:bg-primary/10 transition-colors">
                           <span className="text-lg">🖼️</span>
                           <div className="text-right"><span className="block font-bold">صور PNG</span><span className="block text-[10px] text-muted-foreground">صورة لكل يوم</span></div>
                         </button>
-                        <button onClick={exportAsPDF}
+                        <button onClick={exportAsPDF} role="menuitem"
                           className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-foreground hover:bg-primary/10 transition-colors border-t border-border/50">
                           <span className="text-lg">📄</span>
                           <div className="text-right"><span className="block font-bold">ملف PDF</span><span className="block text-[10px] text-muted-foreground">صفحة لكل يوم</span></div>
@@ -244,8 +249,30 @@ const Schedule = () => {
 
         <section className="section-container py-10 md:py-14" ref={scheduleRef}>
           {loading ? (
-            <div className="flex items-center justify-center py-20 gap-3 text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin" /><span>جاري تحميل الجدول...</span>
+            <div className="space-y-4">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="rounded-2xl border border-border/50 bg-card/50 overflow-hidden animate-pulse">
+                  <div className="flex items-center gap-3 p-4 md:p-5 border-b border-border/30">
+                    <div className="w-10 h-10 rounded-xl bg-muted shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-muted rounded w-24" />
+                      <div className="h-3 bg-muted/60 rounded w-16" />
+                    </div>
+                  </div>
+                  <div className="p-4 md:p-5 space-y-2">
+                    {[0, 1].map((j) => (
+                      <div key={j} className="flex items-center gap-3 rounded-xl p-3 bg-secondary/20 border border-border/40">
+                        <div className="w-16 sm:w-20 h-8 bg-muted rounded shrink-0" />
+                        <div className="hidden sm:block w-px h-10 bg-border/40" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 bg-muted rounded w-2/3" />
+                          <div className="h-3 bg-muted/60 rounded w-1/3" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           ) : schedule.length === 0 ? (
             <div className="text-center py-20">
@@ -305,22 +332,28 @@ const Schedule = () => {
                             <p className="font-bold text-cyan-500">يوم التدريب</p>
                           </div>
                         ) : day.entries.length === 0 ? (
-                          <div className="text-center py-8 rounded-xl bg-muted/30 border border-dashed border-border/50">
-                            <p className="text-sm text-muted-foreground">لا توجد محاضرات</p>
+                          <div className="text-center py-8 rounded-xl bg-muted/20 border border-dashed border-border/40">
+                            <div className="w-12 h-12 rounded-full bg-muted/40 flex items-center justify-center mx-auto mb-3">
+                              <Calendar className="h-6 w-6 text-muted-foreground/40" />
+                            </div>
+                            <p className="text-sm font-medium text-muted-foreground">لا توجد محاضرات</p>
+                            <p className="text-xs text-muted-foreground/60 mt-1">استمتع بيومك بعيداً عن الدراسة ☕</p>
                           </div>
                         ) : (
                           <div className="space-y-2">
                             {day.entries.map((entry, li) => {
                               const isSec = entry.entry_type === "section";
                               return (
-                                <div key={entry.id || li} className={`flex items-center gap-3 md:gap-4 rounded-xl p-3 md:p-4 border transition-all hover:border-primary/30 ${
-                                  isSec ? "bg-cyan-500/5 border-cyan-500/20" : "bg-secondary/20 border-border/40"
+                                <div key={entry.id || li} className={`flex items-center gap-3 md:gap-4 rounded-xl p-3 md:p-4 border-r-4 border border-l-0 transition-all hover:brightness-110 overflow-hidden ${
+                                  isSec
+                                    ? "bg-cyan-500/5 border-r-cyan-400 border-border/20"
+                                    : "bg-secondary/20 border-r-primary/60 border-border/30"
                                 }`}>
-                                  <div className="text-center min-w-[80px]">
+                                  <div className="text-center min-w-[60px] sm:min-w-[80px]">
                                     <div className={`text-[10px] font-bold mb-0.5 ${isSec ? "text-cyan-400" : "text-primary"}`}>
                                       الفترة {entry.period_label || PERIODS_LABEL[li] || ""}
                                     </div>
-                                    <div className="text-xs font-bold text-foreground" dir="ltr">{entry.time_slot}</div>
+                                    <div className="text-xs sm:text-sm font-bold text-foreground" dir="ltr">{entry.time_slot}</div>
                                   </div>
                                   <div className="w-px h-10 bg-border/40 hidden sm:block" />
                                   <div className="flex-1 min-w-0">

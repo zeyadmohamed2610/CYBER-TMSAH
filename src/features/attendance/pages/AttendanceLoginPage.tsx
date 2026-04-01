@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { Hash, Loader2, LogIn, ShieldAlert } from "lucide-react";
+import { Eye, EyeOff, Hash, Loader2, LogIn, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -45,6 +45,7 @@ const AttendanceLoginPage = () => {
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword]   = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError]         = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lockRemaining, setLockRemaining] = useState(() => getLockoutRemaining());
@@ -68,6 +69,9 @@ const AttendanceLoginPage = () => {
   if (!loading && user && role) {
     return <Navigate to={getAttendanceDashboardRoute(role)} replace />;
   }
+
+  // Detect whether user is entering a national ID (digits only) or email
+  const isNationalIdMode = /^\d+$/.test(identifier);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -106,9 +110,15 @@ const AttendanceLoginPage = () => {
   const lockMinutes = Math.ceil(lockRemaining / 60_000);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[var(--gradient-hero)] px-4 py-8 relative overflow-hidden" dir="rtl">
-      {/* Decorative Glow Elements */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-[100px] pointer-events-none"></div>
+    <main className="flex min-h-screen items-center justify-center bg-background px-4 py-8 relative overflow-hidden" dir="rtl">
+      {/* Cyber background — matches Hero aesthetic */}
+      <div className="absolute inset-0 opacity-5" style={{
+        backgroundImage: 'linear-gradient(hsl(174 72% 50% / 0.4) 1px, transparent 1px), linear-gradient(90deg, hsl(174 72% 50% / 0.4) 1px, transparent 1px)',
+        backgroundSize: '50px 50px'
+      }} />
+      <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-primary/8 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-1/4 left-1/4 w-64 h-64 bg-cyan-500/6 rounded-full blur-[80px] pointer-events-none" />
+      <div className="absolute top-3/4 right-1/2 w-48 h-48 bg-primary/5 rounded-full blur-[60px] pointer-events-none" />
 
       <Card className="w-full max-w-md border-0 glass-panel shadow-2xl relative z-10 p-2 sm:p-4 animate-fade-up">
         <CardHeader className="space-y-4 text-center pb-6">
@@ -133,41 +143,57 @@ const AttendanceLoginPage = () => {
               </p>
             </div>
           ) : (
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form className="space-y-5" onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <Label htmlFor="attendance-id">الرقم القومي أو البريد الإلكتروني</Label>
                 <Input
                   id="attendance-id"
                   type="text"
                   dir="ltr"
-                  inputMode="numeric"
+                  inputMode={isNationalIdMode ? "numeric" : "email"}
                   autoComplete="username"
                   placeholder="أدخل الرقم القومي أو البريد الإلكتروني"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   required
+                  className="h-12 text-base"
                 />
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="attendance-password">كلمة المرور</Label>
-                <Input
-                  id="attendance-password"
-                  type="password"
-                  dir="ltr"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="attendance-password"
+                    type={showPassword ? "text" : "password"}
+                    dir="ltr"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="h-12 text-base pl-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1 rounded min-h-[36px] min-w-[36px] flex items-center justify-center"
+                    aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+                  >
+                    {showPassword
+                      ? <EyeOff className="h-5 w-5" />
+                      : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
               </div>
 
               {error && (
-                <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                  {error}
+                <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive flex items-start gap-2">
+                  <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>{error}</span>
                 </div>
               )}
 
-              <Button className="w-full h-12 text-lg font-medium rounded-xl btn-cyber shadow-lg" type="submit" disabled={isSubmitting}>
+              <Button className="w-full h-12 text-base font-semibold rounded-xl btn-cyber shadow-lg gap-2" type="submit" disabled={isSubmitting}>
                 {isSubmitting
                   ? <Loader2 className="h-5 w-5 animate-spin" />
                   : <LogIn className="h-5 w-5" />}

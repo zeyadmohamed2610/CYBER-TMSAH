@@ -1,19 +1,54 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X, BookOpen, Calendar, ShieldCheck, Home } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 
-type NavItem = { label: string; path: string };
+type NavItem = { label: string; path: string; icon: React.ElementType };
 
 const navLinks: NavItem[] = [
-  { label: "الجدول الدراسي", path: "/schedule" },
-  { label: "المواد الدراسية", path: "/materials" },
-  { label: "الحضور", path: "/attendance" },
+  { label: "الجدول الدراسي", path: "/schedule",  icon: Calendar },
+  { label: "المواد الدراسية", path: "/materials", icon: BookOpen },
+  { label: "الحضور",          path: "/attendance", icon: ShieldCheck },
+];
+
+// Mobile menu includes Home
+const mobileNavLinks: NavItem[] = [
+  { label: "الرئيسية",        path: "/",          icon: Home },
+  ...navLinks,
 ];
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close on route change
+  useEffect(() => { setOpen(false); }, [location.pathname]);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const handle = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [open]);
+
+  // Close on Escape
+  useEffect(() => {
+    const handle = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", handle);
+    return () => window.removeEventListener("keydown", handle);
+  }, []);
+
+  // Prevent body scroll when menu open
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
 
   return (
     <>
@@ -25,11 +60,13 @@ const Navbar = () => {
       </a>
 
       <nav
-        className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl"
+        ref={menuRef}
+        className="sticky top-0 z-50 border-b border-border bg-background/85 backdrop-blur-xl"
         role="navigation"
         aria-label="التنقل الرئيسي"
       >
-        <div className="section-container flex items-center justify-between py-4">
+        <div className="section-container flex items-center justify-between py-3.5">
+          {/* Logo */}
           <Link to="/" className="group relative flex items-center" dir="ltr">
             <span className="relative text-2xl md:text-3xl font-black tracking-widest">
               <span
@@ -52,10 +89,9 @@ const Navbar = () => {
               </span>
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary via-cyan-400 to-primary group-hover:w-full transition-all duration-700 ease-out shadow-[0_0_10px_hsl(var(--primary))]" />
             </span>
-
-            <div className="absolute -inset-4 bg-gradient-to-r from-primary/10 via-cyan-400/5 to-primary/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-500 -z-10 blur-xl" />
           </Link>
 
+          {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-2">
             {navLinks.map((link) => {
               const isActive = location.pathname === link.path;
@@ -79,29 +115,68 @@ const Navbar = () => {
             })}
           </div>
 
-          <button className="md:hidden text-foreground p-2" onClick={() => setOpen((value) => !value)}>
-            {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          {/* Mobile hamburger */}
+          <button
+            className="md:hidden flex items-center justify-center text-foreground p-2.5 rounded-xl hover:bg-primary/10 transition-colors min-h-[44px] min-w-[44px]"
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? "إغلاق القائمة" : "فتح القائمة"}
+            aria-expanded={open}
+            aria-controls="mobile-menu"
+          >
+            {open
+              ? <X className="h-6 w-6 transition-all duration-200" />
+              : <Menu className="h-6 w-6 transition-all duration-200" />}
           </button>
         </div>
 
-        {open && (
-          <div className="md:hidden border-t border-border bg-background animate-fade-up">
-            <div className="section-container flex flex-col gap-4 py-6">
-              {navLinks.map((link) => (
+        {/* Mobile menu — animates via max-height */}
+        <div
+          id="mobile-menu"
+          role="menu"
+          className={`md:hidden border-t border-border bg-background/95 backdrop-blur-xl overflow-hidden transition-all duration-300 ease-in-out ${
+            open ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
+          }`}
+        >
+          <div className="section-container flex flex-col gap-1 py-4">
+            {mobileNavLinks.map((link) => {
+              const isHome = link.path === "/";
+              const isActive = isHome
+                ? location.pathname === "/"
+                : location.pathname.startsWith(link.path);
+              return (
                 <NavLink
                   key={link.path}
                   to={link.path}
+                  role="menuitem"
                   onClick={() => setOpen(false)}
-                  className="text-base font-medium transition-colors text-muted-foreground"
-                  activeClassName="text-primary"
+                  className={`flex items-center justify-between px-4 py-3.5 rounded-xl text-base font-semibold transition-all duration-200 min-h-[48px] ${
+                    isActive
+                      ? "text-primary bg-primary/10 border border-primary/30"
+                      : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                  }`}
+                  activeClassName=""
                 >
-                  {link.label}
+                  {/* RTL: text on right, icon on left — but flex row-reverse keeps icon on right in RTL */}
+                  <span className="flex items-center gap-3">
+                    <link.icon className={`h-5 w-5 shrink-0 ${isActive ? "text-primary" : "text-muted-foreground/60"}`} />
+                    <span>{link.label}</span>
+                  </span>
+                  {isActive && <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />}
                 </NavLink>
-              ))}
-            </div>
+              );
+            })}
           </div>
-        )}
+        </div>
       </nav>
+
+      {/* Backdrop for mobile menu */}
+      {open && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
+          onClick={() => setOpen(false)}
+          aria-hidden="true"
+        />
+      )}
     </>
   );
 };

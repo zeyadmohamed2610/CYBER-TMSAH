@@ -97,8 +97,8 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Session selector pills */}
-      <div className="flex gap-3 overflow-x-auto pb-3 snap-x snap-mandatory">
+      {/* Session selector pills — horizontally scrollable with iOS momentum */}
+      <div className="flex gap-3 overflow-x-auto pb-3 snap-x snap-mandatory scroll-touch">
         {sessions.map((s) => (
           <button
             key={s.session_id}
@@ -157,9 +157,13 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
               </Button>
             </div>
 
-            {/* QR Code */}
-            <div className="shrink-0 rounded-2xl bg-white p-3 shadow-xl border border-white/20">
-              <canvas ref={canvasRef} style={{ width: '160px', height: '160px', display: 'block', imageRendering: 'pixelated' }} />
+            {/* QR Code — responsive: fills available width on mobile */}
+            <div className="shrink-0 rounded-2xl bg-white p-3 shadow-xl border border-white/20 w-full sm:w-auto">
+              <canvas
+                ref={canvasRef}
+                className="block w-full sm:w-[160px] aspect-square"
+                style={{ imageRendering: "pixelated" }}
+              />
             </div>
           </div>
 

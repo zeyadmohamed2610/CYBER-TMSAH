@@ -9,14 +9,8 @@ import { GpsProvider } from "../context/GpsContext";
 import { NotificationCenter } from "../components/NotificationCenter";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
+import { computeFingerprint } from "../utils/fingerprint";
 
-async function computeFingerprint(): Promise<string> {
-  try {
-    const raw = [navigator.userAgent, navigator.language, navigator.platform, String(screen.width), String(screen.height), String(navigator.hardwareConcurrency ?? 0), Intl.DateTimeFormat().resolvedOptions().timeZone, navigator.vendor].join("|");
-    const hashBuf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
-    return [...new Uint8Array(hashBuf)].map(b => b.toString(16).padStart(2, "0")).join("");
-  } catch { return "no-fp"; }
-}
 
 const AttendanceStudentPage = () => {
   const { signOut, user } = useAttendanceAuth();

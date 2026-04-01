@@ -50,6 +50,10 @@ export default defineConfig(({ mode }) => ({
 
           // lucide icons — tree-shaken but still sizable
           if (id.includes('node_modules/lucide-react')) return 'icons';
+
+          // PDF/Image export — heavy, loaded only when user exports schedule
+          if (id.includes('node_modules/html2canvas')) return 'export-image';
+          if (id.includes('node_modules/jspdf')) return 'export-pdf';
         },
         chunkFileNames: (chunkInfo) => {
           if (mode === 'production') return 'assets/[hash].js';

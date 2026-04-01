@@ -17,7 +17,7 @@ const Footer = () => {
 
       <div className="section-container relative py-12">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
-          <div className="flex flex-col items-center lg:items-start gap-4">
+          <div className="flex flex-col items-center lg:items-start gap-4 order-2 lg:order-1">
             <Link to="/" className="group flex items-center" dir="ltr">
               <span className="text-2xl font-black tracking-widest">
                 <span
@@ -41,7 +41,7 @@ const Footer = () => {
             </div>
           </div>
 
-          <div className="flex flex-col items-center gap-3">
+          <div className="flex flex-col items-center gap-3 order-1 lg:order-2">
             <span className="text-xs font-bold text-primary uppercase tracking-wider">روابط سريعة</span>
             <div className="flex flex-wrap items-center justify-center gap-4">
               <Link to="/materials" className="text-sm text-muted-foreground hover:text-primary transition-colors">
@@ -67,7 +67,7 @@ const Footer = () => {
             </div>
           </div>
 
-          <div className="flex flex-col items-center lg:items-end gap-4">
+          <div className="flex flex-col items-center lg:items-end gap-4 order-3">
             <span className="text-xs font-bold text-primary uppercase tracking-wider">تواصل معنا</span>
             <div className="flex items-center gap-3">
               {[

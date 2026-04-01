@@ -44,6 +44,7 @@ const Index = () => {
   const [todayLectures, setTodayLectures] = useState<TodayLecture[]>([]);
   const [isHoliday, setIsHoliday] = useState(false);
   const [isTraining, setIsTraining] = useState(false);
+  const [loadingLectures, setLoadingLectures] = useState(true);
   const todayName = normalizeDay(new Date().toLocaleDateString("ar-EG", { weekday: "long" }));
   const todayDate = getTodayDate();
 
@@ -57,6 +58,7 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
+    setLoadingLectures(true);
     const sectionNum = parseInt(selectedSection.replace(/\D/g, "")) || 1;
     supabase.from("published_schedule")
       .select("period, subject, instructor, room, entry_type, is_holiday, is_training")
@@ -64,14 +66,14 @@ const Index = () => {
       .eq("day", todayName)
       .order("period")
       .then(({ data }) => {
-        if (!data || data.length === 0) { setTodayLectures([]); setIsHoliday(false); setIsTraining(false); return; }
+        if (!data || data.length === 0) { setTodayLectures([]); setIsHoliday(false); setIsTraining(false); setLoadingLectures(false); return; }
 
         const hasHoliday = data.some(r => r.is_holiday);
         const hasTraining = data.some(r => r.is_training);
         setIsHoliday(hasHoliday);
         setIsTraining(hasTraining);
 
-        if (hasHoliday || hasTraining) { setTodayLectures([]); return; }
+        if (hasHoliday || hasTraining) { setTodayLectures([]); setLoadingLectures(false); return; }
 
         const lectures = data
           .filter(r => r.subject && r.subject.trim() !== "" && !r.is_holiday && !r.is_training)
@@ -82,6 +84,7 @@ const Index = () => {
             room: r.room,
           }));
         setTodayLectures(lectures);
+        setLoadingLectures(false);
       });
   }, [selectedSection, todayName]);
 
@@ -102,8 +105,8 @@ const Index = () => {
             backgroundImage: 'linear-gradient(hsl(var(--primary)/0.3) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)/0.3) 1px, transparent 1px)',
             backgroundSize: '50px 50px'
           }} />
-          <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-1/4 left-1/4 w-64 h-64 bg-primary/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+          <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-primary/15 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 left-1/4 w-64 h-64 bg-primary/8 rounded-full blur-3xl" />
         </div>
 
         <div className="section-container relative z-10">
@@ -135,17 +138,17 @@ const Index = () => {
               <span className="text-primary font-medium">كل ما تحتاجه في مكان واحد</span>
             </p>
 
-            <div className="animate-fade-up-delay-2 mt-8 flex flex-wrap justify-center gap-4">
-              <Link to="/materials" className="group relative inline-flex items-center gap-3 rounded-xl bg-primary px-8 py-4 text-base font-bold text-primary-foreground overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_hsl(var(--primary)/0.5)]">
+            <div className="animate-fade-up-delay-2 mt-8 flex flex-col sm:flex-row sm:flex-wrap sm:justify-center gap-3 sm:gap-4 w-full sm:w-auto px-2 sm:px-0">
+              <Link to="/materials" className="group relative inline-flex items-center justify-center gap-3 rounded-xl bg-primary px-8 py-4 text-base font-bold text-primary-foreground overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_hsl(var(--primary)/0.5)] w-full sm:w-auto">
                 <span className="relative z-10">المواد الدراسية</span>
                 <ArrowLeft className="h-5 w-5 relative z-10 transition-transform group-hover:-translate-x-1" />
                 <div className="absolute inset-0 bg-gradient-to-r from-primary via-cyan-500 to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </Link>
-              <Link to="/schedule" className="group inline-flex items-center gap-3 rounded-xl border-2 border-primary/50 bg-background/50 backdrop-blur-sm px-8 py-4 text-base font-bold text-foreground transition-all duration-300 hover:border-primary hover:bg-primary/10 hover:scale-105">
+              <Link to="/schedule" className="group inline-flex items-center justify-center gap-3 rounded-xl border-2 border-primary/50 bg-background/50 backdrop-blur-sm px-8 py-4 text-base font-bold text-foreground transition-all duration-300 hover:border-primary hover:bg-primary/10 hover:scale-105 w-full sm:w-auto">
                 <Calendar className="h-5 w-5 text-primary" />
                 <span>الجدول الدراسي</span>
               </Link>
-              <Link to="/attendance" className="group inline-flex items-center gap-3 rounded-xl border-2 border-cyan-400/40 bg-cyan-400/10 backdrop-blur-sm px-8 py-4 text-base font-bold text-cyan-300 transition-all duration-300 hover:border-cyan-300 hover:bg-cyan-400/15 hover:scale-105">
+              <Link to="/attendance" className="group inline-flex items-center justify-center gap-3 rounded-xl border-2 border-cyan-400/40 bg-cyan-400/10 backdrop-blur-sm px-8 py-4 text-base font-bold text-cyan-300 transition-all duration-300 hover:border-cyan-300 hover:bg-cyan-400/15 hover:scale-105 w-full sm:w-auto">
                 <Shield className="h-5 w-5" />
                 <span>الحضور</span>
               </Link>
@@ -164,6 +167,14 @@ const Index = () => {
                 <div className="text-2xl md:text-3xl font-black text-primary">8</div>
                 <div className="text-[11px] md:text-xs text-muted-foreground mt-1">فترات يومياً</div>
               </div>
+            </div>
+
+            {/* Scroll indicator — desktop only */}
+            <div className="hidden md:flex flex-col items-center gap-1 mt-10 opacity-40 hover:opacity-70 transition-opacity cursor-pointer" onClick={() => window.scrollBy({ top: window.innerHeight, behavior: 'smooth' })}>
+              <span className="text-[11px] text-muted-foreground tracking-widest uppercase">استكشف</span>
+              <svg className="w-5 h-5 text-primary animate-bounce mt-0.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
             </div>
           </div>
         </div>
@@ -230,7 +241,22 @@ const Index = () => {
             </div>
           </div>
 
-          {todayName === "الجمعة" || isHoliday ? (
+          {loadingLectures ? (
+            /* Skeleton placeholder — prevents jarring empty flash */
+            <div className="grid gap-3" aria-busy="true" aria-label="جارٍ تحميل المحاضرات">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="rounded-2xl p-4 md:p-5 bg-card border border-border/30 animate-pulse">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-muted/60 shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 rounded bg-muted/60 w-3/4" />
+                      <div className="h-3 rounded bg-muted/40 w-1/2" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : todayName === "الجمعة" || isHoliday ? (
             <div className="relative rounded-2xl bg-gradient-to-br from-card to-card/50 p-10 text-center border border-border/50 overflow-hidden">
               <div className="absolute inset-0 bg-amber-500/5" />
               <div className="relative">
