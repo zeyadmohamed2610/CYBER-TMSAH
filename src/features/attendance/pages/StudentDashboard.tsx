@@ -94,7 +94,7 @@ export const StudentDashboard = () => {
   return (
     <div className="space-y-6">
       {fullName && (
-        <p className="text-lg font-bold">
+        <p className="text-lg font-bold truncate">
           مرحباً يا <span className="text-primary">{fullName}</span> 👋
         </p>
       )}

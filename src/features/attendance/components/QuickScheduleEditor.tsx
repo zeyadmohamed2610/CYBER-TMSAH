@@ -182,7 +182,7 @@ export function QuickScheduleEditor() {
 
         {editing && (
           <div className="rounded-xl border-2 border-primary/50 bg-primary/5 p-4 space-y-3">
-            <p className="text-sm font-bold text-primary">
+            <p className="text-sm font-bold text-primary truncate">
               سكشن {selectedSection} - {DAYS[editing.day]} - الفترة {PERIODS[editing.period]?.label} ({PERIODS[editing.period]?.time})
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
@@ -202,7 +202,7 @@ export function QuickScheduleEditor() {
             <div className="space-y-1">
               <Label className="text-xs">النوع</Label>
               <Select value={editForm.entry_type} onValueChange={v => setEditForm({ ...editForm, entry_type: v as "lecture" | "section" })}>
-                <SelectTrigger className="h-9 w-40 text-sm"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-9 w-full max-w-[160px] text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="lecture">محاضرة</SelectItem>
                   <SelectItem value="section">سكشن عملي</SelectItem>

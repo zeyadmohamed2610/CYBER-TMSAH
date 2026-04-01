@@ -91,7 +91,7 @@ export function DeviceLockPanel() {
               const isLocked = !!lock;
               return (
                 <div key={student.id} className={"flex items-center justify-between gap-3 rounded-xl border p-3 transition-colors " + (isLocked ? "bg-primary/5 border-primary/30" : "bg-card border-border/50")}>
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className={"w-8 h-8 rounded-lg flex items-center justify-center shrink-0 " + (isLocked ? "bg-primary/10" : "bg-muted")}>
                       <Smartphone className={"h-4 w-4 " + (isLocked ? "text-primary" : "text-muted-foreground")} />
                     </div>
@@ -99,7 +99,7 @@ export function DeviceLockPanel() {
                       <p className="font-bold text-sm text-foreground truncate">{student.full_name}</p>
                       <p className="text-xs text-muted-foreground">{student.national_id ?? "—"}</p>
                       {isLocked && (
-                        <p className="text-[10px] text-primary mt-0.5">
+                        <p className="text-[10px] text-primary mt-0.5 truncate">
                           {lock.device_label} — {new Date(lock.locked_at).toLocaleDateString("ar-EG")}
                         </p>
                       )}

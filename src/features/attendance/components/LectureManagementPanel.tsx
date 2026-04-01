@@ -177,7 +177,7 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
                     {lec.subject_name} — {formatDate(lec.lecture_date)}
                   </p>
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3 shrink-0 flex-wrap justify-end">
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Layers className="h-3 w-3" />
                     {lec.session_count ?? 0}

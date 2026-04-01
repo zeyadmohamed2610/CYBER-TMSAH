@@ -133,32 +133,32 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onBack} className="gap-1">
+      <div className="flex items-start justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-3 min-w-0">
+          <Button variant="ghost" size="sm" onClick={onBack} className="gap-1 shrink-0">
             <ArrowRight className="h-4 w-4 rtl:rotate-180" />
             رجوع
           </Button>
-          <div>
-            <h2 className="text-lg font-bold">{lecture.title}</h2>
-            <p className="text-xs text-muted-foreground">
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold truncate">{lecture.title}</h2>
+            <p className="text-xs text-muted-foreground truncate">
               {lecture.subject_name} — {new Date(lecture.lecture_date).toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
             <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
           </Button>
           <Button variant="destructive" size="sm" onClick={handleEndLecture} disabled={ending} className="gap-1">
             <StopCircle className="h-3 w-3" />
-            {ending ? "جاري الإنهاء..." : "إنهاء المحاضرة"}
+            <span className="hidden sm:inline">{ending ? "جاري الإنهاء..." : "إنهاء المحاضرة"}</span>
           </Button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
@@ -242,7 +242,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
       ) : (
         <Card>
           <CardContent className="p-6 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label className="text-xs">المدة (دقائق)</Label>
                 <Input type="number" min={5} max={180} value={sessionDuration}
