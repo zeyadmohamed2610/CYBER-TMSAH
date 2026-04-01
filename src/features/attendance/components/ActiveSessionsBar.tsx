@@ -60,7 +60,7 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
   useEffect(() => {
     if (selectedSession?.short_code && canvasRef.current) {
       QRCode.toCanvas(canvasRef.current, selectedSession.short_code, {
-        width: 160,
+        width: 180,
         margin: 1,
         color: { dark: "#0f172a", light: "#ffffff" },
       }).catch(console.error);
@@ -85,17 +85,20 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
 
   if (sessions.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        <p className="text-sm">لا توجد جلسات نشطة حالياً.</p>
-        <p className="text-xs mt-1">انتظر بدء الدكتور للجلسة.</p>
+      <div className="text-center py-12 space-y-3">
+        <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto">
+          <Clock className="h-8 w-8 text-muted-foreground/50" />
+        </div>
+        <p className="text-sm font-medium text-muted-foreground">لا توجد جلسات نشطة حالياً.</p>
+        <p className="text-xs text-muted-foreground/60">سيظهر كود الحضور تلقائياً عند بدء الدكتور للجلسة.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* Session selector bar */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
+      {/* Session selector pills */}
+      <div className="flex gap-3 overflow-x-auto pb-3 snap-x snap-mandatory">
         {sessions.map((s) => (
           <button
             key={s.session_id}
@@ -103,17 +106,17 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
               setSelectedSession(s);
               onSessionSelect?.(s);
             }}
-            className={`shrink-0 rounded-xl border px-4 py-3 text-left transition-all ${
+            className={`snap-start shrink-0 rounded-2xl border px-4 py-3 text-right transition-all duration-300 min-w-[160px] ${
               selectedSession?.session_id === s.session_id
-                ? "border-primary bg-primary/10 shadow-[0_0_15px_hsl(var(--primary)/0.2)]"
-                : "border-border bg-card hover:border-primary/50"
+                ? "border-primary/60 bg-primary/10 shadow-[0_0_20px_hsl(var(--primary)/0.25)] text-primary"
+                : "border-border/50 bg-card/40 hover:border-primary/40 hover:bg-primary/5"
             }`}
           >
-            <p className="font-bold text-sm">{s.subject_name}</p>
-            <p className="text-xs text-muted-foreground">{s.doctor_name}</p>
-            <div className="flex items-center gap-1 mt-1">
-              <Clock className="h-3 w-3 text-green-500" />
-              <span className="text-xs text-green-500 font-mono">{getRemaining(s.expires_at)}</span>
+            <p className="font-bold text-sm truncate">{s.subject_name}</p>
+            <p className="text-xs text-muted-foreground truncate mt-0.5">{s.doctor_name}</p>
+            <div className="flex items-center gap-1.5 mt-2">
+              <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_6px_rgba(34,197,94,0.6)]"></span>
+              <span className="text-xs text-green-500 font-mono font-bold">{getRemaining(s.expires_at)}</span>
             </div>
           </button>
         ))}
@@ -121,53 +124,52 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
 
       {/* Selected session details */}
       {selectedSession && (
-        <div className="rounded-2xl border border-primary/30 bg-card p-6 text-center space-y-4">
-          <div>
-            <p className="text-lg font-bold">{selectedSession.subject_name}</p>
-            <p className="text-sm text-muted-foreground">
-              {selectedSession.doctor_name} · {selectedSession.lecture_title}
-            </p>
+        <div className="rounded-3xl border border-primary/20 glass-panel p-5 sm:p-6 space-y-5 overflow-hidden relative">
+          {/* Ambient gradient */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-cyan-500/5 pointer-events-none" />
+          
+          <div className="relative z-10 text-center space-y-1">
+            <p className="text-lg sm:text-xl font-extrabold text-foreground">{selectedSession.subject_name}</p>
+            <p className="text-sm text-muted-foreground">{selectedSession.doctor_name} · {selectedSession.lecture_title}</p>
           </div>
 
-          {/* Code display */}
-          <div className="rounded-xl bg-primary/10 border border-primary/30 p-4 sm:p-6 space-y-2 sm:space-y-3">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">كود الجلسة</p>
-            <p className="text-4xl sm:text-5xl font-bold font-mono tracking-[0.3em] sm:tracking-[0.5em] text-primary">
-              {selectedSession.short_code}
-            </p>
-            <div className="flex items-center justify-center gap-2">
-              <Clock className="h-4 w-4 text-green-500" />
-              <span className="text-green-500 font-mono font-bold">
-                {getRemaining(selectedSession.expires_at)}
-              </span>
+          {/* Code + QR layout */}
+          <div className="relative z-10 flex flex-col sm:flex-row items-center gap-5 sm:gap-6 justify-center">
+            {/* TOTP Code */}
+            <div className="w-full sm:w-auto flex-1 rounded-2xl bg-background/60 border border-primary/20 px-4 py-5 text-center space-y-3 backdrop-blur-sm shadow-inner">
+              <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-primary opacity-70">كود الجلسة</p>
+              <p className="font-mono text-4xl sm:text-5xl font-black text-foreground tracking-[0.3em] select-all"
+                style={{ textShadow: '0 0 20px hsl(var(--primary)/0.35)' }}>
+                {selectedSession.short_code}
+              </p>
+              <div className="flex items-center justify-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.7)]"></span>
+                <span className="text-green-500 font-mono font-bold text-base">{getRemaining(selectedSession.expires_at)}</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleCopy(selectedSession.short_code)}
+                className="w-full gap-2 rounded-xl text-xs font-bold h-9 hover:bg-primary/10 hover:text-primary transition-colors"
+              >
+                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                {copied ? "تم النسخ!" : "نسخ الكود"}
+              </Button>
+            </div>
+
+            {/* QR Code */}
+            <div className="shrink-0 rounded-2xl bg-white p-3 shadow-xl border border-white/20">
+              <canvas ref={canvasRef} style={{ width: '160px', height: '160px', display: 'block', imageRendering: 'pixelated' }} />
             </div>
           </div>
 
-          {/* QR Code */}
-          <div className="flex justify-center">
-            <div className="rounded-xl bg-white p-2 sm:p-3">
-              <canvas ref={canvasRef} style={{ maxWidth: "140px", height: "auto" }} />
-            </div>
-          </div>
-
-          {/* GPS info */}
+          {/* GPS badge */}
           {selectedSession.latitude && (
-            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-              <MapPin className="h-3 w-3" />
-               <span>مطلوب GPS · {selectedSession.radius_meters}m نصف القطر</span>
+            <div className="relative z-10 flex items-center justify-center gap-2 text-xs text-muted-foreground bg-background/50 rounded-xl px-4 py-2.5 border border-white/5">
+              <MapPin className="h-3.5 w-3.5 text-primary" />
+              <span className="font-medium">مطلوب GPS · نطاق {selectedSession.radius_meters} متر</span>
             </div>
           )}
-
-          {/* Copy button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleCopy(selectedSession.short_code)}
-            className="gap-2"
-          >
-            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            {copied ? "تم النسخ!" : "نسخ الكود"}
-          </Button>
         </div>
       )}
     </div>

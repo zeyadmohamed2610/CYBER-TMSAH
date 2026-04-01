@@ -312,6 +312,38 @@
   .glass-card:hover {
     @apply dark:border-white/10 dark:bg-[#12121a]/80 shadow-md transform -translate-y-1;
   }
+
+  /* GPU-accelerated layers for animated elements */
+  .gpu {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  /* Content visibility — lets browser skip off-screen rendering */
+  .cv-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 500px;
+  }
+
+  /* Custom minimal scrollbar */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary)/0.3) transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar {
+    height: 4px;
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary)/0.3);
+    border-radius: 999px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary)/0.5);
+  }
 }
 
 @keyframes fadeUp {
