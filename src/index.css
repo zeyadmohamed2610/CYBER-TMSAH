@@ -227,12 +227,14 @@
     direction: rtl;
     font-family: 'Cairo', sans-serif;
     scroll-behavior: smooth;
+    overflow-x: hidden;
   }
 
   body {
     @apply bg-background text-foreground;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
 }
 

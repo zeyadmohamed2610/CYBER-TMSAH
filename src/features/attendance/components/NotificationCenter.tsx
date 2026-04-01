@@ -135,7 +135,7 @@ export function NotificationCenter() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-12 z-50 w-80 sm:w-96 max-h-[70vh] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+          <div className="fixed inset-x-2 top-auto sm:inset-x-auto sm:absolute sm:right-0 top-14 sm:top-12 z-50 w-auto sm:w-96 max-w-[calc(100vw-1rem)] max-h-[70vh] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl glass-panel">
             <div className="flex items-center justify-between p-4 border-b border-border">
               <h3 className="font-bold text-foreground">الاشعارات</h3>
               <button onClick={() => setOpen(false)} className="p-1 rounded hover:bg-muted"><X className="h-4 w-4 text-muted-foreground" /></button>

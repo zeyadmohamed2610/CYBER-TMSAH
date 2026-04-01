@@ -118,10 +118,13 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
   };
 
   return (
-    <Card className="bg-card/80" dir="rtl">
-      <CardHeader>
-        <CardTitle className="text-lg">تسجيل الحضور</CardTitle>
-        <CardDescription>أدخل كود الجلسة (6 أرقام) أو امسح الـ QR</CardDescription>
+    <Card className="glass-card" dir="rtl">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-lg sm:text-xl font-bold flex items-center gap-2">
+          <Lock className="h-5 w-5 text-primary" />
+          تسجيل الحضور
+        </CardTitle>
+        <CardDescription>أدخل كود الجلسة (6 أرقام) أو امسح الـ QR بالكاميرا</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="grid gap-4">
@@ -184,9 +187,9 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
             </div>
           )}
 
-          <Button type="submit" className="w-full" disabled={isSubmitting || !code.trim()}>
-            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            تسجيل الحضور
+          <Button type="submit" className="w-full h-12 rounded-xl text-base font-semibold btn-cyber shadow-lg" disabled={isSubmitting || !code.trim()}>
+            {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+            تسجيل الحضور الآن
           </Button>
         </form>
       </CardContent>
