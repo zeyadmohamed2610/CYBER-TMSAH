@@ -30,6 +30,7 @@ export function TAManagementPanel() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [search, setSearch] = useState("");
 
   // Create TA form
   const [form, setForm] = useState({ name: "", email: "", password: "", subjectId: "" });
@@ -167,11 +168,16 @@ export function TAManagementPanel() {
     );
   };
 
-  // Group TAs by subject
+  // Group TAs by subject and apply search
+  const filteredTas = tas.filter(ta => 
+    ta.full_name.toLowerCase().includes(search.toLowerCase()) || 
+    (ta.national_id && ta.national_id.includes(search))
+  );
+
   const tasBySubject = subjects.map((s) => ({
     ...s,
-    tas: tas.filter((t) => t.subject_id === s.id),
-  })).filter((s) => s.tas.length > 0);
+    tas: filteredTas.filter((t) => t.subject_id === s.id),
+  })).filter((group) => group.tas.length > 0);
 
   return (
     <Card>
@@ -187,6 +193,17 @@ export function TAManagementPanel() {
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Search Bar */}
+        <div className="relative">
+          <Input
+            placeholder="بحث عن معيد بالاسم أو الرقم القومي..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pr-10"
+          />
+          <svg className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </div>
+
         {/* Create TA Form */}
         {showAdd && (
           <div className="rounded-lg border bg-muted/30 p-4 space-y-3">

@@ -15,6 +15,7 @@ interface AttendanceRecord {
   session_id: string;
   submitted_at: string;
   ip_address: string | null;
+  section: string | null;
 }
 
 export const AttendanceRecordsPanel = () => {
@@ -29,7 +30,7 @@ export const AttendanceRecordsPanel = () => {
     try {
       const { data } = await supabase
         .from("attendance")
-        .select("id, created_at, ip_address, session_id, student_id, sessions(subject_id, subjects(name)), users!attendance_student_id_fkey(full_name)")
+        .select("id, created_at, ip_address, session_id, student_id, section, sessions(subject_id, subjects(name)), users!attendance_student_id_fkey(full_name)")
         .order("created_at", { ascending: false })
         .limit(200);
 
@@ -44,6 +45,7 @@ export const AttendanceRecordsPanel = () => {
           session_id: row.session_id as string,
           submitted_at: row.created_at as string,
           ip_address: (row.ip_address as string) ?? null,
+          section: (row.section as string) ?? null,
         };
       });
       setRecords(mapped);
@@ -86,7 +88,8 @@ export const AttendanceRecordsPanel = () => {
     const q = search.toLowerCase();
     return records.filter((r) =>
       r.student_name.toLowerCase().includes(q) ||
-      r.subject_name.toLowerCase().includes(q)
+      r.subject_name.toLowerCase().includes(q) ||
+      (r.section && r.section.toLowerCase().includes(q))
     );
   }, [records, search]);
 
@@ -138,6 +141,7 @@ export const AttendanceRecordsPanel = () => {
                   <p className="text-sm font-medium truncate">{record.student_name}</p>
                   <div className="flex items-center gap-2 mt-0.5">
                     <Badge variant="secondary" className="text-[10px]">{record.subject_name}</Badge>
+                    {record.section && <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">{record.section}</Badge>}
                     <span className="text-[10px] text-muted-foreground" dir="ltr">
                       {new Date(record.submitted_at).toLocaleString("en-GB")}
                     </span>

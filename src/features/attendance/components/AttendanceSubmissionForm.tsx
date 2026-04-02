@@ -147,7 +147,11 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
             <div className="rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 text-sm">
               <p className="font-medium">الجلسات النشطة الآن:</p>
               <ul className="mt-1 list-inside list-disc text-xs text-muted-foreground">
-                {activeSessions.map((s) => <li key={s.id}>{s.subjectName}</li>)}
+                {activeSessions.map((s) => (
+                  <li key={s.id}>
+                    {s.subjectName} {s.section ? `(${s.section})` : ""}
+                  </li>
+                ))}
               </ul>
             </div>
           ) : (

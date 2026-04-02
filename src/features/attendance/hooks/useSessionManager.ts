@@ -17,6 +17,7 @@ export interface ActiveSession {
   longitude: number | null;
   radius_meters: number;
   lecture_id?: string | null;
+  section?: string | null;
 }
 
 interface SessionRow {
@@ -30,6 +31,7 @@ interface SessionRow {
   longitude: number | null;
   radius_meters: number | null;
   lecture_id?: string | null;
+  section?: string | null;
 }
 
 interface UseSessionManagerReturn {
@@ -44,6 +46,7 @@ interface UseSessionManagerReturn {
     longitude?: number | null,
     radiusMeters?: number,
     lectureId?: string | null,
+    section?: string | null,
   ) => Promise<void>;
   stopSession: (sessionId: string) => Promise<void>;
   updateDuration: (sessionId: string, durationMinutes: number) => Promise<{ error?: string }>;
@@ -64,7 +67,7 @@ export function useSessionManager(): UseSessionManagerReturn {
     try {
       let query = supabase
         .from("sessions")
-        .select("id, subject_id, rotating_hash, short_code, expires_at, created_at, latitude, longitude, radius_meters, lecture_id, subjects(name, doctor_name)")
+        .select("id, subject_id, rotating_hash, short_code, expires_at, created_at, latitude, longitude, radius_meters, lecture_id, section, subjects(name, doctor_name)")
         .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: false })
         .limit(1);
@@ -98,6 +101,7 @@ export function useSessionManager(): UseSessionManagerReturn {
             longitude: row.longitude ?? null,
             radius_meters: row.radius_meters ?? 50,
             lecture_id: row.lecture_id ?? null,
+            section: row.section ?? null,
           });
         }
       }
@@ -160,6 +164,7 @@ export function useSessionManager(): UseSessionManagerReturn {
     longitude?: number | null,
     radiusMeters?: number,
     lectureId?: string | null,
+    section?: string | null,
   ) => {
     setCreating(true);
     setError(null);
@@ -171,6 +176,7 @@ export function useSessionManager(): UseSessionManagerReturn {
       p_longitude: longitude ?? null,
       p_radius_meters: radiusMeters ?? 50,
       p_lecture_id: lectureId ?? null,
+      p_section: section ?? null,
     });
 
     if (rpcErr) {
@@ -205,6 +211,7 @@ export function useSessionManager(): UseSessionManagerReturn {
       longitude:        row.longitude ?? longitude ?? null,
       radius_meters:    row.radius_meters ?? radiusMeters ?? 50,
       lecture_id:       row.lecture_id ?? lectureId ?? null,
+      section:          row.section ?? section ?? null,
     });
     setCreating(false);
   }, []);

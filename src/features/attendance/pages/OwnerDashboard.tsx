@@ -1,7 +1,10 @@
 import { useState } from "react";
-import { Activity, BookOpenCheck, ChevronDown, Clock3, Trash2, Users } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Activity, BookOpenCheck, ChevronDown, Clock3, GraduationCap, Stethoscope, Trash2, Users, Users2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { ConfirmAction } from "@/components/ui/confirm-action";
 import { AttendanceRecordsPanel } from "../components/AttendanceRecordsPanel";
 import { ExportButtons } from "../components/ExportButtons";
 import { QuickScheduleEditor } from "../components/QuickScheduleEditor";
@@ -13,6 +16,7 @@ import { NotificationForm } from "../components/NotificationForm";
 import { StatCard } from "../components/StatCard";
 import { DeviceLockPanel } from "../components/DeviceLockPanel";
 import { SystemLogsTable } from "../components/SystemLogsTable";
+import { UserList } from "../components/UserList";
 import { TAManagementPanel } from "../components/TAManagementPanel";
 import { UserCreationForm } from "../components/UserCreationForm";
 import { useAttendanceDashboardData } from "../hooks/useAttendanceDashboardData";
@@ -23,20 +27,44 @@ export const OwnerDashboard = () => {
   const { error, metrics } = useAttendanceDashboardData("owner");
   const { fullName } = useAttendanceAuth();
   const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
-  const [activeTab, setActiveTab] = useState("lectures");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "lectures";
+  
+  const setActiveTab = (tab: string) => {
+    setSearchParams({ tab });
+  };
 
   const TABS = [
     { value: "lectures", label: "المحاضرات" },
     { value: "schedule", label: "الجدول" },
     { value: "materials", label: "المواد" },
-    { value: "users", label: "المستخدمين" },
-    { value: "tas", label: "المعيدين" },
+    { value: "students", label: "الطلاب" },
+    { value: "doctors", label: "الدكاترة" },
+    { value: "tas", label: "المعيديـن" },
     { value: "devices", label: "الأجهزة" },
     { value: "manual-attendance", label: "تسجيل يدوي" },
     { value: "attendance-records", label: "سجلات الحضور" },
     { value: "notifications", label: "الإشعارات" },
     { value: "logs", label: "السجلات" },
   ];
+
+  const clearLogs = async () => {
+    const { attendanceService } = await import("../services/attendanceService");
+    const { error } = await attendanceService.clearSystemLogs();
+    if (error) {
+      alert("فشل مسح السجلات: " + error);
+    } else {
+      window.location.reload();
+    }
+  };
+
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [creationRole, setCreationRole] = useState<"student" | "doctor" | "ta">("student");
+
+  const openCreation = (role: "student" | "doctor" | "ta") => {
+    setCreationRole(role);
+    setShowCreateForm(true);
+  };
 
   if (selectedLecture) {
     return <LectureDetailView lecture={selectedLecture} onBack={() => setSelectedLecture(null)} />;
@@ -51,9 +79,25 @@ export const OwnerDashboard = () => {
         </Alert>
       )}
 
-      {fullName && (
-        <p className="text-lg font-bold">مرحباً يا <span className="text-primary">{fullName}</span></p>
-      )}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        {fullName && (
+          <p className="text-lg font-bold">مرحباً يا <span className="text-primary">{fullName}</span></p>
+        )}
+        <div className="flex items-center gap-2">
+          <ConfirmAction
+            title="مسح سجلات النظام"
+            description="هل تريد مسح جميع سجلات العمليات؟ لا يمكن التراجع."
+            confirmLabel="مسح الآن"
+            onConfirm={clearLogs}
+          >
+            {(trigger) => (
+              <Button variant="destructive" size="sm" onClick={trigger} className="gap-2 shadow-lg shadow-destructive/20">
+                <Trash2 className="h-4 w-4" /> مسح السجلات
+              </Button>
+            )}
+          </ConfirmAction>
+        </div>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard title="الجلسات" value={metrics.totalSessions} description="منذ البداية" icon={BookOpenCheck} />
@@ -104,9 +148,31 @@ export const OwnerDashboard = () => {
 
         <TabsContent value="materials"><MaterialsEditor /></TabsContent>
 
-        <TabsContent value="users"><UserCreationForm /></TabsContent>
+        <TabsContent value="students">
+          {showCreateForm && creationRole === "student" ? (
+            <div className="space-y-4">
+              <Button variant="outline" size="sm" onClick={() => setShowCreateForm(false)}>العودة للقائمة</Button>
+              <UserCreationForm />
+            </div>
+          ) : (
+            <UserList role="student" title="قائمة الطلاب" onCreateClick={() => openCreation("student")} />
+          )}
+        </TabsContent>
 
-        <TabsContent value="tas"><TAManagementPanel /></TabsContent>
+        <TabsContent value="doctors">
+          {showCreateForm && creationRole === "doctor" ? (
+            <div className="space-y-4">
+              <Button variant="outline" size="sm" onClick={() => setShowCreateForm(false)}>العودة للقائمة</Button>
+              <UserCreationForm />
+            </div>
+          ) : (
+            <UserList role="doctor" title="قائمة الدكاترة" onCreateClick={() => openCreation("doctor")} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="tas">
+          <TAManagementPanel />
+        </TabsContent>
 
         <TabsContent value="devices"><DeviceLockPanel /></TabsContent>
 

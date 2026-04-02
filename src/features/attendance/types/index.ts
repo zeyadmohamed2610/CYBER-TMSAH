@@ -48,8 +48,9 @@ export interface SessionSummary {
   isActive: boolean;
   latitude: number | null;
   longitude: number | null;
-  radiusMeters: number;
-  lectureId?: string | null;
+  radiusMeters: number | null;
+  lectureId: string | null;
+  section?: string | null;
 }
 
 export interface AttendanceRecord {
@@ -61,6 +62,7 @@ export interface AttendanceRecord {
   subjectName?: string;
   submittedAt: string;
   ipAddress?: string | null;
+  section?: string | null;
 }
 
 export interface DashboardMetrics {

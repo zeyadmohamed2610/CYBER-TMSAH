@@ -11,10 +11,11 @@ import type { Lecture } from "../types";
 
 export const TADashboard = () => {
   const { user, fullName } = useAttendanceAuth();
-  const { metrics, error } = useAttendanceDashboardData("ta");
-  const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
   const [taSubjectId, setTaSubjectId] = useState<string | undefined>(undefined);
   const [taSubjectName, setTaSubjectName] = useState<string>("");
+  const [taSections, setTaSections] = useState<string[]>([]);
+  const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
+  const { metrics, error } = useAttendanceDashboardData("ta", taSections);
 
   useEffect(() => {
     if (!user) return;
@@ -23,7 +24,24 @@ export const TADashboard = () => {
         if (data?.subject_id) {
           setTaSubjectId(data.subject_id);
           supabase.from("subjects").select("name").eq("id", data.subject_id).maybeSingle()
-            .then(({ data: subj }) => { if (subj?.name) setTaSubjectName(subj.name); });
+            .then(({ data: subj }) => {
+              if (subj?.name) {
+                setTaSubjectName(subj.name);
+                // Fetch assigned sections from course_materials
+                supabase.from("course_materials").select("teaching_assistants").eq("slug", subj.name.toLowerCase().replace(/\s+/g, "-")).maybeSingle()
+                  .then(({ data: mat }) => {
+                    if (mat?.teaching_assistants) {
+                      const userEmail = user.email;
+                      const assigned = (mat.teaching_assistants as string[])
+                        .map(entry => entry.split("|"))
+                        .find(parts => parts[0] === userEmail);
+                      if (assigned && assigned.length > 1) {
+                        setTaSections(assigned.slice(1).map(s => s.trim()));
+                      }
+                    }
+                  });
+              }
+            });
         }
       });
   }, [user]);

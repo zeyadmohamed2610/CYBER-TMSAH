@@ -18,7 +18,7 @@ const EMPTY_METRICS: DashboardMetrics = {
   pendingSubmissions: 0,
 };
 
-export const useAttendanceDashboardData = (role: AttendanceRole) => {
+export const useAttendanceDashboardData = (role: AttendanceRole, sectionFilter?: string[]) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<DashboardMetrics>(EMPTY_METRICS);
@@ -31,10 +31,10 @@ export const useAttendanceDashboardData = (role: AttendanceRole) => {
   /** Core fetch — updates state silently (no loading spinner) */
   const fetchData = useCallback(async () => {
     const [metricsResult, sessionsResult, recordsResult, subjectResult] = await Promise.all([
-      attendanceService.fetchDashboardMetrics(role),
-      attendanceService.fetchSessionsByRole(role),
-      attendanceService.fetchAttendanceRecords(role),
-      attendanceService.fetchSubjectMetrics(role),
+      attendanceService.fetchDashboardMetrics(role, sectionFilter),
+      attendanceService.fetchSessionsByRole(role, sectionFilter),
+      attendanceService.fetchAttendanceRecords(role, undefined, sectionFilter),
+      attendanceService.fetchSubjectMetrics(role, sectionFilter),
     ]);
 
     if (!mountedRef.current) return;
@@ -49,7 +49,7 @@ export const useAttendanceDashboardData = (role: AttendanceRole) => {
     const firstError =
       metricsResult.error || sessionsResult.error || recordsResult.error || subjectResult.error || null;
     setError(firstError);
-  }, [role]);
+  }, [role, sectionFilter]);
 
   /** Initial fetch with loading spinner */
   const initialFetch = useCallback(async () => {

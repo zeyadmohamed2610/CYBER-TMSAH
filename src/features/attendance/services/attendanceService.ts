@@ -153,16 +153,21 @@ export const attendanceService = {
   /** Fetch sessions filtered by role. Derives isActive from expires_at. */
   async fetchSessionsByRole(
     role: AttendanceRole,
+    sectionFilter?: string[],
   ): Promise<AttendanceApiResponse<SessionSummary[]>> {
     const operation = "attendanceService.fetchSessionsByRole";
     try {
       const sessionSelect = "id, subject_id, rotating_hash, short_code, expires_at, created_at, latitude, longitude, radius_meters, subjects(name)";
 
       if (role === "owner") {
-        const { data, error } = await supabase
+        let query = supabase
           .from("sessions")
           .select(sessionSelect)
           .order("created_at", { ascending: false });
+        if (sectionFilter && sectionFilter.length > 0) {
+          query = query.in("section", sectionFilter);
+        }
+        const { data, error } = await query;
         if (error) throw error;
         return ok<SessionSummary[]>(((data ?? []) as SessionRow[]).map(mapSessionSummary));
       }
@@ -187,11 +192,17 @@ export const attendanceService = {
         return ok<SessionSummary[]>([]);
       }
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("sessions")
         .select(sessionSelect)
         .eq("subject_id", profile.subjectId)
         .order("created_at", { ascending: false });
+
+      if (sectionFilter && sectionFilter.length > 0) {
+        query = query.in("section", sectionFilter);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       return ok<SessionSummary[]>(((data ?? []) as SessionRow[]).map(mapSessionSummary));
@@ -204,6 +215,7 @@ export const attendanceService = {
   async fetchAttendanceRecords(
     role: AttendanceRole,
     pagination?: { page?: number; pageSize?: number },
+    sectionFilter?: string[],
   ): Promise<AttendanceApiResponse<AttendanceRecord[]>> {
     const operation = "attendanceService.fetchAttendanceRecords";
     try {
@@ -251,12 +263,18 @@ export const attendanceService = {
       const ids = (sessionIds ?? []).map((r) => r.id as string);
       if (ids.length === 0) return ok<AttendanceRecord[]>([]);
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("attendance")
         .select(attendanceSelect)
         .in("session_id", ids)
         .order("created_at", { ascending: false })
         .range(from, to);
+
+      if (sectionFilter && sectionFilter.length > 0) {
+        query = query.in("section", sectionFilter);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return ok<AttendanceRecord[]>(((data ?? []) as unknown as AttendanceRow[]).map(mapAttendanceRecord));
     } catch (error) {
@@ -267,6 +285,7 @@ export const attendanceService = {
   /** Dashboard metrics recomputed from real columns. */
   async fetchDashboardMetrics(
     role: AttendanceRole,
+    sectionFilter?: string[],
   ): Promise<AttendanceApiResponse<DashboardMetrics>> {
     const operation = "attendanceService.fetchDashboardMetrics";
     try {
@@ -356,8 +375,12 @@ export const attendanceService = {
         });
       }
 
+      const sessionListQuery = supabase.from("sessions").select("id, expires_at, section").eq("subject_id", profile.subjectId);
+      if (sectionFilter && sectionFilter.length > 0) {
+        sessionListQuery.in("section", sectionFilter);
+      }
       const [sessionsResult, studentsResult] = await Promise.all([
-        supabase.from("sessions").select("id, expires_at").eq("subject_id", profile.subjectId),
+        sessionListQuery,
         supabase
           .from("users")
           .select("id", { head: true, count: "exact" })
@@ -437,6 +460,7 @@ export const attendanceService = {
   },
   async fetchSubjectMetrics(
     role: AttendanceRole,
+    sectionFilter?: string[],
   ): Promise<AttendanceApiResponse<SubjectAttendanceMetric[]>> {
     const operation = "attendanceService.fetchSubjectMetrics";
     try {
@@ -447,9 +471,12 @@ export const attendanceService = {
         .from("sessions")
         .select("id, subject_id, subjects(name)");
 
-      if (role === "doctor") {
+      if (role === "doctor" || role === "ta") {
         if (!profile?.subjectId) return ok<SubjectAttendanceMetric[]>([]);
         sessionsQuery = sessionsQuery.eq("subject_id", profile.subjectId);
+        if (sectionFilter && sectionFilter.length > 0) {
+          sessionsQuery = sessionsQuery.in("section", sectionFilter);
+        }
       }
 
       const { data: sessionData, error: sessionError } = await sessionsQuery;
@@ -648,6 +675,18 @@ export const attendanceService = {
       return ok<SystemLogEntry[]>(logs);
     } catch (error) {
       return fail<SystemLogEntry[]>(operation, error);
+    }
+  },
+
+  /** Clear all system logs (owner only). */
+  async clearSystemLogs(): Promise<AttendanceApiResponse<null>> {
+    const operation = "attendanceService.clearSystemLogs";
+    try {
+      const { error } = await supabase.rpc("clear_system_logs");
+      if (error) throw error;
+      return ok<null>(null);
+    } catch (error) {
+      return fail<null>(operation, error);
     }
   },
 

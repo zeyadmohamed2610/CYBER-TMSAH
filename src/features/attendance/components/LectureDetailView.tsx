@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { attendanceService } from "../services/attendanceService";
 import { reportService } from "../services/reportService";
@@ -37,6 +38,8 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
   const [ending, setEnding] = useState(false);
   const [sessionDuration, setSessionDuration] = useState(10);
   const [sessionRadius, setSessionRadius] = useState(50);
+  const [selectedSection, setSelectedSection] = useState<string>("عام");
+  const [availableSections, setAvailableSections] = useState<string[]>([]);
   const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
   const { activeSession, creating, error, createSession, stopSession, updateDuration, refreshHash, restoreActiveSession } =
     useSessionManager();
@@ -95,6 +98,27 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
       );
     }
   }, [lecture.id, restoreActiveSession]);
+  // Load available sections for the subject
+  useEffect(() => {
+    if (lecture.subject_id) {
+      supabase.from("course_materials")
+        .select("teaching_assistants")
+        .eq("slug", lecture.subject_name.toLowerCase().replace(/\s+/g, "-"))
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.teaching_assistants) {
+            const sections = new Set<string>(["عام"]);
+            (data.teaching_assistants as string[]).forEach(ta => {
+              const parts = ta.split("|");
+              parts.slice(1).forEach(s => sections.add(s.trim()));
+            });
+            setAvailableSections(Array.from(sections));
+          } else {
+            setAvailableSections(["عام", "سكشن 1", "سكشن 2", "سكشن 3", "سكشن 4", "سكشن 5"]);
+          }
+        });
+    }
+  }, [lecture.subject_id, lecture.subject_name]);
 
   // Load attendees and session history
   useEffect(() => { void load(); void loadSessionHistory(); }, [load, loadSessionHistory]);
@@ -107,7 +131,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
   }, [activeSession?.is_active, load, loadSessionHistory]);
 
   const handleCreateSession = async () => {
-    await createSession(lecture.subject_id, sessionDuration, gpsCoords?.lat, gpsCoords?.lng, sessionRadius, lecture.id);
+    await createSession(lecture.subject_id, sessionDuration, gpsCoords?.lat, gpsCoords?.lng, sessionRadius, lecture.id, selectedSection);
     setTimeout(() => void loadSessionHistory(), 2000);
   };
 
@@ -199,6 +223,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
             <h2 className="text-lg font-bold truncate">{lecture.title}</h2>
             <p className="text-xs text-muted-foreground truncate">
               {lecture.subject_name} — {new Date(lecture.lecture_date).toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+              {activeSession?.section && <Badge variant="secondary" className="mr-2">قيد التنفيذ: {activeSession.section}</Badge>}
             </p>
           </div>
         </div>
@@ -290,6 +315,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {session.attendee_count} حاضر · {session.is_active ? "نشطة" : "منتهية"}
+                      { (session as any).section && ` · ${(session as any).section}` }
                     </p>
                   </div>
                 </div>
@@ -343,12 +369,23 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
       ) : (
         <Card>
           <CardContent className="p-6 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1">
                 <Label className="text-xs">المدة (دقائق)</Label>
                 <Input type="number" min={5} max={180} value={sessionDuration}
                   onChange={(e) => setSessionDuration(Number(e.target.value))}
                   className="h-8 text-sm" dir="ltr" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">القسم / السكشن</Label>
+                <Select value={selectedSection} onValueChange={setSelectedSection}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="اختر القسم..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableSections.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">نصف القطر GPS (متر)</Label>

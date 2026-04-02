@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
 
 interface Student { id: string; full_name: string; national_id: string | null; }
-interface Session { id: string; subject_name: string; is_active: boolean; created_at: string; }
+interface Session { id: string; subject_name: string; section: string | null; is_active: boolean; created_at: string; }
 
 export function ManualAttendancePanel() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -25,7 +25,7 @@ export function ManualAttendancePanel() {
     const load = async () => {
       const [sRes, sessRes] = await Promise.all([
         supabase.from("users").select("id, full_name, national_id").eq("role", "student").order("full_name"),
-        supabase.from("sessions").select("id, is_active, created_at, subject_id").order("created_at", { ascending: false }).limit(50),
+        supabase.from("sessions").select("id, is_active, created_at, subject_id, section").order("created_at", { ascending: false }).limit(50),
       ]);
       setStudents((sRes.data ?? []) as Student[]);
 
@@ -37,6 +37,7 @@ export function ManualAttendancePanel() {
         setSessions(sessData.map((s: Record<string, unknown>) => ({
           id: s.id as string,
           subject_name: nameMap.get(s.subject_id as string) || "غير معروف",
+          section: (s.section as string) ?? null,
           is_active: s.is_active as boolean,
           created_at: s.created_at as string,
         })));
@@ -116,8 +117,13 @@ export function ManualAttendancePanel() {
             <SelectContent className="max-h-[200px]">
               {sessions.map(s => (
                 <SelectItem key={s.id} value={s.id}>
-                  {s.subject_name} - {new Date(s.created_at).toLocaleDateString("ar-EG")}
-                  {s.is_active ? " (نشطة)" : ""}
+                  <div className="flex flex-col items-start gap-0.5">
+                    <span className="font-medium text-sm">{s.subject_name} {s.section ? `- ${s.section}` : ""}</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {new Date(s.created_at).toLocaleDateString("ar-EG")}
+                      {s.is_active ? " (نشطة)" : ""}
+                    </span>
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>
