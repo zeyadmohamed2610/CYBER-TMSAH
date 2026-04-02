@@ -12,6 +12,7 @@ import type {
   SystemLogEntry,
 } from "../types";
 import { supabase } from "@/lib/supabaseClient";
+import { sha256Hash } from "../utils/fingerprint";
 
 // ─── Internal row shapes ─────────────────────────────────────────────────────
 
@@ -582,30 +583,7 @@ export const attendanceService = {
         canvasFingerprint,
       ].join("|");
 
-      let deviceFingerprint: string;
-      try {
-        if (typeof crypto !== "undefined" && crypto.subtle && typeof crypto.subtle.digest === "function") {
-          const encoder = new TextEncoder();
-          const hashBuf = await crypto.subtle.digest("SHA-256", encoder.encode(fpRaw));
-          deviceFingerprint = [...new Uint8Array(hashBuf)]
-            .map((b) => b.toString(16).padStart(2, "0"))
-            .join("");
-        } else {
-          let h = 0;
-          for (let i = 0; i < fpRaw.length; i++) {
-            h = ((h << 5) - h) + fpRaw.charCodeAt(i);
-            h = h & h;
-          }
-          deviceFingerprint = "fb-" + Math.abs(h).toString(16);
-        }
-      } catch {
-        let h = 0;
-        for (let i = 0; i < fpRaw.length; i++) {
-          h = ((h << 5) - h) + fpRaw.charCodeAt(i);
-          h = h & h;
-        }
-        deviceFingerprint = "fb-" + Math.abs(h).toString(16);
-      }
+      const deviceFingerprint = await sha256Hash(fpRaw);
 
       const { data, error } = await supabase.rpc("submit_attendance", {
         p_hash: hash,
