@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowRight, Download, RefreshCw, Users, Clock, Hash, StopCircle, MapPin, History } from "lucide-react";
+import { ArrowRight, Download, RefreshCw, Users, Clock, Hash, StopCircle, PlayCircle, MapPin, History, Settings, ToggleLeft, ToggleRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,12 +22,24 @@ interface Props {
   fixedSubjectId?: string;
 }
 
+interface SessionDbRow {
+  id: string;
+  created_at: string;
+  expires_at: string;
+  section: string | null;
+  duration_minutes: number | null;
+  gps_radius: number | null;
+}
+
 interface SessionHistoryItem {
   session_id: string;
   created_at: string;
   expires_at: string;
   is_active: boolean;
   attendee_count: number;
+  section?: string | null;
+  duration_minutes?: number | null;
+  gps_radius?: number | null;
 }
 
 export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
@@ -55,30 +67,33 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
     setLoading(false);
   }, [lecture.id, toast]);
 
-  // Load session history for this lecture
+  // Load session history for this lecture with enhanced details
   const loadSessionHistory = useCallback(async () => {
     try {
-      const { data: sessions } = await supabase
+        const { data: sessions } = await supabase
         .from("sessions")
-        .select("id, created_at, expires_at")
+        .select("id, created_at, expires_at, section, duration_minutes, gps_radius")
         .eq("lecture_id", lecture.id)
         .order("created_at", { ascending: false });
 
       if (!sessions) { setSessionHistory([]); return; }
 
       const history: SessionHistoryItem[] = [];
-      for (const s of sessions) {
+      for (const s of sessions as SessionDbRow[]) {
         const { count } = await supabase
           .from("attendance")
           .select("id", { head: true, count: "exact" })
           .eq("session_id", s.id);
 
         history.push({
-          session_id: s.id as string,
-          created_at: s.created_at as string,
-          expires_at: s.expires_at as string,
-          is_active: new Date(s.expires_at as string).getTime() > Date.now(),
+          session_id: s.id,
+          created_at: s.created_at,
+          expires_at: s.expires_at,
+          is_active: new Date(s.expires_at).getTime() > Date.now(),
           attendee_count: count ?? 0,
+          section: s.section ?? null,
+          duration_minutes: s.duration_minutes ?? null,
+          gps_radius: s.gps_radius ?? null,
         });
       }
       setSessionHistory(history);
@@ -129,6 +144,20 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
     const timer = setInterval(() => { void load(); void loadSessionHistory(); }, 10_000);
     return () => clearInterval(timer);
   }, [activeSession?.is_active, load, loadSessionHistory]);
+
+  const handleToggleSession = useCallback(async (sessionId: string, activate: boolean) => {
+    const expiresAt = activate 
+      ? new Date(Date.now() + 15 * 60 * 1000).toISOString() // Open for 15 mins
+      : new Date().toISOString();
+    
+    const result = await attendanceService.updateSessionExpiry(sessionId, expiresAt);
+    if (result.error) {
+      toast({ variant: "destructive", title: "فشل التعديل", description: result.error });
+    } else {
+      toast({ title: activate ? "تم فتح الجلسة" : "تم غلق الجلسة", description: activate ? "الجلسة متاحة الآن لمدة 15 دقيقة." : "تم إيقاف استقبال الحضور لهذه الجلسة." });
+      void loadSessionHistory();
+    }
+  }, [toast, loadSessionHistory]);
 
   const handleCreateSession = async () => {
     await createSession(lecture.subject_id, sessionDuration, gpsCoords?.lat, gpsCoords?.lng, sessionRadius, lecture.id, selectedSection);
@@ -295,37 +324,124 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
         </Card>
       </div>
 
-      {/* Session History */}
+      {/* Session History - Enhanced with detailed controls */}
       {sessionHistory.length > 0 && (
-        <Card>
+        <Card className="border-primary/20">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <History className="h-4 w-4" />
-              تاريخ الجلسات ({sessionHistory.length})
+              إدارة الجلسات ({sessionHistory.length})
+              <span className="text-xs text-muted-foreground mr-auto">
+                · {sessionHistory.filter(s => s.is_active).length} نشطة
+              </span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {sessionHistory.map((session) => (
-              <div key={session.session_id} className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-card/50 p-3">
+          <CardContent className="space-y-3">
+            {sessionHistory.map((session, idx) => (
+              <div key={session.session_id} className={`flex items-center justify-between gap-3 rounded-lg border p-4 transition-all ${
+                session.is_active 
+                  ? "bg-green-500/5 border-green-500/30" 
+                  : "bg-muted/30 border-border/50"
+              }`}>
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${session.is_active ? "bg-green-500 animate-pulse" : "bg-muted-foreground/30"}`} />
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold ${
+                    session.is_active 
+                      ? "bg-green-500/20 text-green-500" 
+                      : "bg-muted text-muted-foreground"
+                  }`}>
+                    {idx + 1}
+                  </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium">
-                      {new Date(session.created_at).toLocaleString("ar-EG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {session.attendee_count} حاضر · {session.is_active ? "نشطة" : "منتهية"}
-                      { (session as any).section && ` · ${(session as any).section}` }
-                    </p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-medium">
+                        {new Date(session.created_at).toLocaleString("ar-EG", { 
+                          day: "numeric", 
+                          month: "short", 
+                          hour: "2-digit", 
+                          minute: "2-digit" 
+                        })}
+                      </p>
+                      {session.is_active && (
+                        <Badge className="bg-green-500/20 text-green-500 border-green-500/30 text-[10px]">نشطة</Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1 flex-wrap">
+                      <span className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        {session.attendee_count} حاضر
+                      </span>
+                      {session.section && (
+                        <span className="flex items-center gap-1">
+                          <Hash className="h-3 w-3" />
+                          {session.section}
+                        </span>
+                      )}
+                      {session.duration_minutes && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {session.duration_minutes} دقيقة
+                        </span>
+                      )}
+                      {session.gps_radius && (
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {session.gps_radius}m
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => void handleExportSession(session.session_id, "csv")}>
-                    <Download className="h-3 w-3" /> CSV
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    title="تصدير CSV" 
+                    className="h-8 w-8 p-0 hover:bg-primary/10" 
+                    onClick={() => void handleExportSession(session.session_id, "csv")}
+                  >
+                    <Download className="h-4 w-4 text-primary" />
                   </Button>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => void handleExportSession(session.session_id, "xlsx")}>
-                    <Download className="h-3 w-3" /> Excel
-                  </Button>
+                  {session.is_active ? (
+                    <ConfirmAction
+                      title="إغلاق الجلسة"
+                      description={`هل تريد إغلاق هذه الجلسة الآن؟ لن يتمكن الطلاب من تسجيل حضورها.`}
+                      confirmLabel="إغلاق"
+                      detailed={true}
+                    >
+                      {(trigger) => (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 px-3 text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive" 
+                          onClick={trigger}
+                        >
+                          <ToggleRight className="h-4 w-4" />
+                          إغلاق
+                        </Button>
+                      )}
+                    </ConfirmAction>
+                  ) : (
+                    <ConfirmAction
+                      title="فتح الجلسة"
+                      description={`هل تريد إعادة فتح هذه الجلسة لمدة 15 دقيقة إضافية؟`}
+                      confirmLabel="فتح"
+                    >
+                      {(trigger) => (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 px-3 text-xs gap-1 text-green-600 border-green-600/30 hover:bg-green-500/10" 
+                          onClick={() => {
+                            trigger();
+                            setTimeout(() => void handleToggleSession(session.session_id, true), 100);
+                          }}
+                        >
+                          <ToggleLeft className="h-4 w-4" />
+                          فتح
+                        </Button>
+                      )}
+                    </ConfirmAction>
+                  )}
                 </div>
               </div>
             ))}

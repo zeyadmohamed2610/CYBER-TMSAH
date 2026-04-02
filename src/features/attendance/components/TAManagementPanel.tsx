@@ -17,6 +17,7 @@ interface TaUser {
   national_id: string | null;
   subject_id: string;
   subject_name?: string;
+  assigned_sections?: string[];
 }
 
 interface Subject { id: string; name: string; }
@@ -63,6 +64,18 @@ export function TAManagementPanel() {
       subjectNameMap = new Map((subjects ?? []).map((s: { id: string; name: string }) => [s.id, s.name]));
     }
     for (const ta of (taData ?? [])) {
+      // Find sections for this TA from course_materials
+      let assigned_sections: string[] = [];
+      const { data: mat } = await supabase.from("course_materials")
+        .select("teaching_assistants")
+        .eq("subject_id", ta.subject_id)
+        .maybeSingle();
+      
+      if (mat?.teaching_assistants) {
+        const entry = (mat.teaching_assistants as string[]).find(t => t.includes(ta.full_name));
+        if (entry) assigned_sections = entry.split("|").slice(1);
+      }
+
       taList.push({
         id: ta.id as string,
         auth_id: ta.auth_id as string,
@@ -70,6 +83,7 @@ export function TAManagementPanel() {
         national_id: (ta.national_id as string) ?? null,
         subject_id: ta.subject_id as string,
         subject_name: subjectNameMap.get(ta.subject_id as string) ?? "غير معروف",
+        assigned_sections
       });
     }
     setTas(taList);
@@ -307,7 +321,15 @@ export function TAManagementPanel() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{ta.full_name}</p>
-                        <p className="text-xs text-muted-foreground font-mono" dir="ltr">{ta.national_id ?? "—"}</p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {ta.assigned_sections && ta.assigned_sections.length > 0 ? (
+                            ta.assigned_sections.map(s => (
+                              <Badge key={s} variant="secondary" className="text-[9px] h-4 px-1">{s}</Badge>
+                            ))
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground italic">لم يتم تعيين أقسام</span>
+                          )}
+                        </div>
                       </div>
                       <ConfirmAction
                         title="حذف المعيد"

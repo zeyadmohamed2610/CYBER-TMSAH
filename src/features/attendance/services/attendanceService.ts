@@ -39,6 +39,7 @@ type SessionRow = {
   longitude?: number | null;
   radius_meters?: number | null;
   lecture_id?: string | null;
+  section?: string | null;
   subjects?: { name?: string | null } | Array<{ name?: string | null }> | null;
 };
 
@@ -661,8 +662,8 @@ export const attendanceService = {
 
       if (error) throw error;
 
-      const logs: SystemLogEntry[] = ((data ?? []) as unknown as SystemLogRow[]).map((row) => {
-        const actor = asObj(row.users);
+      const logs: SystemLogEntry[] = (data ?? []).map((row) => {
+        const actor = (row as unknown as { users: { full_name: string } | null }).users;
         return {
           id: row.id,
           actorId: row.actor_id,
@@ -792,17 +793,37 @@ export const attendanceService = {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return ok<SessionSummary[]>(((data ?? []) as SessionRow[]).map(mapSessionSummary));
+      return ok<SessionSummary[]>((data ?? []).map(mapSessionSummary));
     } catch (error) {
       return fail<SessionSummary[]>(operation, error);
     }
   },
 
-  /** End a lecture: stop all sessions, delete empty ones */
+  /** Update session expiry to manually open or close it */
+  async updateSessionExpiry(
+    sessionId: string,
+    expiresAt: string | null,
+  ): Promise<AttendanceApiResponse<null>> {
+    const operation = "attendanceService.updateSessionExpiry";
+    try {
+      const { error } = await supabase
+        .from("sessions")
+        .update({ expires_at: expiresAt })
+        .eq("id", sessionId);
+      if (error) throw error;
+      return ok<null>(null);
+    } catch (error) {
+      return fail<null>(operation, error);
+    }
+  },
+
+  /** End a lecture and all its sessions */
   async endLecture(lectureId: string): Promise<AttendanceApiResponse<null>> {
     const operation = "attendanceService.endLecture";
     try {
-      const { error } = await supabase.rpc("end_lecture", { p_lecture_id: lectureId });
+      const { error } = await supabase.rpc("end_lecture", {
+        p_lecture_id: lectureId,
+      });
       if (error) throw error;
       return ok<null>(null);
     } catch (error) {

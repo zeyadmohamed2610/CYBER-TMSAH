@@ -204,13 +204,14 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
                   )}
                   {lec.is_ended && (
                     <ConfirmAction
-                      title="حذف المحاضرة"
-                      description={`هل تريد حذف "${lec.title}" نهائياً؟ لا يمكن التراجع.`}
-                      confirmLabel="حذف"
+                      title="حذف المحاضرة نهائياً"
+                      description={`هل أنت متأكد من حذف "${lec.title}"؟ سيتم حذف جميع سجلات الحضور المرتبطة بهذه المحاضرة نهائياً ولا يمكن استعادتها.`}
+                      confirmLabel="نعم، احذف"
+                      detailed={true}
                       onConfirm={() => handleDeleteLecture(lec.id, lec.title, {} as React.MouseEvent)}
                     >
                       {(trigger) => (
-                        <Button variant="ghost" size="sm" className="h-7 gap-1 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); trigger(); }}>
+                        <Button variant="ghost" size="sm" className="h-7 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); trigger(); }}>
                           <Trash2 className="h-3 w-3" />
                           حذف
                         </Button>

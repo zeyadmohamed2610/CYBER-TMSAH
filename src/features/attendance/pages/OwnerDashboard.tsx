@@ -18,7 +18,6 @@ import { DeviceLockPanel } from "../components/DeviceLockPanel";
 import { SystemLogsTable } from "../components/SystemLogsTable";
 import { UserList } from "../components/UserList";
 import { TAManagementPanel } from "../components/TAManagementPanel";
-import { UserCreationForm } from "../components/UserCreationForm";
 import { useAttendanceDashboardData } from "../hooks/useAttendanceDashboardData";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 import type { Lecture } from "../types";
@@ -58,13 +57,9 @@ export const OwnerDashboard = () => {
     }
   };
 
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [creationRole, setCreationRole] = useState<"student" | "doctor" | "ta">("student");
 
-  const openCreation = (role: "student" | "doctor" | "ta") => {
-    setCreationRole(role);
-    setShowCreateForm(true);
-  };
+
+
 
   if (selectedLecture) {
     return <LectureDetailView lecture={selectedLecture} onBack={() => setSelectedLecture(null)} />;
@@ -149,25 +144,11 @@ export const OwnerDashboard = () => {
         <TabsContent value="materials"><MaterialsEditor /></TabsContent>
 
         <TabsContent value="students">
-          {showCreateForm && creationRole === "student" ? (
-            <div className="space-y-4">
-              <Button variant="outline" size="sm" onClick={() => setShowCreateForm(false)}>العودة للقائمة</Button>
-              <UserCreationForm />
-            </div>
-          ) : (
-            <UserList role="student" title="قائمة الطلاب" onCreateClick={() => openCreation("student")} />
-          )}
+          <UserList role="student" title="قائمة الطلاب" />
         </TabsContent>
 
         <TabsContent value="doctors">
-          {showCreateForm && creationRole === "doctor" ? (
-            <div className="space-y-4">
-              <Button variant="outline" size="sm" onClick={() => setShowCreateForm(false)}>العودة للقائمة</Button>
-              <UserCreationForm />
-            </div>
-          ) : (
-            <UserList role="doctor" title="قائمة الدكاترة" onCreateClick={() => openCreation("doctor")} />
-          )}
+          <UserList role="doctor" title="قائمة الدكاترة" />
         </TabsContent>
 
         <TabsContent value="tas">
