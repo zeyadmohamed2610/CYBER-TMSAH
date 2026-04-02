@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import QRCode from "qrcode";
-import { Clock, Copy, Check, MapPin } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Clock, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabaseClient";
@@ -15,45 +14,23 @@ interface ActiveSession {
   latitude: number | null;
   longitude: number | null;
   radius_meters: number;
-  lecture_id: string | null;
-  lecture_title: string;
 }
 
-interface Props {
-  onSessionSelect?: (session: ActiveSession) => void;
-}
-
-export function ActiveSessionsBar({ onSessionSelect }: Props) {
+export function ActiveSessionsBar() {
   const [sessions, setSessions] = useState<ActiveSession[]>([]);
-  const [selectedSession, setSelectedSession] = useState<ActiveSession | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Load active sessions directly from DB (no RPC)
   const load = async () => {
     try {
       const { data } = await supabase
         .from("sessions")
-        .select(`
-          id,
-          short_code,
-          rotating_hash,
-          expires_at,
-          latitude,
-          longitude,
-          radius_meters,
-          lecture_id,
-          subject_id,
-          subjects(name, doctor_name),
-          lectures(title)
-        `)
+        .select(`id, short_code, rotating_hash, expires_at, latitude, longitude, radius_meters, subject_id, subjects(name, doctor_name)`)
         .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: false });
 
       const mapped: ActiveSession[] = (data ?? []).map((row: Record<string, unknown>) => {
         const subj = Array.isArray(row.subjects) ? row.subjects[0] : row.subjects;
-        const lec = Array.isArray(row.lectures) ? row.lectures[0] : row.lectures;
         return {
           session_id: row.id as string,
           subject_name: (subj as Record<string, unknown>)?.name as string ?? "—",
@@ -64,15 +41,10 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
           latitude: (row.latitude as number) ?? null,
           longitude: (row.longitude as number) ?? null,
           radius_meters: (row.radius_meters as number) ?? 50,
-          lecture_id: (row.lecture_id as string) ?? null,
-          lecture_title: (lec as Record<string, unknown>)?.title as string ?? "",
         };
       });
-
       setSessions(mapped);
-    } catch {
-      // silently fail
-    }
+    } catch { /* silently fail */ }
   };
 
   // Load on mount + refresh every 10 seconds
@@ -88,31 +60,11 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
     return () => clearInterval(timer);
   }, []);
 
-  // Auto-select first session
-  useEffect(() => {
-    if (sessions.length > 0 && !selectedSession) {
-      setSelectedSession(sessions[0]);
-      onSessionSelect?.(sessions[0]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessions]);
-
-  // Render QR code
-  useEffect(() => {
-    if (selectedSession?.short_code && canvasRef.current) {
-      QRCode.toCanvas(canvasRef.current, selectedSession.short_code, {
-        width: 180,
-        margin: 1,
-        color: { dark: "#0f172a", light: "#ffffff" },
-      }).catch(console.error);
-    }
-  }, [selectedSession?.short_code]);
-
-  const handleCopy = (code: string) => {
+  const handleCopy = (sessionId: string, code: string) => {
     navigator.clipboard.writeText(code).then(() => {
-      setCopied(true);
+      setCopiedId(sessionId);
       toast.success("تم نسخ الكود!");
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopiedId(null), 2000);
     });
   };
 
@@ -137,90 +89,44 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Session selector pills */}
-      <div className="flex gap-3 overflow-x-auto pb-3 snap-x snap-mandatory scroll-touch" role="tablist" aria-label="الجلسات النشطة">
-        {sessions.map((s) => (
-          <button
-            key={s.session_id}
-            role="tab"
-            aria-selected={selectedSession?.session_id === s.session_id}
-            onClick={() => {
-              setSelectedSession(s);
-              onSessionSelect?.(s);
-            }}
-            className={`snap-start shrink-0 rounded-2xl border px-4 py-3 text-right transition-all duration-300 min-w-[160px] ${
-              selectedSession?.session_id === s.session_id
-                ? "border-primary/60 bg-primary/10 shadow-[0_0_20px_hsl(var(--primary)/0.25)] text-primary"
-                : "border-border/50 bg-card/40 hover:border-primary/40 hover:bg-primary/5"
-            }`}
-          >
-            <p className="font-bold text-sm truncate">{s.subject_name}</p>
-            <p className="text-xs text-muted-foreground truncate mt-0.5">{s.doctor_name}</p>
-            <div className="flex items-center gap-1.5 mt-2">
-              <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_6px_rgba(34,197,94,0.6)]"></span>
+    <div className="space-y-3">
+      {sessions.map((s) => (
+        <div
+          key={s.session_id}
+          className="flex items-center justify-between gap-3 rounded-2xl border border-border/50 bg-card/60 p-4 hover:border-primary/30 transition-colors"
+        >
+          {/* Session info */}
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-sm text-foreground truncate">{s.subject_name}</p>
+            {s.doctor_name && (
+              <p className="text-xs text-muted-foreground truncate mt-0.5">{s.doctor_name}</p>
+            )}
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
               <span className="text-xs text-green-500 font-mono font-bold">{getRemaining(s.expires_at)}</span>
             </div>
-          </button>
-        ))}
-      </div>
-
-      {/* Selected session details */}
-      {selectedSession && (
-        <div className="rounded-3xl border border-primary/20 glass-panel p-5 sm:p-6 space-y-5 overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-cyan-500/5 pointer-events-none" />
-
-          <div className="relative z-10 text-center space-y-1">
-            <p className="text-lg sm:text-xl font-extrabold text-foreground">{selectedSession.subject_name}</p>
-            {selectedSession.doctor_name && (
-              <p className="text-sm text-muted-foreground">{selectedSession.doctor_name}</p>
-            )}
           </div>
 
-          {/* Code + QR layout */}
-          <div className="relative z-10 flex flex-col sm:flex-row items-center gap-5 sm:gap-6 justify-center">
-            {/* TOTP Code */}
-            <div className="w-full sm:w-auto flex-1 rounded-2xl bg-background/60 border border-primary/20 px-4 py-5 text-center space-y-3 backdrop-blur-sm shadow-inner">
-              <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-primary opacity-70">كود الجلسة</p>
-              <p className="font-mono text-4xl sm:text-5xl font-black text-foreground tracking-[0.3em] select-all"
-                style={{ textShadow: '0 0 20px hsl(var(--primary)/0.35)' }}>
-                {selectedSession.short_code}
+          {/* Code + Copy */}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="bg-background/80 border border-primary/20 rounded-xl px-4 py-2 text-center">
+              <p className="font-mono text-xl font-black text-foreground tracking-[0.3em] select-all"
+                style={{ textShadow: "0 0 15px hsl(var(--primary)/0.3)" }}>
+                {s.short_code}
               </p>
-              <div className="flex items-center justify-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.7)]"></span>
-                <span className="text-green-500 font-mono font-bold text-base">{getRemaining(selectedSession.expires_at)}</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleCopy(selectedSession.short_code)}
-                className="w-full gap-2 rounded-xl text-xs font-bold h-9 hover:bg-primary/10 hover:text-primary transition-colors"
-                aria-label="نسخ كود الجلسة"
-              >
-                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                {copied ? "تم النسخ!" : "نسخ الكود"}
-              </Button>
             </div>
-
-            {/* QR Code */}
-            <div className="shrink-0 rounded-2xl bg-white p-3 shadow-xl border border-white/20 w-full sm:w-auto">
-              <canvas
-                ref={canvasRef}
-                className="block w-full sm:w-[160px] aspect-square"
-                style={{ imageRendering: "pixelated" }}
-              />
-            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors"
+              onClick={() => handleCopy(s.session_id, s.short_code)}
+              aria-label={`نسخ كود ${s.subject_name}`}
+            >
+              {copiedId === s.session_id ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+            </Button>
           </div>
-
-          {/* GPS badge */}
-          {selectedSession.latitude && (
-            <div className="relative z-10 flex items-center justify-center gap-2 text-xs text-muted-foreground bg-background/50 rounded-xl px-4 py-2.5 border border-white/5">
-              <MapPin className="h-3.5 w-3.5 text-green-500" />
-              <span className="font-medium text-green-500">مطلوب GPS · نطاق {selectedSession.radius_meters} متر</span>
-            </div>
-          )}
         </div>
-      )}
+      ))}
     </div>
   );
 }
