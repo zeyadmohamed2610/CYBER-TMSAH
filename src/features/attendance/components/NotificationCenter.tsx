@@ -156,10 +156,10 @@ export function NotificationCenter() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="fixed inset-x-2 top-auto sm:inset-x-auto sm:absolute sm:right-0 top-14 sm:top-12 z-50 w-auto sm:w-96 max-w-[calc(100vw-1rem)] max-h-[70vh] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl glass-panel" role="dialog" aria-label="مركز الإشعارات">
+          <div className="fixed sm:absolute inset-x-2 sm:inset-x-auto sm:right-0 top-14 sm:top-12 z-50 w-auto sm:w-96 max-w-[calc(100vw-1rem)] max-h-[70vh] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl" role="dialog" aria-label="مركز الإشعارات">
             <div className="flex items-center justify-between p-4 border-b border-border">
-              <h3 className="font-bold text-foreground">الاشعارات</h3>
-              <button onClick={() => setOpen(false)} aria-label="إغلاق الإشعارات" className="p-1 rounded hover:bg-muted"><X className="h-4 w-4 text-muted-foreground" /></button>
+              <h3 className="font-bold text-foreground text-lg">الإشعارات</h3>
+              <button onClick={() => setOpen(false)} aria-label="إغلاق الإشعارات" className="p-2 rounded-lg hover:bg-muted transition-colors"><X className="h-4 w-4 text-muted-foreground" /></button>
             </div>
             <div className="max-h-[55vh] overflow-y-auto p-3 space-y-2">
               {notifications.length === 0 ? (

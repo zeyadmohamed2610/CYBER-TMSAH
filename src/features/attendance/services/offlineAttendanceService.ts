@@ -38,6 +38,54 @@ async function getFingerprint(): Promise<string> {
   return cachedFingerprint;
 }
 
+/** Find session by short_code hash and submit attendance directly to DB */
+async function submitAttendanceDirect(hash: string, fingerprint: string, lat: number | null, lng: number | null): Promise<{ success: boolean; error?: string }> {
+  // Find session with matching short_code that is still active
+  const { data: session, error: sessionErr } = await supabase
+    .from("sessions")
+    .select("id, subject_id")
+    .eq("short_code", hash)
+    .gt("expires_at", new Date().toISOString())
+    .maybeSingle();
+
+  if (sessionErr || !session) {
+    return { success: false, error: "الكود غير صحيح أو الجلسة منتهية." };
+  }
+
+  // Check if already submitted
+  const { data: user } = await supabase.auth.getUser();
+  if (user?.user) {
+    const { data: existing } = await supabase
+      .from("attendance")
+      .select("id")
+      .eq("session_id", session.id)
+      .eq("student_id", user.user.id)
+      .maybeSingle();
+
+    if (existing) {
+      return { success: false, error: "لقد سجلت حضورك بالفعل في هذه الجلسة." };
+    }
+  }
+
+  // Insert attendance record
+  const { error: insertErr } = await supabase
+    .from("attendance")
+    .insert({
+      session_id: session.id,
+      student_id: user?.user?.id ?? null,
+      device_fingerprint: fingerprint,
+      ip_address: null,
+      student_latitude: lat,
+      student_longitude: lng,
+    });
+
+  if (insertErr) {
+    return { success: false, error: insertErr.message };
+  }
+
+  return { success: true };
+}
+
 export const offlineAttendanceService = {
   async queueSubmission(hash: string): Promise<{ success: boolean; offline: boolean; error?: string }> {
     const fingerprint = await getFingerprint();
@@ -54,18 +102,9 @@ export const offlineAttendanceService = {
     } catch { /* GPS unavailable */ }
 
     if (navigator.onLine) {
-      try {
-        const { error } = await supabase.rpc("submit_attendance", {
-          p_hash: hash,
-          p_device_fingerprint: fingerprint,
-          p_student_latitude: lat,
-          p_student_longitude: lng,
-        });
-        if (!error) return { success: true, offline: false };
-        return { success: false, offline: false, error: error.message };
-      } catch {
-        // Network failed, queue for later
-      }
+      const result = await submitAttendanceDirect(hash, fingerprint, lat, lng);
+      if (result.success) return { success: true, offline: false };
+      return { success: false, offline: false, error: result.error };
     }
 
     const pending = getPending();
@@ -80,14 +119,6 @@ export const offlineAttendanceService = {
     });
     savePending(pending);
 
-    if ("serviceWorker" in navigator && "SyncManager" in window) {
-      try {
-        const reg = await navigator.serviceWorker.ready;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (reg as any).sync.register("sync-attendance");
-      } catch { /* sync not supported */ }
-    }
-
     return { success: true, offline: true };
   },
 
@@ -100,21 +131,10 @@ export const offlineAttendanceService = {
     const remaining: PendingSubmission[] = [];
 
     for (const item of pending) {
-      try {
-        const { error } = await supabase.rpc("submit_attendance", {
-          p_hash: item.hash,
-          p_device_fingerprint: item.deviceFingerprint,
-          p_student_latitude: item.latitude,
-          p_student_longitude: item.longitude,
-        });
-        if (error) {
-          item.retries += 1;
-          if (item.retries < 5) remaining.push(item);
-          else discarded += 1;
-        } else {
-          synced += 1;
-        }
-      } catch {
+      const result = await submitAttendanceDirect(item.hash, item.deviceFingerprint, item.latitude, item.longitude);
+      if (result.success) {
+        synced += 1;
+      } else {
         item.retries += 1;
         if (item.retries < 5) remaining.push(item);
         else discarded += 1;

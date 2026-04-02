@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { offlineAttendanceService } from "../services/offlineAttendanceService";
 import { useGps } from "../context/GpsContext";
-import { supabase } from "@/lib/supabaseClient";
 import type { SessionSummary } from "../types";
 
 interface Props {
@@ -118,34 +117,16 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
       }
     }
 
-    // Submit directly via Supabase RPC for speed
-    try {
-      const { error } = await supabase.rpc("submit_attendance", {
-        p_hash: trimmedCode,
-        p_device_fingerprint: "direct-submit",
-        p_student_latitude: coords?.lat ?? null,
-        p_student_longitude: coords?.lng ?? null,
-      });
+    // Submit via offlineAttendanceService (handles direct DB insert)
+    const result = await offlineAttendanceService.queueSubmission(trimmedCode);
 
-      if (error) {
-        toast({ variant: "destructive", title: "فشل تسجيل الحضور", description: error.message });
-      } else {
-        toast({ title: "تم تسجيل الحضور", description: "تم تسجيل حضورك بنجاح." });
-        setCode("");
-        setGpsStatus("");
-        onSubmitSuccess?.();
-      }
-    } catch {
-      // Fallback to offline service
-      const result = await offlineAttendanceService.queueSubmission(trimmedCode);
-      if (result.success) {
-        toast({ title: result.offline ? "تم حفظ الحضور" : "تم تسجيل الحضور", description: result.offline ? "سيتم مزامنة التسجيل عند عودة الاتصال." : "تم تسجيل حضورك بنجاح." });
-        setCode("");
-        setGpsStatus("");
-        onSubmitSuccess?.();
-      } else {
-        toast({ variant: "destructive", title: "فشل تسجيل الحضور", description: result.error ?? "حدث خطأ." });
-      }
+    if (result.success) {
+      toast({ title: result.offline ? "تم حفظ الحضور" : "تم تسجيل الحضور", description: result.offline ? "سيتم مزامنة التسجيل عند عودة الاتصال." : "تم تسجيل حضورك بنجاح." });
+      setCode("");
+      setGpsStatus("");
+      onSubmitSuccess?.();
+    } else {
+      toast({ variant: "destructive", title: "فشل تسجيل الحضور", description: result.error ?? "حدث خطأ." });
     }
 
     setIsSubmitting(false);

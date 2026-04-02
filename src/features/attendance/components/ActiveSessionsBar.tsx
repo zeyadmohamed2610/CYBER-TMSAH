@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { Clock, Copy, Check, MapPin, Loader2 } from "lucide-react";
+import { Clock, Copy, Check, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabaseClient";
@@ -23,80 +23,62 @@ interface Props {
   onSessionSelect?: (session: ActiveSession) => void;
 }
 
-/** Calculate distance between two GPS points in meters */
-function getDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371000;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 export function ActiveSessionsBar({ onSessionSelect }: Props) {
-  const [allSessions, setAllSessions] = useState<ActiveSession[]>([]);
-  const [nearbySessions, setNearbySessions] = useState<ActiveSession[]>([]);
+  const [sessions, setSessions] = useState<ActiveSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<ActiveSession | null>(null);
   const [copied, setCopied] = useState(false);
   const [now, setNow] = useState(Date.now());
-  const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [gpsLoading, setGpsLoading] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Get GPS on mount
-  useEffect(() => {
-    setGpsLoading(true);
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setGpsCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-          setGpsLoading(false);
-        },
-        () => {
-          setGpsLoading(false);
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    } else {
-      setGpsLoading(false);
-    }
-  }, []);
-
-  // Load sessions
+  // Load active sessions directly from DB (no RPC)
   const load = async () => {
-    const { data } = await supabase.rpc("get_active_sessions");
-    const sessions = (data ?? []) as ActiveSession[];
-    setAllSessions(sessions);
+    try {
+      const { data } = await supabase
+        .from("sessions")
+        .select(`
+          id,
+          short_code,
+          rotating_hash,
+          expires_at,
+          latitude,
+          longitude,
+          radius_meters,
+          lecture_id,
+          subject_id,
+          subjects(name, doctor_name),
+          lectures(title)
+        `)
+        .gt("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false });
+
+      const mapped: ActiveSession[] = (data ?? []).map((row: Record<string, unknown>) => {
+        const subj = Array.isArray(row.subjects) ? row.subjects[0] : row.subjects;
+        const lec = Array.isArray(row.lectures) ? row.lectures[0] : row.lectures;
+        return {
+          session_id: row.id as string,
+          subject_name: (subj as Record<string, unknown>)?.name as string ?? "—",
+          doctor_name: (subj as Record<string, unknown>)?.doctor_name as string ?? "",
+          short_code: (row.short_code as string) ?? "",
+          rotating_hash: (row.rotating_hash as string) ?? "",
+          expires_at: row.expires_at as string,
+          latitude: (row.latitude as number) ?? null,
+          longitude: (row.longitude as number) ?? null,
+          radius_meters: (row.radius_meters as number) ?? 50,
+          lecture_id: (row.lecture_id as string) ?? null,
+          lecture_title: (lec as Record<string, unknown>)?.title as string ?? "",
+        };
+      });
+
+      setSessions(mapped);
+    } catch {
+      // silently fail
+    }
   };
 
-  // Filter sessions by GPS proximity
-  useEffect(() => {
-    if (!gpsCoords) {
-      // No GPS — show all sessions without GPS requirement
-      setNearbySessions(allSessions.filter((s) => !s.latitude));
-      return;
-    }
-
-    const filtered = allSessions.filter((s) => {
-      // Session without GPS requirement — always show
-      if (!s.latitude || !s.longitude) return true;
-
-      // Session with GPS requirement — check proximity
-      const distance = getDistanceMeters(
-        gpsCoords.lat, gpsCoords.lng,
-        s.latitude, s.longitude
-      );
-      return distance <= (s.radius_meters ?? 50);
-    });
-
-    setNearbySessions(filtered);
-  }, [allSessions, gpsCoords]);
-
-  // Load on mount + refresh every 5 seconds
+  // Load on mount + refresh every 10 seconds
   useEffect(() => {
     void load();
-    const timer = setInterval(() => void load(), 5_000);
+    const timer = setInterval(() => void load(), 10_000);
     return () => clearInterval(timer);
   }, []);
 
@@ -106,16 +88,16 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
     return () => clearInterval(timer);
   }, []);
 
-  // Auto-select first nearby session
+  // Auto-select first session
   useEffect(() => {
-    if (nearbySessions.length > 0 && !selectedSession) {
-      setSelectedSession(nearbySessions[0]);
-      onSessionSelect?.(nearbySessions[0]);
+    if (sessions.length > 0 && !selectedSession) {
+      setSelectedSession(sessions[0]);
+      onSessionSelect?.(sessions[0]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nearbySessions]);
+  }, [sessions]);
 
-  // Render QR code when session changes
+  // Render QR code
   useEffect(() => {
     if (selectedSession?.short_code && canvasRef.current) {
       QRCode.toCanvas(canvasRef.current, selectedSession.short_code, {
@@ -142,31 +124,14 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
     return `${min}:${sec.toString().padStart(2, "0")}`;
   };
 
-  if (gpsLoading) {
-    return (
-      <div className="text-center py-8 space-y-3">
-        <Loader2 className="h-8 w-8 mx-auto animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">جاري تحديد موقعك...</p>
-      </div>
-    );
-  }
-
-  if (nearbySessions.length === 0) {
+  if (sessions.length === 0) {
     return (
       <div className="text-center py-12 space-y-3">
         <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto">
           <Clock className="h-8 w-8 text-muted-foreground/50" />
         </div>
-        <p className="text-sm font-medium text-muted-foreground">
-          {allSessions.length > 0
-            ? "لا توجد جلسات نشطة في نطاقك الجغرافي."
-            : "لا توجد جلسات نشطة حالياً."}
-        </p>
-        <p className="text-xs text-muted-foreground/60">
-          {allSessions.length > 0
-            ? "تأكد من تفعيل الموقع واقترابك من القاعة."
-            : "سيظهر كود الحضور تلقائياً عند بدء الدكتور للجلسة."}
-        </p>
+        <p className="text-sm font-medium text-muted-foreground">لا توجد جلسات نشطة حالياً.</p>
+        <p className="text-xs text-muted-foreground/60">سيظهر كود الحضور تلقائياً عند بدء الجلسة.</p>
       </div>
     );
   }
@@ -175,12 +140,11 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
     <div className="space-y-4">
       {/* Session selector pills */}
       <div className="flex gap-3 overflow-x-auto pb-3 snap-x snap-mandatory scroll-touch" role="tablist" aria-label="الجلسات النشطة">
-        {nearbySessions.map((s) => (
+        {sessions.map((s) => (
           <button
             key={s.session_id}
             role="tab"
             aria-selected={selectedSession?.session_id === s.session_id}
-            aria-label={`${s.subject_name} - ${s.doctor_name}`}
             onClick={() => {
               setSelectedSession(s);
               onSessionSelect?.(s);
@@ -208,7 +172,9 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
 
           <div className="relative z-10 text-center space-y-1">
             <p className="text-lg sm:text-xl font-extrabold text-foreground">{selectedSession.subject_name}</p>
-            <p className="text-sm text-muted-foreground">{selectedSession.doctor_name} · {selectedSession.lecture_title}</p>
+            {selectedSession.doctor_name && (
+              <p className="text-sm text-muted-foreground">{selectedSession.doctor_name}</p>
+            )}
           </div>
 
           {/* Code + QR layout */}
@@ -250,7 +216,7 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
           {selectedSession.latitude && (
             <div className="relative z-10 flex items-center justify-center gap-2 text-xs text-muted-foreground bg-background/50 rounded-xl px-4 py-2.5 border border-white/5">
               <MapPin className="h-3.5 w-3.5 text-green-500" />
-              <span className="font-medium text-green-500">أنت في النطاق المطلوب · نطاق {selectedSession.radius_meters} متر</span>
+              <span className="font-medium text-green-500">مطلوب GPS · نطاق {selectedSession.radius_meters} متر</span>
             </div>
           )}
         </div>
