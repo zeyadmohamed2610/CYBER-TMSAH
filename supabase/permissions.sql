@@ -27,8 +27,11 @@ GRANT SELECT ON public.system_logs  TO authenticated;
 
 -- service_role backs server-side admin flows (Edge Functions / admin scripts)
 -- and bypasses RLS, but it still needs ordinary SQL privileges.
-GRANT SELECT, INSERT ON public.users TO service_role;
+GRANT SELECT, INSERT, UPDATE ON public.users TO service_role;
 GRANT INSERT ON public.system_logs TO service_role;
+
+-- Owner needs UPDATE permission on users table for direct PATCH operations
+GRANT UPDATE ON public.users TO authenticated;
 
 -- No INSERT/UPDATE/DELETE granted on any table to authenticated.
 -- All mutations go through SECURITY DEFINER functions only.
@@ -100,6 +103,23 @@ GRANT EXECUTE ON FUNCTION public.delete_student_device(UUID)
   TO authenticated;
 GRANT EXECUTE ON FUNCTION public.log_login_session()
   TO authenticated;
+
+-- Functions added in migration_all_fixes.sql
+GRANT EXECUTE ON FUNCTION public.fetch_lectures(UUID)                                TO authenticated;
+GRANT EXECUTE ON FUNCTION public.create_lecture(UUID, TEXT)                          TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_lecture_attendees(UUID)                         TO authenticated;
+GRANT EXECUTE ON FUNCTION public.end_lecture(UUID)                                   TO authenticated;
+GRANT EXECUTE ON FUNCTION public.delete_lecture(UUID)                                TO authenticated;
+GRANT EXECUTE ON FUNCTION public.clear_system_logs()                                 TO authenticated;
+GRANT EXECUTE ON FUNCTION public.delete_user_by_id(UUID)                             TO authenticated;
+GRANT EXECUTE ON FUNCTION public.add_manual_attendance(UUID, UUID)                   TO authenticated;
+GRANT EXECUTE ON FUNCTION public.update_user(UUID, TEXT, TEXT, UUID)                 TO authenticated;
+GRANT EXECUTE ON FUNCTION public.update_session_duration(UUID, INTEGER)              TO authenticated;
+GRANT EXECUTE ON FUNCTION public.set_session_expiry(UUID, TIMESTAMPTZ)               TO authenticated;
+GRANT EXECUTE ON FUNCTION public.generate_rotating_hash(UUID, INTEGER, DOUBLE PRECISION, DOUBLE PRECISION, INTEGER, UUID, TEXT)
+  TO authenticated;
+
+GRANT SELECT ON public.lectures TO authenticated;
 
 -- ─────────────────────────────────────────────
 -- PRIVATE FUNCTION GRANTS (RLS policy helpers)
