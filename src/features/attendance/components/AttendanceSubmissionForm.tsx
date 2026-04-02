@@ -27,14 +27,7 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
 
   const activeSessions = sessions.filter((s) => s.isActive);
 
-  const verifyDeviceLock = async (): Promise<boolean> => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return false;
-      const { data } = await supabase.from("device_locks").select("student_auth_id").eq("student_auth_id", user.id).maybeSingle();
-      return !!data;
-    } catch { return false; }
-  };
+
 
   const handleQrCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -79,13 +72,6 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
     }
 
     setIsSubmitting(true);
-
-    const locked = await verifyDeviceLock();
-    if (!locked) {
-      toast({ variant: "destructive", title: "ممنوع", description: "يجب قفل جهازك أولاً قبل تسجيل الحضور." });
-      setIsSubmitting(false);
-      return;
-    }
 
     setGpsStatus("جاري تحديد الموقع...");
 

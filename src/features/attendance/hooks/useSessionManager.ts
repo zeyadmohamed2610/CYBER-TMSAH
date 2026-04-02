@@ -224,9 +224,9 @@ export function useSessionManager(): UseSessionManagerReturn {
   const updateDuration = useCallback(async (sessionId: string, durationMinutes: number) => {
     setError(null);
 
-    const { data, error: rpcErr } = await supabase.rpc("set_session_duration", {
+    const { data, error: rpcErr } = await supabase.rpc("update_session_duration", {
       p_session_id: sessionId,
-      p_duration_minutes: durationMinutes,
+      p_new_duration_minutes: durationMinutes,
     });
 
     if (rpcErr) {

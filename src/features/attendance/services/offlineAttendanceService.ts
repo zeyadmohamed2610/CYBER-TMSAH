@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { computeFingerprint } from "../utils/fingerprint";
 
 interface PendingSubmission {
   id: string;
@@ -16,38 +17,6 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-async function computeFingerprint(): Promise<string> {
-  try {
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return "no-canvas";
-    ctx.textBaseline = "top";
-    ctx.font = "14px Arial";
-    ctx.fillStyle = "#f60";
-    ctx.fillRect(125, 1, 62, 20);
-    ctx.fillStyle = "#069";
-    ctx.fillText("cyber-tmsah", 2, 15);
-    const canvasFingerprint = canvas.toDataURL();
-
-    const raw = [
-      navigator.userAgent,
-      navigator.language,
-      navigator.platform,
-      String(screen.width),
-      String(screen.height),
-      String(screen.colorDepth ?? 0),
-      String(navigator.hardwareConcurrency ?? 0),
-      String(Intl.DateTimeFormat().resolvedOptions().timeZone),
-      navigator.vendor,
-      canvasFingerprint,
-    ].join("|");
-    const encoder = new TextEncoder();
-    const hashBuf = await crypto.subtle.digest("SHA-256", encoder.encode(raw));
-    return [...new Uint8Array(hashBuf)].map((b) => b.toString(16).padStart(2, "0")).join("");
-  } catch {
-    return "fingerprint-error";
-  }
-}
 
 function getPending(): PendingSubmission[] {
   try {
@@ -107,7 +76,8 @@ export const offlineAttendanceService = {
     if ("serviceWorker" in navigator && "SyncManager" in window) {
       try {
         const reg = await navigator.serviceWorker.ready;
-        await reg.sync.register("sync-attendance");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (reg as any).sync.register("sync-attendance");
       } catch { /* sync not supported */ }
     }
 
