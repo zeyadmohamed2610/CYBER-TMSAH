@@ -250,17 +250,17 @@ export function TAManagementPanel() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">الاسم</Label>
-                <Input className="h-8 text-sm" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="م. اسم المعيد" />
+                <Input id="taName" name="taName" className="h-8 text-sm" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="م. اسم المعيد" />
               </div>
               <div>
                 <Label className="text-xs">البريد الإلكتروني</Label>
-                <Input className="h-8 text-sm" type="email" dir="ltr" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="ta@university.edu" />
+                <Input id="taEmail" name="taEmail" className="h-8 text-sm" type="email" dir="ltr" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="ta@university.edu" />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">كلمة المرور</Label>
-                <Input className="h-8 text-sm" type="password" dir="ltr" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="8+ أحرف" />
+                <Input id="taPassword" name="taPassword" className="h-8 text-sm" type="password" dir="ltr" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="8+ أحرف" />
               </div>
               <div>
                 <Label className="text-xs">المادة الأساسية</Label>
@@ -283,6 +283,8 @@ export function TAManagementPanel() {
 
         <div className="relative">
           <Input
+            id="taSearch"
+            name="taSearch"
             placeholder="بحث عن معيد بالاسم..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -373,6 +375,8 @@ export function TAManagementPanel() {
                       {editingId === ta.id ? (
                         <div className="flex-1 space-y-2">
                           <Input 
+                            id="editTaName"
+                            name="editTaName"
                             value={editData.name}
                             onChange={e => setEditData({...editData, name: e.target.value})}
                             className="h-8 text-sm"
@@ -380,6 +384,8 @@ export function TAManagementPanel() {
                           />
                           <div className="grid grid-cols-2 gap-2">
                             <Input 
+                              id="editTaEmail"
+                              name="editTaEmail"
                               value={editData.email}
                               onChange={e => setEditData({...editData, email: e.target.value})}
                               className="h-8 text-xs"

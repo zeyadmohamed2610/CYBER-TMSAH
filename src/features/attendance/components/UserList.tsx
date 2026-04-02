@@ -228,6 +228,8 @@ export function UserList({ role, title }: { role: string; title: string }) {
               <div>
                 <Label className="text-xs">الاسم بالكامل</Label>
                 <Input 
+                  id="name"
+                  name="name"
                   placeholder="أدخل الاسم الرباعي" 
                   value={formData.name}
                   onChange={e => setFormData({...formData, name: e.target.value})}
@@ -240,6 +242,8 @@ export function UserList({ role, title }: { role: string; title: string }) {
                 <div>
                   <Label className="text-xs">الرقم القومي (14 رقم)</Label>
                   <Input 
+                    id="nationalId"
+                    name="nationalId"
                     placeholder="299..." 
                     value={formData.nationalId}
                     onChange={e => setFormData({...formData, nationalId: e.target.value})}
@@ -253,6 +257,8 @@ export function UserList({ role, title }: { role: string; title: string }) {
                   <Label className="text-xs">البريد الإلكتروني</Label>
                   <Input 
                     type="email"
+                    id="email"
+                    name="email"
                     placeholder={role === "ta" ? "ta@university.edu" : "doctor@university.edu"} 
                     value={formData.email}
                     onChange={e => setFormData({...formData, email: e.target.value})}
@@ -269,6 +275,8 @@ export function UserList({ role, title }: { role: string; title: string }) {
                 <Label className="text-xs">كلمة المرور</Label>
                 <Input 
                   type="password"
+                  id="password"
+                  name="password"
                   placeholder="أدخل كلمة المرور" 
                   value={formData.password}
                   onChange={e => setFormData({...formData, password: e.target.value})}
@@ -310,6 +318,8 @@ export function UserList({ role, title }: { role: string; title: string }) {
         <div className="relative">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
+            id="search"
+            name="search"
             placeholder={`بحث بالاسم${role === "student" ? " أو الرقم القومي" : ""}...`}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -339,6 +349,8 @@ export function UserList({ role, title }: { role: string; title: string }) {
                 {editingId === user.id ? (
                   <div className="flex-1 space-y-2">
                     <Input 
+                      id="editName"
+                      name="editName"
                       value={editData.name}
                       onChange={e => setEditData({...editData, name: e.target.value})}
                       className="h-8 text-sm"
@@ -347,6 +359,8 @@ export function UserList({ role, title }: { role: string; title: string }) {
                     <div className="grid grid-cols-2 gap-2">
                       {role === "student" && (
                         <Input 
+                          id="editNationalId"
+                          name="editNationalId"
                           value={editData.nationalId}
                           onChange={e => setEditData({...editData, nationalId: e.target.value})}
                           className="h-8 text-xs"
