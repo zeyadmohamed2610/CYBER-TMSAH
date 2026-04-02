@@ -54,6 +54,7 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
       setSelectedSession(sessions[0]);
       onSessionSelect?.(sessions[0]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessions]);
 
   // Render QR code on canvas when session changes
@@ -98,10 +99,13 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
   return (
     <div className="space-y-4">
       {/* Session selector pills — horizontally scrollable with iOS momentum */}
-      <div className="flex gap-3 overflow-x-auto pb-3 snap-x snap-mandatory scroll-touch">
+      <div className="flex gap-3 overflow-x-auto pb-3 snap-x snap-mandatory scroll-touch" role="tablist" aria-label="الجلسات النشطة">
         {sessions.map((s) => (
           <button
             key={s.session_id}
+            role="tab"
+            aria-selected={selectedSession?.session_id === s.session_id}
+            aria-label={`${s.subject_name} - ${s.doctor_name}`}
             onClick={() => {
               setSelectedSession(s);
               onSessionSelect?.(s);
@@ -151,6 +155,7 @@ export function ActiveSessionsBar({ onSessionSelect }: Props) {
                 size="sm"
                 onClick={() => handleCopy(selectedSession.short_code)}
                 className="w-full gap-2 rounded-xl text-xs font-bold h-9 hover:bg-primary/10 hover:text-primary transition-colors"
+                aria-label="نسخ كود الجلسة"
               >
                 {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                 {copied ? "تم النسخ!" : "نسخ الكود"}

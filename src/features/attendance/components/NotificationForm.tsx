@@ -49,7 +49,7 @@ export function NotificationForm({ createdBy, onAdded }: Props) {
       return;
     }
 
-    const payload: any = {
+    const payload: Record<string, unknown> = {
       title,
       type,
       created_by: userData.id,

@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowRight, Download, RefreshCw, Users, Clock, Hash, StopCircle, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmAction } from "@/components/ui/confirm-action";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -30,7 +31,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
   const { activeSession, creating, error, createSession, stopSession, updateDuration, refreshHash, restoreActiveSession } =
     useSessionManager();
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     const result = await attendanceService.getLectureAttendees(lecture.id);
     if (result.error) {
@@ -39,7 +40,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
       setAttendees(result.data ?? []);
     }
     setLoading(false);
-  };
+  }, [lecture.id, toast]);
 
   // Restore active session on mount
   useEffect(() => {
@@ -55,14 +56,14 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
   }, [lecture.id, restoreActiveSession]);
 
   // Load attendees
-  useEffect(() => { void load(); }, [lecture.id]);
+  useEffect(() => { void load(); }, [load]);
 
   // Auto-refresh every 10 seconds when session is active
   useEffect(() => {
     if (!activeSession?.is_active) return;
     const timer = setInterval(() => void load(), 10_000);
     return () => clearInterval(timer);
-  }, [activeSession?.is_active]);
+  }, [activeSession?.is_active, load]);
 
   const handleCreateSession = async () => {
     await createSession(lecture.subject_id, sessionDuration, gpsCoords?.lat, gpsCoords?.lng, sessionRadius, lecture.id);
@@ -89,7 +90,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
     }
   };
 
-  const columns: DataTableColumn<LectureAttendee>[] = [
+  const columns = useMemo<DataTableColumn<LectureAttendee>[]>(() => [
     { id: "num", header: "#", cell: (_row, index) => String((index ?? 0) + 1) },
     {
       id: "name",
@@ -124,11 +125,10 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
       header: "عنوان IP",
       cell: (row) => (
         <span className="font-mono text-xs text-muted-foreground" dir="ltr">
-          {row.ip_address ?? "\u2014"}
-        </span>
+          {row.ip_address ?? "\u2014"}</span>
       ),
     },
-  ];
+  ], []);
 
   return (
     <div className="space-y-4">
@@ -147,13 +147,22 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading} aria-label="تحديث البيانات">
             <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
           </Button>
-          <Button variant="destructive" size="sm" onClick={handleEndLecture} disabled={ending} className="gap-1">
-            <StopCircle className="h-3 w-3" />
-            <span className="hidden sm:inline">{ending ? "جاري الإنهاء..." : "إنهاء المحاضرة"}</span>
-          </Button>
+          <ConfirmAction
+            title="إنهاء المحاضرة"
+            description={`هل تريد إنهاء "${lecture.title}"؟ سيتم إيقاف جميع الجلسات النشطة ولا يمكن التراجع.`}
+            confirmLabel="إنهاء المحاضرة"
+            onConfirm={handleEndLecture}
+          >
+            {(trigger) => (
+              <Button variant="destructive" size="sm" disabled={ending} className="gap-1" onClick={trigger}>
+                <StopCircle className="h-3 w-3" />
+                <span className="hidden sm:inline">{ending ? "جاري الإنهاء..." : "إنهاء المحاضرة"}</span>
+              </Button>
+            )}
+          </ConfirmAction>
         </div>
       </div>
 

@@ -66,6 +66,17 @@ const AttendanceLoginPage = () => {
     }
   }, [loading, navigate, role, user]);
 
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background px-4 py-8" dir="rtl">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-full border-4 border-muted animate-spin" style={{ borderTopColor: "hsl(var(--primary))" }} />
+          <p className="text-sm text-muted-foreground animate-pulse">جاري التحقق من الجلسة...</p>
+        </div>
+      </main>
+    );
+  }
+
   if (!loading && user && role) {
     return <Navigate to={getAttendanceDashboardRoute(role)} replace />;
   }
@@ -143,7 +154,7 @@ const AttendanceLoginPage = () => {
               </p>
             </div>
           ) : (
-            <form className="space-y-5" onSubmit={handleSubmit}>
+            <form className="space-y-5" onSubmit={handleSubmit} aria-label="نموذج تسجيل الدخول">
               <div className="space-y-2">
                 <Label htmlFor="attendance-id">الرقم القومي أو البريد الإلكتروني</Label>
                 <Input
@@ -187,7 +198,7 @@ const AttendanceLoginPage = () => {
               </div>
 
               {error && (
-                <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive flex items-start gap-2">
+                <div role="alert" aria-live="polite" className="rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive flex items-start gap-2">
                   <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" />
                   <span>{error}</span>
                 </div>

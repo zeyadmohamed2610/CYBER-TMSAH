@@ -89,6 +89,7 @@ export const offlineAttendanceService = {
     if (pending.length === 0) return { synced: 0, failed: 0 };
 
     let synced = 0;
+    let discarded = 0;
     const remaining: PendingSubmission[] = [];
 
     for (const item of pending) {
@@ -102,13 +103,14 @@ export const offlineAttendanceService = {
         if (error) {
           item.retries += 1;
           if (item.retries < 5) remaining.push(item);
-          else synced += 1;
+          else discarded += 1;
         } else {
           synced += 1;
         }
       } catch {
         item.retries += 1;
         if (item.retries < 5) remaining.push(item);
+        else discarded += 1;
       }
     }
 

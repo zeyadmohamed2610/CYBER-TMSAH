@@ -71,6 +71,7 @@ export function GpsProvider({ children }: { children: ReactNode }) {
   return <GpsContext.Provider value={value}>{children}</GpsContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useGps(): GpsContextValue {
   const ctx = useContext(GpsContext);
   if (!ctx) throw new Error("useGps must be used inside <GpsProvider>.");

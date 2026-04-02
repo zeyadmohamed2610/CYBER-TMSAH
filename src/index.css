@@ -47,7 +47,7 @@
     --secondary-foreground: 210 20% 85%;
 
     --muted: 220 14% 16%;
-    --muted-foreground: 215 12% 55%;
+    --muted-foreground: 215 15% 65%;
 
     --accent: 174 72% 50%;
     --accent-foreground: 220 20% 7%;
@@ -389,9 +389,9 @@ textarea:focus-visible {
   box-shadow: 0 0 0 4px hsl(var(--primary) / 0.2);
 }
 
-/* Better contrast for muted text */
+/* Better contrast for muted text — WCAG AA */
 .text-muted-foreground {
-  color: hsl(215 15% 60%);
+  color: hsl(215 15% 65%);
 }
 
 /* High contrast mode support */
@@ -414,6 +414,68 @@ textarea:focus-visible {
     min-height: 44px;
     min-width: 44px;
   }
+}
+
+/* Very small screens (< 360px) */
+@media (max-width: 359px) {
+  .section-container {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  h1, .text-2xl, .text-3xl, .text-4xl {
+    font-size: clamp(1.25rem, 4vw, 1.5rem) !important;
+  }
+
+  h2 {
+    font-size: clamp(1.1rem, 3.5vw, 1.25rem) !important;
+  }
+
+  .text-sm {
+    font-size: 0.8rem;
+  }
+
+  .text-xs {
+    font-size: 0.7rem;
+  }
+
+  .glass-card,
+  .glass-panel {
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .gap-3 {
+    gap: 0.5rem;
+  }
+
+  .gap-4 {
+    gap: 0.625rem;
+  }
+
+  .grid-cols-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Fluid typography for all screens */
+@media (min-width: 360px) and (max-width: 639px) {
+  h1 {
+    font-size: clamp(1.5rem, 5vw, 2rem);
+  }
+}
+
+/* Ensure content doesn't overflow on any screen */
+* {
+  max-width: 100%;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Prevent horizontal scroll on all screens */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
 }
 
 /* (scroll-behavior is already set in @layer base above) */

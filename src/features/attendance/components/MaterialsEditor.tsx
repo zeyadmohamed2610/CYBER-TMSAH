@@ -144,7 +144,7 @@ export function MaterialsEditor() {
         {/* Add/Edit Form */}
         {(showAdd || editId) && (
           <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {showAdd && (
                 <div>
                   <Label className="text-xs">المعرف (Slug)</Label>
@@ -160,7 +160,7 @@ export function MaterialsEditor() {
                 <Input className="h-8 text-sm" value={form.icon} onChange={(e) => setForm({ ...form, icon: e.target.value })} placeholder="📚" />
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <Label className="text-xs">المحاضر</Label>
                 <Input className="h-8 text-sm" value={form.instructor} onChange={(e) => setForm({ ...form, instructor: e.target.value })} placeholder="د. ..." />
@@ -174,7 +174,7 @@ export function MaterialsEditor() {
                 <Input className="h-8 text-sm" value={form.teaching_assistants} onChange={(e) => setForm({ ...form, teaching_assistants: e.target.value })} placeholder="م. أحمد, م. سارة" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">المقالات (JSON)</Label>
                 <textarea className="w-full h-20 rounded-md border bg-background px-3 py-2 text-xs font-mono" value={form.articles} onChange={(e) => setForm({ ...form, articles: e.target.value })} placeholder='[{"id":"1","title":"...","blogUrl":"..."}]' />

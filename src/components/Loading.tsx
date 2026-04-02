@@ -88,4 +88,59 @@ export const HeroSkeleton = () => {
   );
 };
 
+/**
+ * Skeleton Loader for Attendance Dashboard
+ */
+export const AttendanceSkeleton = () => {
+  return (
+    <div className="space-y-6 animate-pulse" role="status" aria-label="جاري تحميل بيانات الحضور">
+      {/* Header skeleton */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-3">
+          <div className="h-5 bg-muted rounded-full w-32" />
+          <div className="h-8 bg-muted rounded w-64" />
+        </div>
+        <div className="flex gap-3">
+          <div className="h-9 w-9 bg-muted rounded-lg" />
+          <div className="h-9 bg-muted rounded-xl w-28" />
+        </div>
+      </div>
+
+      {/* Stat cards skeleton */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="rounded-xl bg-card border border-border p-5 sm:p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 space-y-3">
+                <div className="h-3 bg-muted rounded w-20" />
+                <div className="h-7 bg-muted rounded w-16" />
+                <div className="h-2 bg-muted rounded w-24" />
+              </div>
+              <div className="w-9 h-9 bg-muted rounded-lg" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Content skeleton */}
+      <div className="rounded-2xl bg-card border border-border p-6 space-y-4">
+        <div className="h-5 bg-muted rounded w-40" />
+        <div className="flex gap-3">
+          {[1, 2].map((i) => (
+            <div key={i} className="h-20 bg-muted rounded-2xl w-40 shrink-0" />
+          ))}
+        </div>
+      </div>
+
+      {/* Table skeleton */}
+      <div className="rounded-xl bg-card border border-border p-6">
+        <div className="h-5 bg-muted rounded w-32 mb-4" />
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-10 bg-muted rounded w-full mb-2" />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export default LoadingScreen;

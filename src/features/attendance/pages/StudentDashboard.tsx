@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, AlertCircle, AlertTriangle, ClipboardCheck, CloudOff, TrendingUp, Smartphone, CheckCircle2 } from "lucide-react";
+import { Activity, AlertCircle, AlertTriangle, ClipboardCheck, CloudOff, TrendingUp, CheckCircle2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { DataTable, type DataTableColumn } from "../components/DataTable";
 import { ActiveSessionsBar } from "../components/ActiveSessionsBar";
 import { AttendanceSubmissionForm } from "../components/AttendanceSubmissionForm";
@@ -10,23 +9,19 @@ import { StatCard } from "../components/StatCard";
 import { SubjectProgressCard } from "../components/SubjectProgressCard";
 import { useAttendanceDashboardData } from "../hooks/useAttendanceDashboardData";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
+import { useDeviceLock } from "../hooks/useDeviceLock";
 import type { AttendanceRecord } from "../types";
 import { formatDateTime } from "../utils/rotatingSession";
 import { offlineAttendanceService } from "../services/offlineAttendanceService";
-import { supabase } from "@/lib/supabaseClient";
-import { toast } from "sonner";
-import { computeFingerprint } from "../utils/fingerprint";
 
 
 export const StudentDashboard = () => {
   const { fullName, user } = useAttendanceAuth();
   const { loading, error, metrics, records, sessions, subjectMetrics, refetch } =
     useAttendanceDashboardData("student");
+  const { isDeviceLocked, lockLabel, locking, lockDevice } = useDeviceLock(user?.id);
 
   const [pendingCount, setPendingCount] = useState(0);
-  const [isDeviceLocked, setIsDeviceLocked] = useState(false);
-  const [lockLabel, setLockLabel] = useState("");
-  const [locking, setLocking] = useState(false);
 
   const syncAndRefresh = useCallback(async () => {
     await offlineAttendanceService.syncPending();
@@ -41,35 +36,8 @@ export const StudentDashboard = () => {
     const handleOnline = () => syncAndRefresh();
     window.addEventListener("online", handleOnline);
 
-    // Check device lock
-    if (user) {
-      supabase.from("device_locks").select("device_label").eq("student_auth_id", user.id).maybeSingle().then(({ data }) => {
-        if (data) { setIsDeviceLocked(true); setLockLabel(data.device_label); }
-      });
-    }
-
     return () => window.removeEventListener("online", handleOnline);
-  }, [syncAndRefresh, user]);
-
-  const handleLockDevice = async () => {
-    if (!user) return;
-    setLocking(true);
-    try {
-      const fp = await computeFingerprint();
-      const ua = navigator.userAgent;
-      const label = ua.includes("Mobile") ? "هاتف محمول" : "جهاز كمبيوتر";
-      const { error } = await supabase.from("device_locks").upsert({
-        student_auth_id: user.id,
-        device_fingerprint: fp,
-        device_label: label + " - " + new Date().toLocaleDateString("ar-EG"),
-      });
-      if (error) throw error;
-      setIsDeviceLocked(true);
-      setLockLabel(label);
-      toast.success("تم قفل هذا الجهاز بنجاح");
-    } catch { toast.error("فشل قفل الجهاز"); }
-    setLocking(false);
-  };
+  }, [syncAndRefresh]);
 
   const absenceRate = 100 - metrics.attendanceRate;
   const topSubjects = useMemo(() =>
@@ -79,17 +47,17 @@ export const StudentDashboard = () => {
   const isWarningAttendance = metrics.attendanceRate >= 50 && metrics.attendanceRate < 70;
   const isLowAttendance = isCriticalAttendance || isWarningAttendance;
 
-  const columns: DataTableColumn<AttendanceRecord>[] = [
+  const columns = useMemo<DataTableColumn<AttendanceRecord>[]>(() => [
     { id: "subject", header: "المادة", cell: (row) => row.subjectName || "—" },
     { id: "submitted-at", header: "وقت التسجيل", cell: (row) => formatDateTime(row.submittedAt) },
     { id: "session", header: "معرف الجلسة", cell: (row) => `${row.sessionId.slice(0, 8)}…` },
-  ];
+  ], []);
 
   return (
     <div className="space-y-6">
       {fullName && (
         <p className="text-lg font-bold truncate">
-          مرحباً يا <span className="text-primary">{fullName}</span> 👋
+          مرحباً يا <span className="text-primary">{fullName}</span>
         </p>
       )}
 
@@ -108,7 +76,7 @@ export const StudentDashboard = () => {
       ) : null}
 
       {error ? (
-        <Alert variant="destructive">
+        <Alert variant="destructive" role="alert" aria-live="assertive">
           <AlertTitle>خطأ في الاتصال بقاعدة البيانات</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
@@ -129,7 +97,7 @@ export const StudentDashboard = () => {
             <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
           )}
           <AlertTitle className={isCriticalAttendance ? "text-red-700 dark:text-red-300 text-base font-bold" : "text-orange-700 dark:text-orange-300 text-base font-bold"}>
-            {isCriticalAttendance ? "⚠️ تحذير: معدل حضور منخفض جداً!" : "تنبيه معدل الحضور"}
+            {isCriticalAttendance ? "تحذير: معدل حضور منخفض جداً!" : "تنبيه معدل الحضور"}
           </AlertTitle>
           <AlertDescription className={isCriticalAttendance ? "text-red-600 dark:text-red-400" : "text-orange-600 dark:text-orange-400"}>
             معدل حضورك الحالي <strong>{metrics.attendanceRate.toFixed(1)}%</strong>.
@@ -143,13 +111,11 @@ export const StudentDashboard = () => {
         <StatCard title="معدل الغياب" value={`${absenceRate.toFixed(1)}%`} description="نسبة الغياب" icon={ClipboardCheck} className={absenceRate > 30 ? "border-red-500/50" : ""} />
       </div>
 
-      {/* Active sessions — student picks which session to check into */}
       <div className="rounded-3xl glass-card p-4 sm:p-6 animate-fade-up-delay-1">
         <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Activity className="h-5 w-5 text-primary"/> الجلسات النشطة الآن</h3>
         <ActiveSessionsBar />
       </div>
 
-      {/* Manual code entry fallback */}
       <AttendanceSubmissionForm sessions={sessions} onSubmitSuccess={refetch} />
 
       {topSubjects.length > 0 && (

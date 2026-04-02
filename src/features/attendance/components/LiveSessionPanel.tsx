@@ -30,6 +30,7 @@ export function LiveSessionPanel({ session, onStop, onUpdateDuration, onRefreshH
   const [updating, setUpdating]     = useState(false);
   const [totpCode, setTotpCode]     = useState<string>("------");
   const [refreshIn, setRefreshIn]   = useState<number>(10);
+  const prevCodeRef = useRef<string>("------");
 
   const { secondsUntilExpiry } = useRotatingHash({
     rotatingHash: session.rotating_hash,
@@ -41,7 +42,7 @@ export function LiveSessionPanel({ session, onStop, onUpdateDuration, onRefreshH
     setNewMinutes(session.duration_minutes);
   }, [session.duration_minutes]);
 
-  // Generate TOTP code every second
+  // Generate TOTP code every second — only update state when code actually changes
   useEffect(() => {
     let mounted = true;
     const updateCode = async () => {
@@ -50,8 +51,11 @@ export function LiveSessionPanel({ session, onStop, onUpdateDuration, onRefreshH
       const remaining = 10 - (seconds % 10);
       
       if (mounted) {
-        setTotpCode(code);
         setRefreshIn(remaining);
+        if (code !== prevCodeRef.current) {
+          prevCodeRef.current = code;
+          setTotpCode(code);
+        }
       }
     };
     
@@ -130,7 +134,7 @@ export function LiveSessionPanel({ session, onStop, onUpdateDuration, onRefreshH
             >
               {totpCode}
             </p>
-            <Button variant="ghost" size="sm" className="mt-4 gap-2 mx-auto text-muted-foreground hover:text-primary transition-colors" onClick={handleCopyCode}>
+            <Button variant="ghost" size="sm" className="mt-4 gap-2 mx-auto text-muted-foreground hover:text-primary transition-colors" onClick={handleCopyCode} aria-label="نسخ كود الحضور">
               <Copy className="h-4 w-4" />
               نسخ الكود
             </Button>
@@ -179,6 +183,7 @@ export function LiveSessionPanel({ session, onStop, onUpdateDuration, onRefreshH
                 onChange={(e) => setNewMinutes(Number(e.target.value))}
                 className="w-20 text-center text-lg font-bold h-11 bg-background/80"
                 dir="ltr"
+                aria-label="مدة الجلسة بالدقائق"
               />
               <Button
                 variant="secondary"

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Pencil, Save, Globe, CheckCircle2, Trash2, ChevronDown, Calendar, GraduationCap, Coffee, Loader2 } from "lucide-react";
+import { Pencil, Save, Globe, CheckCircle2, Trash2, ChevronDown, ChevronRight, ChevronLeft, Calendar, GraduationCap, Coffee, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -42,6 +42,7 @@ export function QuickScheduleEditor() {
   const [hasChanges, setHasChanges] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [mobileDay, setMobileDay] = useState(0);
 
   const current = allSections[selectedSection] || makeEmpty();
 
@@ -231,7 +232,7 @@ export function QuickScheduleEditor() {
                   const isHoliday = dd?.isHoliday;
                   const isTraining = dd?.isTraining;
                   return (
-                    <th key={day} className={"p-2 text-center border-b border-border min-w-[130px] " + (isHoliday ? "bg-amber-500/10" : isTraining ? "bg-cyan-500/10" : "")}>
+                    <th key={day} className={"hidden md:table-cell p-2 text-center border-b border-border min-w-[130px] " + (isHoliday ? "bg-amber-500/10" : isTraining ? "bg-cyan-500/10" : "")}>
                       <div className="font-bold text-xs text-foreground">{day}</div>
                       <div className="flex items-center justify-center gap-1 mt-1">
                         <button onClick={() => toggleHoliday(di)}
@@ -246,6 +247,30 @@ export function QuickScheduleEditor() {
                     </th>
                   );
                 })}
+                {/* Mobile: single day header */}
+                <th className={"md:hidden p-2 text-center border-b border-border " + (current[mobileDay]?.isHoliday ? "bg-amber-500/10" : current[mobileDay]?.isTraining ? "bg-cyan-500/10" : "")}>
+                  <div className="flex items-center justify-center gap-2">
+                    <button onClick={() => setMobileDay(d => (d - 1 + DAYS.length) % DAYS.length)} className="p-1 rounded hover:bg-muted" aria-label="اليوم السابق">
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                    <div>
+                      <div className="font-bold text-xs text-foreground">{DAYS[mobileDay]}</div>
+                      <div className="flex items-center justify-center gap-1 mt-1">
+                        <button onClick={() => toggleHoliday(mobileDay)}
+                          className={"text-[9px] px-2 py-0.5 rounded-full border transition-colors " + (current[mobileDay]?.isHoliday ? "bg-amber-500/20 border-amber-500/40 text-amber-400 font-bold" : "border-border/50 text-muted-foreground")}>
+                          اجازة
+                        </button>
+                        <button onClick={() => toggleTraining(mobileDay)}
+                          className={"text-[9px] px-2 py-0.5 rounded-full border transition-colors " + (current[mobileDay]?.isTraining ? "bg-cyan-500/20 border-cyan-500/40 text-cyan-400 font-bold" : "border-border/50 text-muted-foreground")}>
+                          تدريب
+                        </button>
+                      </div>
+                    </div>
+                    <button onClick={() => setMobileDay(d => (d + 1) % DAYS.length)} className="p-1 rounded hover:bg-muted" aria-label="اليوم التالي">
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -263,7 +288,7 @@ export function QuickScheduleEditor() {
 
                     if (disabled) {
                       return (
-                        <td key={di} className="p-1.5">
+                        <td key={di} className="hidden md:table-cell p-1.5">
                           <div className="rounded-lg border border-dashed border-border/20 p-3 text-center">
                             <span className="text-[10px] text-muted-foreground/50">{dd.isHoliday ? "اجازة" : "تدريب"}</span>
                           </div>
@@ -272,7 +297,7 @@ export function QuickScheduleEditor() {
                     }
 
                     return (
-                      <td key={di} className={"p-1.5 " + (isEdit ? "bg-primary/10" : "")}>
+                      <td key={di} className={`hidden md:table-cell p-1.5 ${isEdit ? "bg-primary/10" : ""}`}>
                         {entry ? (
                           <div className="group relative rounded-lg border border-border/50 p-2 cursor-pointer hover:border-primary/50 transition-colors bg-card" onClick={() => startEdit(di, pi)}>
                             <div className="font-bold text-xs text-foreground leading-tight">{entry.subject}</div>
@@ -294,6 +319,43 @@ export function QuickScheduleEditor() {
                       </td>
                     );
                   })}
+                  {/* Mobile: single day cell */}
+                  {(() => {
+                    const di = mobileDay;
+                    const dd = current[di];
+                    const entry = dd?.entries[pi];
+                    const isEdit = editing?.day === di && editing?.period === pi;
+                    const disabled = dd?.isHoliday || dd?.isTraining;
+
+                    if (disabled) {
+                      return (
+                        <td className="md:hidden p-1.5">
+                          <div className="rounded-lg border border-dashed border-border/20 p-3 text-center">
+                            <span className="text-[10px] text-muted-foreground/50">{dd.isHoliday ? "اجازة" : "تدريب"}</span>
+                          </div>
+                        </td>
+                      );
+                    }
+
+                    return (
+                      <td className={`md:hidden p-1.5 ${isEdit ? "bg-primary/10" : ""}`}>
+                        {entry ? (
+                          <div className="group relative rounded-lg border border-border/50 p-3 cursor-pointer hover:border-primary/50 transition-colors bg-card" onClick={() => startEdit(di, pi)}>
+                            <div className="font-bold text-sm text-foreground leading-tight">{entry.subject}</div>
+                            <div className="text-xs text-muted-foreground mt-1">{entry.instructor}</div>
+                            <div className="flex items-center gap-1 mt-1">
+                              <span className="text-xs text-primary">{entry.room}</span>
+                              {entry.entry_type === "section" && <span className="text-[10px] bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded font-bold">سكشن</span>}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="rounded-lg border border-dashed border-border/30 p-4 text-center cursor-pointer hover:border-primary/30 transition-colors" onClick={() => startEdit(di, pi)}>
+                            <span className="text-xs text-muted-foreground">+ اضافة</span>
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })()}
                 </tr>
               ))}
             </tbody>

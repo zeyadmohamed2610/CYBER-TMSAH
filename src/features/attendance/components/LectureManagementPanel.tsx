@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { BookOpen, Calendar, Plus, Users, Layers, StopCircle, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmAction } from "@/components/ui/confirm-action";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,7 +29,7 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
   const [selectedSubject, setSelectedSubject] = useState(fixedSubjectId ?? "");
   const [showCreate, setShowCreate] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     const result = await attendanceService.fetchLectures(fixedSubjectId);
     if (result.error) {
@@ -37,9 +38,9 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
       setLectures(result.data ?? []);
     }
     setLoading(false);
-  };
+  }, [fixedSubjectId, toast]);
 
-  useEffect(() => { void load(); }, [fixedSubjectId]);
+  useEffect(() => { void load(); }, [load]);
 
   useEffect(() => {
     if (fixedSubjectId) return;
@@ -187,16 +188,34 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
                     {lec.attendee_count ?? 0}
                   </Badge>
                   {!lec.is_ended && (
-                    <Button variant="destructive" size="sm" className="h-7 gap-1" onClick={(e) => handleEndLecture(lec.id, e)}>
-                      <StopCircle className="h-3 w-3" />
-                      انهاء
-                    </Button>
+                    <ConfirmAction
+                      title="إنهاء المحاضرة"
+                      description={`هل تريد إنهاء "${lec.title}"؟ سيتم إيقاف جميع الجلسات النشطة.`}
+                      confirmLabel="إنهاء"
+                      onConfirm={() => handleEndLecture(lec.id, {} as React.MouseEvent)}
+                    >
+                      {(trigger) => (
+                        <Button variant="destructive" size="sm" className="h-7 gap-1" onClick={(e) => { e.stopPropagation(); trigger(); }}>
+                          <StopCircle className="h-3 w-3" />
+                          انهاء
+                        </Button>
+                      )}
+                    </ConfirmAction>
                   )}
                   {lec.is_ended && (
-                    <Button variant="ghost" size="sm" className="h-7 gap-1 text-destructive hover:text-destructive" onClick={(e) => handleDeleteLecture(lec.id, lec.title, e)}>
-                      <Trash2 className="h-3 w-3" />
-                      حذف
-                    </Button>
+                    <ConfirmAction
+                      title="حذف المحاضرة"
+                      description={`هل تريد حذف "${lec.title}" نهائياً؟ لا يمكن التراجع.`}
+                      confirmLabel="حذف"
+                      onConfirm={() => handleDeleteLecture(lec.id, lec.title, {} as React.MouseEvent)}
+                    >
+                      {(trigger) => (
+                        <Button variant="ghost" size="sm" className="h-7 gap-1 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); trigger(); }}>
+                          <Trash2 className="h-3 w-3" />
+                          حذف
+                        </Button>
+                      )}
+                    </ConfirmAction>
                   )}
                 </div>
               </button>

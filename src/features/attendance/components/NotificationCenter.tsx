@@ -66,7 +66,7 @@ export function NotificationCenter() {
       if ("Notification" in window && Notification.permission === "granted") {
         new Notification(n.title, { body: n.body || n.subject || "تنبيه جديد" });
       }
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = "sine";
@@ -78,7 +78,8 @@ export function NotificationCenter() {
       gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + 0.5);
-    } catch(e) {}
+      osc.onended = () => { ctx.close().catch(() => {}); };
+    } catch { /* audio not available */ }
   };
 
   const load = async () => {
@@ -92,28 +93,45 @@ export function NotificationCenter() {
     return () => clearInterval(timer);
   }, []);
 
-  // Alarm checker (every 1 second)
+  // Alarm checker — smart interval instead of every 1 second
   useEffect(() => {
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();
     }
-    const timer = setInterval(() => {
+
+    const checkAlarms = () => {
+      const now = Date.now();
+      let nextCheck = 30000; // default 30s
+
       notifications.forEach(n => {
-        if (!alertedIds.has(n.id)) {
-          if (!n.notify_date || !n.notify_time) {
+        if (alertedIds.has(n.id)) return;
+
+        if (!n.notify_date || !n.notify_time) {
+          triggerAlarm(n);
+          markAlerted(n.id);
+        } else {
+          const t = new Date(n.notify_date + "T" + n.notify_time).getTime();
+          const diff = t - now;
+          if (diff <= 0) {
             triggerAlarm(n);
             markAlerted(n.id);
-          } else {
-            const t = new Date(n.notify_date + "T" + n.notify_time).getTime();
-            if (t <= Date.now()) {
-              triggerAlarm(n);
-              markAlerted(n.id);
-            }
+          } else if (diff < nextCheck) {
+            nextCheck = Math.max(diff, 500); // check sooner if upcoming
           }
         }
       });
-    }, 1000);
-    return () => clearInterval(timer);
+
+      return nextCheck;
+    };
+
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      const delay = checkAlarms();
+      timeoutId = setTimeout(schedule, delay);
+    };
+    schedule();
+
+    return () => clearTimeout(timeoutId);
   }, [notifications, alertedIds]);
 
   const upcoming = notifications.filter(isUpcoming);
@@ -123,6 +141,9 @@ export function NotificationCenter() {
   return (
     <div className="relative">
       <button onClick={() => setOpen(!open)}
+        aria-label={count > 0 ? `${count} إشعارات جديدة` : "الإشعارات"}
+        aria-expanded={open}
+        aria-haspopup="dialog"
         className={`relative flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground ${count > 0 ? "animate-pulse" : ""}`}>
         {count > 0 ? <BellRing className="h-4 w-4 text-primary" /> : <Bell className="h-4 w-4" />}
         {count > 0 && (
@@ -135,10 +156,10 @@ export function NotificationCenter() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="fixed inset-x-2 top-auto sm:inset-x-auto sm:absolute sm:right-0 top-14 sm:top-12 z-50 w-auto sm:w-96 max-w-[calc(100vw-1rem)] max-h-[70vh] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl glass-panel">
+          <div className="fixed inset-x-2 top-auto sm:inset-x-auto sm:absolute sm:right-0 top-14 sm:top-12 z-50 w-auto sm:w-96 max-w-[calc(100vw-1rem)] max-h-[70vh] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl glass-panel" role="dialog" aria-label="مركز الإشعارات">
             <div className="flex items-center justify-between p-4 border-b border-border">
               <h3 className="font-bold text-foreground">الاشعارات</h3>
-              <button onClick={() => setOpen(false)} className="p-1 rounded hover:bg-muted"><X className="h-4 w-4 text-muted-foreground" /></button>
+              <button onClick={() => setOpen(false)} aria-label="إغلاق الإشعارات" className="p-1 rounded hover:bg-muted"><X className="h-4 w-4 text-muted-foreground" /></button>
             </div>
             <div className="max-h-[55vh] overflow-y-auto p-3 space-y-2">
               {notifications.length === 0 ? (

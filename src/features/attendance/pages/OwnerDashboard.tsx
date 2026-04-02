@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Activity, BookOpenCheck, Clock3, Users } from "lucide-react";
+import { Activity, BookOpenCheck, ChevronDown, Clock3, Users } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ExportButtons } from "../components/ExportButtons";
@@ -23,6 +23,18 @@ export const OwnerDashboard = () => {
   const { fullName } = useAttendanceAuth();
   const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
   const [activeTab, setActiveTab] = useState("lectures");
+
+  const TABS = [
+    { value: "lectures", label: "المحاضرات" },
+    { value: "schedule", label: "الجدول" },
+    { value: "materials", label: "المواد" },
+    { value: "users", label: "المستخدمين" },
+    { value: "tas", label: "المعيدين" },
+    { value: "devices", label: "الأجهزة" },
+    { value: "manual-attendance", label: "تسجيل يدوي" },
+    { value: "notifications", label: "الإشعارات" },
+    { value: "logs", label: "السجلات" },
+  ];
 
   if (selectedLecture) {
     return <LectureDetailView lecture={selectedLecture} onBack={() => setSelectedLecture(null)} />;
@@ -49,17 +61,35 @@ export const OwnerDashboard = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="w-full overflow-x-auto pb-2 custom-scrollbar mb-4 border-b border-white/10">
+        {/* Mobile: dropdown select */}
+        <div className="md:hidden mb-4">
+          <div className="relative">
+            <select
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value)}
+              className="w-full appearance-none rounded-xl border border-border bg-card px-4 py-3 text-sm font-bold text-foreground outline-none pr-10 cursor-pointer"
+              aria-label="اختر القسم"
+            >
+              {TABS.map((tab) => (
+                <option key={tab.value} value={tab.value}>{tab.label}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          </div>
+        </div>
+
+        {/* Desktop: horizontal scrollable tabs */}
+        <div className="hidden md:block w-full overflow-x-auto pb-2 custom-scrollbar mb-4 border-b border-white/10">
           <TabsList className="flex h-auto w-max min-w-full justify-start gap-2 bg-transparent p-0">
-            <TabsTrigger className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary px-4 py-2 rounded-xl" value="lectures">المحاضرات</TabsTrigger>
-            <TabsTrigger className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary px-4 py-2 rounded-xl" value="schedule">الجدول</TabsTrigger>
-            <TabsTrigger className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary px-4 py-2 rounded-xl" value="materials">المواد</TabsTrigger>
-            <TabsTrigger className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary px-4 py-2 rounded-xl" value="users">المستخدمين</TabsTrigger>
-            <TabsTrigger className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary px-4 py-2 rounded-xl" value="tas">المعيدين</TabsTrigger>
-            <TabsTrigger className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary px-4 py-2 rounded-xl" value="devices">الأجهزة</TabsTrigger>
-            <TabsTrigger className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary px-4 py-2 rounded-xl" value="manual-attendance">تسجيل يدوي</TabsTrigger>
-            <TabsTrigger className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary px-4 py-2 rounded-xl" value="notifications">الإشعارات</TabsTrigger>
-            <TabsTrigger className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary px-4 py-2 rounded-xl" value="logs">السجلات</TabsTrigger>
+            {TABS.map((tab) => (
+              <TabsTrigger
+                key={tab.value}
+                className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary px-4 py-2 rounded-xl"
+                value={tab.value}
+              >
+                {tab.label}
+              </TabsTrigger>
+            ))}
           </TabsList>
         </div>
 
