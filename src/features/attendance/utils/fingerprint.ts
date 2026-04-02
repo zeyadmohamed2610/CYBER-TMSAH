@@ -1,33 +1,32 @@
 /**
- * Shared device fingerprint utility.
- * Generates a hash from stable browser signals.
- * Works on both HTTP and HTTPS.
+ * SHA-256 hashing with automatic fallback for HTTP.
+ * On HTTPS: uses Web Crypto API
+ * On HTTP: uses FNV-1a hash (deterministic, not cryptographically secure but sufficient for fingerprinting)
  */
 
 function simpleHash(str: string): string {
-  let hash = 0;
+  let h1 = 0x811c9dc5;
+  let h2 = 0xc6a4a793;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
+    h1 ^= char;
+    h1 = (h1 * 0x01000193) >>> 0;
+    h2 = ((h2 << 5) - h2 + char) >>> 0;
   }
-  return "fp-" + Math.abs(hash).toString(16) + "-" + str.length;
+  return (h1.toString(16).padStart(8, "0") + h2.toString(16).padStart(8, "0")).substring(0, 16);
 }
 
-async function sha256Hash(input: string): Promise<string> {
+export async function sha256Hash(input: string): Promise<string> {
+  // Direct attempt — if it fails, we catch and fallback
   try {
-    if (typeof crypto !== "undefined" && crypto.subtle && typeof crypto.subtle.digest === "function") {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(input);
-      const hashBuf = await crypto.subtle.digest("SHA-256", data);
-      return [...new Uint8Array(hashBuf)]
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
-    }
+    const encoder = new TextEncoder();
+    const data = encoder.encode(input);
+    const hashBuf = await crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuf));
+    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
   } catch {
-    // crypto.subtle.digest not available (HTTP context)
+    return "fb" + simpleHash(input);
   }
-  return simpleHash(input);
 }
 
 export async function computeFingerprint(): Promise<string> {
@@ -43,8 +42,6 @@ export async function computeFingerprint(): Promise<string> {
 
     return await sha256Hash(raw);
   } catch {
-    return "no-fp";
+    return "no-fp-" + Date.now();
   }
 }
-
-export { sha256Hash };
