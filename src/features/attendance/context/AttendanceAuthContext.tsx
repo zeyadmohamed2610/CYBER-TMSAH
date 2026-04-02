@@ -162,6 +162,7 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
   return <AttendanceAuthContext.Provider value={value}>{children}</AttendanceAuthContext.Provider>;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAttendanceAuth = () => {
   const context = useContext(AttendanceAuthContext);
   if (!context) throw new Error("useAttendanceAuth must be used inside AttendanceAuthProvider.");

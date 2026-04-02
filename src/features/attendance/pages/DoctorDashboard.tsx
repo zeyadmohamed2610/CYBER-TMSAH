@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BarChart3 } from "lucide-react";
+import { BookOpenCheck, Clock3, Users } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { StatCard } from "../components/StatCard";
 import { LectureManagementPanel } from "../components/LectureManagementPanel";
@@ -35,7 +35,7 @@ export const DoctorDashboard = () => {
     <div className="space-y-6">
       {fullName && (
         <p className="text-lg font-bold">
-          مرحباً يا <span className="text-primary">{fullName}</span> 👋
+          مرحباً يا <span className="text-primary">{fullName}</span>
         </p>
       )}
 
@@ -47,9 +47,9 @@ export const DoctorDashboard = () => {
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard title="اجمالي الجلسات" value={String(metrics.totalSessions)} description="منذ البداية" icon={BarChart3} />
-        <StatCard title="جلسات نشطة" value={String(metrics.activeSessions)} description="الان" icon={BarChart3} />
-        <StatCard title="نسبة الحضور" value={Math.round(metrics.attendanceRate) + "%"} description="الاجمالي" icon={BarChart3} />
+        <StatCard title="اجمالي الجلسات" value={String(metrics.totalSessions)} description="منذ البداية" icon={BookOpenCheck} />
+        <StatCard title="جلسات نشطة" value={String(metrics.activeSessions)} description="الان" icon={Clock3} />
+        <StatCard title="نسبة الحضور" value={Math.round(metrics.attendanceRate) + "%"} description="الاجمالي" icon={Users} />
       </div>
 
       <LectureManagementPanel fixedSubjectId={doctorSubjectId} onSelectLecture={setSelectedLecture} />

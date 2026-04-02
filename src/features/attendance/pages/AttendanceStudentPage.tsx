@@ -1,23 +1,22 @@
 import { useEffect, useState } from "react";
 import { LogOut, ShieldOff, Smartphone, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Layout from "@/components/Layout";
+import { AttendanceSkeleton } from "@/components/Loading";
 import { StudentDashboard } from "./StudentDashboard";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 import { GpsProvider } from "../context/GpsContext";
 import { NotificationCenter } from "../components/NotificationCenter";
+import { useDeviceLock } from "../hooks/useDeviceLock";
 import { supabase } from "@/lib/supabaseClient";
-import { toast } from "sonner";
 import { computeFingerprint } from "../utils/fingerprint";
 
 
 const AttendanceStudentPage = () => {
   const { signOut, user } = useAttendanceAuth();
   const [checking, setChecking] = useState(true);
-  const [deviceLocked, setDeviceLocked] = useState(false);
   const [wrongDevice, setWrongDevice] = useState(false);
-  const [locking, setLocking] = useState(false);
+  const { isDeviceLocked, locking, lockDevice } = useDeviceLock(user?.id);
 
   useEffect(() => {
     if (!user) { setChecking(false); return; }
@@ -29,10 +28,7 @@ const AttendanceStudentPage = () => {
         const currentFp = await computeFingerprint();
         if (currentFp !== lock.device_fingerprint) {
           setWrongDevice(true);
-          setChecking(false);
-          return;
         }
-        setDeviceLocked(true);
       }
 
       setChecking(false);
@@ -41,26 +37,7 @@ const AttendanceStudentPage = () => {
     check();
   }, [user]);
 
-  const handleLockDevice = async () => {
-    if (!user) return;
-    setLocking(true);
-    try {
-      const fp = await computeFingerprint();
-      const ua = navigator.userAgent;
-      const label = ua.includes("Mobile") ? "هاتف محمول" : "جهاز محمول";
-      const { error } = await supabase.from("device_locks").upsert({
-        student_auth_id: user.id,
-        device_fingerprint: fp,
-        device_label: label + " - " + new Date().toLocaleDateString("ar-EG"),
-      });
-      if (error) throw error;
-      setDeviceLocked(true);
-      toast.success("تم قفل جهازك بنجاح");
-    } catch { toast.error("فشل قفل الجهاز"); }
-    setLocking(false);
-  };
-
-  if (checking) return null;
+  if (checking) return <Layout><section className="section-container py-6 sm:py-10 md:py-14"><AttendanceSkeleton /></section></Layout>;
 
   if (wrongDevice) {
     return (
@@ -78,7 +55,7 @@ const AttendanceStudentPage = () => {
     );
   }
 
-  if (!deviceLocked) {
+  if (!isDeviceLocked) {
     return (
       <Layout>
         <section className="section-container py-12 sm:py-20">
@@ -88,18 +65,18 @@ const AttendanceStudentPage = () => {
             </div>
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground">الخطوة الأخيرة: قفل الجهاز</h2>
             <p className="text-muted-foreground text-sm sm:text-base leading-relaxed">
-              لضمان أعلى درجات الأمان، يجب ربط حسابك بهذا الجهاز. 
+              لضمان أعلى درجات الأمان، يجب ربط حسابك بهذا الجهاز.
               لن يُسمح بتسجيل الحضور من أي جهاز آخر منعاً للتلاعب.
             </p>
             <div className="bg-background/50 rounded-2xl border border-primary/20 p-5 text-sm text-muted-foreground text-right shadow-inner">
-              <p className="font-bold text-primary mb-3">⚠️ إرشادات هامة:</p>
+              <p className="font-bold text-primary mb-3">إرشادات هامة:</p>
               <ul className="space-y-2 list-disc list-inside marker:text-primary">
                 <li>بعد القفل، يُسمح بالحضور من هذا الجهاز فقط.</li>
                 <li>تتم العملية لمرة واحدة فقط طوال الفصل الدراسي.</li>
                 <li>عند فقدان أو تغيير الجهاز، يرجى مراجعة إدارة الكلية.</li>
               </ul>
             </div>
-            <Button onClick={handleLockDevice} disabled={locking} className="w-full gap-2 h-14 rounded-xl text-lg btn-cyber" size="lg">
+            <Button onClick={lockDevice} disabled={locking} className="w-full gap-2 h-14 rounded-xl text-lg btn-cyber" size="lg">
               <Smartphone className="h-6 w-6" />
               {locking ? "جاري التشفير والقفل..." : "قفل هذا الجهاز والمتابعة"}
             </Button>

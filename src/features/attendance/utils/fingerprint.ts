@@ -1,7 +1,7 @@
 /**
  * Shared device fingerprint utility.
  * Generates a SHA-256 hash from stable browser signals.
- * Used by AttendanceStudentPage and StudentDashboard.
+ * Excludes screen dimensions to avoid changes on rotation.
  */
 export async function computeFingerprint(): Promise<string> {
   try {
@@ -9,9 +9,7 @@ export async function computeFingerprint(): Promise<string> {
       navigator.userAgent,
       navigator.language,
       navigator.platform,
-      String(screen.width),
-      String(screen.height),
-      String(navigator.hardwareConcurrency ?? 0),
+      navigator.hardwareConcurrency ?? 0,
       Intl.DateTimeFormat().resolvedOptions().timeZone,
       navigator.vendor,
     ].join("|");

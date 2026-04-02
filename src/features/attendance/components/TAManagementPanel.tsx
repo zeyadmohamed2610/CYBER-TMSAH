@@ -3,6 +3,7 @@ import { Plus, Trash2, Users, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmAction } from "@/components/ui/confirm-action";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -52,16 +53,22 @@ export function TAManagementPanel() {
       .eq("role", "ta")
       .order("full_name");
 
+    // Batch fetch subject names to avoid N+1 queries
     const taList: TaUser[] = [];
+    const subjectIds = [...new Set((taData ?? []).map((ta: Record<string, unknown>) => ta.subject_id as string).filter(Boolean))];
+    let subjectNameMap = new Map<string, string>();
+    if (subjectIds.length > 0) {
+      const { data: subjects } = await supabase.from("subjects").select("id, name").in("id", subjectIds);
+      subjectNameMap = new Map((subjects ?? []).map((s: { id: string; name: string }) => [s.id, s.name]));
+    }
     for (const ta of (taData ?? [])) {
-      const { data: subj } = await supabase.from("subjects").select("name").eq("id", ta.subject_id).maybeSingle();
       taList.push({
         id: ta.id as string,
         auth_id: ta.auth_id as string,
         full_name: ta.full_name as string,
         national_id: (ta.national_id as string) ?? null,
         subject_id: ta.subject_id as string,
-        subject_name: subj?.name ?? "غير معروف",
+        subject_name: subjectNameMap.get(ta.subject_id as string) ?? "غير معروف",
       });
     }
     setTas(taList);
@@ -183,7 +190,7 @@ export function TAManagementPanel() {
         {/* Create TA Form */}
         {showAdd && (
           <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">الاسم</Label>
                 <Input className="h-8 text-sm" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="م. اسم المعيد" />
@@ -193,7 +200,7 @@ export function TAManagementPanel() {
                 <Input className="h-8 text-sm" type="email" dir="ltr" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="ta@university.edu" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">كلمة المرور</Label>
                 <Input className="h-8 text-sm" type="password" dir="ltr" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="8+ أحرف" />
@@ -220,7 +227,7 @@ export function TAManagementPanel() {
         {/* Section Assignment */}
         <div className="rounded-lg border bg-card p-4 space-y-3">
           <p className="text-sm font-medium">تعيين الأقسام</p>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <Label className="text-xs">المادة</Label>
               <Select value={assignSubject} onValueChange={setAssignSubject}>
@@ -285,14 +292,23 @@ export function TAManagementPanel() {
                         <p className="text-sm font-medium truncate">{ta.full_name}</p>
                         <p className="text-xs text-muted-foreground font-mono" dir="ltr">{ta.national_id ?? "—"}</p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={() => handleDeleteTa(ta.id, ta.full_name)}
+                      <ConfirmAction
+                        title="حذف المعيد"
+                        description={`هل تريد حذف المعيد "${ta.full_name}" نهائياً؟ لا يمكن التراجع.`}
+                        confirmLabel="حذف"
+                        onConfirm={() => handleDeleteTa(ta.id, ta.full_name)}
                       >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
+                        {(trigger) => (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={trigger}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </ConfirmAction>
                     </div>
                   ))}
                 </div>

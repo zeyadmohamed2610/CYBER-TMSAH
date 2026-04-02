@@ -3,6 +3,7 @@ import { Shield, Trash2, RefreshCw, Smartphone, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmAction } from "@/components/ui/confirm-action";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabaseClient";
@@ -107,9 +108,18 @@ export function DeviceLockPanel() {
                   </div>
                   <div className="shrink-0">
                     {isLocked ? (
-                      <Button size="sm" variant="ghost" className="text-xs text-destructive h-7" onClick={() => student.auth_id && handleUnlock(student.auth_id, student.full_name)}>
-                        <Trash2 className="h-3 w-3 ml-1" />إلغاء القفل
-                      </Button>
+                      <ConfirmAction
+                        title="إلغاء قفل الجهاز"
+                        description={`هل تريد إلغاء قفل جهاز "${student.full_name}"؟ سيتمكن من تسجيل الحضور من أي جهاز.`}
+                        confirmLabel="إلغاء القفل"
+                        onConfirm={() => student.auth_id && handleUnlock(student.auth_id, student.full_name)}
+                      >
+                        {(trigger) => (
+                          <Button size="sm" variant="ghost" className="text-xs text-destructive h-7" onClick={trigger}>
+                            <Trash2 className="h-3 w-3 ml-1" />إلغاء القفل
+                          </Button>
+                        )}
+                      </ConfirmAction>
                     ) : (
                       <Badge variant="secondary" className="text-xs">غير مغلق</Badge>
                     )}

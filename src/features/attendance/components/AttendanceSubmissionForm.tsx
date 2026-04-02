@@ -141,6 +141,7 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
               className="w-full gap-2"
               onClick={() => fileRef.current?.click()}
               disabled={scanning || isSubmitting}
+              aria-label="مسح رمز QR بالكاميرا"
             >
               {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
               {scanning ? "جاري القراءة..." : "مسح QR بالكاميرا"}
