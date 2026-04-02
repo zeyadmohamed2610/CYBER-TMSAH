@@ -40,6 +40,13 @@ CREATE POLICY "owner_all_users"
   USING      ( private.current_user_role() = 'owner' )
   WITH CHECK ( private.current_user_role() = 'owner' );
 
+-- Allow owner to UPDATE their own profile (self-update)
+CREATE POLICY "owner_update_self"
+  ON public.users
+  FOR UPDATE
+  USING (auth_id = auth.uid())
+  WITH CHECK (auth_id = auth.uid());
+
 CREATE POLICY "doctor_own_users"
   ON public.users
   FOR SELECT
@@ -69,6 +76,7 @@ CREATE POLICY "student_own_users"
 
 DROP POLICY IF EXISTS "owner_all_subjects"  ON public.subjects;
 DROP POLICY IF EXISTS "doctor_own_subject"  ON public.subjects;
+DROP POLICY IF EXISTS "ta_own_subject"      ON public.subjects;
 DROP POLICY IF EXISTS "student_own_subject" ON public.subjects;
 
 CREATE POLICY "owner_all_subjects"
@@ -85,13 +93,18 @@ CREATE POLICY "doctor_own_subject"
     AND id = private.current_user_subject_id()
   );
 
-CREATE POLICY "student_own_subject"
+CREATE POLICY "ta_own_subject"
   ON public.subjects
   FOR SELECT
   USING (
-    private.current_user_role() = 'student'
+    private.current_user_role() = 'ta'
     AND id = private.current_user_subject_id()
   );
+
+CREATE POLICY "student_own_subject"
+  ON public.subjects
+  FOR SELECT
+  USING ( private.current_user_role() = 'student' );
 
 
 -- ═══════════════════════════════════════════════
@@ -100,6 +113,7 @@ CREATE POLICY "student_own_subject"
 
 DROP POLICY IF EXISTS "owner_all_sessions"   ON public.sessions;
 DROP POLICY IF EXISTS "doctor_own_sessions"  ON public.sessions;
+DROP POLICY IF EXISTS "ta_own_sessions"     ON public.sessions;
 DROP POLICY IF EXISTS "student_own_sessions" ON public.sessions;
 
 CREATE POLICY "owner_all_sessions"
@@ -113,6 +127,14 @@ CREATE POLICY "doctor_own_sessions"
   FOR SELECT
   USING (
     private.current_user_role() = 'doctor'
+    AND subject_id = private.current_user_subject_id()
+  );
+
+CREATE POLICY "ta_own_sessions"
+  ON public.sessions
+  FOR SELECT
+  USING (
+    private.current_user_role() = 'ta'
     AND subject_id = private.current_user_subject_id()
   );
 
@@ -133,6 +155,7 @@ CREATE POLICY "student_own_sessions"
 
 DROP POLICY IF EXISTS "owner_all_attendance"   ON public.attendance;
 DROP POLICY IF EXISTS "doctor_own_attendance"  ON public.attendance;
+DROP POLICY IF EXISTS "ta_own_attendance"     ON public.attendance;
 DROP POLICY IF EXISTS "student_own_attendance" ON public.attendance;
 
 CREATE POLICY "owner_all_attendance"
@@ -146,6 +169,18 @@ CREATE POLICY "doctor_own_attendance"
   FOR SELECT
   USING (
     private.current_user_role() = 'doctor'
+    AND EXISTS (
+      SELECT 1 FROM public.sessions s
+      WHERE s.id         = attendance.session_id
+        AND s.subject_id = private.current_user_subject_id()
+    )
+  );
+
+CREATE POLICY "ta_own_attendance"
+  ON public.attendance
+  FOR SELECT
+  USING (
+    private.current_user_role() = 'ta'
     AND EXISTS (
       SELECT 1 FROM public.sessions s
       WHERE s.id         = attendance.session_id

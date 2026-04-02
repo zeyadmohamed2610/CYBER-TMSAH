@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Search, Trash2, Users, Loader2, X, Edit2, Save, CheckCircle, XCircle } from "lucide-react";
+import { Plus, Search, Trash2, Users, Loader2, X, Edit2, Save, CheckCircle, XCircle, Lock, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -30,6 +31,8 @@ export function UserList({ role, title }: { role: string; title: string }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState({ name: "", nationalId: "", email: "", subjectId: "" });
   const [deleteConfirm, setDeleteConfirm] = useState<{id: string, name: string} | null>(null);
+  const [passwordDialog, setPasswordDialog] = useState<{open: boolean, userId: string, userName: string}>({ open: false, userId: "", userName: "" });
+  const [newPassword, setNewPassword] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -152,7 +155,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
     setEditData({
       name: user.full_name,
       nationalId: user.national_id || "",
-      email: user.email || "",
+      email: "",
       subjectId: user.subject_id || ""
     });
     if ((role === "doctor" || role === "ta") && subjects.length === 0) {
@@ -173,15 +176,12 @@ export function UserList({ role, title }: { role: string; title: string }) {
     }
     setSubmitting(true);
 
-    const { error } = await supabase
-      .from("users")
-      .update({ 
-        full_name: editData.name.trim(),
-        national_id: role === "student" ? editData.nationalId : null,
-        email: role === "doctor" ? editData.email.trim().toLowerCase() : null,
-        subject_id: (role === "doctor" || role === "ta") ? editData.subjectId : null
-      })
-      .eq("id", editingId);
+    const { error } = await supabase.rpc("update_user", {
+      p_user_id:     editingId,
+      p_full_name:   editData.name.trim(),
+      p_national_id: role === "student" ? editData.nationalId || null : null,
+      p_subject_id:  (role === "doctor" || role === "ta") ? editData.subjectId || null : null,
+    });
 
     if (error) {
       toast({ variant: "destructive", title: "فشل التعديل", description: error.message });
@@ -189,6 +189,32 @@ export function UserList({ role, title }: { role: string; title: string }) {
       toast({ title: "تم التعديل ✓", description: `تم تعديل بيانات ${editData.name} بنجاح.` });
       setEditingId(null);
       loadUsers();
+    }
+    setSubmitting(false);
+  };
+
+  const handlePasswordChange = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      toast({ variant: "destructive", title: "خطأ", description: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({ variant: "destructive", title: "خطأ", description: "انتهت الجلسة" });
+        return;
+      }
+      const { error } = await supabase.auth.admin.updateUser(passwordDialog.userId, { password: newPassword });
+      if (error) {
+        toast({ variant: "destructive", title: "فشل التغيير", description: error.message });
+      } else {
+        toast({ title: "تم ✓", description: "تم تغيير كلمة المرور بنجاح" });
+        setPasswordDialog({ open: false, userId: "", userName: "" });
+        setNewPassword("");
+      }
+    } catch (err) {
+      toast({ variant: "destructive", title: "خطأ", description: "فشل تغيير كلمة المرور" });
     }
     setSubmitting(false);
   };
@@ -290,6 +316,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
                 <div>
                   <Label className="text-xs">المادة المسندة</Label>
                   <Select 
+                    id="create-user-subject"
                     value={formData.subjectId} 
                     onValueChange={val => setFormData({...formData, subjectId: val})}
                     disabled={submitting}
@@ -348,31 +375,38 @@ export function UserList({ role, title }: { role: string; title: string }) {
               >
                 {editingId === user.id ? (
                   <div className="flex-1 space-y-2">
-                    <Input 
-                      id="editName"
-                      name="editName"
-                      value={editData.name}
-                      onChange={e => setEditData({...editData, name: e.target.value})}
-                      className="h-8 text-sm"
-                      placeholder="الاسم"
-                    />
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs w-12">الاسم:</Label>
+                      <Input 
+                        id="editName"
+                        name="editName"
+                        value={editData.name}
+                        onChange={e => setEditData({...editData, name: e.target.value})}
+                        className="h-8 text-sm flex-1"
+                        placeholder="الاسم"
+                      />
+                    </div>
                     <div className="grid grid-cols-2 gap-2">
                       {role === "student" && (
-                        <Input 
-                          id="editNationalId"
-                          name="editNationalId"
-                          value={editData.nationalId}
-                          onChange={e => setEditData({...editData, nationalId: e.target.value})}
-                          className="h-8 text-xs"
-                          placeholder="الرقم القومي"
-                          dir="ltr"
-                        />
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs w-16">الرقم:</Label>
+                          <Input 
+                            id="editNationalId"
+                            name="editNationalId"
+                            value={editData.nationalId}
+                            onChange={e => setEditData({...editData, nationalId: e.target.value})}
+                            className="h-8 text-xs flex-1"
+                            placeholder="الرقم القومي"
+                            dir="ltr"
+                          />
+                        </div>
                       )}
                       {(role === "doctor" || role === "ta") && (
-                        <Select 
-                          value={editData.subjectId} 
-                          onValueChange={val => setEditData({...editData, subjectId: val})}
-                        >
+                          <Select 
+                            id="edit-user-subject"
+                            value={editData.subjectId} 
+                            onValueChange={val => setEditData({...editData, subjectId: val})}
+                          >
                           <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="المادة" /></SelectTrigger>
                           <SelectContent>
                             {subjects.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
@@ -391,10 +425,16 @@ export function UserList({ role, title }: { role: string; title: string }) {
                       {idx + 1}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold truncate">{user.full_name}</p>
-                      <p className="text-xs text-muted-foreground font-mono" dir="ltr">
-                        {user.national_id || user.id.split("-")[0]}
-                      </p>
+                      <p className="font-bold truncate text-right">{user.full_name}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span className="text-xs font-muted-foreground">{user.id.split("-")[0]}</span>
+                        {user.national_id && (
+                          <>
+                            <span className="text-muted-foreground/50">|</span>
+                            <span className="font-mono" dir="ltr">{user.national_id}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -430,10 +470,13 @@ export function UserList({ role, title }: { role: string; title: string }) {
                     </>
                   ) : (
                     <>
-                      <Button variant="ghost" size="icon" onClick={() => startEdit(user)} className="h-8 w-8 text-primary">
+                      <Button variant="ghost" size="icon" onClick={() => startEdit(user)} className="h-8 w-8 text-primary" title="تعديل">
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setDeleteConfirm({id: user.id, name: user.full_name})} className="text-destructive h-8 w-8 hover:bg-destructive/10">
+                      <Button variant="ghost" size="icon" onClick={() => setPasswordDialog({ open: true, userId: user.id, userName: user.full_name })} className="h-8 w-8 text-amber-500 hover:text-amber-600" title="تغيير كلمة المرور">
+                        <Lock className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteConfirm({id: user.id, name: user.full_name})} className="text-destructive h-8 w-8 hover:bg-destructive/10" title="حذف">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </>
@@ -444,6 +487,40 @@ export function UserList({ role, title }: { role: string; title: string }) {
           )}
         </div>
       </CardContent>
+
+      <Dialog open={passwordDialog.open} onOpenChange={(open) => setPasswordDialog({ ...passwordDialog, open })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>تغيير كلمة المرور</DialogTitle>
+            <DialogDescription>
+              تغيير كلمة مرور: {passwordDialog.userName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">كلمة المرور الجديدة</Label>
+              <div className="relative">
+                <Input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="أدخل كلمة مرور جديدة (6 أحرف على الأقل)"
+                  className="pr-10"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPasswordDialog({ open: false, userId: "", userName: "" })}>
+              إلغاء
+            </Button>
+            <Button onClick={handlePasswordChange} disabled={submitting}>
+              {submitting ? "جاري..." : "تغيير"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

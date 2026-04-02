@@ -970,3 +970,52 @@ BEGIN
   );
 END;
 $$;
+
+-- Function to update session expiry (for closing/reopening sessions)
+CREATE OR REPLACE FUNCTION public.update_session_expiry(
+  p_session_id UUID,
+  p_expires_at TIMESTAMPTZ
+)
+RETURNS public.sessions
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, private
+AS $$
+DECLARE
+  v_caller  public.users;
+  v_session public.sessions;
+BEGIN
+  v_caller := private.get_caller_user();
+
+  IF v_caller IS NULL OR v_caller.role NOT IN ('owner', 'doctor', 'ta') THEN
+    RAISE EXCEPTION 'permission_denied: only owners, doctors and TAs may update sessions';
+  END IF;
+
+  SELECT * INTO v_session
+  FROM public.sessions
+  WHERE id = p_session_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'not_found: session % does not exist', p_session_id;
+  END IF;
+
+  IF v_caller.role IN ('doctor', 'ta') AND v_session.subject_id IS DISTINCT FROM v_caller.subject_id THEN
+    RAISE EXCEPTION 'permission_denied: you may only update sessions for your assigned subject';
+  END IF;
+
+  UPDATE public.sessions
+  SET expires_at = p_expires_at
+  WHERE id = p_session_id
+  RETURNING * INTO v_session;
+
+  INSERT INTO public.system_logs (actor_id, action)
+  VALUES (
+    v_caller.id,
+    format('update_session_expiry: session %s -> %s', p_session_id, p_expires_at)
+  );
+
+  RETURN v_session;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.update_session_expiry TO authenticated;

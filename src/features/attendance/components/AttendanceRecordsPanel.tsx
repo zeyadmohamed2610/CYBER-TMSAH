@@ -1,8 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Trash2, Search, Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ConfirmAction } from "@/components/ui/confirm-action";
+import { Loader2, Search, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -23,7 +20,6 @@ export const AttendanceRecordsPanel = () => {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [deleting, setDeleting] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,32 +54,6 @@ export const AttendanceRecordsPanel = () => {
 
   useEffect(() => { void load(); }, [load]);
 
-  const handleDelete = async (id: string) => {
-    setDeleting(id);
-    try {
-      const { error } = await supabase.from("attendance").delete().eq("id", id);
-      if (error) throw error;
-      setRecords((prev) => prev.filter((r) => r.id !== id));
-      toast({ title: "تم الحذف", description: "تم حذف السجل بنجاح." });
-    } catch {
-      toast({ variant: "destructive", title: "خطأ", description: "فشل حذف السجل." });
-    }
-    setDeleting(null);
-  };
-
-  const handleDeleteAll = async () => {
-    setDeleting("all");
-    try {
-      const { error } = await supabase.from("attendance").delete().neq("id", "");
-      if (error) throw error;
-      setRecords([]);
-      toast({ title: "تم الحذف", description: "تم حذف جميع السجلات." });
-    } catch {
-      toast({ variant: "destructive", title: "خطأ", description: "فشل حذف السجلات." });
-    }
-    setDeleting(null);
-  };
-
   const filtered = useMemo(() => {
     if (!search.trim()) return records;
     const q = search.toLowerCase();
@@ -102,30 +72,14 @@ export const AttendanceRecordsPanel = () => {
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-5 w-5" />}
             سجلات الحضور ({records.length})
           </CardTitle>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                placeholder="بحث باسم أو مادة..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-8 text-sm pr-9 w-48"
-              />
-            </div>
-            {records.length > 0 && (
-              <ConfirmAction
-                title="حذف جميع السجلات"
-                description="هل تريد حذف جميع سجلات الحضور؟ لا يمكن التراجع."
-                confirmLabel="حذف الكل"
-                onConfirm={handleDeleteAll}
-              >
-                {(trigger) => (
-                  <Button variant="destructive" size="sm" className="h-8 gap-1" onClick={trigger} disabled={deleting === "all"}>
-                    <Trash2 className="h-3 w-3" /> حذف الكل
-                  </Button>
-                )}
-              </ConfirmAction>
-            )}
+          <div className="relative">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="بحث باسم أو مادة..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 text-sm pr-9 w-48"
+            />
           </div>
         </div>
       </CardHeader>
@@ -148,24 +102,6 @@ export const AttendanceRecordsPanel = () => {
                     </span>
                   </div>
                 </div>
-                <ConfirmAction
-                  title="حذف السجل"
-                  description={`هل تريد حذف سجل "${record.student_name}"؟`}
-                  confirmLabel="حذف"
-                  onConfirm={() => handleDelete(record.id)}
-                >
-                  {(trigger) => (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
-                      onClick={trigger}
-                      disabled={deleting === record.id}
-                    >
-                      {deleting === record.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-                    </Button>
-                  )}
-                </ConfirmAction>
               </div>
             ))}
           </div>
