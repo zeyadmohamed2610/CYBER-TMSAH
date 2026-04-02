@@ -42,25 +42,32 @@ export function UserList({ role, title }: { role: string; title: string }) {
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
-    let query = supabase
-      .from("users")
-      .select("id, full_name, role, national_id, email, subject_id")
-      .eq("role", role)
-      .order("full_name", { ascending: true });
+    try {
+      let query = supabase
+        .from("users")
+        .select("id, full_name, role, national_id, email, subject_id")
+        .eq("role", role);
 
-    if (search) {
-      if (role === "student") {
-        query = query.or(`full_name.ilike.%${search}%,national_id.ilike.%${search}%`);
-      } else {
-        query = query.or(`full_name.ilike.%${search}%`);
+      if (search) {
+        if (role === "student") {
+          query = query.ilike("full_name", `%${search}%`);
+        } else {
+          query = query.ilike("full_name", `%${search}%`);
+        }
       }
-    }
 
-    const { data, error } = await query;
-    if (error) {
-      toast({ variant: "destructive", title: "خطأ", description: error.message });
-    } else {
-      setUsers((data ?? []) as UserRecord[]);
+      const { data, error } = await query;
+      if (error) {
+        console.error("Error loading users:", error);
+        toast({ variant: "destructive", title: "خطأ", description: error.message });
+        setUsers([]);
+      } else {
+        const sortedData = (data ?? []).sort((a, b) => a.full_name.localeCompare(b.full_name, 'ar'));
+        setUsers(sortedData);
+      }
+    } catch (err) {
+      console.error("Exception loading users:", err);
+      setUsers([]);
     }
     setLoading(false);
   }, [role, search, toast]);

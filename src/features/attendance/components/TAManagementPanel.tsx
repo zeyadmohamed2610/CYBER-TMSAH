@@ -50,8 +50,7 @@ export function TAManagementPanel() {
     const { data: taData, error: taError } = await supabase
       .from("users")
       .select("id, full_name, national_id, email, subject_id")
-      .eq("role", "ta")
-      .order("full_name");
+      .eq("role", "ta");
 
     if (taError) {
       console.error("Error loading TAs:", taError);
@@ -86,6 +85,10 @@ export function TAManagementPanel() {
         assigned_sections
       });
     }
+    
+    // Sort alphabetically by Arabic name
+    taList.sort((a, b) => a.full_name.localeCompare(b.full_name, 'ar'));
+    
     setTas(taList);
     setLoading(false);
   }, []);

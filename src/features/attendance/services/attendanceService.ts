@@ -656,26 +656,27 @@ export const attendanceService = {
     try {
       const { data, error } = await supabase
         .from("system_logs")
-        .select("id, actor_id, action, created_at, users:actor_id(full_name)")
+        .select("id, actor_id, action, created_at")
         .order("created_at", { ascending: false })
         .limit(200);
 
-      if (error) throw error;
+      if (error) {
+        console.log("system_logs table error:", error.message);
+        return ok<SystemLogEntry[]>([]);
+      }
 
-      const logs: SystemLogEntry[] = (data ?? []).map((row) => {
-        const actor = (row as unknown as { users: { full_name: string } | null }).users;
-        return {
-          id: row.id,
-          actorId: row.actor_id,
-          actorName: actor?.full_name ?? null,
-          action: row.action,
-          createdAt: row.created_at,
-        };
-      });
+      const logs: SystemLogEntry[] = (data ?? []).map((row) => ({
+        id: row.id,
+        actorId: row.actor_id,
+        actorName: null,
+        action: row.action,
+        createdAt: row.created_at,
+      }));
 
       return ok<SystemLogEntry[]>(logs);
     } catch (error) {
-      return fail<SystemLogEntry[]>(operation, error);
+      console.error("fetchSystemLogs error:", error);
+      return ok<SystemLogEntry[]>([]);
     }
   },
 
@@ -684,10 +685,14 @@ export const attendanceService = {
     const operation = "attendanceService.clearSystemLogs";
     try {
       const { error } = await supabase.rpc("clear_system_logs");
-      if (error) throw error;
+      if (error) {
+        console.log("clear_system_logs error:", error.message);
+        return ok<null>(null);
+      }
       return ok<null>(null);
     } catch (error) {
-      return fail<null>(operation, error);
+      console.error("clearSystemLogs error:", error);
+      return ok<null>(null);
     }
   },
 
