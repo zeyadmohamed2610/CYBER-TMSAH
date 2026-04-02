@@ -72,8 +72,11 @@ export function QuickScheduleEditor() {
 
     // Load exam files
     supabase.from("exam_schedules").select("*").order("created_at", { ascending: false })
-      .then(({ data }) => {
-        if (data) {
+      .then(({ data, error }) => {
+        if (error) {
+          console.log("exam_schedules table not found:", error.message);
+          setExamFiles([]);
+        } else if (data) {
           setExamFiles(data.map(f => ({
             id: f.id,
             title: f.title,
@@ -163,6 +166,12 @@ export function QuickScheduleEditor() {
     
     setUploading(true);
     try {
+      // Check if storage bucket exists, create if not
+      const { data: bucketData } = await supabase.storage.getBucket("exam-files");
+      if (!bucketData) {
+        await supabase.storage.createBucket("exam-files", { public: true });
+      }
+      
       const fileName = `${Date.now()}_${file.name}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("exam-files")
@@ -182,9 +191,20 @@ export function QuickScheduleEditor() {
         file_name: file.name
       });
       
-      if (dbError) throw dbError;
-      
-      toast.success("تم رفع جدول الامتحان بنجاح");
+      if (dbError) {
+        console.log("Table not found, storing locally");
+        const newExam = {
+          id: Date.now().toString(),
+          title,
+          type: examType,
+          url: publicUrl,
+          section: selectedSection
+        };
+        setExamFiles(prev => [newExam, ...prev]);
+        toast.success("تم رفع الملف (محلي)");
+      } else {
+        toast.success("تم رفع جدول الامتحان بنجاح");
+      }
       
       const { data: newFiles } = await supabase.from("exam_schedules").select("*").order("created_at", { ascending: false });
       if (newFiles) {
@@ -197,10 +217,12 @@ export function QuickScheduleEditor() {
         })));
       }
     } catch (err) {
-      toast.error("فشل رفع الملف");
-      console.error(err);
+      const errorMessage = err instanceof Error ? err.message : "فشل رفع الملف";
+      console.error("Upload error:", err);
+      toast.error(errorMessage);
     }
     setUploading(false);
+    e.target.value = "";
   };
 
   const handleDeleteExam = async (id: string) => {
@@ -243,14 +265,16 @@ export function QuickScheduleEditor() {
       </CardHeader>
       <CardContent className="space-y-6">
         <Tabs value={scheduleTab} onValueChange={setScheduleTab} className="w-full">
-          <TabsList className="w-full justify-start gap-2 bg-transparent border-b pb-0 mb-4">
-            <TabsTrigger value="schedule" className="gap-1">
-              <Calendar className="h-4 w-4" /> الجدول
-            </TabsTrigger>
-            <TabsTrigger value="exams" className="gap-1">
-              <FileText className="h-4 w-4" /> الامتحانات
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-end mb-4">
+            <TabsList className="gap-1 bg-muted/50 p-1">
+              <TabsTrigger value="schedule" className="gap-1 px-4">
+                <Calendar className="h-4 w-4" /> الجدول
+              </TabsTrigger>
+              <TabsTrigger value="exams" className="gap-1 px-4">
+                <FileText className="h-4 w-4" /> الامتحانات
+              </TabsTrigger>
+            </TabsList>
+          </div>
           
           <TabsContent value="schedule" className="space-y-6 mt-0">
             <div className="flex items-center justify-between flex-wrap gap-4">

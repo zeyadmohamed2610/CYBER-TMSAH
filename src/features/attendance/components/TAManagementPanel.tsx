@@ -11,7 +11,6 @@ import { supabase } from "@/lib/supabaseClient";
 
 interface TaUser {
   id: string;
-  auth_id: string;
   full_name: string;
   national_id: string | null;
   subject_id: string;
@@ -48,11 +47,15 @@ export function TAManagementPanel() {
     const { data: subjs } = await supabase.from("subjects").select("id, name").order("name");
     setSubjects((subjs ?? []) as Subject[]);
 
-    const { data: taData } = await supabase
+    const { data: taData, error: taError } = await supabase
       .from("users")
-      .select("id, auth_id, full_name, national_id, email, subject_id")
+      .select("id, full_name, national_id, email, subject_id")
       .eq("role", "ta")
       .order("full_name");
+
+    if (taError) {
+      console.error("Error loading TAs:", taError);
+    }
 
     const taList: TaUser[] = [];
     const subjectIds = [...new Set((taData ?? []).map((ta: Record<string, unknown>) => ta.subject_id as string).filter(Boolean))];
@@ -75,7 +78,6 @@ export function TAManagementPanel() {
 
       taList.push({
         id: ta.id as string,
-        auth_id: ta.auth_id as string,
         full_name: ta.full_name as string,
         national_id: (ta.national_id as string) ?? null,
         email: (ta.email as string) ?? null,

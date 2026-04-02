@@ -44,7 +44,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
     setLoading(true);
     let query = supabase
       .from("users")
-      .select("id, full_name, role, national_id, email, subject_id, auth_id, created_at")
+      .select("id, full_name, role, national_id, email, subject_id")
       .eq("role", role)
       .order("full_name", { ascending: true });
 

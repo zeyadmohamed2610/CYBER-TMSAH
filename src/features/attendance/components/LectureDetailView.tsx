@@ -52,6 +52,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
   const [sessionRadius, setSessionRadius] = useState(50);
   const [selectedSection, setSelectedSection] = useState<string>("عام");
   const [availableSections, setAvailableSections] = useState<string[]>([]);
+  const [sessionType, setSessionType] = useState<"lecture" | "section">("lecture");
   const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
   const { activeSession, creating, error, createSession, stopSession, updateDuration, refreshHash, restoreActiveSession } =
     useSessionManager();
@@ -113,27 +114,15 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
       );
     }
   }, [lecture.id, restoreActiveSession]);
-  // Load available sections for the subject
+
+  // Reset section when session type changes
   useEffect(() => {
-    if (lecture.subject_id) {
-      supabase.from("course_materials")
-        .select("teaching_assistants")
-        .eq("slug", lecture.subject_name.toLowerCase().replace(/\s+/g, "-"))
-        .maybeSingle()
-        .then(({ data }) => {
-          if (data?.teaching_assistants) {
-            const sections = new Set<string>(["عام"]);
-            (data.teaching_assistants as string[]).forEach(ta => {
-              const parts = ta.split("|");
-              parts.slice(1).forEach(s => sections.add(s.trim()));
-            });
-            setAvailableSections(Array.from(sections));
-          } else {
-            setAvailableSections(["عام", "سكشن 1", "سكشن 2", "سكشن 3", "سكشن 4", "سكشن 5"]);
-          }
-        });
+    if (sessionType === "lecture") {
+      setSelectedSection("عام");
+    } else {
+      setSelectedSection("سكشن 1");
     }
-  }, [lecture.subject_id, lecture.subject_name]);
+  }, [sessionType]);
 
   // Load attendees and session history
   useEffect(() => { void load(); void loadSessionHistory(); }, [load, loadSessionHistory]);
@@ -160,7 +149,15 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
   }, [toast, loadSessionHistory]);
 
   const handleCreateSession = async () => {
-    await createSession(lecture.subject_id, sessionDuration, gpsCoords?.lat, gpsCoords?.lng, sessionRadius, lecture.id, selectedSection);
+    await createSession(
+      lecture.subject_id, 
+      sessionDuration, 
+      gpsCoords?.lat, 
+      gpsCoords?.lng, 
+      sessionRadius, 
+      lecture.id, 
+      sessionType === "section" ? selectedSection : null
+    );
     setTimeout(() => void loadSessionHistory(), 2000);
   };
 
@@ -493,26 +490,43 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
                   className="h-8 text-sm" dir="ltr" />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">القسم / السكشن</Label>
-                <Select value={selectedSection} onValueChange={setSelectedSection}>
+                <Label className="text-xs">نوع الجلسة</Label>
+                <Select value={sessionType} onValueChange={(v) => { setSessionType(v as "lecture" | "section"); if (v === "lecture") setSelectedSection("عام"); }}>
                   <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder="اختر القسم..." />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableSections.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    <SelectItem value="lecture">محاضرة</SelectItem>
+                    <SelectItem value="section">سكشن</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs">نصف القطر GPS (متر)</Label>
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <Input type="number" min={10} max={500} value={sessionRadius}
-                    onChange={(e) => setSessionRadius(Number(e.target.value))}
-                    className="h-8 text-sm" dir="ltr" />
+              {sessionType === "section" ? (
+                <div className="space-y-1">
+                  <Label className="text-xs">رقم السكشن</Label>
+                  <Select value={selectedSection} onValueChange={setSelectedSection}>
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="اختر السكشن..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 15 }, (_, i) => i + 1).map(n => (
+                        <SelectItem key={n} value={`سكشن ${n}`}>سكشن {n}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                {gpsCoords && <p className="text-xs text-green-500">تم تحديد الموقع</p>}
-              </div>
+              ) : (
+                <div className="space-y-1">
+                  <Label className="text-xs">نصف القطر GPS (متر)</Label>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <Input type="number" min={10} max={500} value={sessionRadius}
+                      onChange={(e) => setSessionRadius(Number(e.target.value))}
+                      className="h-8 text-sm" dir="ltr" />
+                  </div>
+                  {gpsCoords && <p className="text-xs text-green-500">تم تحديد الموقع</p>}
+                </div>
+              )}
             </div>
             <Button onClick={handleCreateSession} disabled={creating} className="w-full gap-2">
               <Hash className="h-4 w-4" />
