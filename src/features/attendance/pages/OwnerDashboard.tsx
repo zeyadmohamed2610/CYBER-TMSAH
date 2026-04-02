@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Activity, BookOpenCheck, ChevronDown, Clock3, Users } from "lucide-react";
+import { Activity, BookOpenCheck, ChevronDown, Clock3, Trash2, Users } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AttendanceRecordsPanel } from "../components/AttendanceRecordsPanel";
 import { ExportButtons } from "../components/ExportButtons";
 import { QuickScheduleEditor } from "../components/QuickScheduleEditor";
 import { LectureManagementPanel } from "../components/LectureManagementPanel";
@@ -32,6 +33,7 @@ export const OwnerDashboard = () => {
     { value: "tas", label: "المعيدين" },
     { value: "devices", label: "الأجهزة" },
     { value: "manual-attendance", label: "تسجيل يدوي" },
+    { value: "attendance-records", label: "سجلات الحضور" },
     { value: "notifications", label: "الإشعارات" },
     { value: "logs", label: "السجلات" },
   ];
@@ -109,6 +111,8 @@ export const OwnerDashboard = () => {
         <TabsContent value="devices"><DeviceLockPanel /></TabsContent>
 
         <TabsContent value="manual-attendance"><ManualAttendancePanel /></TabsContent>
+
+        <TabsContent value="attendance-records"><AttendanceRecordsPanel /></TabsContent>
 
         <TabsContent value="notifications"><NotificationForm createdBy={fullName ?? "المدير"} /></TabsContent>
 

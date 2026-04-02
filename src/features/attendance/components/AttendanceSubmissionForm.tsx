@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { offlineAttendanceService } from "../services/offlineAttendanceService";
 import { useGps } from "../context/GpsContext";
+import { supabase } from "@/lib/supabaseClient";
 import type { SessionSummary } from "../types";
 
 interface Props {
@@ -15,9 +16,8 @@ interface Props {
   onSubmitSuccess?: () => void;
 }
 
-/** Calculate distance between two GPS points in meters (Haversine formula) */
 function getDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371000; // Earth radius in meters
+  const R = 6371000;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLng = (lng2 - lng1) * Math.PI / 180;
   const a = Math.sin(dLat / 2) ** 2 +
@@ -28,7 +28,7 @@ function getDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: numbe
 
 export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) => {
   const { toast } = useToast();
-  const { requestFresh } = useGps();
+  const { coords } = useGps();
   const [code, setCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -96,17 +96,13 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
     }
 
     setIsSubmitting(true);
-    setGpsStatus("جاري تحديد الموقع...");
 
-    try {
-      const gps = await requestFresh();
-      setGpsStatus("تم تحديد الموقع (" + gps.lat.toFixed(4) + ", " + gps.lng.toFixed(4) + ")");
-
-      // GPS proximity check: if session has GPS, verify student is within range
+    // GPS check - use cached coords from GpsContext
+    if (coords) {
       const nearbySession = activeSessions.find((s) => s.latitude && s.longitude);
       if (nearbySession && nearbySession.latitude && nearbySession.longitude) {
         const distance = getDistanceMeters(
-          gps.lat, gps.lng,
+          coords.lat, coords.lng,
           nearbySession.latitude, nearbySession.longitude
         );
         if (distance > (nearbySession.radiusMeters ?? 50)) {
@@ -115,39 +111,41 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
             title: "خارج النطاق الجغرافي",
             description: `أنت على بُعد ${Math.round(distance)} متر من القاعة. يجب أن تكون ضمن نطاق ${nearbySession.radiusMeters ?? 50} متر.`,
           });
-          setGpsStatus("");
           setIsSubmitting(false);
           return;
         }
         setGpsStatus("موقعك ضمن النطاق المطلوب");
       }
-    } catch {
-      setGpsStatus("لم يتم تحديد الموقع");
-      toast({
-        variant: "destructive",
-        title: "خطأ في الموقع",
-        description: "يجب تحديد موقعك الجغرافي لتسجيل الحضور.",
-      });
-      setIsSubmitting(false);
-      return;
     }
 
+    // Submit directly via Supabase RPC for speed
     try {
-      const result = await offlineAttendanceService.queueSubmission(trimmedCode);
+      const { error } = await supabase.rpc("submit_attendance", {
+        p_hash: trimmedCode,
+        p_device_fingerprint: "direct-submit",
+        p_student_latitude: coords?.lat ?? null,
+        p_student_longitude: coords?.lng ?? null,
+      });
 
-      if (result.success && result.offline) {
-        toast({ title: "تم حفظ الحضور", description: "سيتم مزامنة التسجيل عند عودة الاتصال." });
-        setCode(""); setGpsStatus(""); onSubmitSuccess?.();
-      } else if (result.success) {
-        toast({ title: "تم تسجيل الحضور", description: "تم تسجيل حضورك بنجاح." });
-        setCode(""); setGpsStatus(""); onSubmitSuccess?.();
+      if (error) {
+        toast({ variant: "destructive", title: "فشل تسجيل الحضور", description: error.message });
       } else {
-        toast({ variant: "destructive", title: "فشل تسجيل الحضور", description: result.error ?? "حدث خطأ." });
+        toast({ title: "تم تسجيل الحضور", description: "تم تسجيل حضورك بنجاح." });
+        setCode("");
         setGpsStatus("");
+        onSubmitSuccess?.();
       }
     } catch {
-      toast({ variant: "destructive", title: "خطأ", description: "فشل تسجيل الحضور." });
-      setGpsStatus("");
+      // Fallback to offline service
+      const result = await offlineAttendanceService.queueSubmission(trimmedCode);
+      if (result.success) {
+        toast({ title: result.offline ? "تم حفظ الحضور" : "تم تسجيل الحضور", description: result.offline ? "سيتم مزامنة التسجيل عند عودة الاتصال." : "تم تسجيل حضورك بنجاح." });
+        setCode("");
+        setGpsStatus("");
+        onSubmitSuccess?.();
+      } else {
+        toast({ variant: "destructive", title: "فشل تسجيل الحضور", description: result.error ?? "حدث خطأ." });
+      }
     }
 
     setIsSubmitting(false);
@@ -160,7 +158,7 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
           <Lock className="h-5 w-5 text-primary" />
           تسجيل الحضور
         </CardTitle>
-        <CardDescription>أدخل كود الجلسة (6 أرقام) أو امسح الـ QR أو الصق الكود</CardDescription>
+        <CardDescription>انسخ الكود من الجلسة النشطة أو امسح QR أو الصق الكود</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="grid gap-4">
@@ -198,10 +196,10 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
             </Button>
           </div>
 
-          {/* Short code input with paste */}
+          {/* Code input with paste */}
           <div className="grid gap-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="attendance-code">أو أدخل الكود (6 أرقام)</Label>
+              <Label htmlFor="attendance-code">أو الصق الكود (6 أرقام)</Label>
               <Button
                 type="button"
                 variant="ghost"
@@ -237,9 +235,17 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
 
           {/* GPS status */}
           {gpsStatus && (
-            <div className={`flex items-center gap-2 text-xs ${gpsStatus.includes("النطاق") ? "text-green-600" : gpsStatus.includes("خطأ") || gpsStatus.includes("لم") ? "text-destructive" : "text-muted-foreground"}`}>
-              {gpsStatus.includes("النطاق") ? <ShieldCheck className="h-3 w-3" /> : gpsStatus.includes("خطأ") || gpsStatus.includes("لم") ? <ShieldX className="h-3 w-3" /> : <MapPin className="h-3 w-3" />}
+            <div className={`flex items-center gap-2 text-xs ${gpsStatus.includes("النطاق") ? "text-green-600" : "text-destructive"}`}>
+              {gpsStatus.includes("النطاق") ? <ShieldCheck className="h-3 w-3" /> : <ShieldX className="h-3 w-3" />}
               {gpsStatus}
+            </div>
+          )}
+
+          {/* GPS indicator */}
+          {coords && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <MapPin className="h-3 w-3 text-green-500" />
+              الموقع محدد ({coords.lat.toFixed(4)}, {coords.lng.toFixed(4)})
             </div>
           )}
 

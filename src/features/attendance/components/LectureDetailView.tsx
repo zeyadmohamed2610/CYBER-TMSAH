@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowRight, Download, RefreshCw, Users, Clock, Hash, StopCircle, MapPin } from "lucide-react";
+import { ArrowRight, Download, RefreshCw, Users, Clock, Hash, StopCircle, MapPin, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import { reportService } from "../services/reportService";
 import { DataTable, type DataTableColumn } from "./DataTable";
 import { LiveSessionPanel } from "./LiveSessionPanel";
 import { useSessionManager } from "../hooks/useSessionManager";
+import { supabase } from "@/lib/supabaseClient";
 import type { Lecture, LectureAttendee } from "../types";
 
 interface Props {
@@ -20,9 +21,18 @@ interface Props {
   fixedSubjectId?: string;
 }
 
+interface SessionHistoryItem {
+  session_id: string;
+  created_at: string;
+  expires_at: string;
+  is_active: boolean;
+  attendee_count: number;
+}
+
 export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
   const { toast } = useToast();
   const [attendees, setAttendees] = useState<LectureAttendee[]>([]);
+  const [sessionHistory, setSessionHistory] = useState<SessionHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [ending, setEnding] = useState(false);
   const [sessionDuration, setSessionDuration] = useState(10);
@@ -42,10 +52,41 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
     setLoading(false);
   }, [lecture.id, toast]);
 
+  // Load session history for this lecture
+  const loadSessionHistory = useCallback(async () => {
+    try {
+      const { data: sessions } = await supabase
+        .from("sessions")
+        .select("id, created_at, expires_at")
+        .eq("lecture_id", lecture.id)
+        .order("created_at", { ascending: false });
+
+      if (!sessions) { setSessionHistory([]); return; }
+
+      const history: SessionHistoryItem[] = [];
+      for (const s of sessions) {
+        const { count } = await supabase
+          .from("attendance")
+          .select("id", { head: true, count: "exact" })
+          .eq("session_id", s.id);
+
+        history.push({
+          session_id: s.id as string,
+          created_at: s.created_at as string,
+          expires_at: s.expires_at as string,
+          is_active: new Date(s.expires_at as string).getTime() > Date.now(),
+          attendee_count: count ?? 0,
+        });
+      }
+      setSessionHistory(history);
+    } catch {
+      // silently fail
+    }
+  }, [lecture.id]);
+
   // Restore active session on mount
   useEffect(() => {
     void restoreActiveSession(lecture.id);
-    // Capture GPS
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => setGpsCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
@@ -55,18 +96,19 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
     }
   }, [lecture.id, restoreActiveSession]);
 
-  // Load attendees
-  useEffect(() => { void load(); }, [load]);
+  // Load attendees and session history
+  useEffect(() => { void load(); void loadSessionHistory(); }, [load, loadSessionHistory]);
 
   // Auto-refresh every 10 seconds when session is active
   useEffect(() => {
     if (!activeSession?.is_active) return;
-    const timer = setInterval(() => void load(), 10_000);
+    const timer = setInterval(() => { void load(); void loadSessionHistory(); }, 10_000);
     return () => clearInterval(timer);
-  }, [activeSession?.is_active, load]);
+  }, [activeSession?.is_active, load, loadSessionHistory]);
 
   const handleCreateSession = async () => {
     await createSession(lecture.subject_id, sessionDuration, gpsCoords?.lat, gpsCoords?.lng, sessionRadius, lecture.id);
+    setTimeout(() => void loadSessionHistory(), 2000);
   };
 
   const handleEndLecture = async () => {
@@ -81,12 +123,26 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
     setEnding(false);
   };
 
-  const handleExport = async (format: "csv" | "xlsx" | "pdf") => {
+  const handleExportAll = async (format: "csv" | "xlsx" | "pdf") => {
     const result = await reportService.exportLecture(attendees, lecture, format);
     if (result.error) {
       toast({ variant: "destructive", title: "فشل التصدير", description: result.error });
     } else {
-      toast({ title: "تم التصدير", description: `${format.toUpperCase()} downloaded.` });
+      toast({ title: "تم التصدير", description: "تم تصدير جميع حضور المحاضرة." });
+    }
+  };
+
+  const handleExportSession = async (sessionId: string, format: "csv" | "xlsx") => {
+    const sessionAttendees = attendees.filter((a) => a.session_id === sessionId);
+    if (sessionAttendees.length === 0) {
+      toast({ variant: "destructive", title: "لا يوجد حضور", description: "لا يوجد سجلات حضور لهذه الجلسة." });
+      return;
+    }
+    const result = await reportService.exportLecture(sessionAttendees, { ...lecture, title: `${lecture.title} - جلسة` }, format);
+    if (result.error) {
+      toast({ variant: "destructive", title: "فشل التصدير", description: result.error });
+    } else {
+      toast({ title: "تم التصدير", description: `تم تصدير حضور الجلسة.` });
     }
   };
 
@@ -147,12 +203,12 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading} aria-label="تحديث البيانات">
+          <Button variant="outline" size="sm" onClick={() => { void load(); void loadSessionHistory(); }} disabled={loading} aria-label="تحديث البيانات">
             <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
           </Button>
           <ConfirmAction
             title="إنهاء المحاضرة"
-            description={`هل تريد إنهاء "${lecture.title}"؟ سيتم إيقاف جميع الجلسات النشطة ولا يمكن التراجع.`}
+            description={`هل تريد إنهاء "${lecture.title}"؟ سيتم إيقاف جميع الجلسات النشطة.`}
             confirmLabel="إنهاء المحاضرة"
             onConfirm={handleEndLecture}
           >
@@ -167,7 +223,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
@@ -175,7 +231,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
             </div>
             <div>
               <p className="text-2xl font-bold">{attendees.length}</p>
-              <p className="text-xs text-muted-foreground">الحضور</p>
+              <p className="text-xs text-muted-foreground">إجمالي الحضور</p>
             </div>
           </CardContent>
         </Card>
@@ -185,8 +241,8 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
               <Hash className="h-5 w-5 text-cyan-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{new Set(attendees.map((a) => a.session_id)).size}</p>
-              <p className="text-xs text-muted-foreground">الجلسات</p>
+              <p className="text-2xl font-bold">{sessionHistory.length}</p>
+              <p className="text-xs text-muted-foreground">إجمالي الجلسات</p>
             </div>
           </CardContent>
         </Card>
@@ -196,37 +252,73 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
               <Clock className="h-5 w-5 text-green-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold">
-                {attendees.length > 0
-                  ? new Date(attendees[attendees.length - 1].submitted_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
-                  : "\u2014"}
-              </p>
-              <p className="text-xs text-muted-foreground">آخر تسجيل</p>
+              <p className="text-2xl font-bold">{sessionHistory.filter(s => s.is_active).length}</p>
+              <p className="text-xs text-muted-foreground">جلسات نشطة</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10">
+              <Users className="h-5 w-5 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{sessionHistory.length > 0 ? Math.round(attendees.length / sessionHistory.length) : 0}</p>
+              <p className="text-xs text-muted-foreground">متوسط الحضور/جلسة</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Export buttons */}
+      {/* Session History */}
+      {sessionHistory.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <History className="h-4 w-4" />
+              تاريخ الجلسات ({sessionHistory.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {sessionHistory.map((session) => (
+              <div key={session.session_id} className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-card/50 p-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${session.is_active ? "bg-green-500 animate-pulse" : "bg-muted-foreground/30"}`} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">
+                      {new Date(session.created_at).toLocaleString("ar-EG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {session.attendee_count} حاضر · {session.is_active ? "نشطة" : "منتهية"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => void handleExportSession(session.session_id, "csv")}>
+                    <Download className="h-3 w-3" /> CSV
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => void handleExportSession(session.session_id, "xlsx")}>
+                    <Download className="h-3 w-3" /> Excel
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Export all */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <Download className="h-4 w-4" />
-            تصدير الحضور
+            تصدير المحاضرة كاملة
           </CardTitle>
         </CardHeader>
         <CardContent className="flex gap-2">
           {(["csv", "xlsx", "pdf"] as const).map((fmt) => (
-            <Button
-              key={fmt}
-              variant="outline"
-              size="sm"
-              onClick={() => void handleExport(fmt)}
-              disabled={attendees.length === 0}
-              className="gap-1"
-            >
-              <Download className="h-3 w-3" />
-              {fmt.toUpperCase()}
+            <Button key={fmt} variant="outline" size="sm" onClick={() => void handleExportAll(fmt)} disabled={attendees.length === 0} className="gap-1">
+              <Download className="h-3 w-3" /> {fmt.toUpperCase()}
             </Button>
           ))}
         </CardContent>
@@ -237,8 +329,8 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
         <Card>
           <CardContent className="p-6 text-center space-y-3">
             <StopCircle className="h-10 w-10 mx-auto text-muted-foreground/50" />
-            <p className="font-bold text-lg text-foreground">تم انهاء هذه المحاضرة</p>
-            <p className="text-sm text-muted-foreground">لا يمكن انشاء جلسات جديدة. يمكنك مشاهدة وتصدير بيانات الحضور.</p>
+            <p className="font-bold text-lg text-foreground">تم إنهاء هذه المحاضرة</p>
+            <p className="text-sm text-muted-foreground">لا يمكن إنشاء جلسات جديدة.</p>
           </CardContent>
         </Card>
       ) : activeSession && activeSession.is_active ? (
