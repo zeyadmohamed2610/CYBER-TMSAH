@@ -13,9 +13,8 @@ interface UserRecord {
   full_name: string;
   role: string;
   national_id?: string;
-  email?: string;
   subject_id?: string;
-  created_at: string;
+  created_at?: string;
 }
 
 interface Subject { id: string; name: string; }
@@ -45,7 +44,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
     try {
       let query = supabase
         .from("users")
-        .select("id, full_name, role, national_id, email, subject_id")
+        .select("id, full_name, role, national_id, subject_id")
         .eq("role", role);
 
       if (search) {
@@ -380,7 +379,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
                     <div className="min-w-0 flex-1">
                       <p className="font-bold truncate">{user.full_name}</p>
                       <p className="text-xs text-muted-foreground font-mono" dir="ltr">
-                        {user.national_id || user.email || user.id.split("-")[0]}
+                        {user.national_id || user.id.split("-")[0]}
                       </p>
                     </div>
                   </div>

@@ -15,7 +15,6 @@ interface TaUser {
   national_id: string | null;
   subject_id: string;
   subject_name?: string;
-  email?: string;
   assigned_sections?: string[];
 }
 
@@ -50,7 +49,7 @@ export function TAManagementPanel() {
 
     const { data: taData, error: taError } = await supabase
       .from("users")
-      .select("id, full_name, national_id, email, subject_id")
+      .select("id, full_name, national_id, subject_id")
       .eq("role", "ta");
 
     if (taError) {
@@ -80,7 +79,6 @@ export function TAManagementPanel() {
         id: ta.id as string,
         full_name: ta.full_name as string,
         national_id: (ta.national_id as string) ?? null,
-        email: (ta.email as string) ?? null,
         subject_id: ta.subject_id as string,
         subject_name: subjectNameMap.get(ta.subject_id as string) ?? "غير معروف",
         assigned_sections
