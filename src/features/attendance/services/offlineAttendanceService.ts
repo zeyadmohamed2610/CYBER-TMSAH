@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { attendanceService } from "./attendanceService";
 import { computeFingerprint } from "../utils/fingerprint";
 
 interface PendingSubmission {
@@ -38,57 +39,18 @@ async function getFingerprint(): Promise<string> {
   return cachedFingerprint;
 }
 
-/** Find session by short_code hash and submit attendance directly to DB */
+/** Find session by short_code hash and submit attendance via RPC */
 async function submitAttendanceDirect(hash: string, fingerprint: string, lat: number | null, lng: number | null): Promise<{ success: boolean; error?: string }> {
-  // Find session with matching short_code that is still active
-  const { data: session, error: sessionErr } = await supabase
-    .from("sessions")
-    .select("id, subject_id")
-    .eq("short_code", hash)
-    .gt("expires_at", new Date().toISOString())
-    .maybeSingle();
-
-  if (sessionErr || !session) {
-    return { success: false, error: "الكود غير صحيح أو الجلسة منتهية." };
+  const result = await attendanceService.submitAttendance(hash, lat, lng);
+  if (result.error) {
+    return { success: false, error: result.error };
   }
-
-  // Check if already submitted
-  const { data: user } = await supabase.auth.getUser();
-  if (user?.user) {
-    const { data: existing } = await supabase
-      .from("attendance")
-      .select("id")
-      .eq("session_id", session.id)
-      .eq("student_id", user.user.id)
-      .maybeSingle();
-
-    if (existing) {
-      return { success: false, error: "لقد سجلت حضورك بالفعل في هذه الجلسة." };
-    }
-  }
-
-  // Insert attendance record
-  const { error: insertErr } = await supabase
-    .from("attendance")
-    .insert({
-      session_id: session.id,
-      student_id: user?.user?.id ?? null,
-      device_fingerprint: fingerprint,
-      ip_address: null,
-      student_latitude: lat,
-      student_longitude: lng,
-    });
-
-  if (insertErr) {
-    return { success: false, error: insertErr.message };
-  }
-
   return { success: true };
 }
 
 export const offlineAttendanceService = {
   async queueSubmission(hash: string): Promise<{ success: boolean; offline: boolean; error?: string }> {
-    const fingerprint = await getFingerprint();
+    const fingerprint = await computeFingerprint();
 
     let lat: number | null = null;
     let lng: number | null = null;

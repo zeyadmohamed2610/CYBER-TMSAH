@@ -365,9 +365,10 @@ SECURITY DEFINER
 SET search_path = public, private
 AS $$
 DECLARE
-  v_caller  public.users;
-  v_hash    TEXT;
-  v_session public.sessions;
+  v_caller     public.users;
+  v_hash       TEXT;
+  v_short_code TEXT;
+  v_session    public.sessions;
 BEGIN
   v_caller := private.get_caller_user();
 
@@ -390,11 +391,14 @@ BEGIN
   v_hash := replace(gen_random_uuid()::text, '-', '') ||
             replace(gen_random_uuid()::text, '-', '');
 
+  -- Generate random 6-digit numeric short_code
+  v_short_code := lpad(floor(random() * 1000000)::text, 6, '0');
+
   INSERT INTO public.sessions (
-    subject_id, rotating_hash, expires_at, latitude, longitude, radius_meters, lecture_id
+    subject_id, rotating_hash, short_code, expires_at, latitude, longitude, radius_meters, lecture_id
   )
   VALUES (
-    p_subject_id, v_hash, now() + make_interval(mins => p_duration_minutes),
+    p_subject_id, v_hash, v_short_code, now() + make_interval(mins => p_duration_minutes),
     p_latitude, p_longitude, p_radius_meters, p_lecture_id
   )
   RETURNING * INTO v_session;
@@ -403,8 +407,8 @@ BEGIN
   VALUES (
     v_caller.id,
     format(
-      'generate_session: created session %s for subject %s (%s minutes, GPS enabled: %s)',
-      v_session.id, p_subject_id, p_duration_minutes, p_latitude IS NOT NULL
+      'generate_session: created session %s for subject %s (%s minutes, GPS enabled: %s, code: %s)',
+      v_session.id, p_subject_id, p_duration_minutes, p_latitude IS NOT NULL, v_short_code
     )
   );
 
@@ -435,9 +439,10 @@ SECURITY DEFINER
 SET search_path = public, private
 AS $$
 DECLARE
-  v_caller  public.users;
-  v_session public.sessions;
-  v_hash    TEXT;
+  v_caller     public.users;
+  v_session    public.sessions;
+  v_hash       TEXT;
+  v_short_code TEXT;
 BEGIN
   v_caller := private.get_caller_user();
 
@@ -464,13 +469,17 @@ BEGIN
   v_hash := replace(gen_random_uuid()::text, '-', '') ||
             replace(gen_random_uuid()::text, '-', '');
 
+  -- Generate new 6-digit numeric short_code
+  v_short_code := lpad(floor(random() * 1000000)::text, 6, '0');
+
   UPDATE public.sessions
-  SET rotating_hash = v_hash
+  SET rotating_hash = v_hash,
+      short_code = v_short_code
   WHERE id = p_session_id
   RETURNING * INTO v_session;
 
   INSERT INTO public.system_logs (actor_id, action)
-  VALUES (v_caller.id, format('refresh_session_hash: refreshed session %s', p_session_id));
+  VALUES (v_caller.id, format('refresh_session_hash: refreshed session %s (code: %s)', p_session_id, v_short_code));
 
   RETURN v_session;
 END;
@@ -829,6 +838,8 @@ BEGIN
   FROM public.sessions
   WHERE expires_at > now()
     AND (
+      trim(p_hash) = short_code
+      OR
       trim(p_hash) = public.generate_totp(rotating_hash, v_window)
       OR
       trim(p_hash) = public.generate_totp(rotating_hash, v_window - 1)
