@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Search, Trash2, Users, Loader2, X } from "lucide-react";
+import { Plus, Search, Trash2, Users, Loader2, X, Edit2, Save, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ConfirmAction } from "@/components/ui/confirm-action";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/lib/supabaseClient";
@@ -15,6 +14,7 @@ interface UserRecord {
   role: string;
   national_id?: string;
   email?: string;
+  subject_id?: string;
   created_at: string;
 }
 
@@ -28,6 +28,9 @@ export function UserList({ role, title }: { role: string; title: string }) {
   const [showCreate, setShowCreate] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editData, setEditData] = useState({ name: "", nationalId: "", email: "", subjectId: "" });
+  const [deleteConfirm, setDeleteConfirm] = useState<{id: string, name: string} | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -39,22 +42,25 @@ export function UserList({ role, title }: { role: string; title: string }) {
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from("users")
-      .select("id, full_name, role, national_id, auth_id, created_at")
+      .select("id, full_name, role, national_id, email, subject_id, auth_id, created_at")
       .eq("role", role)
       .order("full_name", { ascending: true });
 
+    if (search) {
+      if (role === "student") {
+        query = query.or(`full_name.ilike.%${search}%,national_id.ilike.%${search}%`);
+      } else {
+        query = query.or(`full_name.ilike.%${search}%`);
+      }
+    }
+
+    const { data, error } = await query;
     if (error) {
       toast({ variant: "destructive", title: "خطأ", description: error.message });
     } else {
-      const filtered = search
-        ? (data ?? []).filter(u => 
-            u.full_name.toLowerCase().includes(search.toLowerCase()) || 
-            (u.national_id && u.national_id.includes(search))
-          )
-        : (data ?? []) as UserRecord[];
-      setUsers(filtered);
+      setUsers((data ?? []) as UserRecord[]);
     }
     setLoading(false);
   }, [role, search, toast]);
@@ -65,7 +71,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
   }, [loadUsers]);
 
   useEffect(() => {
-    if (role === "doctor" && showCreate) {
+    if ((role === "doctor" || role === "ta") && showCreate) {
       supabase.from("subjects").select("id, name").order("name")
         .then(({ data }) => { if (data) setSubjects(data); });
     }
@@ -93,7 +99,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
         email: role === "doctor" ? formData.email.trim().toLowerCase() : undefined,
         password: formData.password || "12345678",
         role: role,
-        subjectId: role === "doctor" ? formData.subjectId : null
+        subjectId: role === "doctor" || role === "ta" ? formData.subjectId : null
       },
     });
 
@@ -118,10 +124,57 @@ export function UserList({ role, title }: { role: string; title: string }) {
     }
   };
 
+  const startEdit = (user: UserRecord) => {
+    setEditingId(user.id);
+    setEditData({
+      name: user.full_name,
+      nationalId: user.national_id || "",
+      email: user.email || "",
+      subjectId: user.subject_id || ""
+    });
+    if ((role === "doctor" || role === "ta") && subjects.length === 0) {
+      supabase.from("subjects").select("id, name").order("name")
+        .then(({ data }) => { if (data) setSubjects(data); });
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditData({ name: "", nationalId: "", email: "", subjectId: "" });
+  };
+
+  const saveEdit = async () => {
+    if (!editData.name || editData.name.length < 5) {
+      toast({ variant: "destructive", title: "خطأ", description: "الاسم يجب أن يكون 5 أحرف على الأقل" });
+      return;
+    }
+    setSubmitting(true);
+
+    const { error } = await supabase
+      .from("users")
+      .update({ 
+        full_name: editData.name.trim(),
+        national_id: role === "student" ? editData.nationalId : null,
+        email: role === "doctor" ? editData.email.trim().toLowerCase() : null,
+        subject_id: (role === "doctor" || role === "ta") ? editData.subjectId : null
+      })
+      .eq("id", editingId);
+
+    if (error) {
+      toast({ variant: "destructive", title: "فشل التعديل", description: error.message });
+    } else {
+      toast({ title: "تم التعديل ✓", description: `تم تعديل بيانات ${editData.name} بنجاح.` });
+      setEditingId(null);
+      loadUsers();
+    }
+    setSubmitting(false);
+  };
+
   const getRoleLabel = () => {
     switch (role) {
       case "student": return "طالب";
       case "doctor": return "دكتور";
+      case "ta": return "معيد";
       default: return "مستخدم";
     }
   };
@@ -146,7 +199,6 @@ export function UserList({ role, title }: { role: string; title: string }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Add Form - Same style as TAManagementPanel */}
         {showCreate && (
           <div className="rounded-lg border bg-muted/30 p-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -178,7 +230,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
                   <Label className="text-xs">البريد الإلكتروني</Label>
                   <Input 
                     type="email"
-                    placeholder="doctor@university.edu" 
+                    placeholder={role === "ta" ? "ta@university.edu" : "doctor@university.edu"} 
                     value={formData.email}
                     onChange={e => setFormData({...formData, email: e.target.value})}
                     disabled={submitting}
@@ -203,7 +255,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
                 />
               </div>
 
-              {role === "doctor" && (
+              {(role === "doctor" || role === "ta") && (
                 <div>
                   <Label className="text-xs">المادة المسندة</Label>
                   <Select 
@@ -232,7 +284,6 @@ export function UserList({ role, title }: { role: string; title: string }) {
           </div>
         )}
 
-        {/* Search Bar */}
         <div className="relative">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -243,7 +294,6 @@ export function UserList({ role, title }: { role: string; title: string }) {
           />
         </div>
 
-        {/* Users List */}
         <div className="space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
           {loading ? (
             <div className="flex justify-center py-8">
@@ -257,39 +307,101 @@ export function UserList({ role, title }: { role: string; title: string }) {
             users.map((user, idx) => (
               <div 
                 key={user.id} 
-                className="flex items-center justify-between rounded-lg border bg-muted/30 p-3 hover:bg-muted/50 transition-colors"
+                className={`flex items-center justify-between rounded-lg border p-3 transition-colors ${
+                  editingId === user.id 
+                    ? "bg-primary/10 border-primary" 
+                    : "bg-muted/30 hover:bg-muted/50 border-transparent"
+                }`}
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                    role === "student" ? "bg-blue-500/20 text-blue-400" : 
-                    role === "doctor" ? "bg-green-500/20 text-green-400" : 
-                    "bg-cyan-500/20 text-cyan-400"
-                  }`}>
-                    {idx + 1}
+                {editingId === user.id ? (
+                  <div className="flex-1 space-y-2">
+                    <Input 
+                      value={editData.name}
+                      onChange={e => setEditData({...editData, name: e.target.value})}
+                      className="h-8 text-sm"
+                      placeholder="الاسم"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      {role === "student" && (
+                        <Input 
+                          value={editData.nationalId}
+                          onChange={e => setEditData({...editData, nationalId: e.target.value})}
+                          className="h-8 text-xs"
+                          placeholder="الرقم القومي"
+                          dir="ltr"
+                        />
+                      )}
+                      {(role === "doctor" || role === "ta") && (
+                        <Select 
+                          value={editData.subjectId} 
+                          onValueChange={val => setEditData({...editData, subjectId: val})}
+                        >
+                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="المادة" /></SelectTrigger>
+                          <SelectContent>
+                            {subjects.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-bold truncate">{user.full_name}</p>
-                    <p className="text-xs text-muted-foreground font-mono" dir="ltr">
-                      {user.national_id || user.email || user.id.split("-")[0]}
-                    </p>
+                ) : (
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                      role === "student" ? "bg-blue-500/20 text-blue-400" : 
+                      role === "doctor" ? "bg-green-500/20 text-green-400" : 
+                      "bg-cyan-500/20 text-cyan-400"
+                    }`}>
+                      {idx + 1}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold truncate">{user.full_name}</p>
+                      <p className="text-xs text-muted-foreground font-mono" dir="ltr">
+                        {user.national_id || user.email || user.id.split("-")[0]}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <ConfirmAction
-                  title={`حذف ${getRoleLabel()}`}
-                  description={`هل تريد حذف "${user.full_name}" نهائياً؟ لا يمكن التراجع.`}
-                  confirmLabel="حذف"
-                >
-                  {(trigger) => (
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={trigger} 
-                      className="text-destructive h-8 w-8 hover:bg-destructive/10"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                )}
+                
+                <div className="flex items-center gap-1 shrink-0">
+                  {editingId === user.id ? (
+                    <>
+                      <Button variant="ghost" size="icon" onClick={cancelEdit} className="h-8 w-8">
+                        <XCircle className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={saveEdit} disabled={submitting} className="h-8 w-8 text-green-500">
+                        <CheckCircle className="h-4 w-4" />
+                      </Button>
+                    </>
+                  ) : deleteConfirm?.id === user.id ? (
+                    <>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => setDeleteConfirm(null)} 
+                        className="h-8 w-8 text-muted-foreground"
+                      >
+                        <XCircle className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => handleDelete(user.id, user.full_name)} 
+                        className="h-8 w-8 text-destructive"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button variant="ghost" size="icon" onClick={() => startEdit(user)} className="h-8 w-8 text-primary">
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteConfirm({id: user.id, name: user.full_name})} className="text-destructive h-8 w-8 hover:bg-destructive/10">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </>
                   )}
-                </ConfirmAction>
+                </div>
               </div>
             ))
           )}

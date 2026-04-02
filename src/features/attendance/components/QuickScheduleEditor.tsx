@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { Pencil, Save, Globe, CheckCircle2, Trash2, ChevronDown, ChevronRight, ChevronLeft, Calendar, GraduationCap, Coffee, Loader2 } from "lucide-react";
+import { Pencil, Save, Globe, CheckCircle2, Trash2, ChevronDown, ChevronRight, ChevronLeft, Calendar, GraduationCap, Coffee, Loader2, FileText, Upload, Eye, Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -43,6 +44,12 @@ export function QuickScheduleEditor() {
   const [publishing, setPublishing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [mobileDay, setMobileDay] = useState(0);
+  const [scheduleTab, setScheduleTab] = useState("schedule");
+  
+  // Exam state
+  const [examFiles, setExamFiles] = useState<{id: string, title: string, type: string, url: string, section: number}[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [previewExam, setPreviewExam] = useState<{id: string, title: string, type: string, url: string} | null>(null);
 
   const current = allSections[selectedSection] || makeEmpty();
 
@@ -62,6 +69,20 @@ export function QuickScheduleEditor() {
       }
       setLoading(false);
     });
+
+    // Load exam files
+    supabase.from("exam_schedules").select("*").order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (data) {
+          setExamFiles(data.map(f => ({
+            id: f.id,
+            title: f.title,
+            type: f.exam_type,
+            url: f.file_url,
+            section: f.section
+          })));
+        }
+      });
   }, []);
 
   const update = (d: DayData[]) => { setAllSections(p => ({ ...p, [selectedSection]: d })); setHasChanges(true); };
@@ -136,6 +157,63 @@ export function QuickScheduleEditor() {
     sec: current.reduce((a, d) => a + d.entries.filter(e => e?.entry_type === "section").length, 0),
   };
 
+  const handleUploadExam = async (e: React.ChangeEvent<HTMLInputElement>, examType: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setUploading(true);
+    try {
+      const fileName = `${Date.now()}_${file.name}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("exam-files")
+        .upload(fileName, file);
+      
+      if (uploadError) throw uploadError;
+      
+      const { data: { publicUrl } } = supabase.storage.from("exam-files").getPublicUrl(fileName);
+      
+      const title = `${examType === "midterm" ? "ميدتيرم" : "فاينل"} - سكشن ${selectedSection} - ${new Date().toLocaleDateString("ar-EG")}`;
+      
+      const { error: dbError } = await supabase.from("exam_schedules").insert({
+        title,
+        exam_type: examType,
+        file_url: publicUrl,
+        section: selectedSection,
+        file_name: file.name
+      });
+      
+      if (dbError) throw dbError;
+      
+      toast.success("تم رفع جدول الامتحان بنجاح");
+      
+      const { data: newFiles } = await supabase.from("exam_schedules").select("*").order("created_at", { ascending: false });
+      if (newFiles) {
+        setExamFiles(newFiles.map(f => ({
+          id: f.id,
+          title: f.title,
+          type: f.exam_type,
+          url: f.file_url,
+          section: f.section
+        })));
+      }
+    } catch (err) {
+      toast.error("فشل رفع الملف");
+      console.error(err);
+    }
+    setUploading(false);
+  };
+
+  const handleDeleteExam = async (id: string) => {
+    try {
+      const { error } = await supabase.from("exam_schedules").delete().eq("id", id);
+      if (error) throw error;
+      setExamFiles(prev => prev.filter(f => f.id !== id));
+      toast.success("تم حذف جدول الامتحان");
+    } catch {
+      toast.error("فشل الحذف");
+    }
+  };
+
   if (loading) {
     return (
       <Card dir="rtl">
@@ -152,7 +230,7 @@ export function QuickScheduleEditor() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <Calendar className="h-4 w-4 text-primary" />
-            ادارة الجدول الدراسي
+            ادارة الجدول والامتحانات
           </CardTitle>
           <div className="flex items-center gap-3">
             {hasChanges && <span className="text-xs text-amber-500 font-medium">غير منشور</span>}
@@ -164,22 +242,33 @@ export function QuickScheduleEditor() {
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-muted-foreground">السكشن:</span>
-            <div className="relative">
-              <select value={selectedSection} onChange={e => { setSelectedSection(Number(e.target.value)); setEditing(null); }}
-                className="appearance-none rounded-lg border border-border bg-card px-4 py-2 text-sm font-bold text-foreground outline-none pr-8 cursor-pointer">
-                {Array.from({ length: 15 }, (_, i) => i + 1).map(n => <option key={n} value={n}>سكشن {n}</option>)}
-              </select>
-              <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <Tabs value={scheduleTab} onValueChange={setScheduleTab} className="w-full">
+          <TabsList className="w-full justify-start gap-2 bg-transparent border-b pb-0 mb-4">
+            <TabsTrigger value="schedule" className="gap-1">
+              <Calendar className="h-4 w-4" /> الجدول
+            </TabsTrigger>
+            <TabsTrigger value="exams" className="gap-1">
+              <FileText className="h-4 w-4" /> الامتحانات
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="schedule" className="space-y-6 mt-0">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-muted-foreground">السكشن:</span>
+                <div className="relative">
+                  <select value={selectedSection} onChange={e => { setSelectedSection(Number(e.target.value)); setEditing(null); }}
+                    className="appearance-none rounded-lg border border-border bg-card px-4 py-2 text-sm font-bold text-foreground outline-none pr-8 cursor-pointer">
+                    {Array.from({ length: 15 }, (_, i) => i + 1).map(n => <option key={n} value={n}>سكشن {n}</option>)}
+                  </select>
+                  <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1"><GraduationCap className="h-3.5 w-3.5 text-primary" />{stats.lec} محاضرة</span>
+                <span className="flex items-center gap-1"><Coffee className="h-3.5 w-3.5 text-cyan-400" />{stats.sec} سكشن</span>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1"><GraduationCap className="h-3.5 w-3.5 text-primary" />{stats.lec} محاضرة</span>
-            <span className="flex items-center gap-1"><Coffee className="h-3.5 w-3.5 text-cyan-400" />{stats.sec} سكشن</span>
-          </div>
-        </div>
 
         {editing && (
           <div className="rounded-xl border-2 border-primary/50 bg-primary/5 p-4 space-y-3">
@@ -361,6 +450,78 @@ export function QuickScheduleEditor() {
             </tbody>
           </table>
         </div>
+          </TabsContent>
+          
+          <TabsContent value="exams" className="space-y-6 mt-0">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <h3 className="font-bold text-sm">جدول الميدتيرم</h3>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">قم برفع جدول امتحانات الميدتيرم للسكشن المحدد</p>
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg cursor-pointer hover:bg-primary/90 transition-colors text-xs font-medium">
+                    <Upload className="h-4 w-4" />
+                    رفع الجدول
+                    <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx" className="hidden" onChange={(e) => handleUploadExam(e, "midterm")} disabled={uploading} />
+                  </label>
+                </div>
+              </div>
+              
+              <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <FileText className="h-5 w-5 text-amber-500" />
+                  <h3 className="font-bold text-sm">جدول الفاينل</h3>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">قم برفع جدول امتحانات الفاينل للسكشن المحدد</p>
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 px-3 py-2 bg-amber-500 text-white rounded-lg cursor-pointer hover:bg-amber-600 transition-colors text-xs font-medium">
+                    <Upload className="h-4 w-4" />
+                    رفع الجدول
+                    <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx" className="hidden" onChange={(e) => handleUploadExam(e, "final")} disabled={uploading} />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg border bg-card p-4">
+              <h3 className="font-bold text-sm mb-4 flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary" />
+                الجداول المرفوعة ({examFiles.length})
+              </h3>
+              {examFiles.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-4">لا توجد جداول امتحانات مرفوعة بعد</p>
+              ) : (
+                <div className="space-y-2">
+                  {examFiles.map((exam) => (
+                    <div key={exam.id} className="flex items-center justify-between rounded-lg border border-border/50 p-3 bg-muted/30">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
+                          exam.type === "midterm" ? "bg-primary/10 text-primary" : "bg-amber-500/10 text-amber-500"
+                        }`}>
+                          <FileText className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm truncate">{exam.title}</p>
+                          <p className="text-xs text-muted-foreground">سكشن {exam.section}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => window.open(exam.url, '_blank')}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDeleteExam(exam.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );
