@@ -86,7 +86,7 @@ export function NotificationForm({ createdBy, onAdded }: Props) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>النوع</Label>
-              <Select value={type} onValueChange={setType}>
+              <Select id="notification-type" value={type} onValueChange={setType}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="exam">امتحان</SelectItem>
@@ -98,16 +98,16 @@ export function NotificationForm({ createdBy, onAdded }: Props) {
             </div>
             <div className="space-y-2">
               <Label>المادة (اختياري)</Label>
-              <Input value={subject} onChange={e => setSubject(e.target.value)} placeholder="مثال: مبادئ الامن السيبراني" />
+              <Input id="notification-subject" value={subject} onChange={e => setSubject(e.target.value)} placeholder="مثال: مبادئ الامن السيبراني" />
             </div>
           </div>
           <div className="space-y-2">
             <Label>العنوان</Label>
-            <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="مثال: امتحان نصف الفصل" required />
+            <Input id="notification-title" value={title} onChange={e => setTitle(e.target.value)} placeholder="مثال: امتحان نصف الفصل" required />
           </div>
           <div className="space-y-2">
             <Label>التفاصيل (اختياري)</Label>
-            <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="مثال: الامتحان يشمل الفصول من 1 الى 5" rows={2}
+            <textarea id="notification-body" value={body} onChange={e => setBody(e.target.value)} placeholder="مثال: الامتحان يشمل الفصول من 1 الى 5" rows={2}
               className="flex w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground resize-none" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-lg bg-primary/5 p-3 border border-primary/20">
@@ -118,11 +118,11 @@ export function NotificationForm({ createdBy, onAdded }: Props) {
             </div>
             <div className="space-y-2">
               <Label>تاريخ الإشعار (اختياري)</Label>
-              <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
+              <Input id="notification-date" type="date" value={date} onChange={e => setDate(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>وقت المنبه (اختياري)</Label>
-              <Input type="time" value={time} onChange={e => setTime(e.target.value)} />
+              <Input id="notification-time" type="time" value={time} onChange={e => setTime(e.target.value)} />
             </div>
           </div>
           <Button type="submit" className="w-full gap-2" disabled={submitting || !title}>

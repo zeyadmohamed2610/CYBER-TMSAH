@@ -18,7 +18,7 @@ export const TADashboard = () => {
   const { metrics, error } = useAttendanceDashboardData("ta", taSections);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !fullName) return;
     supabase.from("users").select("subject_id").eq("auth_id", user.id).maybeSingle()
       .then(({ data }) => {
         if (data?.subject_id) {
@@ -27,16 +27,20 @@ export const TADashboard = () => {
             .then(({ data: subj }) => {
               if (subj?.name) {
                 setTaSubjectName(subj.name);
-                // Fetch assigned sections from course_materials
-                supabase.from("course_materials").select("teaching_assistants").eq("slug", subj.name.toLowerCase().replace(/\s+/g, "-")).maybeSingle()
+                const slug = subj.name.toLowerCase().replace(/\s+/g, "-");
+                // Fetch assigned sections from course_materials using slug
+                supabase.from("course_materials").select("teaching_assistants").eq("slug", slug).maybeSingle()
                   .then(({ data: mat }) => {
                     if (mat?.teaching_assistants) {
-                      const userEmail = user.email;
+                      // Entries are in format "م. {full_name}|section1|section2"
                       const assigned = (mat.teaching_assistants as string[])
                         .map(entry => entry.split("|"))
-                        .find(parts => parts[0] === userEmail);
+                        .find(parts =>
+                          parts[0] === `م. ${fullName}` ||
+                          parts[0].replace(/^م\.\s*/, "").trim() === fullName.trim()
+                        );
                       if (assigned && assigned.length > 1) {
-                        setTaSections(assigned.slice(1).map(s => s.trim()));
+                        setTaSections(assigned.slice(1).map(s => s.trim()).filter(Boolean));
                       }
                     }
                   });
@@ -44,7 +48,7 @@ export const TADashboard = () => {
             });
         }
       });
-  }, [user]);
+  }, [user, fullName]);
 
   if (selectedLecture) {
     return (

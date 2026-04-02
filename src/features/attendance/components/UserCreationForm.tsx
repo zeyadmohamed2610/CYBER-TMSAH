@@ -122,8 +122,9 @@ export const UserCreationForm = () => {
           <TabsContent value="student">
             <form onSubmit={studentForm.handleSubmit(onStudentSubmit)} className="space-y-4">
               <div className="space-y-2">
-                <Label>الاسم الرباعي</Label>
+                <Label htmlFor="student-name">الاسم الرباعي</Label>
                 <Input
+                  id="student-name"
                   {...studentForm.register("name")}
                   placeholder="الاسم الكامل"
                   disabled={submitting}
@@ -133,8 +134,9 @@ export const UserCreationForm = () => {
                 )}
               </div>
               <div className="space-y-2">
-                <Label>الرقم القومي (14 رقم)</Label>
+                <Label htmlFor="student-national-id">الرقم القومي (14 رقم)</Label>
                 <Input
+                  id="student-national-id"
                   {...studentForm.register("nationalId")}
                   placeholder="14 رقم"
                   inputMode="numeric"
@@ -146,8 +148,9 @@ export const UserCreationForm = () => {
                 )}
               </div>
               <div className="space-y-2">
-                <Label>كلمة المرور</Label>
+                <Label htmlFor="student-password">كلمة المرور</Label>
                 <Input
+                  id="student-password"
                   type="password"
                   dir="ltr"
                   {...studentForm.register("password")}
@@ -172,8 +175,9 @@ export const UserCreationForm = () => {
           <TabsContent value="doctor">
             <form onSubmit={doctorForm.handleSubmit(onDoctorSubmit)} className="space-y-4">
               <div className="space-y-2">
-                <Label>اسم الدكتور</Label>
+                <Label htmlFor="doctor-name">اسم الدكتور</Label>
                 <Input
+                  id="doctor-name"
                   {...doctorForm.register("name")}
                   placeholder="الاسم الكامل"
                   disabled={submitting}
@@ -183,8 +187,9 @@ export const UserCreationForm = () => {
                 )}
               </div>
               <div className="space-y-2">
-                <Label>البريد الإلكتروني</Label>
+                <Label htmlFor="doctor-email">البريد الإلكتروني</Label>
                 <Input
+                  id="doctor-email"
                   type="email"
                   dir="ltr"
                   {...doctorForm.register("email")}
@@ -196,8 +201,9 @@ export const UserCreationForm = () => {
                 )}
               </div>
               <div className="space-y-2">
-                <Label>كلمة المرور</Label>
+                <Label htmlFor="doctor-password">كلمة المرور</Label>
                 <Input
+                  id="doctor-password"
                   type="password"
                   dir="ltr"
                   {...doctorForm.register("password")}
@@ -209,7 +215,7 @@ export const UserCreationForm = () => {
                 )}
               </div>
               <div className="space-y-2">
-                <Label>المادة المُسندة</Label>
+                <Label htmlFor="doctor-subject">المادة المُسندة</Label>
                 {subjects.length === 0 ? (
                   <p className="text-xs text-muted-foreground flex items-center gap-1">
                     <BookMinus className="h-3 w-3" />
@@ -217,6 +223,7 @@ export const UserCreationForm = () => {
                   </p>
                 ) : (
                   <Select
+                    id="doctor-subject"
                     value={doctorForm.watch("subjectId")}
                     onValueChange={(val) => doctorForm.setValue("subjectId", val)}
                     disabled={submitting}

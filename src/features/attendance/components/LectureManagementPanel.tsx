@@ -123,7 +123,7 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
             {!fixedSubjectId && (
               <div className="space-y-1">
                 <Label className="text-xs">المادة</Label>
-                <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                <Select id="lecture-subject" value={selectedSubject} onValueChange={setSelectedSubject}>
                   <SelectTrigger className="h-8 text-sm">
                     <SelectValue placeholder="اختر مادة..." />
                   </SelectTrigger>

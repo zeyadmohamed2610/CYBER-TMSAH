@@ -14,6 +14,7 @@ interface Session {
   subject_name: string; 
   subject_id: string;
   section: string | null; 
+  expires_at: string | null;
   is_active: boolean; 
   created_at: string; 
 }
@@ -32,7 +33,7 @@ export function ManualAttendancePanel() {
     const load = async () => {
       const [sRes, sessRes] = await Promise.all([
         supabase.from("users").select("id, full_name, national_id").eq("role", "student"),
-        supabase.from("sessions").select("id, is_active, created_at, subject_id, section").limit(50),
+        supabase.from("sessions").select("id, expires_at, created_at, subject_id, section").limit(50),
       ]);
       
       const studentsData = (sRes.data ?? []).sort((a, b) => a.full_name.localeCompare(b.full_name, 'ar'));
@@ -42,15 +43,16 @@ export function ManualAttendancePanel() {
       const sortedSessions = [...sessData].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       
       if (sortedSessions.length > 0) {
-        const subjectIds = [...new Set(sessData.map((s: Session) => s.subject_id).filter(Boolean))];
+        const subjectIds = [...new Set(sessData.map((s: { subject_id: string }) => s.subject_id).filter(Boolean))];
         const { data: subjects } = await supabase.from("subjects").select("id, name").in("id", subjectIds as string[]);
         const nameMap = new Map((subjects ?? []).map((s: { id: string; name: string }) => [s.id, s.name]));
-        setSessions(sessData.map((s: Session) => ({
+        setSessions(sessData.map((s: { id: string; expires_at: string | null; created_at: string; subject_id: string; section: string | null }) => ({
           id: s.id,
           subject_name: nameMap.get(s.subject_id) || "غير معروف",
           subject_id: s.subject_id,
           section: s.section ?? null,
-          is_active: s.is_active,
+          expires_at: s.expires_at ?? null,
+          is_active: s.expires_at ? new Date(s.expires_at).getTime() > Date.now() : false,
           created_at: s.created_at,
         })));
       }
@@ -110,12 +112,14 @@ export function ManualAttendancePanel() {
             <Label className="text-sm font-semibold">اختيار الطالب</Label>
             <div className="space-y-2">
               <Input
+                id="manual-attendance-search"
+                name="manual-attendance-search"
                 placeholder="بحث عن طالب..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="h-9 text-xs"
               />
-              <Select value={selectedStudent} onValueChange={setSelectedStudent}>
+              <Select id="manual-attendance-student" value={selectedStudent} onValueChange={setSelectedStudent}>
                 <SelectTrigger className="h-12 rounded-xl border-primary/20 bg-background/50">
                   <SelectValue placeholder="اختر الطالب من القائمة..." />
                 </SelectTrigger>
@@ -137,7 +141,7 @@ export function ManualAttendancePanel() {
 
           <div className="space-y-2">
             <Label className="text-sm font-semibold">الجلسة</Label>
-            <Select value={selectedSession} onValueChange={setSelectedSession}>
+            <Select id="manual-attendance-session" value={selectedSession} onValueChange={setSelectedSession}>
               <SelectTrigger className="h-12 rounded-xl border-primary/20 bg-background/50">
                 <SelectValue placeholder="اختر جلسة..." />
               </SelectTrigger>

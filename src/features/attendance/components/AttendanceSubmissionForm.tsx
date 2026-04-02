@@ -162,6 +162,8 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
           <div>
             <input
               ref={fileRef}
+              id="qr-camera-input"
+              name="qr-camera"
               type="file"
               accept="image/*"
               capture="environment"

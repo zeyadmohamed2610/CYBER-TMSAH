@@ -27,8 +27,7 @@ interface SessionDbRow {
   created_at: string;
   expires_at: string;
   section: string | null;
-  duration_minutes: number | null;
-  gps_radius: number | null;
+  radius_meters: number | null;
 }
 
 interface SessionHistoryItem {
@@ -73,7 +72,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
     try {
         const { data: sessions } = await supabase
         .from("sessions")
-        .select("id, created_at, expires_at, section, duration_minutes, gps_radius")
+        .select("id, created_at, expires_at, section, radius_meters")
         .eq("lecture_id", lecture.id);
 
       const sortedSessions = (sessions ?? []).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -85,6 +84,10 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
           .select("id", { head: true, count: "exact" })
           .eq("session_id", s.id);
 
+        // Compute intended duration from timestamps (in minutes)
+        const durationMs = new Date(s.expires_at).getTime() - new Date(s.created_at).getTime();
+        const durationMinutes = Math.max(1, Math.round(durationMs / 60000));
+
         history.push({
           session_id: s.id,
           created_at: s.created_at,
@@ -92,8 +95,8 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
           is_active: new Date(s.expires_at).getTime() > Date.now(),
           attendee_count: count ?? 0,
           section: s.section ?? null,
-          duration_minutes: s.duration_minutes ?? null,
-          gps_radius: s.gps_radius ?? null,
+          duration_minutes: durationMinutes,
+          gps_radius: s.radius_meters ?? null,
         });
       }
       setSessionHistory(history);
@@ -403,6 +406,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
                       description={`هل تريد إغلاق هذه الجلسة الآن؟ لن يتمكن الطلاب من تسجيل حضورها.`}
                       confirmLabel="إغلاق"
                       detailed={true}
+                      onConfirm={() => void handleToggleSession(session.session_id, false)}
                     >
                       {(trigger) => (
                         <Button 
@@ -421,16 +425,15 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
                       title="فتح الجلسة"
                       description={`هل تريد إعادة فتح هذه الجلسة لمدة 15 دقيقة إضافية؟`}
                       confirmLabel="فتح"
+                      variant="default"
+                      onConfirm={() => void handleToggleSession(session.session_id, true)}
                     >
                       {(trigger) => (
                         <Button 
                           variant="outline" 
                           size="sm" 
                           className="h-8 px-3 text-xs gap-1 text-green-600 border-green-600/30 hover:bg-green-500/10" 
-                          onClick={() => {
-                            trigger();
-                            setTimeout(() => void handleToggleSession(session.session_id, true), 100);
-                          }}
+                          onClick={trigger}
                         >
                           <ToggleLeft className="h-4 w-4" />
                           فتح
@@ -484,13 +487,13 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1">
                 <Label className="text-xs">المدة (دقائق)</Label>
-                <Input type="number" min={5} max={180} value={sessionDuration}
+                <Input id="session-duration" type="number" min={5} max={180} value={sessionDuration}
                   onChange={(e) => setSessionDuration(Number(e.target.value))}
                   className="h-8 text-sm" dir="ltr" />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">نوع الجلسة</Label>
-                <Select value={sessionType} onValueChange={(v) => { setSessionType(v as "lecture" | "section"); if (v === "lecture") setSelectedSection("عام"); }}>
+                <Select id="session-type" value={sessionType} onValueChange={(v) => { setSessionType(v as "lecture" | "section"); if (v === "lecture") setSelectedSection("عام"); }}>
                   <SelectTrigger className="h-8 text-sm">
                     <SelectValue />
                   </SelectTrigger>
@@ -503,7 +506,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
               {sessionType === "section" ? (
                 <div className="space-y-1">
                   <Label className="text-xs">رقم السكشن</Label>
-                  <Select value={selectedSection} onValueChange={setSelectedSection}>
+                  <Select id="session-section" value={selectedSection} onValueChange={setSelectedSection}>
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue placeholder="اختر السكشن..." />
                     </SelectTrigger>
@@ -519,7 +522,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
                   <Label className="text-xs">نصف القطر GPS (متر)</Label>
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <Input type="number" min={10} max={500} value={sessionRadius}
+                    <Input id="session-radius" type="number" min={10} max={500} value={sessionRadius}
                       onChange={(e) => setSessionRadius(Number(e.target.value))}
                       className="h-8 text-sm" dir="ltr" />
                   </div>

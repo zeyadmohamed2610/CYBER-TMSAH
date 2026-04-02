@@ -65,14 +65,20 @@ export function TAManagementPanel() {
     }
     for (const ta of (taData ?? [])) {
       let assigned_sections: string[] = [];
-      const { data: mat } = await supabase.from("course_materials")
-        .select("teaching_assistants")
-        .eq("subject_id", ta.subject_id)
-        .maybeSingle();
-      
-      if (mat?.teaching_assistants) {
-        const entry = (mat.teaching_assistants as string[]).find(t => t.includes(ta.full_name));
-        if (entry) assigned_sections = entry.split("|").slice(1);
+      const subjectName = subjectNameMap.get(ta.subject_id as string);
+      if (subjectName) {
+        const slug = subjectName.toLowerCase().replace(/\s+/g, "-");
+        const { data: mat } = await supabase.from("course_materials")
+          .select("teaching_assistants")
+          .eq("slug", slug)
+          .maybeSingle();
+
+        if (mat?.teaching_assistants) {
+          const entry = (mat.teaching_assistants as string[]).find(
+            t => t.startsWith(`م. ${ta.full_name as string}|`) || t.includes(`|${ta.full_name as string}|`)
+          );
+          if (entry) assigned_sections = entry.split("|").slice(1);
+        }
       }
 
       taList.push({
@@ -80,7 +86,7 @@ export function TAManagementPanel() {
         full_name: ta.full_name as string,
         national_id: (ta.national_id as string) ?? null,
         subject_id: ta.subject_id as string,
-        subject_name: subjectNameMap.get(ta.subject_id as string) ?? "غير معروف",
+        subject_name: subjectName ?? "غير معروف",
         assigned_sections
       });
     }
@@ -148,7 +154,7 @@ export function TAManagementPanel() {
     setEditingId(ta.id);
     setEditData({
       name: ta.full_name,
-      email: ta.email || "",
+      email: "",
       subjectId: ta.subject_id
     });
   };
@@ -165,14 +171,11 @@ export function TAManagementPanel() {
     }
     setSubmitting(true);
 
-    const { error } = await supabase
-      .from("users")
-      .update({ 
-        full_name: editData.name.trim(),
-        email: editData.email.trim().toLowerCase(),
-        subject_id: editData.subjectId
-      })
-      .eq("id", editingId);
+    const { error } = await supabase.rpc("update_user", {
+      p_user_id:    editingId,
+      p_full_name:  editData.name.trim(),
+      p_subject_id: editData.subjectId || null,
+    });
 
     if (error) {
       toast({ variant: "destructive", title: "فشل التعديل", description: error.message });
@@ -264,7 +267,7 @@ export function TAManagementPanel() {
               </div>
               <div>
                 <Label className="text-xs">المادة الأساسية</Label>
-                <Select value={form.subjectId} onValueChange={(v) => setForm({ ...form, subjectId: v })}>
+                <Select id="ta-subject" value={form.subjectId} onValueChange={(v) => setForm({ ...form, subjectId: v })}>
                   <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="اختر المادة" /></SelectTrigger>
                   <SelectContent>
                     {subjects.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
@@ -307,7 +310,7 @@ export function TAManagementPanel() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <Label className="text-xs">المادة</Label>
-              <Select value={assignSubject} onValueChange={setAssignSubject}>
+              <Select id="assign-subject" value={assignSubject} onValueChange={setAssignSubject}>
                 <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="اختر المادة" /></SelectTrigger>
                 <SelectContent>
                   {subjects.map((s) => <SelectItem key={s.id} value={s.name.toLowerCase().replace(/\s+/g, "-")}>{s.name}</SelectItem>)}
@@ -316,7 +319,7 @@ export function TAManagementPanel() {
             </div>
             <div>
               <Label className="text-xs">المعيد</Label>
-              <Select value={assignTa} onValueChange={setAssignTa}>
+              <Select id="assign-ta" value={assignTa} onValueChange={setAssignTa}>
                 <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="اختر المعيد" /></SelectTrigger>
                 <SelectContent>
                   {filteredTas.map((t) => <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>)}
@@ -374,43 +377,33 @@ export function TAManagementPanel() {
                     >
                       {editingId === ta.id ? (
                         <div className="flex-1 space-y-2">
-                          <Input 
-                            id="editTaName"
-                            name="editTaName"
-                            value={editData.name}
-                            onChange={e => setEditData({...editData, name: e.target.value})}
-                            className="h-8 text-sm"
-                            placeholder="الاسم"
-                          />
-                          <div className="grid grid-cols-2 gap-2">
-                            <Input 
-                              id="editTaEmail"
-                              name="editTaEmail"
-                              value={editData.email}
-                              onChange={e => setEditData({...editData, email: e.target.value})}
-                              className="h-8 text-xs"
-                              placeholder="البريد"
-                              dir="ltr"
-                            />
-                            <Select 
-                              value={editData.subjectId} 
-                              onValueChange={val => setEditData({...editData, subjectId: val})}
-                            >
-                              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="المادة" /></SelectTrigger>
-                              <SelectContent>
-                                {subjects.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      ) : deleteConfirm?.id === ta.id ? (
+                           <Input 
+                             id="editTaName"
+                             name="editTaName"
+                             value={editData.name}
+                             onChange={e => setEditData({...editData, name: e.target.value})}
+                             className="h-8 text-sm"
+                             placeholder="الاسم"
+                           />
+                           <Select 
+                             id="edit-ta-subject"
+                             value={editData.subjectId} 
+                             onValueChange={val => setEditData({...editData, subjectId: val})}
+                           >
+                             <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="المادة" /></SelectTrigger>
+                             <SelectContent>
+                               {subjects.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                             </SelectContent>
+                           </Select>
+                         </div>
+                        ) : deleteConfirm?.id === ta.id ? (
                         <div className="flex items-center gap-3 flex-1">
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-400">
                             {idx + 1}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">{ta.full_name}</p>
-                            <p className="text-xs text-muted-foreground">{ta.email}</p>
+                            <p className="text-xs text-muted-foreground">{ta.subject_name}</p>
                           </div>
                         </div>
                       ) : (

@@ -804,17 +804,17 @@ export const attendanceService = {
     }
   },
 
-  /** Update session expiry to manually open or close it */
+  /** Update session expiry to manually open or close it (uses SECURITY DEFINER RPC) */
   async updateSessionExpiry(
     sessionId: string,
     expiresAt: string | null,
   ): Promise<AttendanceApiResponse<null>> {
     const operation = "attendanceService.updateSessionExpiry";
     try {
-      const { error } = await supabase
-        .from("sessions")
-        .update({ expires_at: expiresAt })
-        .eq("id", sessionId);
+      const { error } = await supabase.rpc("set_session_expiry", {
+        p_session_id: sessionId,
+        p_expires_at: expiresAt ?? new Date().toISOString(),
+      });
       if (error) throw error;
       return ok<null>(null);
     } catch (error) {

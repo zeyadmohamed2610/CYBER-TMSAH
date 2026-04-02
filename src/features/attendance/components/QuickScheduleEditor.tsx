@@ -302,20 +302,20 @@ export function QuickScheduleEditor() {
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div className="space-y-1 sm:col-span-2">
                 <Label className="text-xs">المادة</Label>
-                <Input value={editForm.subject} onChange={e => setEditForm({ ...editForm, subject: e.target.value })} className="h-9 text-sm" />
+                <Input id="schedule-subject" value={editForm.subject} onChange={e => setEditForm({ ...editForm, subject: e.target.value })} className="h-9 text-sm" />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">المحاضر</Label>
-                <Input value={editForm.instructor} onChange={e => setEditForm({ ...editForm, instructor: e.target.value })} className="h-9 text-sm" />
+                <Input id="schedule-instructor" value={editForm.instructor} onChange={e => setEditForm({ ...editForm, instructor: e.target.value })} className="h-9 text-sm" />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">القاعة</Label>
-                <Input value={editForm.room} onChange={e => setEditForm({ ...editForm, room: e.target.value })} className="h-9 text-sm" />
+                <Input id="schedule-room" value={editForm.room} onChange={e => setEditForm({ ...editForm, room: e.target.value })} className="h-9 text-sm" />
               </div>
             </div>
             <div className="space-y-1">
               <Label className="text-xs">النوع</Label>
-              <Select value={editForm.entry_type} onValueChange={v => setEditForm({ ...editForm, entry_type: v as "lecture" | "section" })}>
+              <Select id="schedule-type" value={editForm.entry_type} onValueChange={v => setEditForm({ ...editForm, entry_type: v as "lecture" | "section" })}>
                 <SelectTrigger className="h-9 w-full max-w-[160px] text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="lecture">محاضرة</SelectItem>
