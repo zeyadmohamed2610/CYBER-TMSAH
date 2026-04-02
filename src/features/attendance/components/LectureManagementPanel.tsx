@@ -44,8 +44,13 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
 
   useEffect(() => {
     if (fixedSubjectId) return;
-    supabase.from("subjects").select("id, name, doctor_name").order("name")
-      .then(({ data }) => { if (data) setSubjects(data); });
+    supabase.from("subjects").select("id, name, doctor_name")
+      .then(({ data }) => { 
+        if (data) {
+          const sorted = data.sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+          setSubjects(sorted);
+        }
+      });
   }, [fixedSubjectId]);
 
   const handleCreate = async (e: React.FormEvent) => {

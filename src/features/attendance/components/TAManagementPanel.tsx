@@ -44,8 +44,9 @@ export function TAManagementPanel() {
   const load = useCallback(async () => {
     setLoading(true);
 
-    const { data: subjs } = await supabase.from("subjects").select("id, name").order("name");
-    setSubjects((subjs ?? []) as Subject[]);
+    const { data: subjs } = await supabase.from("subjects").select("id, name");
+    const sortedSubjs = (subjs ?? []).sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+    setSubjects(sortedSubjs as Subject[]);
 
     const { data: taData, error: taError } = await supabase
       .from("users")

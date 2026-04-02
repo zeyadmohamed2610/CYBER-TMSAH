@@ -51,11 +51,12 @@ export const UserCreationForm = () => {
   const { setValue } = doctorForm;
 
   useEffect(() => {
-    supabase.from("subjects").select("id, name").order("name")
+    supabase.from("subjects").select("id, name")
       .then(({ data }) => {
         if (data) {
-          setSubjects(data as Subject[]);
-          if (data.length > 0) setValue("subjectId", data[0].id);
+          const sorted = data.sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+          setSubjects(sorted as Subject[]);
+          if (sorted.length > 0) setValue("subjectId", sorted[0].id);
         }
       });
   }, [setValue]);
@@ -87,8 +88,13 @@ export const UserCreationForm = () => {
       toast({ title: "تم إضافة الدكتور ✓", description: `تم إضافة ${data.name} وربطه بمادته.` });
       doctorForm.reset();
       // Refresh subjects to reflect updated doctor_name
-      supabase.from("subjects").select("id, name, doctor_name").order("name")
-        .then(({ data }) => { if (data) setSubjects(data as Subject[]); });
+      supabase.from("subjects").select("id, name, doctor_name")
+        .then(({ data }) => { 
+          if (data) {
+            const sorted = data.sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+            setSubjects(sorted as Subject[]); 
+          }
+        });
     }
     setSubmitting(false);
   };

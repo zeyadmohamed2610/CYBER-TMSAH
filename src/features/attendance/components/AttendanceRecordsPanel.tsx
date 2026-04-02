@@ -31,10 +31,11 @@ export const AttendanceRecordsPanel = () => {
       const { data } = await supabase
         .from("attendance")
         .select("id, created_at, ip_address, session_id, student_id, section, sessions(subject_id, subjects(name)), users!attendance_student_id_fkey(full_name)")
-        .order("created_at", { ascending: false })
         .limit(200);
 
-      const mapped: AttendanceRecord[] = (data ?? []).map((row: Record<string, unknown>) => {
+      const sortedData = (data ?? []).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      
+      const mapped: AttendanceRecord[] = sortedData.map((row: Record<string, unknown>) => {
         const session = Array.isArray(row.sessions) ? row.sessions[0] : row.sessions;
         const subject = session && (Array.isArray((session as Record<string, unknown>).subjects) ? ((session as Record<string, unknown>).subjects as Record<string, unknown>[])[0] : (session as Record<string, unknown>).subjects);
         const student = Array.isArray(row.users) ? row.users[0] : row.users;

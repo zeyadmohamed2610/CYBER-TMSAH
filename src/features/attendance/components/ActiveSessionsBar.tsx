@@ -26,10 +26,11 @@ export function ActiveSessionsBar() {
       const { data } = await supabase
         .from("sessions")
         .select(`id, short_code, rotating_hash, expires_at, latitude, longitude, radius_meters, subject_id, subjects(name, doctor_name)`)
-        .gt("expires_at", new Date().toISOString())
-        .order("created_at", { ascending: false });
+        .gt("expires_at", new Date().toISOString());
 
-      const mapped: ActiveSession[] = (data ?? []).map((row: Record<string, unknown>) => {
+      const sortedData = (data ?? []).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      const mapped: ActiveSession[] = sortedData.map((row: Record<string, unknown>) => {
         const subj = Array.isArray(row.subjects) ? row.subjects[0] : row.subjects;
         return {
           session_id: row.id as string,

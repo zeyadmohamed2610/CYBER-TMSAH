@@ -71,10 +71,9 @@ export function QuickScheduleEditor() {
     });
 
     // Load exam files
-    supabase.from("exam_schedules").select("*").order("created_at", { ascending: false })
+    supabase.from("exam_schedules").select("*")
       .then(({ data, error }) => {
         if (error) {
-          console.log("exam_schedules table not found:", error.message);
           setExamFiles([]);
         } else if (data) {
           setExamFiles(data.map(f => ({
@@ -206,9 +205,10 @@ export function QuickScheduleEditor() {
         toast.success("تم رفع جدول الامتحان بنجاح");
       }
       
-      const { data: newFiles } = await supabase.from("exam_schedules").select("*").order("created_at", { ascending: false });
+      const { data: newFiles } = await supabase.from("exam_schedules").select("*");
       if (newFiles) {
-        setExamFiles(newFiles.map(f => ({
+        const sorted = (newFiles || []).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        setExamFiles(sorted.map(f => ({
           id: f.id,
           title: f.title,
           type: f.exam_type,

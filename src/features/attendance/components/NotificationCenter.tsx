@@ -83,8 +83,9 @@ export function NotificationCenter() {
   };
 
   const load = async () => {
-    const { data } = await supabase.from("notifications").select("*").order("created_at", { ascending: false }).limit(20);
-    setNotifications((data ?? []) as Notification[]);
+    const { data } = await supabase.from("notifications").select("*").limit(20);
+    const sorted = (data ?? []).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    setNotifications(sorted as Notification[]);
   };
 
   useEffect(() => {

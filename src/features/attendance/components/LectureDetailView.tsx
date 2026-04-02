@@ -74,13 +74,12 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
         const { data: sessions } = await supabase
         .from("sessions")
         .select("id, created_at, expires_at, section, duration_minutes, gps_radius")
-        .eq("lecture_id", lecture.id)
-        .order("created_at", { ascending: false });
+        .eq("lecture_id", lecture.id);
 
-      if (!sessions) { setSessionHistory([]); return; }
+      const sortedSessions = (sessions ?? []).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
       const history: SessionHistoryItem[] = [];
-      for (const s of sessions as SessionDbRow[]) {
+      for (const s of sortedSessions as SessionDbRow[]) {
         const { count } = await supabase
           .from("attendance")
           .select("id", { head: true, count: "exact" })

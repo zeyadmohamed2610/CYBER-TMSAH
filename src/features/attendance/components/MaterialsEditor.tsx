@@ -40,8 +40,9 @@ export function MaterialsEditor() {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase.from("course_materials").select("*").order("sort_order", { ascending: true });
-    setMaterials((data ?? []) as Material[]);
+    const { data } = await supabase.from("course_materials").select("*");
+    const sorted = (data ?? []).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    setMaterials(sorted as Material[]);
     setLoading(false);
   };
 

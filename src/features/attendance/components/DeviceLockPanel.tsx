@@ -31,10 +31,11 @@ export function DeviceLockPanel() {
   const load = async () => {
     setLoading(true);
     const [usersRes, locksRes] = await Promise.all([
-      supabase.from("users").select("id, full_name, national_id, auth_id").eq("role", "student").order("full_name"),
+      supabase.from("users").select("id, full_name, national_id, auth_id").eq("role", "student"),
       supabase.from("device_locks").select("student_auth_id, device_label, locked_at"),
     ]);
-    setStudents((usersRes.data ?? []) as StudentInfo[]);
+    const sortedUsers = (usersRes.data ?? []).sort((a, b) => a.full_name.localeCompare(b.full_name, 'ar'));
+    setStudents(sortedUsers as StudentInfo[]);
     setLocks((locksRes.data ?? []) as DeviceLock[]);
     setLoading(false);
   };

@@ -31,13 +31,17 @@ export function ManualAttendancePanel() {
   useEffect(() => {
     const load = async () => {
       const [sRes, sessRes] = await Promise.all([
-        supabase.from("users").select("id, full_name, national_id").eq("role", "student").order("full_name", { ascending: true }),
-        supabase.from("sessions").select("id, is_active, created_at, subject_id, section").order("created_at", { ascending: false }).limit(50),
+        supabase.from("users").select("id, full_name, national_id").eq("role", "student"),
+        supabase.from("sessions").select("id, is_active, created_at, subject_id, section").limit(50),
       ]);
-      setStudents((sRes.data ?? []) as Student[]);
+      
+      const studentsData = (sRes.data ?? []).sort((a, b) => a.full_name.localeCompare(b.full_name, 'ar'));
+      setStudents(studentsData as Student[]);
 
       const sessData = sessRes.data ?? [];
-      if (sessData.length > 0) {
+      const sortedSessions = [...sessData].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      
+      if (sortedSessions.length > 0) {
         const subjectIds = [...new Set(sessData.map((s: Session) => s.subject_id).filter(Boolean))];
         const { data: subjects } = await supabase.from("subjects").select("id, name").in("id", subjectIds as string[]);
         const nameMap = new Map((subjects ?? []).map((s: { id: string; name: string }) => [s.id, s.name]));

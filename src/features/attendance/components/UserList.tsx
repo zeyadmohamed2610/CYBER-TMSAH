@@ -79,10 +79,27 @@ export function UserList({ role, title }: { role: string; title: string }) {
 
   useEffect(() => {
     if ((role === "doctor" || role === "ta") && showCreate) {
-      supabase.from("subjects").select("id, name").order("name")
-        .then(({ data }) => { if (data) setSubjects(data); });
+      supabase.from("subjects").select("id, name")
+        .then(({ data }) => { 
+          if (data) {
+            const sorted = data.sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+            setSubjects(sorted); 
+          }
+        });
     }
   }, [role, showCreate]);
+
+  useEffect(() => {
+    if (role === "doctor" && subjects.length === 0) {
+      supabase.from("subjects").select("id, name")
+        .then(({ data }) => {
+          if (data) {
+            const sorted = data.sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+            setSubjects(sorted);
+          }
+        });
+    }
+  }, [role, subjects.length]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
