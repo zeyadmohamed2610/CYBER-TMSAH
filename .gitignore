@@ -53,3 +53,7 @@ nul
 
 # Plans (local planning files)
 plans/
+
+# Local audit files (not pushed to remote)
+AUDIT_REPORT.md
+supabase/audit_fixes.sql
