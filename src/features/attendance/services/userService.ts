@@ -30,7 +30,7 @@ export const userService = {
 
       console.log('Creating user via Edge Function...');
 
-      const { data, error } = await supabase.functions.invoke('createUserNoJWT', {
+      const { data, error } = await supabase.functions.invoke('createUser', {
         body: {
           name: input.name.trim(),
           national_id: input.national_id?.trim(),

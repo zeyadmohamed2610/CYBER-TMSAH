@@ -128,7 +128,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
       return;
     }
 
-    const res = await supabase.functions.invoke("createUserNoJWT", {
+    const res = await supabase.functions.invoke("createUser", {
       body: {
         name: formData.name.trim(),
         national_id: role === "student" ? formData.nationalId : undefined,
@@ -138,14 +138,6 @@ export function UserList({ role, title }: { role: string; title: string }) {
         subject_id: role === "doctor" || role === "ta" ? formData.subjectId : null
       },
     });
-
-    console.log("createUserNoJWT response:", JSON.stringify(res, null, 2));
-    if (res.error) {
-      console.error("createUserNoJWT error:", JSON.stringify(res.error, null, 2));
-    }
-    if (res.data?.error) {
-      console.error("createUserNoJWT data error:", JSON.stringify(res.data.error, null, 2));
-    }
 
     if (res.error || res.data?.error) {
       let errorMsg = "خطأ غير معروف";
