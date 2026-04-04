@@ -4,7 +4,7 @@
         xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
-  <!-- الصفحة الرئيسية - أولوية قصوى -->
+  <!-- الصفحة الرئيسية -->
   <url>
     <loc>https://www.cyber-tmsah.site/</loc>
     <lastmod>2026-04-04</lastmod>
@@ -14,7 +14,6 @@
       <image:loc>https://www.cyber-tmsah.site/og-image.png</image:loc>
       <image:title>CYBER TMSAH - منصة الأمن السيبراني الأكاديمية</image:title>
     </image:image>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://www.cyber-tmsah.site/"/>
   </url>
 
   <!-- صفحة الحضور -->

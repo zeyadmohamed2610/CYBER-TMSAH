@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Search, Trash2, Users, Loader2, X, Edit2, Save, CheckCircle, XCircle, Lock, Eye, EyeOff } from "lucide-react";
+import { Plus, Search, Trash2, Users, Loader2, X, Edit2, Save, CheckCircle, XCircle, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,8 +31,6 @@ export function UserList({ role, title }: { role: string; title: string }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState({ name: "", nationalId: "", email: "", subjectId: "" });
   const [deleteConfirm, setDeleteConfirm] = useState<{id: string, name: string} | null>(null);
-  const [passwordDialog, setPasswordDialog] = useState<{open: boolean, userId: string, userName: string}>({ open: false, userId: "", userName: "" });
-  const [newPassword, setNewPassword] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -189,32 +187,6 @@ export function UserList({ role, title }: { role: string; title: string }) {
       toast({ title: "تم التعديل ✓", description: `تم تعديل بيانات ${editData.name} بنجاح.` });
       setEditingId(null);
       loadUsers();
-    }
-    setSubmitting(false);
-  };
-
-  const handlePasswordChange = async () => {
-    if (!newPassword || newPassword.length < 6) {
-      toast({ variant: "destructive", title: "خطأ", description: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" });
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({ variant: "destructive", title: "خطأ", description: "انتهت الجلسة" });
-        return;
-      }
-      const { error } = await supabase.auth.admin.updateUser(passwordDialog.userId, { password: newPassword });
-      if (error) {
-        toast({ variant: "destructive", title: "فشل التغيير", description: error.message });
-      } else {
-        toast({ title: "تم ✓", description: "تم تغيير كلمة المرور بنجاح" });
-        setPasswordDialog({ open: false, userId: "", userName: "" });
-        setNewPassword("");
-      }
-    } catch (err) {
-      toast({ variant: "destructive", title: "خطأ", description: "فشل تغيير كلمة المرور" });
     }
     setSubmitting(false);
   };
@@ -473,9 +445,6 @@ export function UserList({ role, title }: { role: string; title: string }) {
                       <Button variant="ghost" size="icon" onClick={() => startEdit(user)} className="h-8 w-8 text-primary" title="تعديل">
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setPasswordDialog({ open: true, userId: user.id, userName: user.full_name })} className="h-8 w-8 text-amber-500 hover:text-amber-600" title="تغيير كلمة المرور">
-                        <Lock className="h-4 w-4" />
-                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => setDeleteConfirm({id: user.id, name: user.full_name})} className="text-destructive h-8 w-8 hover:bg-destructive/10" title="حذف">
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -487,40 +456,6 @@ export function UserList({ role, title }: { role: string; title: string }) {
           )}
         </div>
       </CardContent>
-
-      <Dialog open={passwordDialog.open} onOpenChange={(open) => setPasswordDialog({ ...passwordDialog, open })}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>تغيير كلمة المرور</DialogTitle>
-            <DialogDescription>
-              تغيير كلمة مرور: {passwordDialog.userName}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="new-password">كلمة المرور الجديدة</Label>
-              <div className="relative">
-                <Input
-                  id="new-password"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="أدخل كلمة مرور جديدة (6 أحرف على الأقل)"
-                  className="pr-10"
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPasswordDialog({ open: false, userId: "", userName: "" })}>
-              إلغاء
-            </Button>
-            <Button onClick={handlePasswordChange} disabled={submitting}>
-              {submitting ? "جاري..." : "تغيير"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Card>
   );
 }

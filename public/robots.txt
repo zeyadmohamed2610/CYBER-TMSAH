@@ -41,6 +41,8 @@ Disallow: /api/
 Disallow: /attendance/owner-dashboard
 Disallow: /attendance/doctor-dashboard
 Disallow: /attendance/ta-dashboard
+Disallow: /en
+Disallow: /en/
 
 # Sitemap
 Sitemap: https://www.cyber-tmsah.site/sitemap.xml
