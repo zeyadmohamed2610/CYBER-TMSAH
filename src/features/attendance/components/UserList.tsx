@@ -139,16 +139,24 @@ export function UserList({ role, title }: { role: string; title: string }) {
       },
     });
 
-    console.log("createUser response:", res);
+    console.log("createUser response:", JSON.stringify(res, null, 2));
     if (res.error) {
-      console.error("createUser error:", res.error);
+      console.error("createUser error:", JSON.stringify(res.error, null, 2));
     }
     if (res.data?.error) {
-      console.error("createUser data error:", res.data.error);
+      console.error("createUser data error:", JSON.stringify(res.data.error, null, 2));
     }
 
     if (res.error || res.data?.error) {
-      const errorMsg = res.data?.error || res.error?.message || res.error?.toString() || "خطأ غير معروف";
+      let errorMsg = "خطأ غير معروف";
+      if (res.data?.error) {
+        errorMsg = res.data.error;
+      } else if (res.error) {
+        errorMsg = res.error.message || res.error.toString();
+      }
+      if (res.data?.details) {
+        errorMsg += ` (${JSON.stringify(res.data.details)})`;
+      }
       toast({ variant: "destructive", title: "فشل الإنشاء", description: errorMsg });
     } else {
       toast({ title: "تم الإضافة ✓", description: `تم إضافة ${formData.name} بنجاح.` });
