@@ -107,6 +107,18 @@ export function UserList({ role, title }: { role: string; title: string }) {
       toast({ variant: "destructive", title: "خطأ", description: "الاسم يجب أن يكون 5 أحرف على الأقل" });
       return;
     }
+    if ((role === "doctor" || role === "ta") && !formData.subjectId) {
+      toast({ variant: "destructive", title: "خطأ", description: "يرجى اختيار المادة" });
+      return;
+    }
+    if (role === "student" && (!formData.nationalId || formData.nationalId.length !== 14)) {
+      toast({ variant: "destructive", title: "خطأ", description: "الرقم القومي يجب أن يكون 14 رقم" });
+      return;
+    }
+    if ((role === "doctor" || role === "ta") && (!formData.email || !formData.email.includes("@"))) {
+      toast({ variant: "destructive", title: "خطأ", description: "يرجى إدخال بريد إلكتروني صحيح" });
+      return;
+    }
     setSubmitting(true);
 
     const { data: { session } } = await supabase.auth.getSession();
