@@ -147,6 +147,9 @@ export function UserList({ role, title }: { role: string; title: string }) {
       console.error("createUser data error:", JSON.stringify(res.data.error, null, 2));
     }
 
+    // Alert for debugging
+    alert(`خطأ: ${res.data?.error || res.error?.message || res.error?.toString() || "غير معروف"}\n\nDetails: ${JSON.stringify(res.data?.details || res.error)}`);
+
     if (res.error || res.data?.error) {
       let errorMsg = "خطأ غير معروف";
       if (res.data?.error) {
