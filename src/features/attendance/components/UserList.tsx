@@ -139,19 +139,6 @@ export function UserList({ role, title }: { role: string; title: string }) {
       },
     });
 
-    // Log everything
-    const debugInfo = {
-      hasError: !!res.error,
-      hasData: !!res.data,
-      statusCode: res.statusCode,
-      errorType: res.error?.name,
-      errorMessage: res.error?.message,
-      dataError: res.data?.error,
-      dataDetails: res.data?.details
-    };
-    console.log("DEBUG:", JSON.stringify(debugInfo, null, 2));
-    alert("Debug: " + JSON.stringify(debugInfo, null, 2));
-
     if (res.error || res.data?.error) {
       let errorMsg = "خطأ غير معروف";
       if (res.data?.error) {

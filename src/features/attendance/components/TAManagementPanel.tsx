@@ -15,12 +15,9 @@ interface TaUser {
   national_id: string | null;
   subject_id: string;
   subject_name?: string;
-  assigned_sections?: string[];
 }
 
 interface Subject { id: string; name: string; }
-
-const ALL_SECTIONS = Array.from({ length: 15 }, (_, i) => `سكشن ${i + 1}`);
 
 export function TAManagementPanel() {
   const { toast } = useToast();
@@ -35,10 +32,6 @@ export function TAManagementPanel() {
   const [deleteConfirm, setDeleteConfirm] = useState<{id: string, name: string} | null>(null);
 
   const [form, setForm] = useState({ name: "", email: "", password: "", subjectId: "" });
-
-  const [assignSubject, setAssignSubject] = useState("");
-  const [assignTa, setAssignTa] = useState("");
-  const [assignSections, setAssignSections] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -64,30 +57,14 @@ export function TAManagementPanel() {
       subjectNameMap = new Map((subjsData ?? []).map((s: { id: string; name: string }) => [s.id, s.name]));
     }
     for (const ta of (taData ?? [])) {
-      let assigned_sections: string[] = [];
       const subjectName = subjectNameMap.get(ta.subject_id as string);
-      if (subjectName) {
-        const slug = subjectName.toLowerCase().replace(/\s+/g, "-");
-        const { data: mat } = await supabase.from("course_materials")
-          .select("teaching_assistants")
-          .eq("slug", slug)
-          .maybeSingle();
-
-        if (mat?.teaching_assistants) {
-          const entry = (mat.teaching_assistants as string[]).find(
-            t => t.startsWith(`م. ${ta.full_name as string}|`) || t.includes(`|${ta.full_name as string}|`)
-          );
-          if (entry) assigned_sections = entry.split("|").slice(1);
-        }
-      }
 
       taList.push({
         id: ta.id as string,
         full_name: ta.full_name as string,
         national_id: (ta.national_id as string) ?? null,
         subject_id: ta.subject_id as string,
-        subject_name: subjectName ?? "غير معروف",
-        assigned_sections
+        subject_name: subjectName ?? "غير معروف"
       });
     }
     
@@ -187,48 +164,6 @@ export function TAManagementPanel() {
     setSubmitting(false);
   };
 
-  const handleAssignSections = async () => {
-    if (!assignTa || assignSections.length === 0) {
-      toast({ variant: "destructive", title: "خطأ", description: "اختر المعيد والأقسام." });
-      return;
-    }
-
-    const ta = tas.find((t) => t.id === assignTa);
-    if (!ta) return;
-
-    const taEntry = `م. ${ta.full_name}|${assignSections.join("|")}`;
-
-    const { data: mat } = await supabase
-      .from("course_materials")
-      .select("teaching_assistants")
-      .eq("slug", assignSubject)
-      .maybeSingle();
-
-    const currentTAs = (mat?.teaching_assistants as string[]) ?? [];
-    const filtered = currentTAs.filter((t) => !t.startsWith(`م. ${ta.full_name}|`));
-    filtered.push(taEntry);
-
-    const { error } = await supabase
-      .from("course_materials")
-      .update({ teaching_assistants: filtered })
-      .eq("slug", assignSubject);
-
-    if (error) {
-      toast({ variant: "destructive", title: "خطأ", description: error.message });
-    } else {
-      toast({ title: "تم التعيين", description: `تم تعيين ${ta.full_name} إلى ${assignSections.length} أقسام.` });
-      setAssignTa("");
-      setAssignSections([]);
-      await load();
-    }
-  };
-
-  const toggleSection = (section: string) => {
-    setAssignSections((prev) =>
-      prev.includes(section) ? prev.filter((s) => s !== section) : [...prev, section],
-    );
-  };
-
   const tasBySubject = subjects.map((s) => ({
     ...s,
     tas: filteredTas.filter((t) => t.subject_id === s.id),
@@ -296,62 +231,6 @@ export function TAManagementPanel() {
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         </div>
 
-        <div className="rounded-lg border bg-card p-4 space-y-3">
-          <div className="flex items-start gap-2">
-            <Info className="h-4 w-4 text-cyan-500 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium">فائدة تعيين الأقسام لكل معيد:</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                عند تعيين السكاشن للمعيد، يستطيع النظام توجيه طلاب كل سكشن إلى معيده المعني عند تسجيل الحضور. 
-                هذا يوفر تنظيم أفضل ويساعد المعيدين في متابعة طلابهم بسهولة.
-              </p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <Label className="text-xs">المادة</Label>
-              <Select id="assign-subject" value={assignSubject} onValueChange={setAssignSubject}>
-                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="اختر المادة" /></SelectTrigger>
-                <SelectContent>
-                  {subjects.map((s) => <SelectItem key={s.id} value={s.name.toLowerCase().replace(/\s+/g, "-")}>{s.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs">المعيد</Label>
-              <Select id="assign-ta" value={assignTa} onValueChange={setAssignTa}>
-                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="اختر المعيد" /></SelectTrigger>
-                <SelectContent>
-                  {filteredTas.map((t) => <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs">السكاشن ({assignSections.length} محدد)</Label>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {ALL_SECTIONS.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => toggleSection(s)}
-                    className={`px-2 py-0.5 rounded text-xs border transition-colors ${
-                      assignSections.includes(s)
-                        ? "bg-cyan-500 text-white border-cyan-500"
-                        : "bg-muted text-muted-foreground border-border hover:border-cyan-500/50"
-                    }`}
-                  >
-                    {s.replace("سكشن ", "")}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <Button size="sm" onClick={handleAssignSections} disabled={!assignTa || assignSections.length === 0}>
-              تعيين الأقسام
-            </Button>
-          </div>
-        </div>
-
         {loading ? (
           <p className="text-sm text-muted-foreground">جاري التحميل...</p>
         ) : tasBySubject.length === 0 ? (
@@ -413,15 +292,7 @@ export function TAManagementPanel() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">{ta.full_name}</p>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {ta.assigned_sections && ta.assigned_sections.length > 0 ? (
-                                ta.assigned_sections.map(s => (
-                                  <Badge key={s} variant="secondary" className="text-[9px] h-4 px-1">{s}</Badge>
-                                ))
-                              ) : (
-                                <span className="text-[10px] text-muted-foreground italic">لم يتم تعيين أقسام</span>
-                              )}
-                            </div>
+                            <p className="text-xs text-muted-foreground">{ta.subject_name}</p>
                           </div>
                         </div>
                       )}
