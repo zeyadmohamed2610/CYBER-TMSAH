@@ -15,6 +15,7 @@ export default defineConfig(({ mode }) => ({
     compression({ algorithm: 'gzip', ext: '.gz' }),
     VitePWA({
       registerType: 'generateSW',
+      injectRegister: false,
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
         name: 'CYBER TMSAH - منصة الحضور الذكي',
