@@ -118,7 +118,7 @@ export function TAManagementPanel() {
       return;
     }
 
-    const res = await supabase.functions.invoke("createUser", {
+    const res = await supabase.functions.invoke("createUserNoJWT", {
       body: {
         name: form.name.trim(),
         email: form.email.trim().toLowerCase(),

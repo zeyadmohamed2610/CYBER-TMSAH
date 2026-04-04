@@ -128,7 +128,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
       return;
     }
 
-    const res = await supabase.functions.invoke("createUser", {
+    const res = await supabase.functions.invoke("createUserNoJWT", {
       body: {
         name: formData.name.trim(),
         national_id: role === "student" ? formData.nationalId : undefined,
@@ -139,16 +139,13 @@ export function UserList({ role, title }: { role: string; title: string }) {
       },
     });
 
-    console.log("createUser response:", JSON.stringify(res, null, 2));
+    console.log("createUserNoJWT response:", JSON.stringify(res, null, 2));
     if (res.error) {
-      console.error("createUser error:", JSON.stringify(res.error, null, 2));
+      console.error("createUserNoJWT error:", JSON.stringify(res.error, null, 2));
     }
     if (res.data?.error) {
-      console.error("createUser data error:", JSON.stringify(res.data.error, null, 2));
+      console.error("createUserNoJWT data error:", JSON.stringify(res.data.error, null, 2));
     }
-
-    // Alert for debugging
-    alert(`خطأ: ${res.data?.error || res.error?.message || res.error?.toString() || "غير معروف"}\n\nDetails: ${JSON.stringify(res.data?.details || res.error)}`);
 
     if (res.error || res.data?.error) {
       let errorMsg = "خطأ غير معروف";
