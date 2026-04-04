@@ -357,11 +357,12 @@ CREATE OR REPLACE FUNCTION public.delete_user_by_id(
 RETURNS VOID
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, private
+SET search_path = public, private, auth
 AS $$
 DECLARE
   v_caller public.users;
   v_target public.users;
+  v_auth_id uuid;
 BEGIN
   v_caller := private.get_caller_user();
 
@@ -378,7 +379,13 @@ BEGIN
     RAISE EXCEPTION 'validation_error: owners cannot delete themselves';
   END IF;
 
+  v_auth_id := v_target.auth_id;
+
   DELETE FROM public.users WHERE id = p_user_id;
+  
+  IF v_auth_id IS NOT NULL THEN
+    DELETE FROM auth.users WHERE id = v_auth_id;
+  END IF;
 
   INSERT INTO public.system_logs (actor_id, action)
   VALUES (v_caller.id,
