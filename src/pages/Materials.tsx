@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { Link } from "react-router-dom";
 import { User, BookOpen, ArrowLeft, Users, Search } from "lucide-react";
 import { toast } from "sonner";
@@ -11,6 +12,7 @@ const Materials = () => {
   const [materials, setMaterials] = useState<CourseMaterial[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
 
   useEffect(() => {
     materialsService.fetchMaterials().then(({ data, error }) => {
@@ -42,8 +44,8 @@ const Materials = () => {
   [materials]);
 
   const filtered = sorted.filter((m) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
+    if (!debouncedSearch.trim()) return true;
+    const q = debouncedSearch.toLowerCase();
     return (
       m.title.toLowerCase().includes(q) ||
       m.instructor.toLowerCase().includes(q) ||

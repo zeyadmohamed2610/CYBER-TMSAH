@@ -46,7 +46,7 @@ export const DoctorDashboard = () => {
         </Alert>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard title="اجمالي الجلسات" value={String(metrics.totalSessions)} description="منذ البداية" icon={BookOpenCheck} />
         <StatCard title="جلسات نشطة" value={String(metrics.activeSessions)} description="الان" icon={Clock3} />
         <StatCard title="نسبة الحضور" value={Math.round(metrics.attendanceRate) + "%"} description="الاجمالي" icon={Users} />

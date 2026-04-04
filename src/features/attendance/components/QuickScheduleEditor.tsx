@@ -299,7 +299,7 @@ export function QuickScheduleEditor() {
             <p className="text-sm font-bold text-primary truncate">
               سكشن {selectedSection} - {DAYS[editing.day]} - الفترة {PERIODS[editing.period]?.label} ({PERIODS[editing.period]?.time})
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               <div className="space-y-1 sm:col-span-2">
                 <Label className="text-xs">المادة</Label>
                 <Input id="schedule-subject" value={editForm.subject} onChange={e => setEditForm({ ...editForm, subject: e.target.value })} className="h-9 text-sm" />
@@ -315,7 +315,7 @@ export function QuickScheduleEditor() {
             </div>
             <div className="space-y-1">
               <Label className="text-xs">النوع</Label>
-              <Select id="schedule-type" value={editForm.entry_type} onValueChange={v => setEditForm({ ...editForm, entry_type: v as "lecture" | "section" })}>
+              <Select value={editForm.entry_type} onValueChange={v => setEditForm({ ...editForm, entry_type: v as "lecture" | "section" })}>
                 <SelectTrigger className="h-9 w-full max-w-[160px] text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="lecture">محاضرة</SelectItem>
@@ -335,7 +335,7 @@ export function QuickScheduleEditor() {
           </div>
         )}
 
-        <div className="overflow-x-auto rounded-xl border border-border">
+        <div className="overflow-x-auto rounded-xl border border-border custom-scrollbar scroll-touch">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-muted/50">

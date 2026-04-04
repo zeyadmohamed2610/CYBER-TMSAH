@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { Shield, Trash2, RefreshCw, Smartphone, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ export function DeviceLockPanel() {
   const [locks, setLocks] = useState<DeviceLock[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
 
   const load = async () => {
     setLoading(true);
@@ -56,7 +58,7 @@ export function DeviceLockPanel() {
   const lockedCount = locks.length;
 
   const filtered = students.filter(s =>
-    s.full_name.includes(search) || (s.national_id && s.national_id.includes(search))
+    s.full_name.includes(debouncedSearch) || (s.national_id && s.national_id.includes(debouncedSearch))
   );
 
   return (

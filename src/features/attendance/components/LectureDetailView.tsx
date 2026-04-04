@@ -276,7 +276,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3">
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
@@ -484,7 +484,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
       ) : (
         <Card>
           <CardContent className="p-6 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               <div className="space-y-1">
                 <Label className="text-xs">المدة (دقائق)</Label>
                 <Input id="session-duration" type="number" min={5} max={180} value={sessionDuration}
@@ -493,7 +493,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">نوع الجلسة</Label>
-                <Select id="session-type" value={sessionType} onValueChange={(v) => { setSessionType(v as "lecture" | "section"); if (v === "lecture") setSelectedSection("عام"); }}>
+                <Select value={sessionType} onValueChange={(v) => { setSessionType(v as "lecture" | "section"); if (v === "lecture") setSelectedSection("عام"); }}>
                   <SelectTrigger className="h-8 text-sm">
                     <SelectValue />
                   </SelectTrigger>

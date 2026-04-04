@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { Plus, Search, Trash2, Users, Loader2, X, Edit2, Save, CheckCircle, XCircle, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
   const [showCreate, setShowCreate] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -49,11 +51,11 @@ export function UserList({ role, title }: { role: string; title: string }) {
         .select("id, full_name, role, national_id, subject_id")
         .eq("role", role);
 
-      if (search) {
+      if (debouncedSearch) {
         if (role === "student") {
-          query = query.ilike("full_name", `%${search}%`);
+          query = query.ilike("full_name", `%${debouncedSearch}%`);
         } else {
-          query = query.ilike("full_name", `%${search}%`);
+          query = query.ilike("full_name", `%${debouncedSearch}%`);
         }
       }
 
@@ -71,12 +73,9 @@ export function UserList({ role, title }: { role: string; title: string }) {
       setUsers([]);
     }
     setLoading(false);
-  }, [role, search, toast]);
+  }, [role, debouncedSearch, toast]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => loadUsers(), 300);
-    return () => clearTimeout(timer);
-  }, [loadUsers]);
+  useEffect(() => { void loadUsers(); }, [loadUsers]);
 
   useEffect(() => {
     if ((role === "doctor" || role === "ta") && showCreate) {
@@ -328,7 +327,6 @@ export function UserList({ role, title }: { role: string; title: string }) {
                 <div>
                   <Label className="text-xs">المادة المسندة</Label>
                   <Select 
-                    id="create-user-subject"
                     value={formData.subjectId} 
                     onValueChange={val => setFormData({...formData, subjectId: val})}
                     disabled={submitting}
@@ -415,7 +413,6 @@ export function UserList({ role, title }: { role: string; title: string }) {
                       )}
                       {(role === "doctor" || role === "ta") && (
                           <Select 
-                            id="edit-user-subject"
                             value={editData.subjectId} 
                             onValueChange={val => setEditData({...editData, subjectId: val})}
                           >

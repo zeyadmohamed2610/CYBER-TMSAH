@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { UserPlus, Loader2, CheckCircle2, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +24,7 @@ export function ManualAttendancePanel() {
   const [students, setStudents] = useState<Student[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState("");
@@ -82,8 +84,8 @@ export function ManualAttendancePanel() {
   };
 
   const filteredStudents = students.filter(s =>
-    s.full_name.toLowerCase().includes(search.toLowerCase()) || 
-    (s.national_id && s.national_id.includes(search))
+    s.full_name.toLowerCase().includes(debouncedSearch.toLowerCase()) || 
+    (s.national_id && s.national_id.includes(debouncedSearch))
   );
 
   if (loading) {
@@ -119,7 +121,7 @@ export function ManualAttendancePanel() {
                 onChange={(e) => setSearch(e.target.value)}
                 className="h-9 text-xs"
               />
-              <Select id="manual-attendance-student" value={selectedStudent} onValueChange={setSelectedStudent}>
+              <Select value={selectedStudent} onValueChange={setSelectedStudent}>
                 <SelectTrigger className="h-12 rounded-xl border-primary/20 bg-background/50">
                   <SelectValue placeholder="اختر الطالب من القائمة..." />
                 </SelectTrigger>
@@ -141,7 +143,7 @@ export function ManualAttendancePanel() {
 
           <div className="space-y-2">
             <Label className="text-sm font-semibold">الجلسة</Label>
-            <Select id="manual-attendance-session" value={selectedSession} onValueChange={setSelectedSession}>
+            <Select value={selectedSession} onValueChange={setSelectedSession}>
               <SelectTrigger className="h-12 rounded-xl border-primary/20 bg-background/50">
                 <SelectValue placeholder="اختر جلسة..." />
               </SelectTrigger>

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { Plus, Trash2, Users, Loader2, Edit2, Save, XCircle, CheckCircle, Info, BookOpen, Search, Eye, EyeOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ export function TAManagementPanel() {
   const [submitting, setSubmitting] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState({ name: "", email: "", subjectId: "" });
   const [deleteConfirm, setDeleteConfirm] = useState<{id: string, name: string} | null>(null);
@@ -79,7 +81,7 @@ export function TAManagementPanel() {
   useEffect(() => { void load(); }, [load]);
 
   const filteredTas = tas.filter(ta => 
-    ta.full_name.toLowerCase().includes(search.toLowerCase())
+    ta.full_name.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
   const handleCreateTa = async () => {
@@ -212,7 +214,7 @@ export function TAManagementPanel() {
               </div>
               <div>
                 <Label className="text-xs">المادة الأساسية</Label>
-                <Select id="ta-subject" value={form.subjectId} onValueChange={(v) => setForm({ ...form, subjectId: v })}>
+                <Select value={form.subjectId} onValueChange={(v) => setForm({ ...form, subjectId: v })}>
                   <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="اختر المادة" /></SelectTrigger>
                   <SelectContent>
                     {subjects.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
@@ -274,11 +276,10 @@ export function TAManagementPanel() {
                              className="h-8 text-sm"
                              placeholder="الاسم"
                            />
-                           <Select 
-                             id="edit-ta-subject"
-                             value={editData.subjectId} 
-                             onValueChange={val => setEditData({...editData, subjectId: val})}
-                           >
+                 <Select 
+                   value={editData.subjectId} 
+                   onValueChange={val => setEditData({...editData, subjectId: val})}
+                 >
                              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="المادة" /></SelectTrigger>
                              <SelectContent>
                                {subjects.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}

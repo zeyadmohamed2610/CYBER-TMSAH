@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { Loader2, Search, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -20,6 +22,7 @@ export const AttendanceRecordsPanel = () => {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -55,14 +58,14 @@ export const AttendanceRecordsPanel = () => {
   useEffect(() => { void load(); }, [load]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return records;
-    const q = search.toLowerCase();
+    if (!debouncedSearch.trim()) return records;
+    const q = debouncedSearch.toLowerCase();
     return records.filter((r) =>
       r.student_name.toLowerCase().includes(q) ||
       r.subject_name.toLowerCase().includes(q) ||
       (r.section && r.section.toLowerCase().includes(q))
     );
-  }, [records, search]);
+  }, [records, debouncedSearch]);
 
   return (
     <Card className="bg-card/80">
