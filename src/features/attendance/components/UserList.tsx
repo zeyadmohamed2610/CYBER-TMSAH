@@ -139,19 +139,18 @@ export function UserList({ role, title }: { role: string; title: string }) {
       },
     });
 
-    // Debug: log everything
-    console.log("Full response:", res);
-    console.log("Status:", res.error ? "error" : "success");
-    console.log("Data:", res.data);
-    console.log("Error:", res.error);
-    console.log("Response keys:", Object.keys(res));
-
-    // Try to get more info from the error
-    const errorInfo = res.error ? 
-      (res.error.message || res.error.toString()) : 
-      (res.data?.error || "unknown");
-    
-    alert(`Status: ${res.error ? 'ERROR' : 'OK'}\nError: ${errorInfo}\nData: ${JSON.stringify(res.data, null, 2)}`);
+    // Log everything
+    const debugInfo = {
+      hasError: !!res.error,
+      hasData: !!res.data,
+      statusCode: res.statusCode,
+      errorType: res.error?.name,
+      errorMessage: res.error?.message,
+      dataError: res.data?.error,
+      dataDetails: res.data?.details
+    };
+    console.log("DEBUG:", JSON.stringify(debugInfo, null, 2));
+    alert("Debug: " + JSON.stringify(debugInfo, null, 2));
 
     if (res.error || res.data?.error) {
       let errorMsg = "خطأ غير معروف";
