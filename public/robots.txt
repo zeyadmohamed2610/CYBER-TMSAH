@@ -38,10 +38,15 @@ Allow: /
 Disallow: /private/
 Disallow: /admin/
 Disallow: /api/
-Disallow: /assets/
+Disallow: /attendance/owner-dashboard
+Disallow: /attendance/doctor-dashboard
+Disallow: /attendance/ta-dashboard
 
 # Sitemap
 Sitemap: https://www.cyber-tmsah.site/sitemap.xml
 
 # Host
 Host: https://www.cyber-tmsah.site
+
+# Clean parameter URLs
+Clean-param: utm_source&utm_medium&utm_campaign

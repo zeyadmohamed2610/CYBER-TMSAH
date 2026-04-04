@@ -7,49 +7,55 @@
   <!-- الصفحة الرئيسية - أولوية قصوى -->
   <url>
     <loc>https://www.cyber-tmsah.site/</loc>
-    <lastmod>2025-02-17</lastmod>
+    <lastmod>2026-04-04</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
       <image:loc>https://www.cyber-tmsah.site/og-image.png</image:loc>
-      <image:title>CYBER TMSAH - منصة الأمن السيبراني</image:title>
-      <image:caption>منصة CYBER TMSAH - سايبر تمساح - منصة سايبر</image:caption>
+      <image:title>CYBER TMSAH - منصة الأمن السيبراني الأكاديمية</image:title>
     </image:image>
     <xhtml:link rel="alternate" hreflang="ar" href="https://www.cyber-tmsah.site/"/>
+  </url>
+
+  <!-- صفحة الحضور -->
+  <url>
+    <loc>https://www.cyber-tmsah.site/attendance</loc>
+    <lastmod>2026-04-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://www.cyber-tmsah.site/attendance"/>
+  </url>
+
+  <!-- صفحة تسجيل الدخول للحضور -->
+  <url>
+    <loc>https://www.cyber-tmsah.site/attendance/login</loc>
+    <lastmod>2026-04-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
 
   <!-- الجدول الدراسي -->
   <url>
     <loc>https://www.cyber-tmsah.site/schedule</loc>
-    <lastmod>2025-02-17</lastmod>
+    <lastmod>2026-04-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
-    <image:image>
-      <image:loc>https://www.cyber-tmsah.site/og-image.png</image:loc>
-      <image:title>جدول محاضرات CYBER TMSAH</image:title>
-      <image:caption>جدول محاضرات منصة سايبر تمساح</image:caption>
-    </image:image>
     <xhtml:link rel="alternate" hreflang="ar" href="https://www.cyber-tmsah.site/schedule"/>
   </url>
 
   <!-- المواد الدراسية -->
   <url>
     <loc>https://www.cyber-tmsah.site/materials</loc>
-    <lastmod>2025-02-17</lastmod>
+    <lastmod>2026-04-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
-    <image:image>
-      <image:loc>https://www.cyber-tmsah.site/og-image.png</image:loc>
-      <image:title>المواد الدراسية - CYBER TMSAH</image:title>
-      <image:caption>مواد الأمن السيبراني - منصة تمساح</image:caption>
-    </image:image>
     <xhtml:link rel="alternate" hreflang="ar" href="https://www.cyber-tmsah.site/materials"/>
   </url>
 
   <!-- مادة التفاوض والحل الإبداعي -->
   <url>
     <loc>https://www.cyber-tmsah.site/materials/negotiation</loc>
-    <lastmod>2025-02-17</lastmod>
+    <lastmod>2026-04-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -57,7 +63,7 @@
   <!-- مادة أساسيات الأمن السيبراني -->
   <url>
     <loc>https://www.cyber-tmsah.site/materials/cybersecurity</loc>
-    <lastmod>2025-02-17</lastmod>
+    <lastmod>2026-04-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -65,7 +71,7 @@
   <!-- مادة اللغة الإنجليزية -->
   <url>
     <loc>https://www.cyber-tmsah.site/materials/english</loc>
-    <lastmod>2025-02-17</lastmod>
+    <lastmod>2026-04-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -73,7 +79,7 @@
   <!-- مادة الشبكات -->
   <url>
     <loc>https://www.cyber-tmsah.site/materials/networking</loc>
-    <lastmod>2025-02-17</lastmod>
+    <lastmod>2026-04-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -81,7 +87,7 @@
   <!-- مادة الرسم الهندسي -->
   <url>
     <loc>https://www.cyber-tmsah.site/materials/engineering-drawing</loc>
-    <lastmod>2025-02-17</lastmod>
+    <lastmod>2026-04-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -89,7 +95,7 @@
   <!-- مادة تكنولوجيا المعلومات -->
   <url>
     <loc>https://www.cyber-tmsah.site/materials/technology</loc>
-    <lastmod>2025-02-17</lastmod>
+    <lastmod>2026-04-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -97,7 +103,7 @@
   <!-- مادة أنظمة التشغيل -->
   <url>
     <loc>https://www.cyber-tmsah.site/materials/os</loc>
-    <lastmod>2025-02-17</lastmod>
+    <lastmod>2026-04-04</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
