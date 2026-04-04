@@ -10,7 +10,6 @@ import { LectureManagementPanel } from "../components/LectureManagementPanel";
 import { LectureDetailView } from "../components/LectureDetailView";
 import { ManualAttendancePanel } from "../components/ManualAttendancePanel";
 import { MaterialsEditor } from "../components/MaterialsEditor";
-import { NotificationForm } from "../components/NotificationForm";
 import { StatCard } from "../components/StatCard";
 import { DeviceLockPanel } from "../components/DeviceLockPanel";
 import { UserList } from "../components/UserList";
@@ -40,7 +39,6 @@ export const OwnerDashboard = () => {
     { value: "devices", label: "الأجهزة" },
     { value: "manual-attendance", label: "تسجيل يدوي" },
     { value: "attendance-records", label: "سجلات الحضور" },
-    { value: "notifications", label: "الإشعارات" },
   ];
 
 
@@ -135,7 +133,6 @@ export const OwnerDashboard = () => {
 
         <TabsContent value="attendance-records"><AttendanceRecordsPanel /></TabsContent>
 
-        <TabsContent value="notifications"><NotificationForm createdBy={fullName ?? "المدير"} /></TabsContent>
       </Tabs>
     </div>
   );

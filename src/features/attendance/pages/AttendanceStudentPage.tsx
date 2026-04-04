@@ -6,7 +6,6 @@ import { AttendanceSkeleton } from "@/components/Loading";
 import { StudentDashboard } from "./StudentDashboard";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 import { GpsProvider } from "../context/GpsContext";
-import { NotificationCenter } from "../components/NotificationCenter";
 import { useDeviceLock } from "../hooks/useDeviceLock";
 import { supabase } from "@/lib/supabaseClient";
 import { computeFingerprint } from "../utils/fingerprint";
@@ -99,7 +98,6 @@ const AttendanceStudentPage = () => {
               <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground md:text-4xl tracking-tight">مركز الحضور السيبراني</h1>
             </div>
             <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-3 mt-2 sm:mt-0">
-              <NotificationCenter />
               <Button variant="destructive" size="sm" onClick={signOut} className="h-10 px-4 rounded-xl shadow-md transition-all hover:scale-105 shrink-0 gap-2 font-medium">
                 <LogOut className="h-4 w-4" /><span>تسجيل الخروج</span>
               </Button>
