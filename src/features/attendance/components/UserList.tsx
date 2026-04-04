@@ -120,10 +120,10 @@ export function UserList({ role, title }: { role: string; title: string }) {
       body: {
         name: formData.name.trim(),
         national_id: role === "student" ? formData.nationalId : undefined,
-        email: role === "doctor" ? formData.email.trim().toLowerCase() : undefined,
+        email: (role === "doctor" || role === "ta") ? formData.email.trim().toLowerCase() : undefined,
         password: formData.password || "12345678",
         role: role,
-        subjectId: role === "doctor" || role === "ta" ? formData.subjectId : null
+        subject_id: role === "doctor" || role === "ta" ? formData.subjectId : null
       },
     });
 
