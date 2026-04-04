@@ -28,8 +28,8 @@ const PERIODS_TIME = [
 const PERIODS_LABEL = ["الأولى", "الثانية", "الثالثة", "الرابعة", "الخامسة", "السادسة", "السابعة", "الثامنة"];
 
 const Schedule = () => {
-  const [selectedSection, setSelectedSection] = useState("سكشن 1");
-  const [sections, setSections] = useState<string[]>(Array.from({ length: 15 }, (_, i) => `سكشن ${i + 1}`));
+  const [selectedSection, setSelectedSection] = useState("مجموعة 1");
+  const [sections, setSections] = useState<string[]>(Array.from({ length: 15 }, (_, i) => `مجموعة ${i + 1}`));
   const [schedule, setSchedule] = useState<UnifiedDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
@@ -41,7 +41,7 @@ const Schedule = () => {
     supabase.from("published_schedule").select("section").then(({ data }) => {
       if (data && data.length > 0) {
         const secs = [...new Set(data.map(r => r.section))].sort((a, b) => a - b);
-        setSections(secs.map(n => `سكشن ${n}`));
+        setSections(secs.map(n => `مجموعة ${n}`));
       }
     });
   }, []);

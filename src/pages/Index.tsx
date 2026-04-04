@@ -10,12 +10,12 @@ import { supabase } from "@/lib/supabaseClient";
 const heroBg = "/hero-bg.jpg";
 
 const features = [
-  { icon: BookOpen, title: "مواد دراسية", desc: "محاضرات ومراجعات شاملة لكل المواد" },
-  { icon: Calendar, title: "جدول محدث", desc: "الجدول الأسبوعي الكامل لكل سكشن" },
-  { icon: Shield, title: "حضور ذكي", desc: "نظام حضور بال GPS وكود جلسة متحرك" },
-  { icon: Zap, title: "إشعارات فورية", desc: "تذكيرات بالامتحانات والكويزات" },
-  { icon: GraduationCap, title: "كلي المواد", desc: "7 مواد تخصص الأمن السيبراني" },
-  { icon: Clock, title: "يعمل بدون نت", desc: "تسجيل حضور حتى بدون إنترنت" },
+  { icon: BookOpen, title: "المقررات الدراسية", desc: "محاضرات ومراجعات شاملة لجميع المواد الأكاديمية" },
+  { icon: Calendar, title: "الجدول الدراسي", desc: "الجدول الأسبوعي المحدث لكل مجموعة دراسية" },
+  { icon: Shield, title: "نظام الحضور الذكي", desc: "تحقق عبر الموقع الجغرافي والكود الديناميكي" },
+  { icon: Zap, title: "الإشعارات الأكاديمية", desc: "تنبيهات فورية للامتحانات والاختبارات" },
+  { icon: GraduationCap, title: "تخصص الأمن السيبراني", desc: "تغطية شاملة لـ 7 مقررات متخصصة" },
+  { icon: Clock, title: "دعم العمل دون اتصال", desc: "تسجيل الحضور يعمل بدون إنترنت" },
 ];
 
 const PERIODS_TIME = [
@@ -39,8 +39,8 @@ function normalizeDay(raw: string): string {
 }
 
 const Index = () => {
-  const [selectedSection, setSelectedSection] = useState("سكشن 1");
-  const [sections, setSections] = useState<string[]>(Array.from({ length: 15 }, (_, i) => `سكشن ${i + 1}`));
+  const [selectedSection, setSelectedSection] = useState("مجموعة 1");
+  const [sections, setSections] = useState<string[]>(Array.from({ length: 15 }, (_, i) => `مجموعة ${i + 1}`));
   const [todayLectures, setTodayLectures] = useState<TodayLecture[]>([]);
   const [isHoliday, setIsHoliday] = useState(false);
   const [isTraining, setIsTraining] = useState(false);
@@ -52,7 +52,7 @@ const Index = () => {
     supabase.from("published_schedule").select("section").then(({ data }) => {
       if (data && data.length > 0) {
         const secs = [...new Set(data.map(r => r.section))].sort((a, b) => a - b);
-        setSections(secs.map(n => `سكشن ${n}`));
+        setSections(secs.map(n => `مجموعة ${n}`));
       }
     });
   }, []);
@@ -226,9 +226,9 @@ const Index = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                <span className="text-sm text-muted-foreground">اختر السكشن:</span>
-                <div className="relative">
-                  <select aria-label="اختر السكشن" value={selectedSection} onChange={e => setSelectedSection(e.target.value)} className="appearance-none w-full sm:w-52 rounded-xl border-2 border-border bg-card px-5 py-3 text-sm font-medium text-foreground outline-none transition-all duration-300 focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer hover:border-primary/50">
+                <span className="text-sm text-muted-foreground">اختر المجموعة:</span>
+                  <div className="relative">
+                    <select aria-label="اختر المجموعة" value={selectedSection} onChange={e => setSelectedSection(e.target.value)} className="appearance-none w-full sm:w-52 rounded-xl border-2 border-border bg-card px-5 py-3 text-sm font-medium text-foreground outline-none transition-all duration-300 focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer hover:border-primary/50">
                     {sections.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
