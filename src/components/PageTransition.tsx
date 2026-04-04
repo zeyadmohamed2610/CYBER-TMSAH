@@ -1,27 +1,22 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useLocation, useOutlet } from "react-router-dom";
-import { useState, useEffect } from "react";
-
-type TransitionType = "fade" | "slide-right" | "slide-left" | "scale";
+import { useState, useEffect, useCallback, memo } from "react";
+import { transitionStyles, type TransitionType } from "./PageTransitionStyles";
 
 interface PageTransitionProps {
   children: React.ReactNode;
   type?: TransitionType;
 }
 
-const transitionStyles: Record<TransitionType, string> = {
-  fade: "page-enter",
-  "slide-right": "page-slide-right",
-  "slide-left": "page-slide-left",
-  scale: "page-scale",
-};
-
-export const PageTransition = ({ children, type = "fade" }: PageTransitionProps) => {
+const PageTransitionComponent = memo(function PageTransition({ children, type = "fade" }: PageTransitionProps) {
   return (
     <div className={transitionStyles[type]} key={type}>
       {children}
     </div>
   );
-};
+});
+
+export const PageTransition = PageTransitionComponent;
 
 export const usePageTransition = () => {
   const location = useLocation();
@@ -44,10 +39,12 @@ export const usePageTransition = () => {
     }
   }, [location, displayLocation]);
 
-  return { displayLocation, transitionType };
+  const getTransitionType = useCallback(() => transitionType, [transitionType]);
+
+  return { displayLocation, transitionType: getTransitionType() };
 };
 
-export const AnimatedOutlet = () => {
+export const AnimatedOutlet = memo(function AnimatedOutlet() {
   const outlet = useOutlet();
   const { transitionType } = usePageTransition();
 
@@ -58,4 +55,4 @@ export const AnimatedOutlet = () => {
       {outlet}
     </div>
   );
-};
+});

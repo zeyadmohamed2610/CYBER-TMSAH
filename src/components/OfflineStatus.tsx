@@ -1,4 +1,5 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from "react";
+/* eslint-disable react-refresh/only-export-components */
+import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from "react";
 import { WifiOff, Wifi, RefreshCw, CloudOff } from "lucide-react";
 import { toast } from "sonner";
 
@@ -16,13 +17,13 @@ const OfflineStatusContext = createContext<OfflineStatusContextType>({
   syncNow: async () => {},
 });
 
-export const useOfflineStatus = () => useContext(OfflineStatusContext);
-
 interface OfflineStatusProviderProps {
   children: ReactNode;
   syncFunction?: () => Promise<{ synced: number; failed: number }>;
   getPendingCountFunction?: () => number;
 }
+
+const useOfflineStatusContext = () => useContext(OfflineStatusContext);
 
 export const OfflineStatusProvider = ({ 
   children, 
@@ -72,7 +73,7 @@ export const OfflineStatusProvider = ({
     }
   }, [getPendingCountFunction]);
 
-  const syncNow = async () => {
+  const syncNow = useCallback(async () => {
     if (!syncFunction || isSyncing || !isOnline) return;
     
     setIsSyncing(true);
@@ -93,7 +94,7 @@ export const OfflineStatusProvider = ({
     } finally {
       setIsSyncing(false);
     }
-  };
+  }, [syncFunction, isSyncing, isOnline]);
 
   useEffect(() => {
     if (isOnline && pendingCount > 0 && !isSyncing) {
@@ -113,7 +114,7 @@ export const OfflineStatusProvider = ({
 };
 
 export const OfflineIndicator = () => {
-  const { isOnline, pendingCount, isSyncing, syncNow } = useOfflineStatus();
+  const { isOnline, pendingCount, isSyncing, syncNow } = useOfflineStatusContext();
 
   if (isOnline && pendingCount === 0) return null;
 
@@ -150,3 +151,5 @@ export const OfflineIndicator = () => {
     </div>
   );
 };
+
+export const useOfflineStatus = useOfflineStatusContext;
