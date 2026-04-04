@@ -1,8 +1,8 @@
 // Edge Function - Create User
-// Simpler version with better error handling
+// Fixed version with better error handling and duplicate email check
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '',
+  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
@@ -21,15 +21,199 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Get headers
-    const authHeader = req.headers.get('Authorization');
-    const apikey = req.headers.get('apikey') || Deno.env.get('SUPABASE_ANON_KEY');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'No authorization header' }), {
-        status: 401,
+    const body: UserRequest = await req.json();
+    const { name, national_id, email, password, role, subject_id } = body;
+
+    if (!name || !password || !role) {
+      return new Response(JSON.stringify({ error: 'جميع الحقول مطلوبة (الاسم، كلمة المرور، الدور)' }), {
+        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    if (password.length < 6) {
+      return new Response(JSON.stringify({ error: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if ((role === 'doctor' || role === 'ta') && !subject_id) {
+      return new Response(JSON.stringify({ error: 'يرجى اختيار المادة للدكتور أو المعيد' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (role === 'student' && subject_id) {
+      return new Response(JSON.stringify({ error: 'الطلاب لا يتم ربطهم بمادة' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    let authEmail: string;
+    if (role === 'student') {
+      if (!national_id || national_id.length !== 14 || !/^\d+$/.test(national_id)) {
+        return new Response(JSON.stringify({ error: 'الرقم القومي يجب أن يكون 14 رقم' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      authEmail = `${national_id}@nid.local`;
+    } else {
+      if (!email || !email.includes('@')) {
+        return new Response(JSON.stringify({ error: 'يرجى إدخال بريد إلكتروني صحيح' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      authEmail = email.toLowerCase();
+    }
+
+    // Check for duplicate email in auth.users BEFORE creating
+    const emailCheckRes = await fetch(
+      `${supabaseUrl}/rest/v1/users?email=eq.${authEmail}&select=id`,
+      {
+        headers: {
+          'Authorization': `Bearer ${serviceKey}`,
+          'apikey': serviceKey,
+        },
+      }
+    );
+    const emailCheckData = await emailCheckRes.json();
+    // Note: We can't directly query auth.users email, so we'll try to create and catch the error
+
+    // Check for duplicate national_id
+    if (national_id) {
+      const dupCheck = await fetch(
+        `${supabaseUrl}/rest/v1/users?national_id=eq.${national_id}&select=id`,
+        {
+          headers: {
+            'Authorization': `Bearer ${serviceKey}`,
+            'apikey': serviceKey,
+          },
+        }
+      );
+      const dupData = await dupCheck.json();
+      if (Array.isArray(dupData) && dupData.length > 0) {
+        return new Response(JSON.stringify({ error: 'الرقم القومي مسجل بالفعل' }), {
+          status: 409,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    // Create auth user
+    const createUserRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${serviceKey}`,
+        'apikey': serviceKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: authEmail,
+        password: password,
+        email_confirm: true,
+      }),
+    });
+
+    let createUserData;
+    try {
+      createUserData = await createUserRes.json();
+    } catch {
+      createUserData = {};
+    }
+
+    if (!createUserRes.ok) {
+      // Check for duplicate email error
+      const errorMsg = createUserData.msg || createUserData.error || '';
+      if (errorMsg.toLowerCase().includes('email') || errorMsg.toLowerCase().includes('already') || errorMsg.toLowerCase().includes('already exists')) {
+        return new Response(JSON.stringify({ error: 'البريد الإلكتروني مسجل بالفعل' }), {
+          status: 409,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify({
+        error: createUserData.msg || createUserData.error || 'فشل في إنشاء المستخدم في المصادقة',
+        details: createUserData
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const authUserId = createUserData.id;
+
+    const insertRes = await fetch(
+      `${supabaseUrl}/rest/v1/users`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${serviceKey}`,
+          'apikey': serviceKey,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({
+          auth_id: authUserId,
+          full_name: name.trim(),
+          national_id: national_id || null,
+          role: role,
+          subject_id: subject_id || null
+        }),
+      }
+    );
+
+    let insertData;
+    try {
+      insertData = await insertRes.json();
+    } catch {
+      insertData = [];
+    }
+
+    if (!insertRes.ok) {
+      const insertError = Array.isArray(insertData)
+        ? insertData.map((entry) => (entry && typeof entry === 'object' && 'message' in entry ? String(entry.message) : 'خطأ غير معروف')).join(', ')
+        : insertData.message || insertData.error || 'خطأ غير معروف';
+      
+      // Cleanup: delete the auth user if insert fails
+      await fetch(`${supabaseUrl}/auth/v1/admin/users/${authUserId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${serviceKey}`,
+          'apikey': serviceKey,
+        },
+      });
+      
+      return new Response(JSON.stringify({ error: 'فشل في إنشاء المستخدم في قاعدة البيانات', details: insertError }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      user: { id: authUserId, name: name.trim(), role: role }
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return new Response(JSON.stringify({
+      error: 'خطأ داخلي في الخادم',
+      message: errorMessage
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+});
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;

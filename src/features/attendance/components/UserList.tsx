@@ -148,6 +148,14 @@ export function UserList({ role, title }: { role: string; title: string }) {
         } else if (res.error) {
           errorMsg = res.error.message || res.error.toString();
         }
+        // Check for common issues and provide helpful messages
+        if (errorMsg.includes("email") || errorMsg.includes("البريد الإلكتروني")) {
+          errorMsg = "البريد الإلكتروني مسجل بالفعل. يرجى استخدام بريد آخر.";
+        } else if (errorMsg.includes("national") || errorMsg.includes("الرقم القومي")) {
+          errorMsg = "الرقم القومي مسجل بالفعل.";
+        } else if (errorMsg.includes("400") || errorMsg.includes("Bad Request")) {
+          errorMsg = "حدث خطأ. يرجى المحاولة مرة أخرى.";
+        }
         toast({ variant: "destructive", title: "فشل الإنشاء", description: errorMsg });
       } else {
         toast({ title: "تم الإضافة ✓", description: `تم إضافة ${formData.name} بنجاح.` });
