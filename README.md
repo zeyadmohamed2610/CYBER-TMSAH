@@ -175,6 +175,29 @@ Co-Lead في GDG HITU
 
 ---
 
+## كيفية التشغيل
+
+### المتطلبات
+- Node.js 18+
+- npm أو pnpm
+
+### التثبيت
+```bash
+git clone https://github.com/zeyadmohamed2610/CYBER-TMSAH.git
+cd CYBER-TMSAH
+npm install
+cp .env.example .env
+```
+
+### التشغيل
+```bash
+npm run dev     # تطوير
+npm run build   # بناء
+npm run preview # معاينة
+```
+
+---
+
 <div align="center">
 
 **كلية التكنولوجيا الصناعة والطاقة**

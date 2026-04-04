@@ -10,6 +10,9 @@ import { Analytics } from "@/components/Analytics";
 import { usePerformanceMonitoring } from "@/hooks/use-performance";
 import { AttendanceAuthProvider } from "@/features/attendance/context/AttendanceAuthContext";
 import { AttendanceRoleGate } from "@/features/attendance/components/AttendanceRoleGate";
+import { PageTransition } from "@/components/PageTransition";
+import { OfflineStatusProvider, OfflineIndicator } from "@/components/OfflineStatus";
+import { offlineAttendanceService } from "@/features/attendance/services/offlineAttendanceService";
 
 const Index = lazy(() => import("./pages/Index"));
 const Schedule = lazy(() => import("./pages/Schedule"));
@@ -43,54 +46,62 @@ const App = () => (
               },
             }}
           />
-          <AttendanceAuthProvider>
-            <BrowserRouter>
-              <Analytics />
-              <Suspense fallback={<LoadingScreen />}>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/schedule" element={<Schedule />} />
-                  <Route path="/materials" element={<Materials />} />
-                  <Route path="/materials/:id" element={<SubjectDetail />} />
-                  <Route path="/attendance/login" element={<AttendanceLoginPage />} />
-                  <Route path="/attendance" element={<AttendancePage />} />
-                  <Route
-                    path="/attendance/owner-dashboard"
-                    element={
-                      <AttendanceRoleGate allowedRole="owner">
-                        <AttendanceOwnerPage />
-                      </AttendanceRoleGate>
-                    }
-                  />
-                  <Route
-                    path="/attendance/doctor-dashboard"
-                    element={
-                      <AttendanceRoleGate allowedRole="doctor">
-                        <AttendanceDoctorPage />
-                      </AttendanceRoleGate>
-                    }
-                  />
-                  <Route
-                    path="/attendance/student-panel"
-                    element={
-                      <AttendanceRoleGate allowedRole="student">
-                        <AttendanceStudentPage />
-                      </AttendanceRoleGate>
-                    }
-                  />
-                  <Route
-                    path="/attendance/ta-dashboard"
-                    element={
-                      <AttendanceRoleGate allowedRole="ta">
-                        <AttendanceTAPage />
-                      </AttendanceRoleGate>
-                    }
-                  />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-            </BrowserRouter>
-          </AttendanceAuthProvider>
+          <OfflineStatusProvider
+            syncFunction={offlineAttendanceService.syncPending}
+            getPendingCountFunction={offlineAttendanceService.getPendingCount}
+          >
+            <AttendanceAuthProvider>
+              <BrowserRouter>
+                <Analytics />
+                <Suspense fallback={<LoadingScreen />}>
+                  <PageTransition>
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/schedule" element={<Schedule />} />
+                      <Route path="/materials" element={<Materials />} />
+                      <Route path="/materials/:id" element={<SubjectDetail />} />
+                      <Route path="/attendance/login" element={<AttendanceLoginPage />} />
+                      <Route path="/attendance" element={<AttendancePage />} />
+                      <Route
+                        path="/attendance/owner-dashboard"
+                        element={
+                          <AttendanceRoleGate allowedRole="owner">
+                            <AttendanceOwnerPage />
+                          </AttendanceRoleGate>
+                        }
+                      />
+                      <Route
+                        path="/attendance/doctor-dashboard"
+                        element={
+                          <AttendanceRoleGate allowedRole="doctor">
+                            <AttendanceDoctorPage />
+                          </AttendanceRoleGate>
+                        }
+                      />
+                      <Route
+                        path="/attendance/student-panel"
+                        element={
+                          <AttendanceRoleGate allowedRole="student">
+                            <AttendanceStudentPage />
+                          </AttendanceRoleGate>
+                        }
+                      />
+                      <Route
+                        path="/attendance/ta-dashboard"
+                        element={
+                          <AttendanceRoleGate allowedRole="ta">
+                            <AttendanceTAPage />
+                          </AttendanceRoleGate>
+                        }
+                      />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </PageTransition>
+                </Suspense>
+              </BrowserRouter>
+            </AttendanceAuthProvider>
+            <OfflineIndicator />
+          </OfflineStatusProvider>
         </TooltipProvider>
       </ErrorBoundary>
     </AppWrapper>

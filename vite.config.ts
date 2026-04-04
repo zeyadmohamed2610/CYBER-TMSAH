@@ -1,18 +1,45 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import { VitePWA } from "vite-plugin-pwa";
+import compression from "vite-plugin-compression";
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
-    hmr: {
-      overlay: false,
-    },
+    hmr: { overlay: false },
   },
   plugins: [
     react(),
+    compression({ algorithm: 'gzip', ext: '.gz' }),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      manifest: {
+        name: 'CYBER TMSAH - منصة الحضور الذكي',
+        short_name: 'CYBER TMSAH',
+        description: 'منصة جامعية شاملة لنظام الحضور الذكي',
+        theme_color: '#0d9488',
+        background_color: '#0a0a0f',
+        display: 'standalone',
+        orientation: 'portrait',
+        scope: '/',
+        start_url: '/',
+        icons: [
+          { src: 'favicon.png', sizes: '192x192', type: 'image/png' },
+          { src: 'favicon.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+        ]
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        runtimeCaching: [
+          { urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i, handler: 'CacheFirst', options: { cacheName: 'google-fonts-cache', expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 }, cacheableResponse: { statuses: [0, 200] } } },
+          { urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i, handler: 'CacheFirst', options: { cacheName: 'gstatic-fonts-cache', expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 }, cacheableResponse: { statuses: [0, 200] } } },
+          { urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i, handler: 'NetworkFirst', options: { cacheName: 'supabase-api-cache', expiration: { maxEntries: 50, maxAgeSeconds: 60 * 5 }, networkTimeoutSeconds: 10, cacheableResponse: { statuses: [0, 200] } } }
+        ]
+      }
+    }),
   ],
   resolve: {
     alias: {
@@ -22,50 +49,25 @@ export default defineConfig(({ mode }) => ({
   publicDir: "public",
   build: {
     copyPublicDir: true,
-    // Use esbuild (fastest, built into Vite 8)
     minify: 'esbuild',
-    // Raise chunk warning threshold slightly — large UI libs are expected
     chunkSizeWarningLimit: 600,
-    // Target modern browsers that support ESM natively — smaller output
     target: 'esnext',
     rollupOptions: {
       output: {
         manualChunks: (id: string) => {
-          // Core React runtime — must load first
-          if (
-            id.includes('node_modules/react/') ||
-            id.includes('node_modules/react-dom/') ||
-            id.includes('node_modules/react-router-dom/') ||
-            id.includes('node_modules/scheduler/')
-          ) return 'react-vendor';
-
-          // Radix UI components — lazy, only needed when UI renders
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') || id.includes('node_modules/react-router-dom/') || id.includes('node_modules/scheduler/')) return 'react-vendor';
           if (id.includes('node_modules/@radix-ui/')) return 'radix-ui';
-
-          // Supabase client — large, separately cached once logged in
           if (id.includes('node_modules/@supabase/')) return 'supabase';
-
-          // QR code generation — only needed in attendance views
           if (id.includes('node_modules/qrcode')) return 'qrcode';
-
-          // lucide icons — tree-shaken but still sizable
           if (id.includes('node_modules/lucide-react')) return 'icons';
-
-          // PDF/Image export — heavy, loaded only when user exports schedule
-          if (id.includes('node_modules/html2canvas')) return 'export-image';
+          if (id.includes('node_modules/html2canvas') || id.includes('node_modules/html2canvas-pro')) return 'export-image';
           if (id.includes('node_modules/jspdf')) return 'export-pdf';
+          if (id.includes('node_modules/chart.js') || id.includes('node_modules/react-chartjs')) return 'charts';
         },
-        chunkFileNames: (chunkInfo) => {
-          if (mode === 'production') return 'assets/[hash].js';
-          return 'assets/[name]-[hash].js';
-        },
-        entryFileNames: (chunkInfo) => {
-          if (mode === 'production') return 'assets/[hash].js';
-          return 'assets/[name]-[hash].js';
-        },
+        chunkFileNames: (chunkInfo) => mode === 'production' ? 'assets/[hash].js' : 'assets/[name]-[hash].js',
+        entryFileNames: (chunkInfo) => mode === 'production' ? 'assets/[hash].js' : 'assets/[name]-[hash].js',
       },
     },
-    // Source maps only in development
     sourcemap: mode === 'development',
   },
 }));
