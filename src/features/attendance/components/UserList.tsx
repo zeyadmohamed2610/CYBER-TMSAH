@@ -139,6 +139,20 @@ export function UserList({ role, title }: { role: string; title: string }) {
       },
     });
 
+    // Debug: log everything
+    console.log("Full response:", res);
+    console.log("Status:", res.error ? "error" : "success");
+    console.log("Data:", res.data);
+    console.log("Error:", res.error);
+    console.log("Response keys:", Object.keys(res));
+
+    // Try to get more info from the error
+    const errorInfo = res.error ? 
+      (res.error.message || res.error.toString()) : 
+      (res.data?.error || "unknown");
+    
+    alert(`Status: ${res.error ? 'ERROR' : 'OK'}\nError: ${errorInfo}\nData: ${JSON.stringify(res.data, null, 2)}`);
+
     if (res.error || res.data?.error) {
       let errorMsg = "خطأ غير معروف";
       if (res.data?.error) {
