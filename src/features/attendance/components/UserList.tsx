@@ -28,6 +28,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
   const [showCreate, setShowCreate] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [showPassword, setShowPassword] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState({ name: "", nationalId: "", email: "", subjectId: "" });
   const [deleteConfirm, setDeleteConfirm] = useState<{id: string, name: string} | null>(null);
@@ -292,17 +293,26 @@ export function UserList({ role, title }: { role: string; title: string }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">كلمة المرور</Label>
-                <Input 
-                  type="password"
-                  id="password"
-                  name="password"
-                  placeholder="أدخل كلمة المرور" 
-                  value={formData.password}
-                  onChange={e => setFormData({...formData, password: e.target.value})}
-                  disabled={submitting}
-                  className="h-8 text-sm"
-                  dir="ltr"
-                />
+                <div className="relative">
+                  <Input 
+                    type={showPassword ? "text" : "password"}
+                    id="password"
+                    name="password"
+                    placeholder="أدخل كلمة المرور" 
+                    value={formData.password}
+                    onChange={e => setFormData({...formData, password: e.target.value})}
+                    disabled={submitting}
+                    className="h-8 text-sm pr-10"
+                    dir="ltr"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
 
               {(role === "doctor" || role === "ta") && (

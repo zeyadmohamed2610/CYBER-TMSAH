@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Trash2, Users, Loader2, Edit2, Save, XCircle, CheckCircle, Info, BookOpen, Search } from "lucide-react";
+import { Plus, Trash2, Users, Loader2, Edit2, Save, XCircle, CheckCircle, Info, BookOpen, Search, Eye, EyeOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +32,7 @@ export function TAManagementPanel() {
   const [deleteConfirm, setDeleteConfirm] = useState<{id: string, name: string} | null>(null);
 
   const [form, setForm] = useState({ name: "", email: "", password: "", subjectId: "" });
+  const [showPassword, setShowPassword] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -198,7 +199,16 @@ export function TAManagementPanel() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">كلمة المرور</Label>
-                <Input id="taPassword" name="taPassword" className="h-8 text-sm" type="password" dir="ltr" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="8+ أحرف" />
+                <div className="relative">
+                  <Input id="taPassword" name="taPassword" className="h-8 text-sm pr-10" type={showPassword ? "text" : "password"} dir="ltr" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="8+ أحرف" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
               <div>
                 <Label className="text-xs">المادة الأساسية</Label>

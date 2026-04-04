@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { BookMinus, GraduationCap, Loader2, Stethoscope } from "lucide-react";
+import { BookMinus, GraduationCap, Loader2, Stethoscope, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,7 @@ export const UserCreationForm = () => {
   const { toast } = useToast();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // React Hook Form for Student
   const studentForm = useForm<StudentFormData>({
@@ -149,14 +150,24 @@ export const UserCreationForm = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="student-password">كلمة المرور</Label>
-                <Input
-                  id="student-password"
-                  type="password"
-                  dir="ltr"
-                  {...studentForm.register("password")}
-                  placeholder="8 أحرف على الأقل"
-                  disabled={submitting}
-                />
+                <div className="relative">
+                  <Input
+                    id="student-password"
+                    type={showPassword ? "text" : "password"}
+                    dir="ltr"
+                    {...studentForm.register("password")}
+                    placeholder="8 أحرف على الأقل"
+                    disabled={submitting}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
                 {studentErrors.password && (
                   <p className="text-xs text-destructive">{studentErrors.password.message}</p>
                 )}
@@ -202,14 +213,24 @@ export const UserCreationForm = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="doctor-password">كلمة المرور</Label>
-                <Input
-                  id="doctor-password"
-                  type="password"
-                  dir="ltr"
-                  {...doctorForm.register("password")}
-                  placeholder="8 أحرف على الأقل"
-                  disabled={submitting}
-                />
+                <div className="relative">
+                  <Input
+                    id="doctor-password"
+                    type={showPassword ? "text" : "password"}
+                    dir="ltr"
+                    {...doctorForm.register("password")}
+                    placeholder="8 أحرف على الأقل"
+                    disabled={submitting}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
                 {doctorErrors.password && (
                   <p className="text-xs text-destructive">{doctorErrors.password.message}</p>
                 )}
