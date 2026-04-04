@@ -139,8 +139,17 @@ export function UserList({ role, title }: { role: string; title: string }) {
       },
     });
 
+    console.log("createUser response:", res);
+    if (res.error) {
+      console.error("createUser error:", res.error);
+    }
+    if (res.data?.error) {
+      console.error("createUser data error:", res.data.error);
+    }
+
     if (res.error || res.data?.error) {
-      toast({ variant: "destructive", title: "فشل الإنشاء", description: res.data?.error || res.error?.message });
+      const errorMsg = res.data?.error || res.error?.message || res.error?.toString() || "خطأ غير معروف";
+      toast({ variant: "destructive", title: "فشل الإنشاء", description: errorMsg });
     } else {
       toast({ title: "تم الإضافة ✓", description: `تم إضافة ${formData.name} بنجاح.` });
       setFormData({ name: "", nationalId: "", email: "", password: "", subjectId: "" });
