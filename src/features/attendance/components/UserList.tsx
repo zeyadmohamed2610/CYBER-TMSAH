@@ -129,33 +129,34 @@ export function UserList({ role, title }: { role: string; title: string }) {
       return;
     }
 
-    const res = await supabase.functions.invoke("createUser", {
-      body: {
-        name: formData.name.trim(),
-        national_id: role === "student" ? formData.nationalId : undefined,
-        email: (role === "doctor" || role === "ta") ? formData.email.trim().toLowerCase() : undefined,
-        password: formData.password || "12345678",
-        role: role,
-        subject_id: role === "doctor" || role === "ta" ? formData.subjectId : null
-      },
-    });
+    try {
+      const res = await supabase.functions.invoke("createUser", {
+        body: {
+          name: formData.name.trim(),
+          national_id: role === "student" ? formData.nationalId : undefined,
+          email: (role === "doctor" || role === "ta") ? formData.email.trim().toLowerCase() : undefined,
+          password: formData.password || "12345678",
+          role: role,
+          subject_id: role === "doctor" || role === "ta" ? formData.subjectId : null
+        },
+      });
 
-    if (res.error || res.data?.error) {
-      let errorMsg = "خطأ غير معروف";
-      if (res.data?.error) {
-        errorMsg = res.data.error;
-      } else if (res.error) {
-        errorMsg = res.error.message || res.error.toString();
+      if (res.error || res.data?.error) {
+        let errorMsg = "خطأ غير معروف";
+        if (res.data?.error) {
+          errorMsg = res.data.error;
+        } else if (res.error) {
+          errorMsg = res.error.message || res.error.toString();
+        }
+        toast({ variant: "destructive", title: "فشل الإنشاء", description: errorMsg });
+      } else {
+        toast({ title: "تم الإضافة ✓", description: `تم إضافة ${formData.name} بنجاح.` });
+        setFormData({ name: "", nationalId: "", email: "", password: "", subjectId: "" });
+        setShowCreate(false);
+        loadUsers();
       }
-      if (res.data?.details) {
-        errorMsg += ` (${JSON.stringify(res.data.details)})`;
-      }
-      toast({ variant: "destructive", title: "فشل الإنشاء", description: errorMsg });
-    } else {
-      toast({ title: "تم الإضافة ✓", description: `تم إضافة ${formData.name} بنجاح.` });
-      setFormData({ name: "", nationalId: "", email: "", password: "", subjectId: "" });
-      setShowCreate(false);
-      loadUsers();
+    } catch (err) {
+      toast({ variant: "destructive", title: "خطأ", description: "حدث خطأ غير متوقع" });
     }
     setSubmitting(false);
   };
