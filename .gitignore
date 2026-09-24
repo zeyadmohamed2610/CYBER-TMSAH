@@ -48,6 +48,10 @@ functions/.env.*
 # Build artifacts
 tsconfig.tsbuildinfo
 
+# Test artifacts
+playwright-report/
+test-results/
+
 # Accidental Windows null file
 nul
 
