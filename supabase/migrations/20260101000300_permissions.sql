@@ -27,10 +27,13 @@ GRANT SELECT ON public.course_materials TO authenticated;
 GRANT SELECT ON public.system_logs  TO authenticated;
 
 -- service_role backs server-side admin flows (Edge Functions / admin scripts)
--- and bypasses RLS, but it still needs ordinary SQL privileges.
-GRANT SELECT, INSERT, UPDATE ON public.users TO service_role;
-GRANT INSERT ON public.system_logs TO service_role;
-GRANT ALL ON public.lectures TO service_role;
+-- and bypasses RLS, with full SQL privileges across public schema.
+GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO service_role;
 
 -- Owner needs UPDATE permission on users table for direct PATCH operations
 GRANT UPDATE ON public.users TO authenticated;
