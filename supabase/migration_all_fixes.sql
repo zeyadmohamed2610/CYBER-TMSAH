@@ -37,14 +37,18 @@ CREATE INDEX IF NOT EXISTS idx_sessions_section
   WHERE section IS NOT NULL;
 
 -- ─────────────────────────────────────────────────────────────
--- STEP 4: Drop old 6-parameter generate_rotating_hash and
---         replace with 7-parameter version (adds p_section)
+-- STEP 4: generate_rotating_hash consolidation
+-- The single 7-param signature (with p_section) plus its
+-- structured metadata audit write now live in functions.sql.
+-- The legacy 6-param overload and the 1-param PUBLIC wrapper
+-- are intentionally NOT recreated here (the wrapper leaked
+-- PUBLIC EXECUTE, a security hole closed by consolidation).
 -- ─────────────────────────────────────────────────────────────
 DROP FUNCTION IF EXISTS public.generate_rotating_hash(UUID, INTEGER, DOUBLE PRECISION, DOUBLE PRECISION, INTEGER, UUID);
-
+-- Idempotent: re-define is a no-op when functions.sql already owns 7-param.
 CREATE OR REPLACE FUNCTION public.generate_rotating_hash(
   p_subject_id       UUID,
-  p_duration_minutes INTEGER,
+  p_duration_minutes INTEGER          DEFAULT 10,
   p_latitude         DOUBLE PRECISION DEFAULT NULL,
   p_longitude        DOUBLE PRECISION DEFAULT NULL,
   p_radius_meters    INTEGER          DEFAULT 50,
@@ -96,7 +100,7 @@ BEGIN
   )
   RETURNING * INTO v_session;
 
-  INSERT INTO public.system_logs (actor_id, action)
+  INSERT INTO public.system_logs (actor_id, action, metadata)
   VALUES (
     v_caller.id,
     format(
@@ -104,24 +108,19 @@ BEGIN
       v_session.id, p_subject_id, p_duration_minutes,
       p_latitude IS NOT NULL, v_short_code,
       COALESCE(p_section, 'none')
+    ),
+    jsonb_build_object(
+      'session_id', v_session.id::text,
+      'subject_id', p_subject_id::text,
+      'duration_minutes', p_duration_minutes,
+      'gps_enabled', p_latitude IS NOT NULL,
+      'short_code', v_short_code,
+      'lecture_id', p_lecture_id::text,
+      'section', p_section
     )
   );
 
   RETURN v_session;
-END;
-$$;
-
--- Update the 1-param wrapper to call the new 7-param version
-CREATE OR REPLACE FUNCTION public.generate_rotating_hash(
-  p_subject_id UUID
-)
-RETURNS public.sessions
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, private
-AS $$
-BEGIN
-  RETURN public.generate_rotating_hash(p_subject_id, 10);
 END;
 $$;
 

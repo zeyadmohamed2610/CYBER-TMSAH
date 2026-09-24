@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 import compression from "vite-plugin-compression";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 
 export default defineConfig(({ mode }) => ({
   server: {
@@ -14,7 +15,7 @@ export default defineConfig(({ mode }) => ({
     react(),
     compression({ algorithm: 'gzip', ext: '.gz' }),
     VitePWA({
-      registerType: 'generateSW',
+      registerType: 'autoUpdate',
       injectRegister: false,
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
@@ -41,6 +42,17 @@ export default defineConfig(({ mode }) => ({
         ]
       }
     }),
+    sentryVitePlugin({
+      org: process.env.VITE_SENTRY_ORG,
+      project: process.env.VITE_SENTRY_PROJECT,
+      authToken: process.env.VITE_SENTRY_AUTH_TOKEN,
+      release: {
+        name: process.env.VITE_SENTRY_RELEASE || `v${Date.now()}`,
+      },
+      sourcemap: {
+        files: ['dist/**/*.js'],
+      },
+    }),
   ],
   resolve: {
     alias: {
@@ -53,6 +65,7 @@ export default defineConfig(({ mode }) => ({
     minify: 'esbuild',
     chunkSizeWarningLimit: 600,
     target: 'esnext',
+    sourcemap: true,
     rollupOptions: {
       output: {
         manualChunks: (id: string) => {
@@ -69,6 +82,5 @@ export default defineConfig(({ mode }) => ({
         entryFileNames: (chunkInfo) => mode === 'production' ? 'assets/[hash].js' : 'assets/[name]-[hash].js',
       },
     },
-    sourcemap: mode === 'development',
   },
 }));

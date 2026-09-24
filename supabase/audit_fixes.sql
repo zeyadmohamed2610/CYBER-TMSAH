@@ -20,13 +20,26 @@ CREATE TABLE IF NOT EXISTS public.device_locks (
 
 CREATE INDEX IF NOT EXISTS idx_device_locks_student ON public.device_locks (student_auth_id);
 
--- Enable RLS and grant access
 ALTER TABLE public.device_locks ENABLE ROW LEVEL SECURITY;
 
+-- Owner can manage every lock. A student may only touch their own row;
+-- this also blocks anonymous and prevents locking/unlocking other students.
 DROP POLICY IF EXISTS "owner_all_device_locks" ON public.device_locks;
-CREATE POLICY "owner_all_device_locks" ON public.device_locks FOR ALL USING (true);
+DROP POLICY IF EXISTS "student_own_device_lock" ON public.device_locks;
 
-GRANT SELECT, INSERT, DELETE ON public.device_locks TO authenticated;
+CREATE POLICY "owner_all_device_locks"
+  ON public.device_locks
+  FOR ALL
+  USING      (private.current_user_role() = 'owner')
+  WITH CHECK (private.current_user_role() = 'owner');
+
+CREATE POLICY "student_own_device_lock"
+  ON public.device_locks
+  FOR ALL
+  USING      (auth.uid() IS NOT NULL AND student_auth_id = auth.uid())
+  WITH CHECK (auth.uid() IS NOT NULL AND student_auth_id = auth.uid());
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.device_locks TO authenticated;
 REVOKE ALL ON public.device_locks FROM anon;
 
 

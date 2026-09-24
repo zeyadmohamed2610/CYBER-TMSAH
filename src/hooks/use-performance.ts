@@ -11,9 +11,10 @@ interface FirstInputEntry extends PerformanceEntry {
 
 interface AnalyticsEventParams {
   event_category: string;
-  event_label: string;
-  non_interaction: boolean;
-  value: number;
+  event_label?: string;
+  non_interaction?: boolean;
+  value?: number;
+  [key: string]: unknown;
 }
 
 const trackAnalyticsEvent = (eventName: string, params: AnalyticsEventParams) => {

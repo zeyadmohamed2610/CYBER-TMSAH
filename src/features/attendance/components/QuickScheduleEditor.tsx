@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Pencil, Save, Globe, CheckCircle2, Trash2, ChevronDown, ChevronRight, ChevronLeft, Calendar, GraduationCap, Coffee, Loader2, FileText, Upload, Eye, Download, X } from "lucide-react";
+import { Pencil, Save, Globe, CheckCircle2, Trash2, ChevronDown, ChevronRight, ChevronLeft, Calendar, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -297,7 +297,7 @@ export function QuickScheduleEditor() {
         {editing && (
           <div className="rounded-xl border-2 border-primary/50 bg-primary/5 p-4 space-y-3">
             <p className="text-sm font-bold text-primary truncate">
-              سكشن {selectedSection} - {DAYS[editing.day]} - الفترة {PERIODS[editing.period]?.label} ({PERIODS[editing.period]?.time})
+              سكشن {selectedSection} - {DAYS[editing.day]} - الفترة {PERIODS[editing.period]?.label ?? ""} ({PERIODS[editing.period]?.time ?? ""})
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               <div className="space-y-1 sm:col-span-2">
@@ -390,8 +390,8 @@ export function QuickScheduleEditor() {
               {PERIODS.map((period, pi) => (
                 <tr key={pi} className="border-b border-border/50">
                   <td className="p-2 text-center">
-                    <div className="text-[10px] font-bold text-primary">{period.label}</div>
-                    <div className="text-[9px] text-muted-foreground" dir="ltr">{period.time}</div>
+                    <div className="text-[10px] font-bold text-primary">{PERIODS[pi]?.label ?? ""}</div>
+                    <div className="text-[9px] text-muted-foreground" dir="ltr">{PERIODS[pi]?.time ?? ""}</div>
                   </td>
                   {DAYS.map((_, di) => {
                     const dd = current[di];

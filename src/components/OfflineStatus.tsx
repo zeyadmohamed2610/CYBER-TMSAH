@@ -73,7 +73,7 @@ export const OfflineStatusProvider = ({
     }
   }, [getPendingCountFunction]);
 
-  const syncNow = useCallback(async () => {
+  const syncNow = useCallback(async (): Promise<void> => {
     if (!syncFunction || isSyncing || !isOnline) return;
     
     setIsSyncing(true);

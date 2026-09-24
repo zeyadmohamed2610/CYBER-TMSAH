@@ -19,6 +19,7 @@ const Schedule = lazy(() => import("./pages/Schedule"));
 const Materials = lazy(() => import("./pages/Materials"));
 const SubjectDetail = lazy(() => import("./pages/SubjectDetail"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const HealthCheck = lazy(() => import("./pages/HealthCheck"));
 const AttendancePage = lazy(() => import("./features/attendance/pages/AttendancePage"));
 const AttendanceLoginPage = lazy(() => import("./features/attendance/pages/AttendanceLoginPage"));
 const AttendanceOwnerPage = lazy(() => import("./features/attendance/pages/AttendanceOwnerPage"));
@@ -57,6 +58,7 @@ const App = () => (
                   <PageTransition>
                     <Routes>
                       <Route path="/" element={<Index />} />
+                      <Route path="/health" element={<HealthCheck />} />
                       <Route path="/schedule" element={<Schedule />} />
                       <Route path="/materials" element={<Materials />} />
                       <Route path="/materials/:id" element={<SubjectDetail />} />

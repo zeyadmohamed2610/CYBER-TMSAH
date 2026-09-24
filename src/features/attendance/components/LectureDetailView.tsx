@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowRight, Download, RefreshCw, Users, Clock, Hash, StopCircle, PlayCircle, MapPin, History, Settings, ToggleLeft, ToggleRight } from "lucide-react";
+import { ArrowRight, Download, RefreshCw, Users, Clock, Hash, StopCircle, PlayCircle, MapPin, History, ToggleLeft, ToggleRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -506,7 +506,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
               {sessionType === "section" ? (
                 <div className="space-y-1">
                   <Label className="text-xs">رقم السكشن</Label>
-                  <Select id="session-section" value={selectedSection} onValueChange={setSelectedSection}>
+                  <Select value={selectedSection} onValueChange={setSelectedSection}>
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue placeholder="اختر السكشن..." />
                     </SelectTrigger>
@@ -543,7 +543,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
       {/* Attendees table */}
       <DataTable
         title={`قائمة الحضور (${attendees.length})`}
-        caption={loading ? "جاري التحميل..." : attendees.length === 0 ? "لا يوجد سجلات حضور بعد." : undefined}
+        caption={loading ? "جاري التحميل..." : attendees.length === 0 ? "لا يوجد سجلات حضور بعد." : ""}
         columns={columns}
         rows={attendees}
         getRowId={(row) => row.attendance_id}

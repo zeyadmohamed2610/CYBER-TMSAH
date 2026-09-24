@@ -6,8 +6,9 @@ const ScrollReveal = ({ children, className = "" }: { children: ReactNode; class
 
   useEffect(() => {
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
+      (entries) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting) {
           setVisible(true);
           observer.disconnect();
         }

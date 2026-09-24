@@ -25,7 +25,7 @@ export function ActiveSessionsBar() {
     try {
       const { data } = await supabase
         .from("sessions")
-        .select(`id, short_code, rotating_hash, expires_at, latitude, longitude, radius_meters, subject_id, subjects(name, doctor_name)`)
+        .select(`id, created_at, short_code, rotating_hash, expires_at, latitude, longitude, radius_meters, subject_id, subjects(name, doctor_name)`)
         .gt("expires_at", new Date().toISOString());
 
       const sortedData = (data ?? []).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());

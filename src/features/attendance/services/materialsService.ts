@@ -4,7 +4,7 @@ import type { AttendanceApiResponse } from "../types";
 const ok = <T>(data: T): AttendanceApiResponse<T> => ({ data, error: null });
 const fail = <T>(operation: string, error: unknown): AttendanceApiResponse<T> => ({
   data: null,
-  error: typeof error === "object" && error && "message" in error ? String((error as Record<string, unknown>).message) : String(error),
+  error: `${operation}: ${typeof error === "object" && error && "message" in error ? String((error as Record<string, unknown>).message) : String(error)}`,
 });
 
 export interface Article {

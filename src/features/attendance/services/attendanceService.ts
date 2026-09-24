@@ -12,7 +12,23 @@ import type {
   SystemLogEntry,
 } from "../types";
 import { supabase } from "@/lib/supabaseClient";
-import { sha256Hash } from "../utils/fingerprint";
+import {
+  validateRpcInput,
+  generateRotatingHashSchema,
+  submitAttendanceSchema,
+  createLectureSchema,
+  updateSessionExpirySchema,
+  fetchLecturesSchema,
+  getLectureAttendeesSchema,
+  endLectureSchema,
+  deleteLectureSchema,
+  addManualAttendanceSchema,
+  updateUserSchema,
+  deleteStudentDeviceSchema,
+  setSessionDurationSchema,
+  refreshSessionHashSchema,
+  stopSessionSchema,
+} from "../utils/rpcValidation";
 
 // ─── Internal row shapes ─────────────────────────────────────────────────────
 
@@ -121,8 +137,8 @@ const mapAttendanceRecord = (row: AttendanceRow): AttendanceRecord => {
     id: row.id,
     sessionId: row.session_id,
     studentId: row.student_id,
-    studentName: student?.full_name ?? undefined,
-    subjectName: subject?.name ?? undefined,
+    studentName: student?.full_name ?? "",
+    subjectName: subject?.name ?? "",
     submittedAt: row.created_at,
   };
 };
@@ -436,13 +452,18 @@ export const attendanceService = {
   ): Promise<AttendanceApiResponse<SessionSummary>> {
     const operation = "attendanceService.generateRotatingHash";
     try {
-      const { data, error } = await supabase.rpc("generate_rotating_hash", {
+      const validation = validateRpcInput(generateRotatingHashSchema, {
         p_subject_id: subjectId,
         p_duration_minutes: durationMinutes ?? 10,
         p_latitude: latitude ?? null,
         p_longitude: longitude ?? null,
         p_radius_meters: radiusMeters ?? 50,
       });
+      if (!validation.success) {
+        return fail<SessionSummary>(operation, new Error(validation.error));
+      }
+
+      const { data, error } = await supabase.rpc("generate_rotating_hash", validation.data);
 
       if (error) throw error;
 
@@ -581,6 +602,7 @@ export const attendanceService = {
     const operation = "attendanceService.submitAttendance";
     try {
       // Compute a stable browser fingerprint from device characteristics
+      const { sha256Hash } = await import("../utils/fingerprint");
       const canvasFingerprint = (() => {
         try {
           const c = document.createElement("canvas");
@@ -613,12 +635,17 @@ export const attendanceService = {
 
       const deviceFingerprint = await sha256Hash(fpRaw);
 
-      const { data, error } = await supabase.rpc("submit_attendance", {
+      const validation = validateRpcInput(submitAttendanceSchema, {
         p_hash: hash,
         p_device_fingerprint: deviceFingerprint,
         p_student_latitude: latitude ?? null,
         p_student_longitude: longitude ?? null,
       });
+      if (!validation.success) {
+        return fail<AttendanceSubmissionResult>(operation, new Error(validation.error));
+      }
+
+      const { data, error } = await supabase.rpc("submit_attendance", validation.data);
 
       if (error) throw error;
 
@@ -698,15 +725,19 @@ export const attendanceService = {
 
   // ─── Lecture Methods ─────────────────────────────────────────
 
-  /** Fetch lectures with session/attendee counts via single RPC */
   async fetchLectures(
     subjectId?: string,
   ): Promise<AttendanceApiResponse<Lecture[]>> {
     const operation = "attendanceService.fetchLectures";
     try {
-      const { data, error } = await supabase.rpc("fetch_lectures", {
+      const validation = validateRpcInput(fetchLecturesSchema, {
         p_subject_id: subjectId ?? null,
       });
+      if (!validation.success) {
+        return fail<Lecture[]>(operation, new Error(validation.error));
+      }
+
+      const { data, error } = await supabase.rpc("fetch_lectures", validation.data);
       if (error) throw error;
 
       const lectures: Lecture[] = (data ?? []).map((row: Record<string, unknown>) => ({
@@ -735,10 +766,15 @@ export const attendanceService = {
   ): Promise<AttendanceApiResponse<Lecture>> {
     const operation = "attendanceService.createLecture";
     try {
-      const { data, error } = await supabase.rpc("create_lecture", {
+      const validation = validateRpcInput(createLectureSchema, {
         p_subject_id: subjectId,
         p_title: title,
       });
+      if (!validation.success) {
+        return fail<Lecture>(operation, new Error(validation.error));
+      }
+
+      const { data, error } = await supabase.rpc("create_lecture", validation.data);
       if (error) throw error;
 
       const row = data as { id: string; subject_id: string; title: string; lecture_date: string; created_by: string | null; created_at: string };
@@ -761,9 +797,14 @@ export const attendanceService = {
   ): Promise<AttendanceApiResponse<LectureAttendee[]>> {
     const operation = "attendanceService.getLectureAttendees";
     try {
-      const { data, error } = await supabase.rpc("get_lecture_attendees", {
+      const validation = validateRpcInput(getLectureAttendeesSchema, {
         p_lecture_id: lectureId,
       });
+      if (!validation.success) {
+        return fail<LectureAttendee[]>(operation, new Error(validation.error));
+      }
+
+      const { data, error } = await supabase.rpc("get_lecture_attendees", validation.data);
       if (error) throw error;
 
       const attendees: LectureAttendee[] = (data ?? []).map((row: Record<string, unknown>) => ({
@@ -781,6 +822,48 @@ export const attendanceService = {
       return ok<LectureAttendee[]>(attendees);
     } catch (error) {
       return fail<LectureAttendee[]>(operation, error);
+    }
+  },
+
+  /** Update session expiry to manually open or close it (uses SECURITY DEFINER RPC) */
+  async updateSessionExpiry(
+    sessionId: string,
+    expiresAt: string | null,
+  ): Promise<AttendanceApiResponse<null>> {
+    const operation = "attendanceService.updateSessionExpiry";
+    try {
+      const validation = validateRpcInput(updateSessionExpirySchema, {
+        p_session_id: sessionId,
+        p_expires_at: expiresAt ?? new Date().toISOString(),
+      });
+      if (!validation.success) {
+        return fail<null>(operation, new Error(validation.error));
+      }
+
+      const { error } = await supabase.rpc("set_session_expiry", validation.data);
+      if (error) throw error;
+      return ok<null>(null);
+    } catch (error) {
+      return fail<null>(operation, error);
+    }
+  },
+
+  /** End a lecture and all its sessions */
+  async endLecture(lectureId: string): Promise<AttendanceApiResponse<null>> {
+    const operation = "attendanceService.endLecture";
+    try {
+      const validation = validateRpcInput(endLectureSchema, {
+        p_lecture_id: lectureId,
+      });
+      if (!validation.success) {
+        return fail<null>(operation, new Error(validation.error));
+      }
+
+      const { error } = await supabase.rpc("end_lecture", validation.data);
+      if (error) throw error;
+      return ok<null>(null);
+    } catch (error) {
+      return fail<null>(operation, error);
     }
   },
 
@@ -804,17 +887,18 @@ export const attendanceService = {
     }
   },
 
-  /** Update session expiry to manually open or close it (uses SECURITY DEFINER RPC) */
-  async updateSessionExpiry(
-    sessionId: string,
-    expiresAt: string | null,
-  ): Promise<AttendanceApiResponse<null>> {
-    const operation = "attendanceService.updateSessionExpiry";
+  /** Delete a lecture (owner only) */
+  async deleteLecture(lectureId: string): Promise<AttendanceApiResponse<null>> {
+    const operation = "attendanceService.deleteLecture";
     try {
-      const { error } = await supabase.rpc("set_session_expiry", {
-        p_session_id: sessionId,
-        p_expires_at: expiresAt ?? new Date().toISOString(),
+      const validation = validateRpcInput(deleteLectureSchema, {
+        p_lecture_id: lectureId,
       });
+      if (!validation.success) {
+        return fail<null>(operation, new Error(validation.error));
+      }
+
+      const { error } = await supabase.rpc("delete_lecture", validation.data);
       if (error) throw error;
       return ok<null>(null);
     } catch (error) {
@@ -822,13 +906,136 @@ export const attendanceService = {
     }
   },
 
-  /** End a lecture and all its sessions */
-  async endLecture(lectureId: string): Promise<AttendanceApiResponse<null>> {
-    const operation = "attendanceService.endLecture";
+  /** Add manual attendance (owner/doctor/ta) */
+  async addManualAttendance(
+    studentId: string,
+    sessionId: string,
+  ): Promise<AttendanceApiResponse<AttendanceSubmissionResult>> {
+    const operation = "attendanceService.addManualAttendance";
     try {
-      const { error } = await supabase.rpc("end_lecture", {
-        p_lecture_id: lectureId,
+      const validation = validateRpcInput(addManualAttendanceSchema, {
+        p_student_id: studentId,
+        p_session_id: sessionId,
       });
+      if (!validation.success) {
+        return fail<AttendanceSubmissionResult>(operation, new Error(validation.error));
+      }
+
+      const { data, error } = await supabase.rpc("add_manual_attendance", validation.data);
+      if (error) throw error;
+
+      const row = data as { id?: string; created_at?: string } | null;
+      if (!row?.id) throw new Error("RPC returned unexpected response.");
+
+      return ok<AttendanceSubmissionResult>({
+        attendanceId: row.id,
+        recordedAt: row.created_at ?? new Date().toISOString(),
+      });
+    } catch (error) {
+      return fail<AttendanceSubmissionResult>(operation, error);
+    }
+  },
+
+  /** Update user profile (owner only) */
+  async updateUser(
+    userId: string,
+    fullName: string,
+    nationalId?: string | null,
+    subjectId?: string | null,
+  ): Promise<AttendanceApiResponse<null>> {
+    const operation = "attendanceService.updateUser";
+    try {
+      const validation = validateRpcInput(updateUserSchema, {
+        p_user_id: userId,
+        p_full_name: fullName,
+        p_national_id: nationalId ?? null,
+        p_subject_id: subjectId ?? null,
+      });
+      if (!validation.success) {
+        return fail<null>(operation, new Error(validation.error));
+      }
+
+      const { error } = await supabase.rpc("update_user", validation.data);
+      if (error) throw error;
+      return ok<null>(null);
+    } catch (error) {
+      return fail<null>(operation, error);
+    }
+  },
+
+  /** Delete student device binding (owner only) */
+  async deleteStudentDevice(studentId: string): Promise<AttendanceApiResponse<null>> {
+    const operation = "attendanceService.deleteStudentDevice";
+    try {
+      const validation = validateRpcInput(deleteStudentDeviceSchema, {
+        p_student_id: studentId,
+      });
+      if (!validation.success) {
+        return fail<null>(operation, new Error(validation.error));
+      }
+
+      const { error } = await supabase.rpc("delete_student_device", validation.data);
+      if (error) throw error;
+      return ok<null>(null);
+    } catch (error) {
+      return fail<null>(operation, error);
+    }
+  },
+
+  /** Set session duration (owner/doctor/ta) */
+  async setSessionDuration(
+    sessionId: string,
+    durationMinutes: number,
+  ): Promise<AttendanceApiResponse<null>> {
+    const operation = "attendanceService.setSessionDuration";
+    try {
+      const validation = validateRpcInput(setSessionDurationSchema, {
+        p_session_id: sessionId,
+        p_duration_minutes: durationMinutes,
+      });
+      if (!validation.success) {
+        return fail<null>(operation, new Error(validation.error));
+      }
+
+      const { error } = await supabase.rpc("set_session_duration", validation.data);
+      if (error) throw error;
+      return ok<null>(null);
+    } catch (error) {
+      return fail<null>(operation, error);
+    }
+  },
+
+  /** Refresh session hash (owner/doctor/ta) */
+  async refreshSessionHash(sessionId: string): Promise<AttendanceApiResponse<null>> {
+    const operation = "attendanceService.refreshSessionHash";
+    try {
+      const validation = validateRpcInput(refreshSessionHashSchema, {
+        p_session_id: sessionId,
+      });
+      if (!validation.success) {
+        return fail<null>(operation, new Error(validation.error));
+      }
+
+      const { error } = await supabase.rpc("refresh_session_hash", validation.data);
+      if (error) throw error;
+      return ok<null>(null);
+    } catch (error) {
+      return fail<null>(operation, error);
+    }
+  },
+
+  /** Stop session immediately (owner/doctor/ta) */
+  async stopSession(sessionId: string): Promise<AttendanceApiResponse<null>> {
+    const operation = "attendanceService.stopSession";
+    try {
+      const validation = validateRpcInput(stopSessionSchema, {
+        p_session_id: sessionId,
+      });
+      if (!validation.success) {
+        return fail<null>(operation, new Error(validation.error));
+      }
+
+      const { error } = await supabase.rpc("stop_session", validation.data);
       if (error) throw error;
       return ok<null>(null);
     } catch (error) {

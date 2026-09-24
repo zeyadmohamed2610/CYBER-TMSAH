@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 const getSecondsRemaining = (expiresAt: string | null | undefined): number | null => {
   if (!expiresAt) return null;

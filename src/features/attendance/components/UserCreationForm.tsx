@@ -244,8 +244,7 @@ export const UserCreationForm = () => {
                   </p>
                 ) : (
                   <Select
-                    id="doctor-subject"
-                    value={doctorForm.watch("subjectId")}
+                    value={doctorForm.watch("subjectId") ?? ""}
                     onValueChange={(val) => doctorForm.setValue("subjectId", val)}
                     disabled={submitting}
                   >

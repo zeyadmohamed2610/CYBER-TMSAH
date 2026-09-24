@@ -1,4 +1,3 @@
-import { supabase } from "@/lib/supabaseClient";
 import { attendanceService } from "./attendanceService";
 import { computeFingerprint } from "../utils/fingerprint";
 

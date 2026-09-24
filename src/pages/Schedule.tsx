@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Clock, MapPin, User, Calendar, GraduationCap, Sparkles, ChevronDown, Download, Loader2 } from "lucide-react";
+import { MapPin, User, Calendar, GraduationCap, Sparkles, ChevronDown, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import Layout from "@/components/Layout";
 import ScrollReveal from "@/components/ScrollReveal";

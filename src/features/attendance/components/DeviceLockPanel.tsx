@@ -91,7 +91,8 @@ export function DeviceLockPanel() {
         ) : (
           <div className="space-y-2 max-h-[500px] overflow-y-auto">
             {filtered.map(student => {
-              const lock = student.auth_id ? lockMap.get(student.auth_id) : null;
+              const authId = student.auth_id;
+              const lock = authId ? lockMap.get(authId) : null;
               const isLocked = !!lock;
               return (
                 <div key={student.id} className={"flex items-center justify-between gap-3 rounded-xl border p-3 transition-colors " + (isLocked ? "bg-primary/5 border-primary/30" : "bg-card border-border/50")}>

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
-import { Plus, Trash2, Users, Loader2, Edit2, Save, XCircle, CheckCircle, Info, BookOpen, Search, Eye, EyeOff } from "lucide-react";
+import { Plus, Trash2, Users, Loader2, Edit2, Save, XCircle, CheckCircle, BookOpen, Search, Eye, EyeOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

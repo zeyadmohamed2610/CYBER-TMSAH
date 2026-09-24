@@ -18,10 +18,9 @@ interface Props {
   session: ActiveSession;
   onStop:         (id: string) => Promise<void>;
   onUpdateDuration: (id: string, min: number) => Promise<{ error?: string }>;
-  onRefreshHash:  () => Promise<void>;
 }
 
-export function LiveSessionPanel({ session, onStop, onUpdateDuration, onRefreshHash }: Props) {
+export function LiveSessionPanel({ session, onStop, onUpdateDuration }: Props) {
   const canvasRef   = useRef<HTMLCanvasElement>(null);
   const { toast }   = useToast();
   const [newMinutes, setNewMinutes] = useState(session.duration_minutes);
