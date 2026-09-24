@@ -160,10 +160,13 @@ const exportPdf = async (rows: ExportRow[], role: ExportRequest["role"]) => {
   const container = await renderOffscreen(html);
 
   // Dynamic imports for heavy libraries
-  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+  const [html2canvasModule, jspdfModule] = await Promise.all([
     import("html2canvas-pro"),
     import("jspdf"),
   ]);
+
+  const html2canvas = html2canvasModule.default;
+  const jsPDF = jspdfModule.default;
 
   try {
     const canvas = await html2canvas(container, {
