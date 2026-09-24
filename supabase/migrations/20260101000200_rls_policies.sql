@@ -25,6 +25,7 @@ ALTER TABLE public.lectures        ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "self_read"         ON public.users;
 DROP POLICY IF EXISTS "owner_all_users"   ON public.users;
 DROP POLICY IF EXISTS "doctor_own_users"  ON public.users;
+DROP POLICY IF EXISTS "ta_own_users"      ON public.users;
 DROP POLICY IF EXISTS "student_own_users" ON public.users;
 DROP POLICY IF EXISTS "owner_update_self" ON public.users;
 

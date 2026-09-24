@@ -75,6 +75,23 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_users_national_id_unique
   WHERE national_id IS NOT NULL;
 
 -- ─────────────────────────────────────────────
+-- TABLE: lectures
+-- Defined before sessions.lecture_id FK, so the reference resolves.
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.lectures (
+  id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  subject_id   UUID        NOT NULL REFERENCES public.subjects(id) ON DELETE CASCADE,
+  title        TEXT        NOT NULL DEFAULT 'Lecture',
+  lecture_date DATE        NOT NULL DEFAULT CURRENT_DATE,
+  created_by   UUID        REFERENCES public.users(id),
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  CONSTRAINT uq_lectures_subject_date_title UNIQUE (subject_id, lecture_date, title)
+);
+
+CREATE INDEX IF NOT EXISTS idx_lectures_subject_date ON public.lectures (subject_id, lecture_date DESC);
+
+-- ─────────────────────────────────────────────
 -- TABLE: sessions
 -- Includes GPS columns + short_code + section up-front so
 -- functions defined in a later migration resolve them.
@@ -99,23 +116,6 @@ CREATE INDEX IF NOT EXISTS idx_sessions_lecture     ON public.sessions (lecture_
 CREATE INDEX IF NOT EXISTS idx_sessions_short_code  ON public.sessions (short_code) WHERE short_code IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_sessions_section      ON public.sessions (section) WHERE section IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_sessions_subject_expires ON public.sessions (subject_id, expires_at);
-
--- ─────────────────────────────────────────────
--- TABLE: lectures
--- Defined before sessions.lecture_id FK, so the reference resolves.
--- ─────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS public.lectures (
-  id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  subject_id   UUID        NOT NULL REFERENCES public.subjects(id) ON DELETE CASCADE,
-  title        TEXT        NOT NULL DEFAULT 'Lecture',
-  lecture_date DATE        NOT NULL DEFAULT CURRENT_DATE,
-  created_by   UUID        REFERENCES public.users(id),
-  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
-
-  CONSTRAINT uq_lectures_subject_date_title UNIQUE (subject_id, lecture_date, title)
-);
-
-CREATE INDEX IF NOT EXISTS idx_lectures_subject_date ON public.lectures (subject_id, lecture_date DESC);
 
 -- ─────────────────────────────────────────────
 -- TABLE: course_materials

@@ -475,6 +475,8 @@ $$;
 -- STEP 16: Add unique constraint on lectures (subject_id, lecture_date, title)
 -- ─────────────────────────────────────────────────────────────
 ALTER TABLE public.lectures 
+  DROP CONSTRAINT IF EXISTS uq_lectures_subject_date_title;
+ALTER TABLE public.lectures 
   ADD CONSTRAINT uq_lectures_subject_date_title UNIQUE (subject_id, lecture_date, title);
 
 -- ─────────────────────────────────────────────────────────────
@@ -502,7 +504,6 @@ REVOKE EXECUTE ON FUNCTION public.delete_user_by_id(UUID)                       
 REVOKE EXECUTE ON FUNCTION public.add_manual_attendance(UUID, UUID)                  FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION public.update_user(UUID, TEXT, TEXT, UUID)                FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION public.update_session_duration(UUID, INTEGER)             FROM PUBLIC, anon;
-REVOKE EXECUTE ON FUNCTION public.set_session_expiry(UUID, TIMESTAMPTZ)              FROM PUBLIC, anon;
 
 GRANT EXECUTE ON FUNCTION public.fetch_lectures(UUID)                                TO authenticated;
 GRANT EXECUTE ON FUNCTION public.create_lecture(UUID, TEXT)                          TO authenticated;
@@ -514,4 +515,3 @@ GRANT EXECUTE ON FUNCTION public.delete_user_by_id(UUID)                        
 GRANT EXECUTE ON FUNCTION public.add_manual_attendance(UUID, UUID)                   TO authenticated;
 GRANT EXECUTE ON FUNCTION public.update_user(UUID, TEXT, TEXT, UUID)                 TO authenticated;
 GRANT EXECUTE ON FUNCTION public.update_session_duration(UUID, INTEGER)              TO authenticated;
-GRANT EXECUTE ON FUNCTION public.set_session_expiry(UUID, TIMESTAMPTZ)               TO authenticated;

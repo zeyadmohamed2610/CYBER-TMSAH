@@ -139,10 +139,11 @@ const Schedule = () => {
     setIsExporting(true);
     setShowExportMenu(false);
     try {
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+      const [{ default: html2canvas }, jspdfModule] = await Promise.all([
         import("html2canvas"),
-        import("jspdf"),
+        import("jspdf/dist/jspdf.umd.min.js"),
       ]);
+      const jsPDF = jspdfModule.jsPDF || jspdfModule.default || jspdfModule;
       const dayEls = scheduleRef.current.querySelectorAll<HTMLElement>("[data-day]");
       const pdf = new jsPDF("landscape", "mm", "a4");
       const pw = pdf.internal.pageSize.getWidth();
