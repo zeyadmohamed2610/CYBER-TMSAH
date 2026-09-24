@@ -107,5 +107,6 @@ export interface SystemLogEntry {
   actorId: string | null;
   actorName?: string | null;
   action: string;
+  metadata?: Record<string, unknown> | null;
   createdAt: string;
 }

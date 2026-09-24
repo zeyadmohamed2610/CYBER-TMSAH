@@ -1,7 +1,6 @@
 -- ===========================================================
--- migration_all_fixes.sql
--- University Attendance System – Comprehensive Fix Migration
--- Run AFTER all existing SQL files (schema, functions, rls, permissions)
+-- Comprehensive Fixes & GPS Migration
+-- Run order: 5 of 5  (run AFTER all previous migrations)
 -- ===========================================================
 
 -- ─────────────────────────────────────────────────────────────
@@ -37,95 +36,50 @@ CREATE INDEX IF NOT EXISTS idx_sessions_section
   WHERE section IS NOT NULL;
 
 -- ─────────────────────────────────────────────────────────────
--- STEP 4: generate_rotating_hash consolidation
--- The single 7-param signature (with p_section) plus its
--- structured metadata audit write now live in functions.sql.
--- The legacy 6-param overload and the 1-param PUBLIC wrapper
--- are intentionally NOT recreated here (the wrapper leaked
--- PUBLIC EXECUTE, a security hole closed by consolidation).
+-- STEP 4: Add GPS columns to sessions (doctor location at session creation)
 -- ─────────────────────────────────────────────────────────────
-DROP FUNCTION IF EXISTS public.generate_rotating_hash(UUID, INTEGER, DOUBLE PRECISION, DOUBLE PRECISION, INTEGER, UUID);
--- Idempotent: re-define is a no-op when functions.sql already owns 7-param.
-CREATE OR REPLACE FUNCTION public.generate_rotating_hash(
-  p_subject_id       UUID,
-  p_duration_minutes INTEGER          DEFAULT 10,
-  p_latitude         DOUBLE PRECISION DEFAULT NULL,
-  p_longitude        DOUBLE PRECISION DEFAULT NULL,
-  p_radius_meters    INTEGER          DEFAULT 50,
-  p_lecture_id       UUID             DEFAULT NULL,
-  p_section          TEXT             DEFAULT NULL
-)
-RETURNS public.sessions
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, private
-AS $$
-DECLARE
-  v_caller     public.users;
-  v_hash       TEXT;
-  v_short_code TEXT;
-  v_session    public.sessions;
-BEGIN
-  v_caller := private.get_caller_user();
+ALTER TABLE public.sessions
+  ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
+  ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION,
+  ADD COLUMN IF NOT EXISTS radius_meters INTEGER NOT NULL DEFAULT 50;
 
-  IF v_caller IS NULL OR v_caller.role NOT IN ('owner', 'doctor', 'ta') THEN
-    RAISE EXCEPTION 'permission_denied: only owners, doctors and TAs may generate sessions';
-  END IF;
+-- Add a short_code column (6-digit numeric code, easier to type than 64-char hash)
+ALTER TABLE public.sessions
+  ADD COLUMN IF NOT EXISTS short_code TEXT;
 
-  IF p_duration_minutes IS NULL OR p_duration_minutes < 1 OR p_duration_minutes > 180 THEN
-    RAISE EXCEPTION 'validation_error: duration must be between 1 and 180 minutes';
-  END IF;
+-- Index on short_code for fast lookups
+CREATE INDEX IF NOT EXISTS idx_sessions_short_code ON public.sessions (short_code);
 
-  IF NOT EXISTS (SELECT 1 FROM public.subjects WHERE id = p_subject_id) THEN
-    RAISE EXCEPTION 'not_found: subject % does not exist', p_subject_id;
-  END IF;
-
-  IF v_caller.role = 'doctor' AND v_caller.subject_id IS DISTINCT FROM p_subject_id THEN
-    RAISE EXCEPTION 'permission_denied: doctors may only create sessions for their assigned subject';
-  END IF;
-
-  v_hash := replace(gen_random_uuid()::text, '-', '') ||
-            replace(gen_random_uuid()::text, '-', '');
-
-  v_short_code := lpad(floor(random() * 1000000)::text, 6, '0');
-
-  INSERT INTO public.sessions (
-    subject_id, rotating_hash, short_code, expires_at,
-    latitude, longitude, radius_meters, lecture_id, section
-  )
-  VALUES (
-    p_subject_id, v_hash, v_short_code,
-    now() + make_interval(mins => p_duration_minutes),
-    p_latitude, p_longitude, p_radius_meters, p_lecture_id, p_section
-  )
-  RETURNING * INTO v_session;
-
-  INSERT INTO public.system_logs (actor_id, action, metadata)
-  VALUES (
-    v_caller.id,
-    format(
-      'generate_session: created session %s for subject %s (%s minutes, GPS: %s, code: %s, section: %s)',
-      v_session.id, p_subject_id, p_duration_minutes,
-      p_latitude IS NOT NULL, v_short_code,
-      COALESCE(p_section, 'none')
-    ),
-    jsonb_build_object(
-      'session_id', v_session.id::text,
-      'subject_id', p_subject_id::text,
-      'duration_minutes', p_duration_minutes,
-      'gps_enabled', p_latitude IS NOT NULL,
-      'short_code', v_short_code,
-      'lecture_id', p_lecture_id::text,
-      'section', p_section
-    )
-  );
-
-  RETURN v_session;
-END;
-$$;
+-- Add student location at time of attendance (anti-cheat audit trail)
+ALTER TABLE public.attendance
+  ADD COLUMN IF NOT EXISTS student_latitude DOUBLE PRECISION,
+  ADD COLUMN IF NOT EXISTS student_longitude DOUBLE PRECISION;
 
 -- ─────────────────────────────────────────────────────────────
--- STEP 5: fetch_lectures – returns lectures with counts
+-- STEP 5: Create device_locks table (missing from audit)
+-- The code references 'device_locks' table but it doesn't exist in schema
+-- Used by: DeviceLockPanel.tsx, AttendanceStudentPage.tsx, useDeviceLock.ts
+-- ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.device_locks (
+  student_auth_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  device_fingerprint TEXT NOT NULL,
+  device_label TEXT,
+  locked_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_device_locks_student ON public.device_locks (student_auth_id);
+
+-- Enable RLS and grant access
+ALTER TABLE public.device_locks ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "owner_all_device_locks" ON public.device_locks;
+CREATE POLICY "owner_all_device_locks" ON public.device_locks FOR ALL USING (true);
+
+GRANT SELECT, INSERT, DELETE ON public.device_locks TO authenticated;
+REVOKE ALL ON public.device_locks FROM anon;
+
+-- ─────────────────────────────────────────────────────────────
+-- STEP 6: fetch_lectures – returns lectures with counts
 -- ─────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.fetch_lectures(
   p_subject_id UUID DEFAULT NULL
@@ -170,7 +124,7 @@ AS $$
 $$;
 
 -- ─────────────────────────────────────────────────────────────
--- STEP 6: create_lecture
+-- STEP 7: create_lecture
 -- ─────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.create_lecture(
   p_subject_id UUID,
@@ -195,8 +149,8 @@ BEGIN
     RAISE EXCEPTION 'not_found: subject % does not exist', p_subject_id;
   END IF;
 
-  IF v_caller.role = 'doctor' AND v_caller.subject_id IS DISTINCT FROM p_subject_id THEN
-    RAISE EXCEPTION 'permission_denied: doctors may only create lectures for their assigned subject';
+  IF v_caller.role IN ('doctor', 'ta') AND v_caller.subject_id IS DISTINCT FROM p_subject_id THEN
+    RAISE EXCEPTION 'permission_denied: doctors and TAs may only create lectures for their assigned subject';
   END IF;
 
   INSERT INTO public.lectures (subject_id, title, created_by)
@@ -212,7 +166,7 @@ END;
 $$;
 
 -- ─────────────────────────────────────────────────────────────
--- STEP 7: get_lecture_attendees
+-- STEP 8: get_lecture_attendees
 -- ─────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.get_lecture_attendees(
   p_lecture_id UUID
@@ -252,7 +206,7 @@ AS $$
 $$;
 
 -- ─────────────────────────────────────────────────────────────
--- STEP 8: end_lecture – expires all active sessions for a lecture
+-- STEP 9: end_lecture – expires all active sessions for a lecture
 -- ─────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.end_lecture(
   p_lecture_id UUID
@@ -283,7 +237,7 @@ END;
 $$;
 
 -- ─────────────────────────────────────────────────────────────
--- STEP 9: delete_lecture – permanently removes lecture + sessions + attendance
+-- STEP 10: delete_lecture – permanently removes lecture + sessions + attendance
 -- ─────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.delete_lecture(
   p_lecture_id UUID
@@ -321,7 +275,7 @@ END;
 $$;
 
 -- ─────────────────────────────────────────────────────────────
--- STEP 10: clear_system_logs
+-- STEP 11: clear_system_logs
 -- ─────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.clear_system_logs()
 RETURNS VOID
@@ -346,7 +300,7 @@ END;
 $$;
 
 -- ─────────────────────────────────────────────────────────────
--- STEP 11: delete_user_by_id
+-- STEP 12: delete_user_by_id
 -- Deletes the public.users row (cascades to attendance, devices, login_sessions).
 -- The orphan auth.users record is cleaned up separately via Admin API.
 -- ─────────────────────────────────────────────────────────────
@@ -394,7 +348,7 @@ END;
 $$;
 
 -- ─────────────────────────────────────────────────────────────
--- STEP 12: add_manual_attendance (owner / doctor only)
+-- STEP 13: add_manual_attendance (owner / doctor / ta only)
 -- ─────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.add_manual_attendance(
   p_student_id UUID,
@@ -448,7 +402,7 @@ END;
 $$;
 
 -- ─────────────────────────────────────────────────────────────
--- STEP 13: update_user – owner-only profile update via RPC
+-- STEP 14: update_user – owner-only profile update via RPC
 -- Replaces direct PATCH /users which is not permitted.
 -- ─────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.update_user(
@@ -499,7 +453,7 @@ END;
 $$;
 
 -- ─────────────────────────────────────────────────────────────
--- STEP 14: update_session_duration – alias matching frontend call name
+-- STEP 15: update_session_duration – alias matching frontend call name
 -- Frontend calls "update_session_duration" with "p_new_duration_minutes".
 -- The underlying function is set_session_duration(UUID, INTEGER).
 -- ─────────────────────────────────────────────────────────────
@@ -518,89 +472,25 @@ END;
 $$;
 
 -- ─────────────────────────────────────────────────────────────
--- STEP 15: set_session_expiry – allows owner/doctor to set
--- a session's expiry to an exact timestamp (used by toggle open/close).
--- Replaces the broken direct PATCH on sessions.
+-- STEP 16: Add unique constraint on lectures (subject_id, lecture_date, title)
 -- ─────────────────────────────────────────────────────────────
-CREATE OR REPLACE FUNCTION public.set_session_expiry(
-  p_session_id UUID,
-  p_expires_at TIMESTAMPTZ
-)
-RETURNS public.sessions
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, private
-AS $$
-DECLARE
-  v_caller  public.users;
-  v_session public.sessions;
-BEGIN
-  v_caller := private.get_caller_user();
-
-  IF v_caller IS NULL OR v_caller.role NOT IN ('owner', 'doctor', 'ta') THEN
-    RAISE EXCEPTION 'permission_denied: only owners, doctors and TAs may modify sessions';
-  END IF;
-
-  SELECT * INTO v_session FROM public.sessions WHERE id = p_session_id;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'not_found: session % does not exist', p_session_id;
-  END IF;
-
-  IF v_caller.role = 'doctor' AND v_session.subject_id IS DISTINCT FROM v_caller.subject_id THEN
-    RAISE EXCEPTION 'permission_denied: doctors may only modify their assigned subject sessions';
-  END IF;
-
-  UPDATE public.sessions
-  SET    expires_at = p_expires_at
-  WHERE  id = p_session_id
-  RETURNING * INTO v_session;
-
-  INSERT INTO public.system_logs (actor_id, action)
-  VALUES (v_caller.id,
-    format('set_session_expiry: session %s expires_at -> %s', p_session_id, p_expires_at));
-
-  RETURN v_session;
-END;
-$$;
+ALTER TABLE public.lectures 
+  ADD CONSTRAINT uq_lectures_subject_date_title UNIQUE (subject_id, lecture_date, title);
 
 -- ─────────────────────────────────────────────────────────────
--- STEP 16: RLS – enable for lectures + add policies
+-- STEP 17: Add missing indexes for performance
 -- ─────────────────────────────────────────────────────────────
-ALTER TABLE public.lectures ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "owner_all_lectures"  ON public.lectures;
-DROP POLICY IF EXISTS "doctor_own_lectures" ON public.lectures;
-DROP POLICY IF EXISTS "ta_own_lectures"     ON public.lectures;
-
-CREATE POLICY "owner_all_lectures"
-  ON public.lectures
-  FOR ALL
-  USING      ( private.current_user_role() = 'owner' )
-  WITH CHECK ( private.current_user_role() = 'owner' );
-
-CREATE POLICY "doctor_own_lectures"
-  ON public.lectures
-  FOR SELECT
-  USING (
-    private.current_user_role() = 'doctor'
-    AND subject_id = private.current_user_subject_id()
-  );
-
-CREATE POLICY "ta_own_lectures"
-  ON public.lectures
-  FOR SELECT
-  USING (
-    private.current_user_role() = 'ta'
-    AND subject_id = private.current_user_subject_id()
-  );
+CREATE INDEX IF NOT EXISTS idx_attendance_lecture_id ON public.attendance (session_id) INCLUDE (student_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_short_code_lookup ON public.sessions (short_code) WHERE short_code IS NOT NULL;
 
 -- ─────────────────────────────────────────────────────────────
--- STEP 17: Table-level GRANTs
+-- STEP 18: Table-level GRANTs for new tables
 -- ─────────────────────────────────────────────────────────────
 GRANT SELECT ON public.lectures TO authenticated;
+GRANT SELECT ON public.device_locks TO authenticated;
 
 -- ─────────────────────────────────────────────────────────────
--- STEP 18: Function GRANTs for all new functions
+-- STEP 19: Function GRANTs for all new functions
 -- ─────────────────────────────────────────────────────────────
 REVOKE EXECUTE ON FUNCTION public.fetch_lectures(UUID)                               FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION public.create_lecture(UUID, TEXT)                         FROM PUBLIC, anon;
@@ -613,8 +503,6 @@ REVOKE EXECUTE ON FUNCTION public.add_manual_attendance(UUID, UUID)             
 REVOKE EXECUTE ON FUNCTION public.update_user(UUID, TEXT, TEXT, UUID)                FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION public.update_session_duration(UUID, INTEGER)             FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION public.set_session_expiry(UUID, TIMESTAMPTZ)              FROM PUBLIC, anon;
-REVOKE EXECUTE ON FUNCTION public.generate_rotating_hash(UUID, INTEGER, DOUBLE PRECISION, DOUBLE PRECISION, INTEGER, UUID, TEXT)
-  FROM PUBLIC, anon;
 
 GRANT EXECUTE ON FUNCTION public.fetch_lectures(UUID)                                TO authenticated;
 GRANT EXECUTE ON FUNCTION public.create_lecture(UUID, TEXT)                          TO authenticated;
@@ -627,5 +515,3 @@ GRANT EXECUTE ON FUNCTION public.add_manual_attendance(UUID, UUID)              
 GRANT EXECUTE ON FUNCTION public.update_user(UUID, TEXT, TEXT, UUID)                 TO authenticated;
 GRANT EXECUTE ON FUNCTION public.update_session_duration(UUID, INTEGER)              TO authenticated;
 GRANT EXECUTE ON FUNCTION public.set_session_expiry(UUID, TIMESTAMPTZ)               TO authenticated;
-GRANT EXECUTE ON FUNCTION public.generate_rotating_hash(UUID, INTEGER, DOUBLE PRECISION, DOUBLE PRECISION, INTEGER, UUID, TEXT)
-  TO authenticated;

@@ -1,5 +1,3 @@
-import { jsPDF } from "jspdf";
-import html2canvas from "html2canvas-pro";
 import type { AttendanceApiResponse, AttendanceRecord, ExportRequest, ExportResult, Lecture, LectureAttendee } from "../types";
 import { attendanceService } from "./attendanceService";
 
@@ -10,12 +8,14 @@ const fail = <T>(error: string): AttendanceApiResponse<T> => ({ data: null, erro
 
 const escapeCsvCell = (value: string) => `"${value.replace(/"/g, '""')}"`;
 
-const escapeHtml = (value: string) =>
-  value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+const escapeHtml = (value: string) => {
+  const QUOTE = "\"";
+  return value
+    .replace(/&/g, "&")
+    .replace(/</g, "<")
+    .replace(/>/g, ">")
+    .replace(/"/g, QUOTE);
+};
 
 const roleLabels: Record<string, string> = {
   student: "Student",
@@ -158,6 +158,12 @@ const exportExcel = async (rows: ExportRow[], role: ExportRequest["role"]) => {
 const exportPdf = async (rows: ExportRow[], role: ExportRequest["role"]) => {
   const html = buildTableHtml(rows, role);
   const container = await renderOffscreen(html);
+
+  // Dynamic imports for heavy libraries
+  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+    import("html2canvas-pro"),
+    import("jspdf"),
+  ]);
 
   try {
     const canvas = await html2canvas(container, {

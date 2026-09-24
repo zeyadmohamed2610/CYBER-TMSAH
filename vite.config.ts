@@ -3,9 +3,16 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 import compression from "vite-plugin-compression";
-import { sentryVitePlugin } from "@sentry/vite-plugin";
 
-export default defineConfig(({ mode }) => ({
+let sentryVitePlugin: import("@sentry/vite-plugin").SentryVitePlugin | null = null;
+try {
+  const mod = await import("@sentry/vite-plugin");
+  sentryVitePlugin = mod.sentryVitePlugin;
+} catch {
+  sentryVitePlugin = null;
+}
+
+export default defineConfig(async ({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
@@ -42,7 +49,7 @@ export default defineConfig(({ mode }) => ({
         ]
       }
     }),
-    sentryVitePlugin({
+    sentryVitePlugin && sentryVitePlugin({
       org: process.env.VITE_SENTRY_ORG,
       project: process.env.VITE_SENTRY_PROJECT,
       authToken: process.env.VITE_SENTRY_AUTH_TOKEN,
@@ -53,7 +60,7 @@ export default defineConfig(({ mode }) => ({
         files: ['dist/**/*.js'],
       },
     }),
-  ],
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
