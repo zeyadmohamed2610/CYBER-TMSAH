@@ -162,11 +162,11 @@ const exportPdf = async (rows: ExportRow[], role: ExportRequest["role"]) => {
   // Dynamic imports for heavy libraries
   const [html2canvasModule, jspdfModule] = await Promise.all([
     import("html2canvas-pro"),
-    import("jspdf"),
+    import("jspdf/dist/jspdf.umd.min.js"),
   ]);
 
   const html2canvas = html2canvasModule.default;
-  const jsPDF = jspdfModule.default;
+  const jsPDF = jspdfModule.default ?? jspdfModule;
 
   try {
     const canvas = await html2canvas(container, {
