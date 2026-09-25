@@ -6,6 +6,8 @@ export interface AuditLogEntry {
   action: "login_success" | "login_failed" | "join_request" | "password_reset_request";
   identifier: string;
   role?: string;
+  /** Human-readable reason for the outcome, e.g. "user_not_found" | "wrong_password" */
+  notes?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -22,6 +24,7 @@ export const recordAuditLog = async (entry: AuditLogEntry): Promise<void> => {
       metadata: {
         ...(entry.metadata || {}),
         fingerprint,
+        ...(entry.notes ? { failure_reason: entry.notes } : {}),
       },
       created_at: new Date().toISOString(),
     };

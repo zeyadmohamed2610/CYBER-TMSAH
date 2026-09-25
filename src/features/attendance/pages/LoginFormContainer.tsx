@@ -301,42 +301,74 @@ const LoginPage = () => {
     e.preventDefault();
     if (lockRemaining > 0) return;
     setLoginLoading(true); setLoginError(null);
-    let email = username.trim();
+
+    const rawIdentifier = username.trim();
+    let email = rawIdentifier;
+
+    // ── Step 1: Resolve identifier → email ──────────────────────────────────
     if (!email.includes("@")) {
-      const { data } = await supabase.rpc("resolve_login_identifier", { p_identifier: email });
-      email = data || `${email}@cyber.local`;
+      const { data: resolvedEmail } = await supabase.rpc("resolve_login_identifier", {
+        p_identifier: email,
+      });
+      email = resolvedEmail || null;
+
+      // If resolution returned null → user simply doesn't exist in our system
+      if (!email) {
+        recordAttempt(false);
+        setLockRemaining(getLockoutRemaining());
+        await recordAuditLog({ action: "login_failed", identifier: rawIdentifier, notes: "user_not_found" });
+        setLoginError(
+          lang === "ar"
+            ? "⚠️ لم يتم العثور على حساب بهذا المعرّف. تحقق من الاسم أو رقم الجلوس."
+            : "⚠️ No account found with this identifier. Check your username or ID."
+        );
+        setLoginLoading(false);
+        return;
+      }
     }
+
+    // ── Step 2: Attempt authentication ──────────────────────────────────────
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+
     if (error) {
       recordAttempt(false);
       setLockRemaining(getLockoutRemaining());
+
+      // Distinguish between wrong-password and other errors
+      const isWrongPassword =
+        error.message?.toLowerCase().includes("invalid") ||
+        error.message?.toLowerCase().includes("password");
+
+      const specificMsg = isWrongPassword
+        ? (lang === "ar"
+            ? "🔑 كلمة المرور غير صحيحة. تأكد منها أو استخدم \"نسيت كلمة المرور\"."
+            : "🔑 Incorrect password. Double-check it or use \"Forgot Password\".")
+        : (lang === "ar"
+            ? "❌ فشل تسجيل الدخول. حاول مرة أخرى."
+            : "❌ Sign-in failed. Please try again.");
+
       await recordAuditLog({
         action: "login_failed",
-        identifier: username.trim(),
+        identifier: rawIdentifier,
+        notes: isWrongPassword ? "wrong_password" : error.message,
       });
-      setLoginError(t.auth.loginFailed);
+      setLoginError(specificMsg);
       setLoginLoading(false);
       return;
     }
 
-    // Handle Remember Me preference
+    // ── Step 3: Success ──────────────────────────────────────────────────────
     try {
       if (rememberMe) {
-        localStorage.setItem(REMEMBER_KEY, username.trim());
+        localStorage.setItem(REMEMBER_KEY, rawIdentifier);
       } else {
         localStorage.removeItem(REMEMBER_KEY);
       }
     } catch { /* ignore */ }
 
-    // Audio chime on success
     playCyberSuccessChime();
 
-    // Audit log
-    await recordAuditLog({
-      action: "login_success",
-      identifier: username.trim(),
-    });
-
+    await recordAuditLog({ action: "login_success", identifier: rawIdentifier });
     recordAttempt(true);
     navigate("/attendance", { replace: true });
     setLoginLoading(false);
