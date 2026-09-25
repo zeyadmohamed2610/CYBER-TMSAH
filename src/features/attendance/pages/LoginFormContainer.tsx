@@ -402,31 +402,46 @@ const LoginPage = () => {
 
       {/* ── Brand mark ───────────────────────────────────────────────── */}
       <div className="relative z-10 flex flex-col items-center mb-8" style={{ animation: "rise 0.5s cubic-bezier(0.22,1,0.36,1) both" }}>
-        {/* Logo mark */}
-        <div className="flex items-center justify-center mb-4"
+
+        {/* Monogram mark — CSS only, no SVG color conflicts */}
+        <div className="flex items-center justify-center mb-5 select-none"
           style={{
-            width: 52, height: 52, borderRadius: 14,
-            background: "linear-gradient(135deg, rgba(99,102,241,0.22), rgba(79,70,229,0.1))",
-            border: "1px solid rgba(99,102,241,0.35)",
-            boxShadow: "0 0 0 1px rgba(99,102,241,0.1), 0 8px 24px rgba(79,70,229,0.25)",
+            width: 56, height: 56, borderRadius: 16,
+            background: "linear-gradient(145deg, rgba(79,70,229,0.18) 0%, rgba(99,102,241,0.08) 100%)",
+            border: "1px solid rgba(99,102,241,0.3)",
+            boxShadow: "0 0 0 1px rgba(99,102,241,0.08), 0 8px 28px rgba(79,70,229,0.2)",
           }}>
-          <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
-            <path d="M16 3L5 8v9c0 7 5 13.5 11 15.5C22 30.5 27 24 27 17V8L16 3z"
-              fill="rgba(99,102,241,0.2)" stroke="#818CF8" strokeWidth="1.4" strokeLinejoin="round"/>
-            <path d="M11 16.5l3.5 3.5L21 13" stroke="#818CF8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <span
+            style={{
+              color: "#818CF8",
+              fontSize: 22,
+              fontWeight: 900,
+              letterSpacing: "-0.04em",
+              lineHeight: 1,
+              fontFamily: "'Inter', sans-serif",
+            }}
+            dir="ltr">
+            CT
+          </span>
         </div>
 
         {/* Wordmark */}
         <div className="text-center" dir="ltr">
-          <div className="font-black tracking-[0.22em] text-white" style={{ fontSize: 17, letterSpacing: "0.22em" }}>
-            CYBER<span style={{ color: "#6366F1" }}>·</span>TMSAH
+          <div style={{
+            fontSize: 15,
+            fontWeight: 800,
+            letterSpacing: "0.25em",
+            color: "#F1F5F9",
+            fontFamily: "'Inter', sans-serif",
+          }}>
+            CYBER<span style={{ color: "#6366F1", marginInline: "1px" }}>·</span>TMSAH
           </div>
-          <div className="text-[11px] font-medium mt-1 tracking-wide" style={{ color: "rgba(71,85,105,1)" }}>
+          <div style={{ fontSize: 11, color: "#334155", marginTop: 4, fontWeight: 500, letterSpacing: "0.04em" }}>
             {lang === "ar" ? "نظام الحضور والمتابعة الأكاديمي" : "Academic Attendance Platform"}
           </div>
         </div>
       </div>
+
 
       {/* ── Card ─────────────────────────────────────────────────────── */}
       <div
