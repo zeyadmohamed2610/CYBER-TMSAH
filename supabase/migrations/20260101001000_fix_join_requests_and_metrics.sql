@@ -18,11 +18,14 @@ GRANT EXECUTE ON FUNCTION public.count_students() TO authenticated, anon;
 
 -- 2. Drop obsolete approve_join_request overload
 DROP FUNCTION IF EXISTS public.approve_join_request(uuid, uuid);
+DROP FUNCTION IF EXISTS public.approve_join_request(uuid, text);
 
 -- 3. Robust approve_join_request that handles auth user & public.users creation
+-- Accepts both p_temp_password and p_auth_id as optional to be backward compatible
 CREATE OR REPLACE FUNCTION public.approve_join_request(
   p_request_id uuid,
-  p_temp_password text DEFAULT NULL::text
+  p_temp_password text DEFAULT NULL::text,
+  p_auth_id uuid DEFAULT NULL::uuid
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -55,11 +58,15 @@ BEGIN
   v_email    := lower(trim(v_req.username)) || '@cyber.local';
   v_password := COALESCE(p_temp_password, 'Cyber' || trim(v_req.username) || '2025!');
 
-  -- Check if auth user already exists with this email
-  SELECT id INTO v_auth_id
-  FROM auth.users
-  WHERE email = v_email
-  LIMIT 1;
+  -- Check if p_auth_id was provided, else look up existing auth user
+  IF p_auth_id IS NOT NULL THEN
+    v_auth_id := p_auth_id;
+  ELSE
+    SELECT id INTO v_auth_id
+    FROM auth.users
+    WHERE email = v_email
+    LIMIT 1;
+  END IF;
 
   IF v_auth_id IS NULL THEN
     -- Create a new auth user directly in auth.users
@@ -124,7 +131,7 @@ BEGIN
 END;
 $function$;
 
-GRANT EXECUTE ON FUNCTION public.approve_join_request(uuid, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.approve_join_request(uuid, text, uuid) TO authenticated, anon;
 
 -- 4. Robust reject_join_request
 CREATE OR REPLACE FUNCTION public.reject_join_request(
@@ -151,4 +158,4 @@ BEGIN
 END;
 $function$;
 
-GRANT EXECUTE ON FUNCTION public.reject_join_request(uuid, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.reject_join_request(uuid, text) TO authenticated, anon;
