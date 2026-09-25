@@ -40,129 +40,183 @@ function recordAttempt(success: boolean) {
   } catch { /**/ }
 }
 
-// ─── Custom Icons ─────────────────────────────────────────────────────────────
-const IC = {
-  Shield: ({ cls = "" }) => (
-    <svg className={cls} viewBox="0 0 48 48" fill="none">
-      <path d="M24 4L8 11v11c0 9.5 7.2 18.4 16 21 8.8-2.6 16-11.5 16-21V11L24 4z" fill="currentColor" fillOpacity=".15" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+// ── Theme tokens (both modes dark-premium) ───────────────────────────────────
+const THEME = {
+  dark: {
+    bg:          "hsl(222, 28%, 5%)",
+    card:        "rgba(255,255,255,0.04)",
+    cardBorder:  "rgba(255,255,255,0.07)",
+    cardShadow:  "0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04)",
+    fieldBg:     "rgba(255,255,255,0.05)",
+    fieldBorder: "rgba(255,255,255,0.09)",
+    fieldFocus:  "rgba(255,255,255,0.09)",
+    tabBg:       "rgba(255,255,255,0.05)",
+    tabBorder:   "rgba(255,255,255,0.07)",
+    text:        "#f1f5f9",
+    textMuted:   "rgba(148,163,184,0.75)",
+    textFaint:   "rgba(100,116,139,0.6)",
+    label:       "rgba(100,116,139,0.7)",
+    orb1:        "hsl(174,72%,50%,0.09)",
+    orb2:        "hsl(210,80%,60%,0.06)",
+    orb3:        "hsl(280,60%,60%,0.04)",
+    particleL:   58,
+    particleA:   0.45,
+    dotA:        0.14,
+  },
+  dim: {
+    // "Light" mode = deep navy-slate — NOT white
+    bg:          "hsl(222, 22%, 11%)",
+    card:        "rgba(255,255,255,0.06)",
+    cardBorder:  "rgba(255,255,255,0.1)",
+    cardShadow:  "0 24px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06)",
+    fieldBg:     "rgba(255,255,255,0.06)",
+    fieldBorder: "rgba(255,255,255,0.11)",
+    fieldFocus:  "rgba(255,255,255,0.1)",
+    tabBg:       "rgba(255,255,255,0.06)",
+    tabBorder:   "rgba(255,255,255,0.09)",
+    text:        "#e2e8f0",
+    textMuted:   "rgba(148,163,184,0.85)",
+    textFaint:   "rgba(100,116,139,0.7)",
+    label:       "rgba(100,116,139,0.75)",
+    orb1:        "hsl(174,72%,50%,0.12)",
+    orb2:        "hsl(210,80%,60%,0.08)",
+    orb3:        "hsl(280,60%,60%,0.05)",
+    particleL:   52,
+    particleA:   0.35,
+    dotA:        0.18,
+  },
+} as const;
+
+type ThemeKey = "dark" | "dim";
+
+// ── Icons ─────────────────────────────────────────────────────────────────────
+const Ic = {
+  Shield: ({ s }: { s?: number }) => (
+    <svg width={s ?? 32} height={s ?? 32} viewBox="0 0 48 48" fill="none">
+      <path d="M24 4L8 11v11c0 9.5 7.2 18.4 16 21 8.8-2.6 16-11.5 16-21V11L24 4z"
+        fill="currentColor" fillOpacity=".15" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
       <path d="M16 24l5.5 5.5L32 18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-      <circle cx="24" cy="14" r="2" fill="currentColor" fillOpacity=".5"/>
+      <circle cx="24" cy="14" r="2" fill="currentColor" fillOpacity=".6"/>
     </svg>
   ),
-  User: ({ cls = "" }) => (
-    <svg className={cls} viewBox="0 0 20 20" fill="none">
+  User: ({ s = 16 }: { s?: number }) => (
+    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
       <circle cx="10" cy="7" r="3.5" stroke="currentColor" strokeWidth="1.5"/>
       <path d="M3 17c0-3.314 2.686-6 6-6h2c3.314 0 6 2.686 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
     </svg>
   ),
-  Lock: ({ cls = "" }) => (
-    <svg className={cls} viewBox="0 0 20 20" fill="none">
+  Lock: ({ s = 16 }: { s?: number }) => (
+    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
       <rect x="4" y="9" width="12" height="9" rx="2" stroke="currentColor" strokeWidth="1.5"/>
       <path d="M7 9V6.5a3 3 0 016 0V9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
       <circle cx="10" cy="13.5" r="1.2" fill="currentColor"/>
     </svg>
   ),
-  EyeOn: ({ cls = "" }) => (
-    <svg className={cls} viewBox="0 0 20 20" fill="none">
+  Eye: ({ off, s = 16 }: { off?: boolean; s?: number }) => off ? (
+    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
+      <path d="M3 3l14 14M8.5 8.7A3 3 0 0111.3 11.5M6.4 6.5C4.7 7.7 3.5 9 3.5 10c0 2 3 5 6.5 5 1.3 0 2.5-.4 3.5-1M10 5c3.5 0 6.5 3 6.5 5 0 .7-.3 1.5-.9 2.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  ) : (
+    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
       <ellipse cx="10" cy="10" rx="8.5" ry="5.5" stroke="currentColor" strokeWidth="1.5"/>
       <circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.5"/>
     </svg>
   ),
-  EyeOff: ({ cls = "" }) => (
-    <svg className={cls} viewBox="0 0 20 20" fill="none">
-      <path d="M3 3l14 14M8.5 8.7A3 3 0 0111.3 11.5M6.4 6.5C4.7 7.7 3.5 9 3.5 10c0 2 3 5 6.5 5 1.3 0 2.5-.4 3.5-1M10 5c3.5 0 6.5 3 6.5 5 0 .7-.3 1.5-.9 2.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-    </svg>
-  ),
-  ArrowIn: ({ cls = "" }) => (
-    <svg className={cls} viewBox="0 0 20 20" fill="none">
+  Login: ({ s = 16 }: { s?: number }) => (
+    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
       <path d="M13 3h4a1 1 0 011 1v12a1 1 0 01-1 1h-4M9 14l4-4-4-4M13 10H3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   ),
-  Plus: ({ cls = "" }) => (
-    <svg className={cls} viewBox="0 0 20 20" fill="none">
+  UserPlus: ({ s = 16 }: { s?: number }) => (
+    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
       <circle cx="8" cy="7" r="3" stroke="currentColor" strokeWidth="1.5"/>
       <path d="M2 17c0-3.314 2.686-6 6-6M15 10v6M12 13h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
     </svg>
   ),
-  Globe: ({ cls = "" }) => (
-    <svg className={cls} viewBox="0 0 20 20" fill="none">
+  Globe: ({ s = 15 }: { s?: number }) => (
+    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
       <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5"/>
-      <path d="M10 2c-2 2.5-3 5-3 8s1 5.5 3 8M10 2c2 2.5 3 5 3 8s-1 5.5-3 8M2 10h16" stroke="currentColor" strokeWidth="1.2"/>
+      <path d="M10 2c-2 2.5-3 5-3 8s1 5.5 3 8M10 2c2 2.5 3 5 3 8s-1 5.5-3 8M2 10h16" stroke="currentColor" strokeWidth="1.3"/>
     </svg>
   ),
-  Sun: ({ cls = "" }) => (
-    <svg className={cls} viewBox="0 0 20 20" fill="none">
+  Sun: ({ s = 16 }: { s?: number }) => (
+    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
       <circle cx="10" cy="10" r="3.5" stroke="currentColor" strokeWidth="1.5"/>
-      <path d="M10 2v1.5M10 16.5V18M2 10h1.5M16.5 10H18M4.4 4.4l1 1M14.6 14.6l1 1M4.4 15.6l1-1M14.6 5.4l1-1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      <path d="M10 2v1.5M10 16.5V18M2 10h1.5M16.5 10H18M4.4 4.4l1.1 1.1M14.5 14.5l1.1 1.1M4.4 15.6l1.1-1.1M14.5 5.5l1.1-1.1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
     </svg>
   ),
-  Moon: ({ cls = "" }) => (
-    <svg className={cls} viewBox="0 0 20 20" fill="none">
+  Moon: ({ s = 16 }: { s?: number }) => (
+    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
       <path d="M17 12.5A7.5 7.5 0 017.5 3a7.5 7.5 0 100 14A7.5 7.5 0 0017 12.5z" stroke="currentColor" strokeWidth="1.5"/>
     </svg>
   ),
-  Warn: ({ cls = "" }) => (
-    <svg className={cls} viewBox="0 0 20 20" fill="none">
+  Warn: ({ s = 16 }: { s?: number }) => (
+    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
       <path d="M8.69 3.41L1.84 15.5A1.5 1.5 0 003.14 17.5h13.7a1.5 1.5 0 001.3-2.24L11.3 3.41a1.5 1.5 0 00-2.6 0z" stroke="currentColor" strokeWidth="1.5"/>
       <path d="M10 8v4M10 14.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
     </svg>
   ),
-  Check: ({ cls = "" }) => (
-    <svg className={cls} viewBox="0 0 20 20" fill="none">
+  Check: ({ s = 36 }: { s?: number }) => (
+    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
       <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5"/>
       <path d="M6.5 10l2.5 2.5 4.5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   ),
-  Chevron: ({ cls = "" }) => (
-    <svg className={cls} viewBox="0 0 20 20" fill="none">
+  Chevron: ({ s = 16 }: { s?: number }) => (
+    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
       <path d="M5 8l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   ),
-  Tag: ({ cls = "" }) => (
-    <svg className={cls} viewBox="0 0 20 20" fill="none">
+  Tag: ({ s = 16 }: { s?: number }) => (
+    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
       <path d="M10 3H4a1 1 0 00-1 1v6l7 7 7-7-7-7z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
       <circle cx="7" cy="8" r="1" fill="currentColor"/>
     </svg>
   ),
-  Hash: ({ cls = "" }) => (
-    <svg className={cls} viewBox="0 0 20 20" fill="none">
+  Hash: ({ s = 16 }: { s?: number }) => (
+    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
       <path d="M4 8h12M4 12h12M8 4l-1.5 12M11.5 4L10 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
     </svg>
   ),
 };
 
-// ─── Particle canvas ──────────────────────────────────────────────────────────
-function Particles({ isDark }: { isDark: boolean }) {
+// ── Particles ─────────────────────────────────────────────────────────────────
+function Particles({ tk }: { tk: typeof THEME[ThemeKey] }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const tkRef = useRef(tk);
+  tkRef.current = tk;
+
   useEffect(() => {
     const c = ref.current; if (!c) return;
     const ctx = c.getContext("2d"); if (!ctx) return;
     let id: number;
     const resize = () => { c.width = window.innerWidth; c.height = window.innerHeight; };
-    resize();
-    window.addEventListener("resize", resize);
-    const L = isDark ? 58 : 32;
-    const COUNT = Math.min(55, Math.floor(window.innerWidth * window.innerHeight / 20000));
+    resize(); window.addEventListener("resize", resize);
+
+    const COUNT = Math.min(60, Math.floor(window.innerWidth * window.innerHeight / 18000));
     const pts = Array.from({ length: COUNT }, () => ({
       x: Math.random() * c.width, y: Math.random() * c.height,
-      vx: (Math.random() - .5) * .38, vy: (Math.random() - .5) * .38,
-      r: Math.random() * 1.4 + .5,
-      a: isDark ? Math.random() * .45 + .15 : Math.random() * .28 + .1,
+      vx: (Math.random() - .5) * .35, vy: (Math.random() - .5) * .35,
+      r: Math.random() * 1.5 + .4,
+      a: Math.random() * .4 + .1,
     }));
+
     const draw = () => {
+      const { particleL, particleA } = tkRef.current;
       ctx.clearRect(0, 0, c.width, c.height);
       for (const p of pts) {
         p.x = (p.x + p.vx + c.width) % c.width;
         p.y = (p.y + p.vy + c.height) % c.height;
         ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(174,72%,${L}%,${p.a})`; ctx.fill();
+        ctx.fillStyle = `hsla(174,72%,${particleL}%,${p.a * (particleA / 0.45)})`;
+        ctx.fill();
       }
       for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
         const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
         const d = Math.sqrt(dx * dx + dy * dy);
-        if (d < 115) {
+        if (d < 120) {
           ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y);
-          ctx.strokeStyle = `hsla(174,72%,${L - 5}%,${(isDark ? .1 : .15) * (1 - d / 115)})`;
+          ctx.strokeStyle = `hsla(174,72%,${particleL - 8}%,${0.12 * (particleA / 0.45) * (1 - d / 120)})`;
           ctx.lineWidth = .5; ctx.stroke();
         }
       }
@@ -170,71 +224,105 @@ function Particles({ isDark }: { isDark: boolean }) {
     };
     draw();
     return () => { window.removeEventListener("resize", resize); cancelAnimationFrame(id); };
-  }, [isDark]);
+  }, []);
+
   return <canvas ref={ref} className="fixed inset-0 w-full h-full pointer-events-none z-0" aria-hidden />;
 }
 
-// ─── Field ────────────────────────────────────────────────────────────────────
-function Field({ id, label, type = "text", value, onChange, placeholder, required, autoComplete, dir = "ltr", icon, suffix }: {
-  id: string; label: string; type?: string; value: string; onChange: (v: string) => void;
-  placeholder?: string; required?: boolean; autoComplete?: string; dir?: "ltr" | "rtl";
+// ── Input Field ───────────────────────────────────────────────────────────────
+function Field({
+  id, label, type = "text", value, onChange, placeholder,
+  required, autoComplete, dir = "ltr", icon, suffix, tk,
+}: {
+  id: string; label: string; type?: string; value: string;
+  onChange: (v: string) => void; placeholder?: string; required?: boolean;
+  autoComplete?: string; dir?: "ltr" | "rtl";
   icon?: React.ReactNode; suffix?: React.ReactNode;
+  tk: typeof THEME[ThemeKey];
 }) {
+  const [focused, setFocused] = useState(false);
   return (
-    <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-[11px] font-bold tracking-widest uppercase text-muted-foreground/60 select-none">
+    <div>
+      <label htmlFor={id} style={{ color: tk.label }}
+        className="block text-[10.5px] font-bold tracking-[0.12em] uppercase mb-1.5 select-none transition-colors">
         {label}
       </label>
-      <div className="relative group/f">
+      <div className="relative">
         {icon && (
-          <span className="absolute start-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within/f:text-primary transition-colors duration-200 pointer-events-none z-10">
+          <span className="absolute start-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10 transition-colors duration-200"
+            style={{ color: focused ? "hsl(174,72%,50%)" : tk.textFaint }}>
             {icon}
           </span>
         )}
         <input
           id={id} type={type} value={value} onChange={e => onChange(e.target.value)}
           placeholder={placeholder} required={required} autoComplete={autoComplete} dir={dir}
-          className="w-full h-11 rounded-xl border border-border/50 bg-muted/25 text-foreground text-sm font-medium
-            placeholder:text-muted-foreground/30 transition-all duration-200
-            focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 focus:bg-muted/40
-            hover:border-border"
-          style={{ paddingInlineStart: icon ? "2.75rem" : "1rem", paddingInlineEnd: suffix ? "3rem" : "1rem" }}
+          onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+          style={{
+            paddingInlineStart: icon ? "2.75rem" : "1rem",
+            paddingInlineEnd: suffix ? "3rem" : "1rem",
+            background: focused ? tk.fieldFocus : tk.fieldBg,
+            border: `1px solid ${focused ? "hsl(174,72%,50%,0.5)" : tk.fieldBorder}`,
+            color: tk.text,
+            boxShadow: focused ? "0 0 0 3px hsl(174 72% 50% / 0.12), inset 0 1px 0 rgba(255,255,255,0.05)" : "inset 0 1px 0 rgba(255,255,255,0.03)",
+            outline: "none",
+          }}
+          className="w-full h-11 rounded-xl text-sm font-medium transition-all duration-200 placeholder:opacity-30"
         />
+        {/* Cyan underline on focus */}
+        <span className="absolute bottom-0 start-5 end-5 h-px rounded-full bg-primary transition-all duration-300"
+          style={{ opacity: focused ? 1 : 0, transform: focused ? "scaleX(1)" : "scaleX(0)" }} />
         {suffix && <span className="absolute end-3 top-1/2 -translate-y-1/2 z-10">{suffix}</span>}
-        <span className="absolute bottom-0 start-6 end-6 h-px rounded-full bg-primary scale-x-0 group-focus-within/f:scale-x-100 transition-transform duration-300 origin-center" />
       </div>
     </div>
   );
 }
 
-function SelectField({ id, label, value, onChange, options, icon }: {
+function SelectField({ id, label, value, onChange, options, icon, tk }: {
   id: string; label: string; value: string; onChange: (v: string) => void;
   options: { value: string; label: string }[]; icon?: React.ReactNode;
+  tk: typeof THEME[ThemeKey];
 }) {
   return (
-    <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-[11px] font-bold tracking-widest uppercase text-muted-foreground/60 select-none">{label}</label>
+    <div>
+      <label htmlFor={id} style={{ color: tk.label }}
+        className="block text-[10.5px] font-bold tracking-[0.12em] uppercase mb-1.5 select-none">
+        {label}
+      </label>
       <div className="relative">
-        {icon && <span className="absolute start-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 pointer-events-none z-10">{icon}</span>}
+        {icon && (
+          <span className="absolute start-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10"
+            style={{ color: tk.textFaint }}>{icon}</span>
+        )}
         <select id={id} value={value} onChange={e => onChange(e.target.value)}
-          className="w-full h-11 rounded-xl border border-border/50 bg-muted/25 text-foreground text-sm font-medium
-            appearance-none transition-all duration-200 cursor-pointer
-            focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50"
-          style={{ paddingInlineStart: icon ? "2.75rem" : "1rem", paddingInlineEnd: "2.5rem" }}>
-          {options.map(o => <option key={o.value} value={o.value} className="bg-background">{o.label}</option>)}
+          style={{
+            paddingInlineStart: icon ? "2.75rem" : "1rem", paddingInlineEnd: "2.5rem",
+            background: tk.fieldBg, border: `1px solid ${tk.fieldBorder}`,
+            color: tk.text, outline: "none",
+          }}
+          className="w-full h-11 rounded-xl text-sm font-medium appearance-none cursor-pointer transition-all duration-200
+            focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
+          {options.map(o => (
+            <option key={o.value} value={o.value} style={{ background: "hsl(222,28%,8%)" }}>{o.label}</option>
+          ))}
         </select>
-        <IC.Chevron cls="absolute end-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 pointer-events-none" />
+        <span className="absolute end-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: tk.textFaint }}>
+          <Ic.Chevron />
+        </span>
       </div>
     </div>
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
 const LoginPage = () => {
   const navigate = useNavigate();
   const { user, role, loading } = useAttendanceAuth();
   const { t, lang, setLang, isRTL } = useLang();
   const { toggleTheme, isDark } = useTheme();
+
+  // Both modes are dark-premium — isDark = deeper black, !isDark = navy-slate
+  const tk: typeof THEME[ThemeKey] = isDark ? THEME.dark : THEME.dim;
 
   const [tab, setTab] = useState<Tab>("login");
   const [lockRemaining, setLockRemaining] = useState(getLockoutRemaining);
@@ -267,13 +355,16 @@ const LoginPage = () => {
   }, [loading, navigate, role, user]);
 
   if (loading) return (
-    <div className="fixed inset-0 flex items-center justify-center bg-background">
+    <div className="fixed inset-0 flex items-center justify-center" style={{ background: tk.bg }}>
       <div className="flex flex-col items-center gap-4">
         <div className="relative w-14 h-14">
-          <div className="absolute inset-0 rounded-full border-4 border-muted border-t-primary animate-spin" />
-          <IC.Shield cls="absolute inset-2 text-primary" />
+          <div className="absolute inset-0 rounded-full border-4 animate-spin"
+            style={{ borderColor: "rgba(255,255,255,0.08)", borderTopColor: "hsl(174,72%,50%)" }} />
+          <span className="absolute inset-2 text-primary flex items-center justify-center">
+            <Ic.Shield s={28} />
+          </span>
         </div>
-        <p className="text-sm text-muted-foreground animate-pulse font-medium">{t.common.loading}</p>
+        <p className="text-sm animate-pulse font-medium" style={{ color: tk.textMuted }}>{t.common.loading}</p>
       </div>
     </div>
   );
@@ -311,87 +402,118 @@ const LoginPage = () => {
 
   const lockMinutes = Math.ceil(lockRemaining / 60_000);
   const isStudent = joinRole === "student";
-
-  const cardCls = isDark
-    ? "bg-[hsl(220,22%,9%)]/90 border border-white/[0.07] shadow-[0_32px_80px_rgba(0,0,0,0.6)] backdrop-blur-2xl"
-    : "bg-white/92 border border-border/60 shadow-[0_24px_64px_rgba(0,0,0,0.1)] backdrop-blur-xl";
+  const fieldProps = { tk };
 
   return (
-    <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-background py-8 px-4" dir={isRTL ? "rtl" : "ltr"}>
-      <Particles isDark={isDark} />
+    <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden py-8 px-4"
+      style={{ background: tk.bg }}
+      dir={isRTL ? "rtl" : "ltr"}>
 
-      {/* Ambient glow */}
-      <div className="fixed top-[-20%] end-[-10%] w-[600px] h-[600px] rounded-full bg-primary/[0.08] blur-[140px] pointer-events-none" />
-      <div className="fixed bottom-[-20%] start-[-10%] w-[500px] h-[500px] rounded-full bg-cyan-500/[0.06] blur-[120px] pointer-events-none" />
+      {/* Particles */}
+      <Particles tk={tk} />
+
+      {/* Glow orbs */}
+      <div className="fixed top-[-18%] end-[-8%] w-[580px] h-[580px] rounded-full pointer-events-none blur-[140px]"
+        style={{ background: tk.orb1 }} />
+      <div className="fixed bottom-[-15%] start-[-8%] w-[480px] h-[480px] rounded-full pointer-events-none blur-[120px]"
+        style={{ background: tk.orb2 }} />
+      <div className="fixed top-[50%] start-[40%] w-[320px] h-[320px] rounded-full pointer-events-none blur-[100px]"
+        style={{ background: tk.orb3 }} />
 
       {/* Dot grid */}
       <div className="fixed inset-0 pointer-events-none" style={{
-        backgroundImage: `radial-gradient(circle, hsl(174 72% ${isDark ? 50 : 35}% / ${isDark ? .14 : .2}) 1px, transparent 1px)`,
+        backgroundImage: `radial-gradient(circle, hsl(174 72% 50% / ${tk.dotA}) 1px, transparent 1px)`,
         backgroundSize: "32px 32px",
-        opacity: isDark ? .5 : .7,
       }} />
 
-      {/* Controls top-right */}
+      {/* ── Top bar ── */}
       <div className="fixed top-4 end-4 flex items-center gap-2 z-50">
         <button onClick={() => setLang(lang === "en" ? "ar" : "en")}
-          className={`flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-bold transition-all ${cardCls} text-muted-foreground hover:text-foreground`}>
-          <IC.Globe cls="w-3.5 h-3.5" />
-          <span>{lang === "en" ? "عربي" : "EN"}</span>
+          style={{ background: tk.tabBg, border: `1px solid ${tk.tabBorder}`, color: tk.textMuted }}
+          className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-bold backdrop-blur-xl transition-all hover:text-white">
+          <Ic.Globe /> <span>{lang === "en" ? "عربي" : "EN"}</span>
         </button>
         <button onClick={toggleTheme}
-          className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all ${cardCls} text-muted-foreground hover:text-foreground`}>
-          {isDark ? <IC.Sun cls="w-4 h-4" /> : <IC.Moon cls="w-4 h-4" />}
+          style={{ background: tk.tabBg, border: `1px solid ${tk.tabBorder}`, color: tk.textMuted }}
+          className="w-8 h-8 flex items-center justify-center rounded-lg backdrop-blur-xl transition-all hover:text-white"
+          title={isDark ? "Dim mode" : "Deep dark"}>
+          {isDark ? <Ic.Sun /> : <Ic.Moon />}
         </button>
       </div>
 
-      {/* ── Main Card ── */}
-      <div className={`relative z-10 w-full max-w-[400px] rounded-2xl ${cardCls} animate-fade-up overflow-hidden`}>
+      {/* ── Card ── */}
+      <div className="relative z-10 w-full max-w-[400px] rounded-2xl overflow-hidden"
+        style={{
+          background: tk.card,
+          border: `1px solid ${tk.cardBorder}`,
+          boxShadow: tk.cardShadow,
+          backdropFilter: "blur(24px) saturate(160%)",
+          WebkitBackdropFilter: "blur(24px) saturate(160%)",
+          animation: "fadeUp .4s cubic-bezier(.16,1,.3,1) both",
+        }}>
 
-        {/* Top gradient bar */}
-        <div className="h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent" />
+        {/* Top gradient accent */}
+        <div className="h-px w-full" style={{
+          background: "linear-gradient(90deg, transparent, hsl(174,72%,50%,0.7) 40%, hsl(210,80%,70%,0.5) 70%, transparent)"
+        }} />
 
-        <div className="px-7 pt-8 pb-7">
+        {/* Shimmer overlay (top-left corner glow) */}
+        <div className="absolute inset-0 pointer-events-none rounded-2xl" style={{
+          background: "linear-gradient(135deg, hsl(174 72% 50%/0.07) 0%, transparent 45%)",
+        }} />
 
-          {/* Logo + title */}
-          <div className="flex flex-col items-center gap-3 mb-7">
-            <div className={`relative flex items-center justify-center w-[66px] h-[66px] rounded-[18px] transition-all duration-300 ${
-              isDark
-                ? "bg-gradient-to-br from-primary/20 to-cyan-500/10 border border-primary/25 shadow-[0_0_36px_hsl(174_72%_50%/0.2)]"
-                : "bg-gradient-to-br from-primary to-[hsl(174,72%,26%)] shadow-[0_8px_28px_hsl(174_72%_38%/0.35)]"
-            }`}>
-              <IC.Shield cls={`w-8 h-8 ${isDark ? "text-primary" : "text-white"}`} />
-              {isDark && <div className="absolute inset-[-5px] rounded-[22px] border border-primary/15 animate-pulse" />}
+        <div className="relative px-7 pt-8 pb-7 space-y-6">
+
+          {/* ── Logo ── */}
+          <div className="flex flex-col items-center gap-3">
+            {/* Shield icon with rings */}
+            <div className="relative flex items-center justify-center" style={{ width: 72, height: 72 }}>
+              {/* outer ring */}
+              <div className="absolute inset-0 rounded-[20px] animate-pulse"
+                style={{ border: "1px solid hsl(174,72%,50%,0.18)" }} />
+              {/* inner card */}
+              <div className="absolute inset-[4px] rounded-[16px] flex items-center justify-center"
+                style={{
+                  background: "linear-gradient(135deg, hsl(174,72%,50%,0.18), hsl(174,72%,30%,0.08))",
+                  border: "1px solid hsl(174,72%,50%,0.28)",
+                  boxShadow: "0 0 32px hsl(174 72% 50% / 0.2), inset 0 1px 0 rgba(255,255,255,0.1)",
+                }}>
+                <span className="text-primary"><Ic.Shield s={30} /></span>
+              </div>
             </div>
 
             <div className="text-center">
-              <h1 className={`text-[22px] font-black tracking-widest ${
-                isDark ? "bg-gradient-to-r from-white via-cyan-100 to-white bg-clip-text text-transparent" : "text-foreground"
-              }`} dir="ltr">
+              <h1 className="text-[22px] font-black tracking-[0.15em] leading-tight" dir="ltr"
+                style={{ color: tk.text }}>
                 CYBER{" "}
-                <span className={isDark ? "bg-gradient-to-r from-primary to-cyan-300 bg-clip-text text-transparent" : "text-primary"}>
-                  TMSAH
-                </span>
+                <span style={{
+                  background: "linear-gradient(90deg, hsl(174,72%,55%), hsl(174,85%,70%), hsl(174,72%,55%))",
+                  WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+                  filter: "drop-shadow(0 0 12px hsl(174 72% 50% / 0.4))",
+                }}>TMSAH</span>
               </h1>
-              <p className="text-[11px] text-muted-foreground/55 mt-0.5 font-medium">
+              <p className="text-[11px] mt-1 font-medium tracking-wide" style={{ color: tk.textFaint }}>
                 {tab === "login" ? t.auth.subtitle : t.auth.joinSubtitle}
               </p>
             </div>
           </div>
 
-          {/* ── Sliding pill tab switcher ── */}
-          <div className={`relative flex p-1 rounded-xl mb-6 ${isDark ? "bg-white/[0.05] border border-white/[0.06]" : "bg-muted/60 border border-border/40"}`}>
-            <div
-              className="absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg bg-primary transition-all duration-300 ease-out shadow-[0_2px_16px_hsl(174_72%_50%/0.35)]"
-              style={{ [isRTL ? "right" : "left"]: tab === "login" ? "4px" : "calc(50%)" }}
-            />
+          {/* ── Tab switcher ── */}
+          <div className="relative flex p-1 rounded-xl" style={{ background: tk.tabBg, border: `1px solid ${tk.tabBorder}` }}>
+            {/* sliding indicator */}
+            <div className="absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg transition-all duration-300 ease-out"
+              style={{
+                [isRTL ? "right" : "left"]: tab === "login" ? "4px" : "calc(50%)",
+                background: "hsl(174,72%,50%)",
+                boxShadow: "0 0 20px hsl(174 72% 50% / 0.4), 0 2px 8px rgba(0,0,0,0.3)",
+              }} />
             {(["login", "join"] as Tab[]).map(tb => (
               <button key={tb} onClick={() => setTab(tb)}
-                className={`relative flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold z-10 transition-colors duration-300 select-none ${
-                  tab === tb ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}>
+                className="relative flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold z-10 transition-colors duration-300 select-none"
+                style={{ color: tab === tb ? "hsl(222,28%,5%)" : tk.textMuted }}>
                 {tb === "login"
-                  ? <><IC.ArrowIn cls="w-4 h-4" />{t.auth.signIn}</>
-                  : <><IC.Plus cls="w-4 h-4" />{t.auth.joinTitle}</>}
+                  ? <><Ic.Login />{t.auth.signIn}</>
+                  : <><Ic.UserPlus />{t.auth.joinTitle}</>}
               </button>
             ))}
           </div>
@@ -400,48 +522,56 @@ const LoginPage = () => {
           {tab === "login" && (
             <form onSubmit={handleLogin} className="space-y-4">
               {lockRemaining > 0 && (
-                <div className="flex gap-3 p-3.5 rounded-xl border border-amber-400/25 bg-amber-400/[0.08]">
-                  <IC.Warn cls="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                <div className="flex gap-3 p-3.5 rounded-xl"
+                  style={{ background: "hsl(38,95%,55%,0.1)", border: "1px solid hsl(38,95%,55%,0.25)" }}>
+                  <span style={{ color: "hsl(38,95%,55%)" }} className="shrink-0 mt-0.5"><Ic.Warn /></span>
                   <div>
-                    <p className="text-sm font-bold text-amber-500">{t.auth.lockedOut}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{interpolate(t.auth.lockedOutTimer, { minutes: lockMinutes })}</p>
+                    <p className="text-sm font-bold" style={{ color: "hsl(38,95%,60%)" }}>{t.auth.lockedOut}</p>
+                    <p className="text-xs mt-0.5" style={{ color: tk.textMuted }}>{interpolate(t.auth.lockedOutTimer, { minutes: lockMinutes })}</p>
                   </div>
                 </div>
               )}
+
               <Field id="l-user" label={t.auth.username} value={username} onChange={setUsername}
                 placeholder={t.auth.usernamePlaceholder} required autoComplete="username"
-                icon={<IC.User cls="w-4 h-4" />} />
+                icon={<Ic.User />} {...fieldProps} />
               <Field id="l-pass" label={t.auth.password} type={showPass ? "text" : "password"}
                 value={password} onChange={setPassword}
                 placeholder={t.auth.passwordPlaceholder} required autoComplete="current-password"
-                icon={<IC.Lock cls="w-4 h-4" />}
+                icon={<Ic.Lock />}
                 suffix={
                   <button type="button" onClick={() => setShowPass(v => !v)}
-                    className="text-muted-foreground/50 hover:text-primary transition-colors">
-                    {showPass ? <IC.EyeOff cls="w-4 h-4" /> : <IC.EyeOn cls="w-4 h-4" />}
+                    style={{ color: tk.textFaint }} className="hover:text-primary transition-colors">
+                    <Ic.Eye off={showPass} />
                   </button>
                 }
-              />
+                {...fieldProps} />
+
               {loginError && (
-                <div role="alert" className="flex items-center gap-2.5 p-3 rounded-xl border border-destructive/25 bg-destructive/[0.08] text-sm text-destructive font-medium">
-                  <IC.Warn cls="w-4 h-4 shrink-0" />
-                  <span>{loginError}</span>
+                <div role="alert" className="flex items-center gap-2.5 p-3 rounded-xl text-sm font-medium"
+                  style={{ background: "hsl(0,72%,50%,0.1)", border: "1px solid hsl(0,72%,50%,0.25)", color: "hsl(0,72%,65%)" }}>
+                  <Ic.Warn /> <span>{loginError}</span>
                 </div>
               )}
+
               <button type="submit" disabled={loginLoading || lockRemaining > 0}
-                className="w-full h-11 mt-1 rounded-xl font-bold text-sm flex items-center justify-center gap-2
-                  bg-primary text-primary-foreground
-                  hover:bg-primary/90 active:scale-[0.98]
-                  disabled:opacity-50 disabled:cursor-not-allowed
-                  transition-all duration-200
-                  shadow-[0_4px_20px_hsl(174_72%_50%/0.3)] hover:shadow-[0_4px_28px_hsl(174_72%_50%/0.45)]">
+                className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: "hsl(174,72%,50%)",
+                  color: "hsl(222,28%,5%)",
+                  boxShadow: "0 4px 24px hsl(174 72% 50% / 0.35), 0 0 0 1px hsl(174 72% 55% / 0.3)",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 6px 32px hsl(174 72% 50% / 0.5), 0 0 0 1px hsl(174 72% 55% / 0.4)")}
+                onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 4px 24px hsl(174 72% 50% / 0.35), 0 0 0 1px hsl(174 72% 55% / 0.3)")}>
                 {loginLoading
                   ? <><Loader2 className="w-4 h-4 animate-spin" /><span>{t.auth.signingIn}</span></>
-                  : <><IC.ArrowIn cls="w-4 h-4" /><span>{t.auth.signIn}</span></>}
+                  : <><Ic.Login /><span>{t.auth.signIn}</span></>}
               </button>
-              <p className="text-center text-xs text-muted-foreground/60 pt-0.5">
+
+              <p className="text-center text-xs" style={{ color: tk.textFaint }}>
                 {lang === "ar" ? "ليس لديك حساب؟" : "No account?"}{" "}
-                <button type="button" onClick={() => setTab("join")} className="text-primary hover:underline font-bold">
+                <button type="button" onClick={() => setTab("join")}
+                  className="font-bold hover:underline" style={{ color: "hsl(174,72%,55%)" }}>
                   {t.auth.joinTitle}
                 </button>
               </p>
@@ -452,17 +582,17 @@ const LoginPage = () => {
           {tab === "join" && (
             joinSuccess ? (
               <div className="flex flex-col items-center gap-5 py-6 text-center">
-                <div className={`flex items-center justify-center rounded-2xl ${
-                  isDark ? "bg-primary/15 border border-primary/25" : "bg-primary/10 border border-primary/20"
-                }`} style={{ width: 72, height: 72 }}>
-                  <IC.Check cls="w-9 h-9 text-primary" />
+                <div className="flex items-center justify-center rounded-2xl"
+                  style={{ width: 72, height: 72, background: "hsl(174,72%,50%,0.12)", border: "1px solid hsl(174,72%,50%,0.28)" }}>
+                  <span className="text-primary"><Ic.Check s={36} /></span>
                 </div>
                 <div>
-                  <h3 className="text-base font-black">{lang === "ar" ? "تم الإرسال!" : "Sent!"}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">{t.auth.requestSent}</p>
+                  <h3 className="text-base font-black" style={{ color: tk.text }}>{lang === "ar" ? "تم الإرسال!" : "Sent!"}</h3>
+                  <p className="text-sm mt-1" style={{ color: tk.textMuted }}>{t.auth.requestSent}</p>
                 </div>
                 <button onClick={() => { setJoinSuccess(false); setTab("login"); }}
-                  className="h-10 px-6 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-all shadow-[0_4px_16px_hsl(174_72%_50%/0.3)]">
+                  className="h-10 px-6 rounded-xl text-sm font-bold transition-all"
+                  style={{ background: "hsl(174,72%,50%)", color: "hsl(222,28%,5%)", boxShadow: "0 4px 20px hsl(174 72% 50% / 0.35)" }}>
                   {lang === "ar" ? "العودة لتسجيل الدخول" : "Back to Sign In"}
                 </button>
               </div>
@@ -470,55 +600,56 @@ const LoginPage = () => {
               <form onSubmit={handleJoin} className="space-y-3.5">
                 <Field id="j-name" label={t.auth.fullName} value={fullName} onChange={setFullName}
                   placeholder={t.auth.fullNamePlaceholder} required dir={isRTL ? "rtl" : "ltr"}
-                  icon={<IC.User cls="w-4 h-4" />} />
+                  icon={<Ic.User />} {...fieldProps} />
                 <Field id="j-user" label={t.auth.username} value={joinUsername} onChange={setJoinUsername}
                   placeholder={t.auth.usernamePlaceholder} required autoComplete="username"
-                  icon={<IC.User cls="w-4 h-4" />} />
+                  icon={<Ic.User />} {...fieldProps} />
                 <Field id="j-pass" label={t.auth.password} type={showJoinPass ? "text" : "password"}
                   value={joinPassword} onChange={setJoinPassword}
                   placeholder={t.auth.passwordPlaceholder} required autoComplete="new-password"
-                  icon={<IC.Lock cls="w-4 h-4" />}
+                  icon={<Ic.Lock />}
                   suffix={
                     <button type="button" onClick={() => setShowJoinPass(v => !v)}
-                      className="text-muted-foreground/50 hover:text-primary transition-colors">
-                      {showJoinPass ? <IC.EyeOff cls="w-4 h-4" /> : <IC.EyeOn cls="w-4 h-4" />}
+                      style={{ color: tk.textFaint }} className="hover:text-primary transition-colors">
+                      <Ic.Eye off={showJoinPass} />
                     </button>
                   }
-                />
+                  {...fieldProps} />
                 <SelectField id="j-role" label={t.auth.chooseRole} value={joinRole}
-                  onChange={v => setJoinRole(v as JoinRole)} icon={<IC.Tag cls="w-4 h-4" />}
+                  onChange={v => setJoinRole(v as JoinRole)} icon={<Ic.Tag />}
                   options={[
                     { value: "student", label: t.auth.student },
                     { value: "doctor", label: t.auth.doctor },
                     { value: "ta", label: t.auth.ta },
                   ]}
-                />
+                  {...fieldProps} />
                 {isStudent && (
                   <div className="grid grid-cols-2 gap-3">
                     <Field id="j-seat" label={t.auth.seatNumber} value={seatNumber} onChange={setSeatNumber}
-                      placeholder={t.auth.seatNumberPlaceholder} icon={<IC.Hash cls="w-4 h-4" />} />
+                      placeholder={t.auth.seatNumberPlaceholder} icon={<Ic.Hash />} {...fieldProps} />
                     <Field id="j-sec" label={t.auth.sectionNumber} type="number" value={sectionNumber}
-                      onChange={setSectionNumber} placeholder={t.auth.sectionPlaceholder} icon={<IC.Hash cls="w-4 h-4" />} />
+                      onChange={setSectionNumber} placeholder={t.auth.sectionPlaceholder} icon={<Ic.Hash />} {...fieldProps} />
                   </div>
                 )}
                 {isStudent && (
                   <Field id="j-rank" label={t.auth.rankInList} type="number" value={rankInList}
-                    onChange={setRankInList} placeholder={t.auth.rankPlaceholder} icon={<IC.Hash cls="w-4 h-4" />} />
+                    onChange={setRankInList} placeholder={t.auth.rankPlaceholder} icon={<Ic.Hash />} {...fieldProps} />
                 )}
                 <button type="submit" disabled={joinLoading}
-                  className="w-full h-11 mt-1 rounded-xl font-bold text-sm flex items-center justify-center gap-2
-                    bg-primary text-primary-foreground
-                    hover:bg-primary/90 active:scale-[0.98]
-                    disabled:opacity-50 disabled:cursor-not-allowed
-                    transition-all duration-200
-                    shadow-[0_4px_20px_hsl(174_72%_50%/0.3)] hover:shadow-[0_4px_28px_hsl(174_72%_50%/0.45)]">
+                  className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    background: "hsl(174,72%,50%)",
+                    color: "hsl(222,28%,5%)",
+                    boxShadow: "0 4px 24px hsl(174 72% 50% / 0.35)",
+                  }}>
                   {joinLoading
                     ? <><Loader2 className="w-4 h-4 animate-spin" /><span>{t.auth.submitting}</span></>
-                    : <><IC.Plus cls="w-4 h-4" /><span>{t.auth.submitRequest}</span></>}
+                    : <><Ic.UserPlus /><span>{t.auth.submitRequest}</span></>}
                 </button>
-                <p className="text-center text-xs text-muted-foreground/60 pt-0.5">
+                <p className="text-center text-xs" style={{ color: tk.textFaint }}>
                   {lang === "ar" ? "لديك حساب؟" : "Have an account?"}{" "}
-                  <button type="button" onClick={() => setTab("login")} className="text-primary hover:underline font-bold">
+                  <button type="button" onClick={() => setTab("login")}
+                    className="font-bold hover:underline" style={{ color: "hsl(174,72%,55%)" }}>
                     {t.auth.signIn}
                   </button>
                 </p>
@@ -528,11 +659,21 @@ const LoginPage = () => {
         </div>
 
         {/* Bottom rule + footer */}
-        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-        <p className="text-center text-[10px] text-muted-foreground/35 py-3 font-medium">
+        <div className="h-px" style={{ background: `linear-gradient(90deg, transparent, ${tk.cardBorder}, transparent)` }} />
+        <p className="text-center text-[10px] py-3 font-medium" style={{ color: tk.textFaint }}>
           © 2026 CYBER TMSAH · {lang === "ar" ? "جامعة حلوان التكنولوجية الدولية" : "Helwan International Technological University"}
         </p>
       </div>
+
+      {/* Keyframes */}
+      <style>{`
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(18px) scale(0.98); }
+          to   { opacity: 1; transform: translateY(0)    scale(1);    }
+        }
+        input::placeholder { opacity: 0.3; }
+        select option { background: hsl(222,28%,8%); color: #e2e8f0; }
+      `}</style>
     </div>
   );
 };
