@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, BookOpen, Calendar, ShieldCheck, Home } from "lucide-react";
+import { Menu, X, Calendar, ShieldCheck, Home } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 
 type NavItem = { label: string; path: string; icon: React.ElementType };
 
 const navLinks: NavItem[] = [
   { label: "الجدول الدراسي", path: "/schedule",  icon: Calendar },
-  { label: "المواد الدراسية", path: "/materials", icon: BookOpen },
   { label: "الحضور",          path: "/attendance", icon: ShieldCheck },
 ];
 

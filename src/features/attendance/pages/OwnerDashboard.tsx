@@ -9,7 +9,7 @@ import { QuickScheduleEditor } from "../components/QuickScheduleEditor";
 import { LectureManagementPanel } from "../components/LectureManagementPanel";
 import { LectureDetailView } from "../components/LectureDetailView";
 import { ManualAttendancePanel } from "../components/ManualAttendancePanel";
-import { MaterialsEditor } from "../components/MaterialsEditor";
+
 import { StatCard } from "../components/StatCard";
 import { DeviceLockPanel } from "../components/DeviceLockPanel";
 import { UserList } from "../components/UserList";
@@ -34,7 +34,7 @@ export const OwnerDashboard = () => {
     { value: "requests", label: "🔔 الطلبات" },
     { value: "lectures", label: "المحاضرات" },
     { value: "schedule", label: "الجدول" },
-    { value: "materials", label: "المواد" },
+
     { value: "students", label: "الطلاب" },
     { value: "doctors", label: "الدكاترة" },
     { value: "tas", label: "المعيدين" },
@@ -117,7 +117,7 @@ export const OwnerDashboard = () => {
 
         <TabsContent value="schedule"><QuickScheduleEditor /></TabsContent>
 
-        <TabsContent value="materials"><MaterialsEditor /></TabsContent>
+
 
         <TabsContent value="students">
           <UserList role="student" title="قائمة الطلاب" />

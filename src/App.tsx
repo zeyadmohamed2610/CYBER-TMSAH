@@ -18,8 +18,6 @@ import { LanguageProvider } from "@/i18n";
 
 // ── Pages ─────────────────────────────────────────────────────────────────────
 const Schedule     = lazy(() => import("./pages/Schedule"));
-const Materials    = lazy(() => import("./pages/Materials"));
-const SubjectDetail = lazy(() => import("./pages/SubjectDetail"));
 const NotFound     = lazy(() => import("./pages/NotFound"));
 const HealthCheck  = lazy(() => import("./pages/HealthCheck"));
 
@@ -68,8 +66,6 @@ const App = () => (
 
                           {/* ── Legacy public routes (still accessible) ─────── */}
                           <Route path="/schedule" element={<Schedule />} />
-                          <Route path="/materials" element={<Materials />} />
-                          <Route path="/materials/:id" element={<SubjectDetail />} />
 
                           {/* ── Health ──────────────────────────────────────── */}
                           <Route path="/health" element={<HealthCheck />} />

@@ -40,7 +40,6 @@ const en = {
   // ── Navigation ───────────────────────────────────────────
   nav: {
     schedule: "Schedule",
-    materials: "Materials",
     attendance: "Attendance",
     about: "About",
     logout: "Logout",

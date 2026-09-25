@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Clock, MapPin, User, Calendar, BookOpen, Shield, Zap, GraduationCap } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, User, Calendar, Shield, Zap, GraduationCap } from "lucide-react";
 import Layout from "@/components/Layout";
 import ScrollReveal from "@/components/ScrollReveal";
 import FounderCard from "@/components/FounderCard";
@@ -10,12 +10,12 @@ import { supabase } from "@/lib/supabaseClient";
 const heroBg = "/hero-bg.jpg";
 
 const features = [
-  { icon: BookOpen, title: "المقررات الدراسية", desc: "محاضرات ومراجعات شاملة لجميع المواد الأكاديمية" },
   { icon: Calendar, title: "الجدول الدراسي", desc: "الجدول الأسبوعي المحدث لكل مجموعة دراسية" },
   { icon: Shield, title: "نظام الحضور الذكي", desc: "تحقق عبر الموقع الجغرافي والكود الديناميكي" },
   { icon: Zap, title: "الإشعارات الأكاديمية", desc: "تنبيهات فورية للامتحانات والاختبارات" },
   { icon: GraduationCap, title: "تخصص الأمن السيبراني", desc: "تغطية شاملة لـ 7 مقررات متخصصة" },
   { icon: Clock, title: "دعم العمل دون اتصال", desc: "تسجيل الحضور يعمل بدون إنترنت" },
+  { icon: GraduationCap, title: "متابعة أكاديمية", desc: "إدارة سجلات الحضور والمحاضرات بسهولة" },
 ];
 
 const PERIODS_TIME = [
@@ -139,14 +139,10 @@ const Index = () => {
             </p>
 
             <div className="animate-fade-up-delay-2 mt-8 flex flex-col sm:flex-row sm:flex-wrap sm:justify-center gap-3 sm:gap-4 w-full sm:w-auto px-2 sm:px-0">
-              <Link to="/materials" className="group relative inline-flex items-center justify-center gap-3 rounded-xl bg-primary px-8 py-4 text-base font-bold text-primary-foreground overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_hsl(var(--primary)/0.5)] w-full sm:w-auto">
-                <span className="relative z-10">المواد الدراسية</span>
+              <Link to="/schedule" className="group relative inline-flex items-center justify-center gap-3 rounded-xl bg-primary px-8 py-4 text-base font-bold text-primary-foreground overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_hsl(var(--primary)/0.5)] w-full sm:w-auto">
+                <span className="relative z-10">الجدول الدراسي</span>
                 <ArrowLeft className="h-5 w-5 relative z-10 transition-transform group-hover:-translate-x-1" />
                 <div className="absolute inset-0 bg-gradient-to-r from-primary via-cyan-500 to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </Link>
-              <Link to="/schedule" className="group inline-flex items-center justify-center gap-3 rounded-xl border-2 border-primary/50 bg-background/50 backdrop-blur-sm px-8 py-4 text-base font-bold text-foreground transition-all duration-300 hover:border-primary hover:bg-primary/10 hover:scale-105 w-full sm:w-auto">
-                <Calendar className="h-5 w-5 text-primary" />
-                <span>الجدول الدراسي</span>
               </Link>
               <Link to="/attendance" className="group inline-flex items-center justify-center gap-3 rounded-xl border-2 border-cyan-400/40 bg-cyan-400/10 backdrop-blur-sm px-8 py-4 text-base font-bold text-cyan-300 transition-all duration-300 hover:border-cyan-300 hover:bg-cyan-400/15 hover:scale-105 w-full sm:w-auto">
                 <Shield className="h-5 w-5" />

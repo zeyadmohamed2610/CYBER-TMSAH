@@ -38,7 +38,6 @@ const ar: Translations = {
 
   nav: {
     schedule: "الجدول الدراسي",
-    materials: "المواد الدراسية",
     attendance: "الحضور",
     about: "عن المنصة",
     logout: "تسجيل الخروج",

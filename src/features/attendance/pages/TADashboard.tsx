@@ -18,37 +18,22 @@ export const TADashboard = () => {
   const { metrics, error } = useAttendanceDashboardData("ta", taSections);
 
   useEffect(() => {
-    if (!user || !fullName) return;
-    supabase.from("users").select("subject_id").eq("auth_id", user.id).maybeSingle()
+    if (!user) return;
+    supabase.from("users").select("subject_id, sections").eq("auth_id", user.id).maybeSingle()
       .then(({ data }) => {
         if (data?.subject_id) {
           setTaSubjectId(data.subject_id);
           supabase.from("subjects").select("name").eq("id", data.subject_id).maybeSingle()
             .then(({ data: subj }) => {
-              if (subj?.name) {
-                setTaSubjectName(subj.name);
-                const slug = subj.name.toLowerCase().replace(/\s+/g, "-");
-                // Fetch assigned sections from course_materials using slug
-                supabase.from("course_materials").select("teaching_assistants").eq("slug", slug).maybeSingle()
-                  .then(({ data: mat }) => {
-                    if (mat?.teaching_assistants) {
-                      // Entries are in format "م. {full_name}|section1|section2"
-                      const assigned = (mat.teaching_assistants as string[])
-                        .map(entry => entry.split("|"))
-                        .find(parts =>
-                          parts[0] === `م. ${fullName}` ||
-                          parts[0].replace(/^م\.\s*/, "").trim() === fullName.trim()
-                        );
-                      if (assigned && assigned.length > 1) {
-                        setTaSections(assigned.slice(1).map(s => s.trim()).filter(Boolean));
-                      }
-                    }
-                  });
-              }
+              if (subj?.name) setTaSubjectName(subj.name);
             });
         }
+        // Sections are stored directly on the user record
+        if (Array.isArray(data?.sections) && data.sections.length > 0) {
+          setTaSections(data.sections.map((s: string | number) => String(s)));
+        }
       });
-  }, [user, fullName]);
+  }, [user]);
 
   if (selectedLecture) {
     return (

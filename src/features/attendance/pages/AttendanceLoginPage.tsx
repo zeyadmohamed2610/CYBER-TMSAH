@@ -43,7 +43,7 @@ function recordAttempt(success: boolean): void {
 }
 
 // ── Canvas Particle Background ────────────────────────────────────────────────
-function ParticleCanvas() {
+function ParticleCanvas({ isDark }: { isDark: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -60,7 +60,11 @@ function ParticleCanvas() {
     resize();
     window.addEventListener("resize", resize);
 
-    // Particles
+    // Adapt particle color to theme
+    const hue = 174;
+    const particleLightness = isDark ? 60 : 35;
+    const lineAlphaBase = isDark ? 0.12 : 0.18;
+
     const COUNT = Math.min(60, Math.floor((window.innerWidth * window.innerHeight) / 18000));
     const particles = Array.from({ length: COUNT }, () => ({
       x: Math.random() * canvas.width,
@@ -68,7 +72,7 @@ function ParticleCanvas() {
       vx: (Math.random() - 0.5) * 0.4,
       vy: (Math.random() - 0.5) * 0.4,
       r: Math.random() * 1.5 + 0.5,
-      alpha: Math.random() * 0.5 + 0.2,
+      alpha: isDark ? Math.random() * 0.5 + 0.2 : Math.random() * 0.35 + 0.15,
     }));
 
     const draw = () => {
@@ -84,11 +88,10 @@ function ParticleCanvas() {
 
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(174, 72%, 60%, ${p.alpha})`;
+        ctx.fillStyle = `hsla(${hue}, 72%, ${particleLightness}%, ${p.alpha})`;
         ctx.fill();
       }
 
-      // Connect nearby particles
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x;
@@ -98,7 +101,7 @@ function ParticleCanvas() {
             ctx.beginPath();
             ctx.moveTo(particles[i].x, particles[i].y);
             ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.strokeStyle = `hsla(174, 72%, 55%, ${0.12 * (1 - dist / 120)})`;
+            ctx.strokeStyle = `hsla(${hue}, 72%, ${particleLightness - 5}%, ${lineAlphaBase * (1 - dist / 120)})`;
             ctx.lineWidth = 0.5;
             ctx.stroke();
           }
@@ -113,7 +116,7 @@ function ParticleCanvas() {
       window.removeEventListener("resize", resize);
       cancelAnimationFrame(animId);
     };
-  }, []);
+  }, [isDark]);
 
   return (
     <canvas
@@ -153,13 +156,12 @@ function FloatingInput({
           dir={dir}
           className="
             w-full h-12 px-4 rounded-xl
-            bg-white/5 border border-white/10
-            text-foreground placeholder:text-muted-foreground/50
+            bg-muted/40 border border-border
+            text-foreground placeholder:text-muted-foreground/60
             text-sm font-medium
             transition-all duration-200
-            focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/60 focus:bg-white/8
-            hover:border-white/20
-            backdrop-blur-sm
+            focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/60 focus:bg-muted/60
+            hover:border-primary/30
           "
           style={rightSlot ? { paddingRight: "3rem" } : undefined}
         />
@@ -190,11 +192,11 @@ function FloatingSelect({
           onChange={e => onChange(e.target.value)}
           className="
             w-full h-12 px-4 rounded-xl appearance-none
-            bg-white/5 border border-white/10
+            bg-muted/40 border border-border
             text-foreground text-sm font-medium
             transition-all duration-200
             focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/60
-            hover:border-white/20 cursor-pointer
+            hover:border-primary/30 cursor-pointer
           "
         >
           {options.map(o => <option key={o.value} value={o.value} className="bg-background">{o.label}</option>)}
@@ -326,14 +328,15 @@ const LoginPage = () => {
       dir={isRTL ? "rtl" : "ltr"}
     >
       {/* ── Particle Background */}
-      <ParticleCanvas />
+      <ParticleCanvas isDark={isDark} />
 
       {/* ── Grid overlay */}
       <div
-        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        className="absolute inset-0 pointer-events-none"
         style={{
-          backgroundImage: "linear-gradient(hsl(174 72% 50%/0.8) 1px, transparent 1px), linear-gradient(90deg, hsl(174 72% 50%/0.8) 1px, transparent 1px)",
+          backgroundImage: `linear-gradient(hsl(174 72% ${isDark ? '50' : '38'}%/0.5) 1px, transparent 1px), linear-gradient(90deg, hsl(174 72% ${isDark ? '50' : '38'}%/0.5) 1px, transparent 1px)`,
           backgroundSize: "60px 60px",
+          opacity: isDark ? 0.03 : 0.06,
         }}
       />
 
@@ -347,7 +350,7 @@ const LoginPage = () => {
         {/* Language toggle */}
         <button
           onClick={() => setLang(lang === "en" ? "ar" : "en")}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/60 border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
           aria-label="Toggle language"
         >
           <span className="text-base">{lang === "en" ? "🇦🇪" : "🇺🇸"}</span>
@@ -357,7 +360,7 @@ const LoginPage = () => {
         {/* Theme toggle */}
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-lg bg-white/5 border border-white/10 text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
+          className="p-2 rounded-lg bg-muted/60 border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
           aria-label={isDark ? t.common.lightMode : t.common.darkMode}
         >
           {isDark ? (
@@ -377,10 +380,43 @@ const LoginPage = () => {
 
         {/* Logo & title */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/10 border border-primary/20 mb-5 cyber-glow shadow-2xl">
-            <Shield className="w-10 h-10 text-primary" strokeWidth={1.5} />
+          {/* Adaptive logo: dark mode = glowing cyan shield, light mode = solid teal on white card */}
+          <div className={`inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-5 shadow-2xl transition-all duration-300 ${
+            isDark
+              ? "bg-primary/10 border border-primary/30 cyber-glow"
+              : "bg-white border-2 border-primary/40 shadow-[0_4px_24px_hsl(174_72%_38%/0.18)]"
+          }`}>
+            {isDark ? (
+              /* Dark mode: hollow glowing shield */
+              <Shield className="w-10 h-10 text-primary drop-shadow-[0_0_8px_hsl(174_72%_50%/0.8)]" strokeWidth={1.5} />
+            ) : (
+              /* Light mode: filled solid shield with gradient */
+              <svg viewBox="0 0 24 24" className="w-10 h-10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="shield-grad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="hsl(174,72%,38%)" />
+                    <stop offset="100%" stopColor="hsl(174,72%,28%)" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M12 2L3 6.5V12c0 5.25 3.75 10.15 9 11.5 5.25-1.35 9-6.25 9-11.5V6.5L12 2z"
+                  fill="url(#shield-grad)"
+                />
+                <path
+                  d="M9 12l2 2 4-4"
+                  stroke="white"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
           </div>
-          <h1 className="text-3xl font-black tracking-tight bg-gradient-to-r from-primary via-cyan-400 to-primary bg-clip-text text-transparent leading-tight">
+          <h1 className={`text-3xl font-black tracking-tight leading-tight ${
+            isDark
+              ? "bg-gradient-to-r from-primary via-cyan-400 to-primary bg-clip-text text-transparent"
+              : "text-primary"
+          }`}>
             CYBER TMSAH
           </h1>
           <p className="text-sm text-muted-foreground mt-2 font-medium">
@@ -389,15 +425,21 @@ const LoginPage = () => {
         </div>
 
         {/* Card */}
-        <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl backdrop-blur-xl bg-white/[0.04]">
+        <div className={`relative rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 ${
+          isDark
+            ? "border border-white/10 backdrop-blur-xl bg-white/[0.04]"
+            : "border border-border bg-card"
+        }`}>
 
-          {/* Shimmer border */}
-          <div className="absolute inset-0 rounded-2xl pointer-events-none" style={{
-            background: "linear-gradient(135deg, hsl(174 72% 50%/0.15) 0%, transparent 50%, hsl(174 72% 50%/0.08) 100%)",
-          }} />
+          {/* Shimmer border — dark mode only */}
+          {isDark && (
+            <div className="absolute inset-0 rounded-2xl pointer-events-none" style={{
+              background: "linear-gradient(135deg, hsl(174 72% 50%/0.15) 0%, transparent 50%, hsl(174 72% 50%/0.08) 100%)",
+            }} />
+          )}
 
           {/* Tabs */}
-          <div className="flex border-b border-white/8 relative">
+          <div className="flex border-b border-border relative">
             {(["login", "join"] as Tab[]).map(t2 => (
               <button
                 key={t2}
