@@ -66,37 +66,14 @@ export function JoinRequestsPanel() {
   const handleApprove = async (req: JoinRequest) => {
     setProcessingId(req.id);
     try {
-      // Step 1: Create Supabase Auth user with username@cyber.local email
-      const authEmail = `${req.username}@cyber.local`;
-      // Generate a temporary password — owner must reset it
-      const tempPassword = `Cyber${Math.random().toString(36).slice(2, 10)}!`;
+      // Use the server-side RPC that handles auth user creation + public.users insert
+      // approve_join_request is SECURITY DEFINER so it can create auth users safely
+      const { error } = await supabase.rpc("approve_join_request", {
+        p_request_id: req.id,
+        p_auth_id: null, // will be created server-side
+      });
 
-      const { data: authData, error: authError } = await supabase.auth.admin
-        ? // Use admin API if available (service role)
-          { data: null, error: new Error("Use Edge Function or server-side for admin create") }
-        : { data: null, error: new Error("Use Edge Function or server-side for admin create") };
-
-      // Fallback: directly insert into public.users with a placeholder auth_id
-      // In production, this should be done via an Edge Function with service role key
-      // For now, mark as approved and insert user record
-      const { error: insertError } = await supabase.from("users").insert({
-        full_name: req.full_name,
-        username: req.username,
-        role: req.role,
-        // auth_id will be linked when the user completes signup
-      } as Record<string, unknown>);
-
-      if (insertError && !insertError.message.includes("duplicate")) {
-        throw insertError;
-      }
-
-      // Mark request as approved
-      const { error: updateError } = await supabase
-        .from("join_requests")
-        .update({ status: "approved", reviewed_at: new Date().toISOString() })
-        .eq("id", req.id);
-
-      if (updateError) throw updateError;
+      if (error) throw error;
 
       toast.success(lang === "ar"
         ? `تمت الموافقة على طلب ${req.full_name}`
