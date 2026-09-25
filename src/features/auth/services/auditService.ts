@@ -1,0 +1,28 @@
+// src/features/auth/services/auditService.ts
+import { supabase } from "@/lib/supabaseClient";
+
+export interface AuditLogEntry {
+  action: "login_success" | "login_failed" | "join_request" | "password_reset_request";
+  identifier: string;
+  role?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export const recordAuditLog = async (entry: AuditLogEntry): Promise<void> => {
+  try {
+    const payload = {
+      action: entry.action,
+      identifier: entry.identifier,
+      role: entry.role || null,
+      user_agent: navigator.userAgent,
+      screen_resolution: `${window.screen.width}x${window.screen.height}`,
+      metadata: entry.metadata || {},
+      created_at: new Date().toISOString(),
+    };
+
+    // Attempt to log to Supabase audit_logs table
+    await supabase.from("audit_logs").insert(payload);
+  } catch {
+    // Non-blocking: fail silently if network is offline or table is pending migration
+  }
+};

@@ -1,17 +1,25 @@
-import { useEffect, useRef, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
-import { Loader2, ShieldCheck, Lock, User, Eye, EyeOff, Hash, Tag, Globe, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabaseClient";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 import { getAttendanceDashboardRoute } from "../utils/dashboardRoutes";
 import { useLang } from "@/i18n";
-import type { AttendanceRole } from "../types";
+
+// Modular Auth Architecture components
+import { CyberBackgroundCanvas } from "@/features/auth/components/CyberBackgroundCanvas";
+import { PasswordStrengthMeter } from "@/features/auth/components/PasswordStrengthMeter";
+import { CustomRoleSelect } from "@/features/auth/components/CustomRoleSelect";
+import { ForgotPasswordModal } from "@/features/auth/components/ForgotPasswordModal";
+import { playCyberSuccessChime } from "@/features/auth/utils/cyberAudio";
+import { recordAuditLog } from "@/features/auth/services/auditService";
 
 type Tab = "login" | "join";
 type JoinRole = "student" | "doctor" | "ta";
 
 const STORAGE_KEY = "attendance_login_attempts";
+const REMEMBER_KEY = "cyber_remember_user";
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 15 * 60 * 1000;
 
@@ -42,62 +50,30 @@ function recordAttempt(success: boolean): void {
   } catch { /**/ }
 }
 
-// ── Theme tokens (Refined Cyber Dark & Porcelain Soft Light) ────────────────
+// ── Theme tokens (Refined Cyber Dark) ──────────────────────────────────────
 const THEME = {
-  dark: {
-    bg:          "hsl(222, 34%, 5%)",
-    card:        "rgba(15, 23, 42, 0.78)",
-    cardBorder:  "rgba(6, 182, 212, 0.22)", // Cyber neon rim
-    cardShadow:  "0 32px 80px rgba(0,0,0,0.8), 0 0 35px rgba(6, 182, 212, 0.12)",
-    fieldBg:     "rgba(255, 255, 255, 0.04)",
-    fieldBorder: "rgba(255, 255, 255, 0.09)",
-    fieldFocus:  "rgba(255, 255, 255, 0.08)",
-    fieldGlow:   "0 0 20px hsl(187 92% 50% / 0.22), 0 0 0 1.5px hsl(187 92% 50% / 0.45)",
-    tabBg:       "rgba(255, 255, 255, 0.05)",
-    tabBorder:   "rgba(255, 255, 255, 0.08)",
-    text:        "#f8fafc",
-    textMuted:   "rgba(148, 163, 184, 0.85)",
-    textFaint:   "rgba(148, 163, 184, 0.55)",
-    label:       "rgba(148, 163, 184, 0.8)",
-    btnBg:       "linear-gradient(135deg, hsl(187, 92%, 46%), hsl(199, 90%, 48%))",
-    btnText:     "hsl(222, 35%, 6%)",
-    btnShadow:   "0 4px 24px hsl(187 92% 46% / 0.4), 0 0 30px hsl(187 92% 46% / 0.2)",
-    orb1:        "hsl(187, 92%, 46%, 0.11)",
-    orb2:        "hsl(210, 80%, 60%, 0.07)",
-    orb3:        "hsl(280, 60%, 60%, 0.05)",
-    particleL:   58,
-    particleA:   0.45,
-    dotA:        0.12,
-  },
-  light: {
-    // Soft, eye-friendly porcelain off-white with radiant dual shadows
-    bg:          "hsl(215, 28%, 95%)",
-    card:        "#ffffff",
-    cardBorder:  "rgba(226, 232, 240, 0.95)",
-    cardShadow:  "0 10px 30px -5px rgba(15, 23, 42, 0.05), 0 20px 45px -12px rgba(6, 182, 212, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04)",
-    fieldBg:     "#f8fafc",
-    fieldBorder: "rgba(203, 213, 225, 0.9)",
-    fieldFocus:  "#ffffff",
-    fieldGlow:   "0 0 20px hsl(187 92% 43% / 0.2), 0 0 0 1.5px hsl(187 92% 43% / 0.4)",
-    tabBg:       "#f1f5f9",
-    tabBorder:   "#e2e8f0",
-    text:        "#0f172a",
-    textMuted:   "#475569",
-    textFaint:   "#94a3b8",
-    label:       "#334155",
-    btnBg:       "linear-gradient(135deg, hsl(187, 92%, 43%), hsl(199, 89%, 46%))",
-    btnText:     "#ffffff",
-    btnShadow:   "0 4px 20px hsl(187 92% 43% / 0.38)",
-    orb1:        "hsl(187, 85%, 60%, 0.12)",
-    orb2:        "hsl(210, 85%, 65%, 0.09)",
-    orb3:        "hsl(280, 70%, 70%, 0.05)",
-    particleL:   45,
-    particleA:   0.25,
-    dotA:        0.06,
-  },
+  bg:          "hsl(222, 34%, 5%)",
+  card:        "rgba(15, 23, 42, 0.8)",
+  cardBorder:  "rgba(6, 182, 212, 0.22)", // Cyber neon rim
+  cardShadow:  "0 32px 80px rgba(0,0,0,0.85), 0 0 35px rgba(6, 182, 212, 0.14)",
+  fieldBg:     "rgba(255, 255, 255, 0.04)",
+  fieldBorder: "rgba(255, 255, 255, 0.09)",
+  fieldFocus:  "rgba(255, 255, 255, 0.08)",
+  fieldGlow:   "0 0 20px hsl(187 92% 50% / 0.22), 0 0 0 1.5px hsl(187 92% 50% / 0.45)",
+  tabBg:       "rgba(255, 255, 255, 0.05)",
+  tabBorder:   "rgba(255, 255, 255, 0.08)",
+  text:        "#f8fafc",
+  textMuted:   "rgba(148, 163, 184, 0.85)",
+  textFaint:   "rgba(148, 163, 184, 0.55)",
+  label:       "rgba(148, 163, 184, 0.8)",
+  btnBg:       "linear-gradient(135deg, hsl(187, 92%, 46%), hsl(199, 90%, 48%))",
+  btnText:     "hsl(222, 35%, 6%)",
+  btnShadow:   "0 4px 24px hsl(187 92% 46% / 0.4), 0 0 30px hsl(187 92% 46% / 0.2)",
+  orb1:        "hsl(187, 92%, 46%, 0.11)",
+  orb2:        "hsl(210, 80%, 60%, 0.07)",
+  orb3:        "hsl(280, 60%, 60%, 0.05)",
+  dotA:        0.12,
 } as const;
-
-type ThemeKey = "dark" | "light";
 
 // ── Icons ───────────────────────────────────────────────────────────────────
 const Ic = {
@@ -149,17 +125,6 @@ const Ic = {
       <path d="M10 2c-2 2.5-3 5-3 8s1 5.5 3 8M10 2c2 2.5 3 5 3 8s-1 5.5-3 8M2 10h16" stroke="currentColor" strokeWidth="1.3"/>
     </svg>
   ),
-  Sun: ({ s = 16 }: { s?: number }) => (
-    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
-      <circle cx="10" cy="10" r="3.5" stroke="currentColor" strokeWidth="1.5"/>
-      <path d="M10 2v1.5M10 16.5V18M2 10h1.5M16.5 10H18M4.4 4.4l1.1 1.1M14.5 14.5l1.1 1.1M4.4 15.6l1.1-1.1M14.5 5.5l1.1-1.1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-    </svg>
-  ),
-  Moon: ({ s = 16 }: { s?: number }) => (
-    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
-      <path d="M17 12.5A7.5 7.5 0 017.5 3a7.5 7.5 0 100 14A7.5 7.5 0 0017 12.5z" stroke="currentColor" strokeWidth="1.5"/>
-    </svg>
-  ),
   Warn: ({ s = 16 }: { s?: number }) => (
     <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
       <path d="M8.69 3.41L1.84 15.5A1.5 1.5 0 003.14 17.5h13.7a1.5 1.5 0 001.3-2.24L11.3 3.41a1.5 1.5 0 00-2.6 0z" stroke="currentColor" strokeWidth="1.5"/>
@@ -170,11 +135,6 @@ const Ic = {
     <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
       <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5"/>
       <path d="M6.5 10l2.5 2.5 4.5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  ),
-  Chevron: ({ s = 16 }: { s?: number }) => (
-    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
-      <path d="M5 8l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   ),
   Tag: ({ s = 16 }: { s?: number }) => (
@@ -190,99 +150,6 @@ const Ic = {
   ),
 };
 
-// ── Particles Canvas ────────────────────────────────────────────────────────
-function Particles({ tk }: { tk: typeof THEME[ThemeKey] }) {
-  const ref = useRef<HTMLCanvasElement>(null);
-  const tkRef = useRef(tk);
-  tkRef.current = tk;
-
-  useEffect(() => {
-    const c = ref.current; if (!c) return;
-    const ctx = c.getContext("2d"); if (!ctx) return;
-    let id: number;
-    const resize = () => { c.width = window.innerWidth; c.height = window.innerHeight; };
-    resize(); window.addEventListener("resize", resize);
-
-    const COUNT = Math.min(60, Math.floor(window.innerWidth * window.innerHeight / 18000));
-    const pts = Array.from({ length: COUNT }, () => ({
-      x: Math.random() * c.width, y: Math.random() * c.height,
-      vx: (Math.random() - .5) * .35, vy: (Math.random() - .5) * .35,
-      r: Math.random() * 1.5 + .4,
-      a: Math.random() * .4 + .1,
-    }));
-
-    const draw = () => {
-      const { particleL, particleA } = tkRef.current;
-      ctx.clearRect(0, 0, c.width, c.height);
-      for (const p of pts) {
-        p.x = (p.x + p.vx + c.width) % c.width;
-        p.y = (p.y + p.vy + c.height) % c.height;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(187,92%,${particleL}%,${p.a * (particleA / 0.45)})`;
-        ctx.fill();
-      }
-      for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
-        const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
-        const d = Math.sqrt(dx * dx + dy * dy);
-        if (d < 120) {
-          ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y);
-          ctx.strokeStyle = `hsla(187,92%,${particleL - 8}%,${0.12 * (particleA / 0.45) * (1 - d / 120)})`;
-          ctx.lineWidth = .5; ctx.stroke();
-        }
-      }
-      id = requestAnimationFrame(draw);
-    };
-    draw();
-    return () => { window.removeEventListener("resize", resize); cancelAnimationFrame(id); };
-  }, []);
-
-  return <canvas ref={ref} className="fixed inset-0 w-full h-full pointer-events-none z-0" aria-hidden />;
-}
-
-// ── Password Strength Bar Component ─────────────────────────────────────────
-function PasswordStrengthBar({ password, lang }: { password: string; lang: string }) {
-  if (!password) return null;
-
-  let score = 0;
-  if (password.length >= 6) score++;
-  if (password.length >= 8) score++;
-  if (/[0-9]/.test(password) && /[a-zA-Z]/.test(password)) score++;
-  if (/[^A-Za-z0-9]/.test(password) || (/[A-Z]/.test(password) && /[a-z]/.test(password))) score++;
-
-  const config = [
-    { label: lang === "ar" ? "ضعيفة" : "Weak", color: "bg-red-500", glow: "shadow-[0_0_8px_rgba(239,68,68,0.5)]" },
-    { label: lang === "ar" ? "مقبولة" : "Fair", color: "bg-amber-500", glow: "shadow-[0_0_8px_rgba(245,158,11,0.5)]" },
-    { label: lang === "ar" ? "جيدة" : "Good", color: "bg-cyan-500", glow: "shadow-[0_0_8px_rgba(6,182,212,0.5)]" },
-    { label: lang === "ar" ? "قوية جداً 🛡️" : "Very Strong 🛡️", color: "bg-emerald-500", glow: "shadow-[0_0_8px_rgba(16,185,129,0.5)]" },
-  ];
-
-  const current = config[Math.max(0, score - 1)];
-
-  return (
-    <div className="space-y-1.5 pt-1 animate-fade-up">
-      <div className="flex items-center justify-between text-[10px] font-bold">
-        <span className="text-muted-foreground">{lang === "ar" ? "قوة كلمة المرور:" : "Password Strength:"}</span>
-        <span className={score >= 3 ? "text-primary" : score === 2 ? "text-amber-500" : "text-red-500"}>
-          {current.label}
-        </span>
-      </div>
-      <div className="grid grid-cols-4 gap-1.5 h-1.5">
-        {[1, 2, 3, 4].map((step) => {
-          const active = score >= step;
-          return (
-            <div
-              key={step}
-              className={`h-full rounded-full transition-all duration-300 ${
-                active ? `${current.color} ${current.glow}` : "bg-muted/40"
-              }`}
-            />
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 // ── Input Field Component with Ambient Glow ────────────────────────────────
 function Field({
   id, label, type = "text", value, onChange, placeholder,
@@ -292,7 +159,7 @@ function Field({
   onChange: (v: string) => void; placeholder?: string; required?: boolean;
   autoComplete?: string; dir?: "ltr" | "rtl";
   icon?: React.ReactNode; suffix?: React.ReactNode; badge?: React.ReactNode;
-  tk: typeof THEME[ThemeKey];
+  tk: typeof THEME;
 }) {
   const [focused, setFocused] = useState(false);
   return (
@@ -335,138 +202,14 @@ function Field({
   );
 }
 
-function CustomRoleSelect({
-  id,
-  label,
-  value,
-  onChange,
-  options,
-  icon,
-  tk,
-  isRTL,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { value: string; label: string; icon?: string }[];
-  icon?: React.ReactNode;
-  tk: typeof THEME.dark;
-  isRTL?: boolean;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) document.addEventListener("mousedown", handleOutside);
-    return () => document.removeEventListener("mousedown", handleOutside);
-  }, [isOpen]);
-
-  const selected = options.find((o) => o.value === value) || options[0];
-
-  return (
-    <div className="relative" ref={ref}>
-      <label
-        htmlFor={id}
-        style={{ color: tk.label }}
-        className="block text-[10.5px] font-bold tracking-[0.12em] uppercase mb-1.5 select-none"
-      >
-        {label}
-      </label>
-
-      {/* Trigger Button */}
-      <button
-        id={id}
-        type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
-        style={{
-          background: isOpen ? tk.fieldFocus : tk.fieldBg,
-          border: `1px solid ${isOpen ? "hsl(187,92%,46%)" : tk.fieldBorder}`,
-          color: tk.text,
-          boxShadow: isOpen ? tk.fieldGlow : "inset 0 1px 0 rgba(255,255,255,0.03)",
-        }}
-        className="w-full h-11 px-3.5 rounded-xl text-sm font-semibold flex items-center justify-between transition-all duration-200 cursor-pointer select-none group"
-      >
-        <div className="flex items-center gap-2.5">
-          <span
-            className="transition-colors duration-200"
-            style={{ color: isOpen ? "hsl(187,92%,46%)" : tk.textFaint }}
-          >
-            {icon || <Ic.Tag />}
-          </span>
-          <div className="flex items-center gap-2">
-            {selected?.icon && <span className="text-sm">{selected.icon}</span>}
-            <span className="font-bold text-slate-100">{selected?.label}</span>
-          </div>
-        </div>
-
-        <span
-          className={`transition-transform duration-200 ${isOpen ? "rotate-180 text-primary" : ""}`}
-          style={{ color: isOpen ? "hsl(187,92%,46%)" : tk.textFaint }}
-        >
-          <Ic.Chevron />
-        </span>
-      </button>
-
-      {/* Floating Cyber Glass Dropdown Menu */}
-      {isOpen && (
-        <div
-          className="absolute z-50 start-0 end-0 mt-2 p-1.5 rounded-2xl backdrop-blur-2xl border shadow-2xl animate-fade-up overflow-hidden"
-          style={{
-            background: "rgba(11, 19, 38, 0.98)",
-            borderColor: "rgba(6, 182, 212, 0.35)",
-            boxShadow: "0 24px 60px rgba(0,0,0,0.95), 0 0 25px rgba(6,182,212,0.18)",
-          }}
-          dir={isRTL ? "rtl" : "ltr"}
-        >
-          <div className="space-y-1">
-            {options.map((opt) => {
-              const active = opt.value === value;
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => {
-                    onChange(opt.value);
-                    setIsOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer text-start ${
-                    active
-                      ? "bg-primary/20 text-primary border border-primary/40 shadow-[0_0_12px_hsl(187_92%_46%/0.25)]"
-                      : "text-slate-300 hover:text-white hover:bg-white/[0.08] border border-transparent"
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    {opt.icon && <span className="text-base">{opt.icon}</span>}
-                    <span className="text-xs font-bold">{opt.label}</span>
-                  </div>
-                  {active && (
-                    <span className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_hsl(187_92%_46%)]" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── Main Page Component ─────────────────────────────────────────────────────
 const LoginPage = () => {
   const navigate = useNavigate();
   const { user, role, loading } = useAttendanceAuth();
-  const { t, lang, setLang, isRTL } = useLang();
+  const { t, lang, setLang, isRTL, interpolate } = useLang();
 
   // Permanent Cyber Dark tokens
-  const tk = THEME.dark;
-  const isDark = true;
+  const tk = THEME;
 
   const [tab, setTab] = useState<Tab>("login");
   const [lockRemaining, setLockRemaining] = useState(getLockoutRemaining);
@@ -474,6 +217,8 @@ const LoginPage = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [showForgotModal, setShowForgotModal] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
 
@@ -492,7 +237,6 @@ const LoginPage = () => {
   const [tilt, setTilt] = useState({ rx: 0, ry: 0, gx: 50, gy: 50 });
 
   const handleCardMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Only apply tilt on desktop screens
     if (window.innerWidth < 768) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -506,9 +250,24 @@ const LoginPage = () => {
     setTilt({ rx: 0, ry: 0, gx: 50, gy: 50 });
   };
 
+  // Load remembered username on mount
+  useEffect(() => {
+    try {
+      const savedUser = localStorage.getItem(REMEMBER_KEY);
+      if (savedUser) {
+        setUsername(savedUser);
+        setRememberMe(true);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   useEffect(() => {
     if (lockRemaining <= 0) return;
-    const timer = setInterval(() => { const r = getLockoutRemaining(); setLockRemaining(r); if (!r) clearInterval(timer); }, 1000);
+    const timer = setInterval(() => {
+      const r = getLockoutRemaining();
+      setLockRemaining(r);
+      if (!r) clearInterval(timer);
+    }, 1000);
     return () => clearInterval(timer);
   }, [lockRemaining]);
 
@@ -542,10 +301,38 @@ const LoginPage = () => {
     }
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      recordAttempt(false); setLockRemaining(getLockoutRemaining());
-      setLoginError(t.auth.loginFailed); setLoginLoading(false); return;
+      recordAttempt(false);
+      setLockRemaining(getLockoutRemaining());
+      await recordAuditLog({
+        action: "login_failed",
+        identifier: username.trim(),
+      });
+      setLoginError(t.auth.loginFailed);
+      setLoginLoading(false);
+      return;
     }
-    recordAttempt(true); navigate("/attendance", { replace: true }); setLoginLoading(false);
+
+    // Handle Remember Me preference
+    try {
+      if (rememberMe) {
+        localStorage.setItem(REMEMBER_KEY, username.trim());
+      } else {
+        localStorage.removeItem(REMEMBER_KEY);
+      }
+    } catch { /* ignore */ }
+
+    // Audio chime on success
+    playCyberSuccessChime();
+
+    // Audit log
+    await recordAuditLog({
+      action: "login_success",
+      identifier: username.trim(),
+    });
+
+    recordAttempt(true);
+    navigate("/attendance", { replace: true });
+    setLoginLoading(false);
   };
 
   const handleJoin = async (e: React.FormEvent) => {
@@ -556,8 +343,21 @@ const LoginPage = () => {
       section_number: sectionNumber ? parseInt(sectionNumber) : null,
       rank_in_list: rankInList ? parseInt(rankInList) : null,
     });
-    if (error) { toast.error(lang === "ar" ? "فشل إرسال الطلب." : "Failed to submit."); setJoinLoading(false); return; }
-    setJoinSuccess(true); toast.success(t.auth.requestSent); setJoinLoading(false);
+    if (error) {
+      toast.error(lang === "ar" ? "فشل إرسال الطلب." : "Failed to submit.");
+      setJoinLoading(false);
+      return;
+    }
+
+    await recordAuditLog({
+      action: "join_request",
+      identifier: joinUsername.trim(),
+      role: joinRole,
+    });
+
+    setJoinSuccess(true);
+    toast.success(t.auth.requestSent);
+    setJoinLoading(false);
   };
 
   const lockMinutes = Math.ceil(lockRemaining / 60_000);
@@ -594,8 +394,8 @@ const LoginPage = () => {
       style={{ background: tk.bg }}
       dir={isRTL ? "rtl" : "ltr"}>
 
-      {/* Particles */}
-      <Particles tk={tk} />
+      {/* Cyber Constellation Particles Canvas */}
+      <CyberBackgroundCanvas />
 
       {/* Glow orbs */}
       <div className="fixed top-[-18%] end-[-8%] w-[580px] h-[580px] rounded-full pointer-events-none blur-[140px]"
@@ -660,9 +460,7 @@ const LoginPage = () => {
               {/* Inner glass icon */}
               <div className="absolute inset-[4px] rounded-[18px] flex items-center justify-center"
                 style={{
-                  background: isDark
-                    ? "linear-gradient(135deg, hsl(187,92%,46%,0.2), hsl(187,92%,30%,0.08))"
-                    : "linear-gradient(135deg, hsl(187,92%,43%,0.15), hsl(187,92%,60%,0.05))",
+                  background: "linear-gradient(135deg, hsl(187,92%,46%,0.2), hsl(187,92%,30%,0.08))",
                   border: "1px solid hsl(187,92%,46%,0.32)",
                   boxShadow: "0 0 28px hsl(187 92% 46% / 0.25), inset 0 1px 0 rgba(255,255,255,0.2)",
                 }}>
@@ -753,6 +551,29 @@ const LoginPage = () => {
                 {...fieldProps}
               />
 
+              {/* ── Remember Me & Forgot Password Row ── */}
+              <div className="flex items-center justify-between text-xs py-0.5 select-none">
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-700 bg-slate-900/80 text-primary accent-primary cursor-pointer focus:ring-1 focus:ring-primary/40"
+                  />
+                  <span className="text-slate-400 group-hover:text-slate-200 text-xs font-semibold transition-colors">
+                    {lang === "ar" ? "تذكرني على هذا الجهاز" : "Remember me"}
+                  </span>
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => setShowForgotModal(true)}
+                  className="text-xs font-bold text-primary/80 hover:text-primary transition-colors cursor-pointer hover:underline"
+                >
+                  {lang === "ar" ? "نسيت كلمة المرور؟" : "Forgot Password?"}
+                </button>
+              </div>
+
               {loginError && (
                 <div role="alert" className="flex items-center gap-2.5 p-3 rounded-2xl text-xs font-semibold"
                   style={{ background: "hsl(0,72%,50%,0.1)", border: "1px solid hsl(0,72%,50%,0.25)", color: "hsl(0,72%,65%)" }}>
@@ -823,7 +644,7 @@ const LoginPage = () => {
                     }
                     {...fieldProps} />
                   {/* Live Password Strength Meter */}
-                  <PasswordStrengthBar password={joinPassword} lang={lang} />
+                  <PasswordStrengthMeter password={joinPassword} lang={lang} />
                 </div>
 
                 <CustomRoleSelect
@@ -837,7 +658,13 @@ const LoginPage = () => {
                     { value: "doctor", label: t.auth.doctor, icon: "🩺" },
                     { value: "ta", label: t.auth.ta, icon: "💼" },
                   ]}
-                  tk={tk}
+                  labelColor={tk.label}
+                  fieldBg={tk.fieldBg}
+                  fieldBorder={tk.fieldBorder}
+                  fieldFocus={tk.fieldFocus}
+                  fieldGlow={tk.fieldGlow}
+                  textColor={tk.text}
+                  faintColor={tk.textFaint}
                   isRTL={isRTL}
                 />
 
@@ -900,6 +727,14 @@ const LoginPage = () => {
         </p>
       </div>
 
+      {/* Forgot Password Modal */}
+      <ForgotPasswordModal
+        isOpen={showForgotModal}
+        onClose={() => setShowForgotModal(false)}
+        lang={lang}
+        isRTL={isRTL}
+      />
+
       {/* Keyframes */}
       <style>{`
         @keyframes fadeUp {
@@ -907,7 +742,6 @@ const LoginPage = () => {
           to   { opacity: 1; transform: translateY(0)    scale(1);    }
         }
         input::placeholder { opacity: 0.45; }
-        select option { background: var(--card, #ffffff); color: var(--foreground, #0f172a); }
       `}</style>
     </div>
   );
