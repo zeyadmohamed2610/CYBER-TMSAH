@@ -1,32 +1,35 @@
 import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2, ShieldCheck, Lock, User, Eye, EyeOff, Hash, Tag, Globe, Sun, Moon, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabaseClient";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 import { getAttendanceDashboardRoute } from "../utils/dashboardRoutes";
-import { useLang, interpolate } from "@/i18n";
 import { useTheme } from "@/context/ThemeContext";
+import { useLang } from "@/i18n";
+import type { AttendanceRole } from "../types";
 
 type Tab = "login" | "join";
 type JoinRole = "student" | "doctor" | "ta";
 
+const STORAGE_KEY = "attendance_login_attempts";
 const MAX_ATTEMPTS = 5;
-const LOCKOUT_MS = 3 * 60 * 1000;
-const STORAGE_KEY = "cyber_login_attempts";
+const LOCKOUT_MS = 15 * 60 * 1000;
 
 function getLockoutRemaining(): number {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return 0;
     const { count, firstAttempt } = JSON.parse(raw) as { count: number; firstAttempt: number };
-    if (count < MAX_ATTEMPTS) return 0;
-    const rem = LOCKOUT_MS - (Date.now() - firstAttempt);
-    return rem > 0 ? rem : 0;
-  } catch { return 0; }
+    if (count >= MAX_ATTEMPTS) {
+      const remaining = LOCKOUT_MS - (Date.now() - firstAttempt);
+      return remaining > 0 ? remaining : 0;
+    }
+  } catch { /**/ }
+  return 0;
 }
 
-function recordAttempt(success: boolean) {
+function recordAttempt(success: boolean): void {
   if (success) { localStorage.removeItem(STORAGE_KEY); return; }
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -40,50 +43,52 @@ function recordAttempt(success: boolean) {
   } catch { /**/ }
 }
 
-// ── Theme tokens (dark & calm non-glaring light mode) ─────────────────────────
+// ── Theme tokens (Refined Cyber Dark & Porcelain Soft Light) ────────────────
 const THEME = {
   dark: {
-    bg:          "hsl(222, 32%, 6%)",
-    card:        "rgba(15, 23, 42, 0.75)",
-    cardBorder:  "rgba(255, 255, 255, 0.08)",
-    cardShadow:  "0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.05)",
+    bg:          "hsl(222, 34%, 5%)",
+    card:        "rgba(15, 23, 42, 0.78)",
+    cardBorder:  "rgba(6, 182, 212, 0.22)", // Cyber neon rim
+    cardShadow:  "0 32px 80px rgba(0,0,0,0.8), 0 0 35px rgba(6, 182, 212, 0.12)",
     fieldBg:     "rgba(255, 255, 255, 0.04)",
-    fieldBorder: "rgba(255, 255, 255, 0.08)",
+    fieldBorder: "rgba(255, 255, 255, 0.09)",
     fieldFocus:  "rgba(255, 255, 255, 0.08)",
+    fieldGlow:   "0 0 20px hsl(187 92% 50% / 0.22), 0 0 0 1.5px hsl(187 92% 50% / 0.45)",
     tabBg:       "rgba(255, 255, 255, 0.05)",
     tabBorder:   "rgba(255, 255, 255, 0.08)",
     text:        "#f8fafc",
     textMuted:   "rgba(148, 163, 184, 0.85)",
     textFaint:   "rgba(148, 163, 184, 0.55)",
     label:       "rgba(148, 163, 184, 0.8)",
-    btnBg:       "hsl(187, 92%, 46%)",
+    btnBg:       "linear-gradient(135deg, hsl(187, 92%, 46%), hsl(199, 90%, 48%))",
     btnText:     "hsl(222, 35%, 6%)",
-    btnShadow:   "0 4px 24px hsl(187 92% 46% / 0.35)",
-    orb1:        "hsl(187, 92%, 46%, 0.09)",
-    orb2:        "hsl(210, 80%, 60%, 0.06)",
-    orb3:        "hsl(280, 60%, 60%, 0.04)",
+    btnShadow:   "0 4px 24px hsl(187 92% 46% / 0.4), 0 0 30px hsl(187 92% 46% / 0.2)",
+    orb1:        "hsl(187, 92%, 46%, 0.11)",
+    orb2:        "hsl(210, 80%, 60%, 0.07)",
+    orb3:        "hsl(280, 60%, 60%, 0.05)",
     particleL:   58,
     particleA:   0.45,
     dotA:        0.12,
   },
   light: {
-    // Soft, eye-friendly off-white / light slate (NOT blinding #fff, matching reference)
+    // Soft, eye-friendly porcelain off-white with radiant dual shadows
     bg:          "hsl(215, 28%, 95%)",
-    card:        "rgba(255, 255, 255, 0.98)",
+    card:        "#ffffff",
     cardBorder:  "rgba(226, 232, 240, 0.95)",
-    cardShadow:  "0 24px 60px -12px rgba(15, 23, 42, 0.09), 0 0 0 1px rgba(0, 0, 0, 0.04)",
+    cardShadow:  "0 10px 30px -5px rgba(15, 23, 42, 0.05), 0 20px 45px -12px rgba(6, 182, 212, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04)",
     fieldBg:     "#f8fafc",
-    fieldBorder: "#cbd5e1",
+    fieldBorder: "rgba(203, 213, 225, 0.9)",
     fieldFocus:  "#ffffff",
+    fieldGlow:   "0 0 20px hsl(187 92% 43% / 0.2), 0 0 0 1.5px hsl(187 92% 43% / 0.4)",
     tabBg:       "#f1f5f9",
     tabBorder:   "#e2e8f0",
     text:        "#0f172a",
     textMuted:   "#475569",
     textFaint:   "#94a3b8",
     label:       "#334155",
-    btnBg:       "hsl(187, 92%, 43%)",
+    btnBg:       "linear-gradient(135deg, hsl(187, 92%, 43%), hsl(199, 89%, 46%))",
     btnText:     "#ffffff",
-    btnShadow:   "0 4px 20px hsl(187 92% 43% / 0.35)",
+    btnShadow:   "0 4px 20px hsl(187 92% 43% / 0.38)",
     orb1:        "hsl(187, 85%, 60%, 0.12)",
     orb2:        "hsl(210, 85%, 65%, 0.09)",
     orb3:        "hsl(280, 70%, 70%, 0.05)",
@@ -95,7 +100,7 @@ const THEME = {
 
 type ThemeKey = "dark" | "light";
 
-// ── Icons ─────────────────────────────────────────────────────────────────────
+// ── Icons ───────────────────────────────────────────────────────────────────
 const Ic = {
   Shield: ({ s }: { s?: number }) => (
     <svg width={s ?? 32} height={s ?? 32} viewBox="0 0 48 48" fill="none">
@@ -186,7 +191,7 @@ const Ic = {
   ),
 };
 
-// ── Particles ─────────────────────────────────────────────────────────────────
+// ── Particles Canvas ────────────────────────────────────────────────────────
 function Particles({ tk }: { tk: typeof THEME[ThemeKey] }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const tkRef = useRef(tk);
@@ -214,7 +219,7 @@ function Particles({ tk }: { tk: typeof THEME[ThemeKey] }) {
         p.x = (p.x + p.vx + c.width) % c.width;
         p.y = (p.y + p.vy + c.height) % c.height;
         ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(174,72%,${particleL}%,${p.a * (particleA / 0.45)})`;
+        ctx.fillStyle = `hsla(187,92%,${particleL}%,${p.a * (particleA / 0.45)})`;
         ctx.fill();
       }
       for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
@@ -222,7 +227,7 @@ function Particles({ tk }: { tk: typeof THEME[ThemeKey] }) {
         const d = Math.sqrt(dx * dx + dy * dy);
         if (d < 120) {
           ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y);
-          ctx.strokeStyle = `hsla(174,72%,${particleL - 8}%,${0.12 * (particleA / 0.45) * (1 - d / 120)})`;
+          ctx.strokeStyle = `hsla(187,92%,${particleL - 8}%,${0.12 * (particleA / 0.45) * (1 - d / 120)})`;
           ctx.lineWidth = .5; ctx.stroke();
         }
       }
@@ -235,28 +240,75 @@ function Particles({ tk }: { tk: typeof THEME[ThemeKey] }) {
   return <canvas ref={ref} className="fixed inset-0 w-full h-full pointer-events-none z-0" aria-hidden />;
 }
 
-// ── Input Field ───────────────────────────────────────────────────────────────
+// ── Password Strength Bar Component ─────────────────────────────────────────
+function PasswordStrengthBar({ password, lang }: { password: string; lang: string }) {
+  if (!password) return null;
+
+  let score = 0;
+  if (password.length >= 6) score++;
+  if (password.length >= 8) score++;
+  if (/[0-9]/.test(password) && /[a-zA-Z]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password) || (/[A-Z]/.test(password) && /[a-z]/.test(password))) score++;
+
+  const config = [
+    { label: lang === "ar" ? "ضعيفة" : "Weak", color: "bg-red-500", glow: "shadow-[0_0_8px_rgba(239,68,68,0.5)]" },
+    { label: lang === "ar" ? "مقبولة" : "Fair", color: "bg-amber-500", glow: "shadow-[0_0_8px_rgba(245,158,11,0.5)]" },
+    { label: lang === "ar" ? "جيدة" : "Good", color: "bg-cyan-500", glow: "shadow-[0_0_8px_rgba(6,182,212,0.5)]" },
+    { label: lang === "ar" ? "قوية جداً 🛡️" : "Very Strong 🛡️", color: "bg-emerald-500", glow: "shadow-[0_0_8px_rgba(16,185,129,0.5)]" },
+  ];
+
+  const current = config[Math.max(0, score - 1)];
+
+  return (
+    <div className="space-y-1.5 pt-1 animate-fade-up">
+      <div className="flex items-center justify-between text-[10px] font-bold">
+        <span className="text-muted-foreground">{lang === "ar" ? "قوة كلمة المرور:" : "Password Strength:"}</span>
+        <span className={score >= 3 ? "text-primary" : score === 2 ? "text-amber-500" : "text-red-500"}>
+          {current.label}
+        </span>
+      </div>
+      <div className="grid grid-cols-4 gap-1.5 h-1.5">
+        {[1, 2, 3, 4].map((step) => {
+          const active = score >= step;
+          return (
+            <div
+              key={step}
+              className={`h-full rounded-full transition-all duration-300 ${
+                active ? `${current.color} ${current.glow}` : "bg-muted/40"
+              }`}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Input Field Component with Ambient Glow ────────────────────────────────
 function Field({
   id, label, type = "text", value, onChange, placeholder,
-  required, autoComplete, dir = "ltr", icon, suffix, tk,
+  required, autoComplete, dir = "ltr", icon, suffix, badge, tk,
 }: {
   id: string; label: string; type?: string; value: string;
   onChange: (v: string) => void; placeholder?: string; required?: boolean;
   autoComplete?: string; dir?: "ltr" | "rtl";
-  icon?: React.ReactNode; suffix?: React.ReactNode;
+  icon?: React.ReactNode; suffix?: React.ReactNode; badge?: React.ReactNode;
   tk: typeof THEME[ThemeKey];
 }) {
   const [focused, setFocused] = useState(false);
   return (
     <div>
-      <label htmlFor={id} style={{ color: tk.label }}
-        className="block text-[10.5px] font-bold tracking-[0.12em] uppercase mb-1.5 select-none transition-colors">
-        {label}
-      </label>
+      <div className="flex items-center justify-between mb-1.5">
+        <label htmlFor={id} style={{ color: tk.label }}
+          className="block text-[10.5px] font-bold tracking-[0.12em] uppercase select-none transition-colors">
+          {label}
+        </label>
+        {badge}
+      </div>
       <div className="relative">
         {icon && (
           <span className="absolute start-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10 transition-colors duration-200"
-            style={{ color: focused ? "hsl(174,72%,50%)" : tk.textFaint }}>
+            style={{ color: focused ? "hsl(187,92%,46%)" : tk.textFaint }}>
             {icon}
           </span>
         )}
@@ -268,15 +320,15 @@ function Field({
             paddingInlineStart: icon ? "2.75rem" : "1rem",
             paddingInlineEnd: suffix ? "3rem" : "1rem",
             background: focused ? tk.fieldFocus : tk.fieldBg,
-            border: `1px solid ${focused ? "hsl(174,72%,50%,0.5)" : tk.fieldBorder}`,
+            border: `1px solid ${focused ? "hsl(187,92%,46%)" : tk.fieldBorder}`,
             color: tk.text,
-            boxShadow: focused ? "0 0 0 3px hsl(174 72% 50% / 0.12), inset 0 1px 0 rgba(255,255,255,0.05)" : "inset 0 1px 0 rgba(255,255,255,0.03)",
+            boxShadow: focused ? tk.fieldGlow : "inset 0 1px 0 rgba(255,255,255,0.03)",
             outline: "none",
           }}
-          className="w-full h-11 rounded-xl text-sm font-medium transition-all duration-200 placeholder:opacity-30"
+          className="w-full h-11 rounded-xl text-sm font-medium transition-all duration-200 placeholder:opacity-35"
         />
-        {/* Cyan underline on focus */}
-        <span className="absolute bottom-0 start-5 end-5 h-px rounded-full bg-primary transition-all duration-300"
+        {/* Animated cyan bottom highlight on focus */}
+        <span className="absolute bottom-0 start-4 end-4 h-[1.5px] rounded-full bg-primary transition-all duration-300"
           style={{ opacity: focused ? 1 : 0, transform: focused ? "scaleX(1)" : "scaleX(0)" }} />
         {suffix && <span className="absolute end-3 top-1/2 -translate-y-1/2 z-10">{suffix}</span>}
       </div>
@@ -307,9 +359,9 @@ function SelectField({ id, label, value, onChange, options, icon, tk }: {
             color: tk.text, outline: "none",
           }}
           className="w-full h-11 rounded-xl text-sm font-medium appearance-none cursor-pointer transition-all duration-200
-            focus:ring-2 focus:ring-primary/20 focus:border-primary/50">
+            focus:ring-2 focus:ring-primary/25 focus:border-primary/60">
           {options.map(o => (
-            <option key={o.value} value={o.value} style={{ background: "hsl(222,28%,8%)" }}>{o.label}</option>
+            <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
         <span className="absolute end-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: tk.textFaint }}>
@@ -320,14 +372,14 @@ function SelectField({ id, label, value, onChange, options, icon, tk }: {
   );
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+// ── Main Page Component ─────────────────────────────────────────────────────
 const LoginPage = () => {
   const navigate = useNavigate();
   const { user, role, loading } = useAttendanceAuth();
   const { t, lang, setLang, isRTL } = useLang();
   const { toggleTheme, isDark } = useTheme();
 
-  // Theme tokens: Dark mode and calm non-glaring light mode
+  // Theme tokens
   const tk: typeof THEME[ThemeKey] = isDark ? THEME.dark : THEME.light;
 
   const [tab, setTab] = useState<Tab>("login");
@@ -350,6 +402,24 @@ const LoginPage = () => {
   const [joinLoading, setJoinLoading] = useState(false);
   const [joinSuccess, setJoinSuccess] = useState(false);
 
+  // 3D Magnetic Card Tilt State
+  const [tilt, setTilt] = useState({ rx: 0, ry: 0, gx: 50, gy: 50 });
+
+  const handleCardMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Only apply tilt on desktop screens
+    if (window.innerWidth < 768) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const rx = ((y - rect.height / 2) / (rect.height / 2)) * -3.5;
+    const ry = ((x - rect.width / 2) / (rect.width / 2)) * 3.5;
+    setTilt({ rx, ry, gx: (x / rect.width) * 100, gy: (y / rect.height) * 100 });
+  };
+
+  const handleCardMouseLeave = () => {
+    setTilt({ rx: 0, ry: 0, gx: 50, gy: 50 });
+  };
+
   useEffect(() => {
     if (lockRemaining <= 0) return;
     const timer = setInterval(() => { const r = getLockoutRemaining(); setLockRemaining(r); if (!r) clearInterval(timer); }, 1000);
@@ -365,7 +435,7 @@ const LoginPage = () => {
       <div className="flex flex-col items-center gap-4">
         <div className="relative w-14 h-14">
           <div className="absolute inset-0 rounded-full border-4 animate-spin"
-            style={{ borderColor: "rgba(255,255,255,0.08)", borderTopColor: "hsl(174,72%,50%)" }} />
+            style={{ borderColor: "rgba(255,255,255,0.08)", borderTopColor: "hsl(187,92%,46%)" }} />
           <span className="absolute inset-2 text-primary flex items-center justify-center">
             <Ic.Shield s={28} />
           </span>
@@ -375,12 +445,10 @@ const LoginPage = () => {
     </div>
   );
 
-  if (!loading && user && role) return <Navigate to={getAttendanceDashboardRoute(role)} replace />;
-
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault(); setLoginError(null);
-    const ms = getLockoutRemaining(); if (ms > 0) { setLockRemaining(ms); return; }
-    setLoginLoading(true);
+    e.preventDefault();
+    if (lockRemaining > 0) return;
+    setLoginLoading(true); setLoginError(null);
     let email = username.trim();
     if (!email.includes("@")) {
       const { data } = await supabase.rpc("resolve_login_identifier", { p_identifier: email });
@@ -410,6 +478,31 @@ const LoginPage = () => {
   const isStudent = joinRole === "student";
   const fieldProps = { tk };
 
+  // Smart Input Detection badge for Username
+  const getUsernameBadge = () => {
+    const trimmed = username.trim();
+    if (!trimmed) return null;
+    if (/^[0-9]+$/.test(trimmed)) {
+      return (
+        <span className="text-[10px] font-bold text-primary bg-primary/10 border border-primary/30 px-2 py-0.5 rounded-md animate-fade-up">
+          {lang === "ar" ? "🔢 رقم جلوس / قيد" : "🔢 ID / Seat No."}
+        </span>
+      );
+    }
+    if (trimmed.includes("@")) {
+      return (
+        <span className="text-[10px] font-bold text-cyan-500 bg-cyan-500/10 border border-cyan-500/30 px-2 py-0.5 rounded-md animate-fade-up">
+          {lang === "ar" ? "📧 بريد إلكتروني" : "📧 Email"}
+        </span>
+      );
+    }
+    return (
+      <span className="text-[10px] font-bold text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-md animate-fade-up">
+        {lang === "ar" ? "👤 اسم مستخدم" : "👤 Username"}
+      </span>
+    );
+  };
+
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden py-8 px-4"
       style={{ background: tk.bg }}
@@ -428,61 +521,69 @@ const LoginPage = () => {
 
       {/* Dot grid */}
       <div className="fixed inset-0 pointer-events-none" style={{
-        backgroundImage: `radial-gradient(circle, hsl(174 72% 50% / ${tk.dotA}) 1px, transparent 1px)`,
+        backgroundImage: `radial-gradient(circle, hsl(187 92% 46% / ${tk.dotA}) 1px, transparent 1px)`,
         backgroundSize: "32px 32px",
       }} />
 
-      {/* ── Top bar ── */}
+      {/* ── Top bar: Lang & Theme Toggles ── */}
       <div className="fixed top-4 end-4 flex items-center gap-2 z-50">
         <button onClick={() => setLang(lang === "en" ? "ar" : "en")}
           style={{ background: tk.tabBg, border: `1px solid ${tk.tabBorder}`, color: tk.textMuted }}
-          className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-bold backdrop-blur-xl transition-all hover:text-white">
+          className="flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-bold backdrop-blur-xl transition-all hover:text-foreground hover:border-primary/40 shadow-sm">
           <Ic.Globe /> <span>{lang === "en" ? "عربي" : "EN"}</span>
         </button>
         <button onClick={toggleTheme}
           style={{ background: tk.tabBg, border: `1px solid ${tk.tabBorder}`, color: tk.textMuted }}
-          className="w-8 h-8 flex items-center justify-center rounded-lg backdrop-blur-xl transition-all hover:text-white"
-          title={isDark ? "Dim mode" : "Deep dark"}>
+          className="w-8 h-8 flex items-center justify-center rounded-xl backdrop-blur-xl transition-all hover:text-foreground hover:border-primary/40 shadow-sm"
+          title={isDark ? "الوضع الفاتح الهادئ" : "الوضع الداكن"}>
           {isDark ? <Ic.Sun /> : <Ic.Moon />}
         </button>
       </div>
 
-      {/* ── Card ── */}
-      <div className="relative z-10 w-full max-w-[400px] rounded-2xl overflow-hidden"
+      {/* ── Interactive 3D Card ── */}
+      <div
+        onMouseMove={handleCardMouseMove}
+        onMouseLeave={handleCardMouseLeave}
+        className="relative z-10 w-full max-w-[410px] rounded-3xl overflow-hidden transition-transform duration-200 ease-out"
         style={{
           background: tk.card,
           border: `1px solid ${tk.cardBorder}`,
           boxShadow: tk.cardShadow,
           backdropFilter: "blur(24px) saturate(160%)",
-          WebkitBackdropFilter: "blur(24px) saturate(160%)",
-          animation: "fadeUp .4s cubic-bezier(.16,1,.3,1) both",
+          transform: `perspective(1000px) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`,
+          animation: "fadeUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards",
         }}>
 
-        {/* Top gradient accent */}
-        <div className="h-px w-full" style={{
-          background: "linear-gradient(90deg, transparent, hsl(174,72%,50%,0.7) 40%, hsl(210,80%,70%,0.5) 70%, transparent)"
+        {/* Top cyan gradient accent bar */}
+        <div className="h-[3px] w-full" style={{
+          background: "linear-gradient(90deg, transparent, hsl(187,92%,46%), transparent)",
         }} />
 
-        {/* Shimmer overlay (top-left corner glow) */}
-        <div className="absolute inset-0 pointer-events-none rounded-2xl" style={{
-          background: "linear-gradient(135deg, hsl(174 72% 50%/0.07) 0%, transparent 45%)",
-        }} />
+        {/* Specular glare overlay that follows mouse */}
+        <div
+          className="absolute inset-0 pointer-events-none rounded-3xl transition-opacity duration-300"
+          style={{
+            background: `radial-gradient(circle at ${tilt.gx}% ${tilt.gy}%, rgba(6,182,212,0.12) 0%, transparent 60%)`,
+          }}
+        />
 
-        <div className="relative px-7 pt-8 pb-7 space-y-6">
+        <div className="relative px-7 pt-7 pb-6 space-y-5">
 
           {/* ── Logo ── */}
-          <div className="flex flex-col items-center gap-3">
-            {/* Shield icon with rings */}
-            <div className="relative flex items-center justify-center" style={{ width: 72, height: 72 }}>
-              {/* outer ring */}
-              <div className="absolute inset-0 rounded-[20px] animate-pulse"
-                style={{ border: "1px solid hsl(174,72%,50%,0.18)" }} />
-              {/* inner card */}
-              <div className="absolute inset-[4px] rounded-[16px] flex items-center justify-center"
+          <div className="flex flex-col items-center gap-2.5">
+            {/* Shield icon with cyber pulse */}
+            <div className="relative flex items-center justify-center" style={{ width: 68, height: 68 }}>
+              {/* Outer neon ring */}
+              <div className="absolute inset-0 rounded-[22px] animate-pulse"
+                style={{ border: "1px solid hsl(187,92%,46%,0.28)" }} />
+              {/* Inner glass icon */}
+              <div className="absolute inset-[4px] rounded-[18px] flex items-center justify-center"
                 style={{
-                  background: "linear-gradient(135deg, hsl(174,72%,50%,0.18), hsl(174,72%,30%,0.08))",
-                  border: "1px solid hsl(174,72%,50%,0.28)",
-                  boxShadow: "0 0 32px hsl(174 72% 50% / 0.2), inset 0 1px 0 rgba(255,255,255,0.1)",
+                  background: isDark
+                    ? "linear-gradient(135deg, hsl(187,92%,46%,0.2), hsl(187,92%,30%,0.08))"
+                    : "linear-gradient(135deg, hsl(187,92%,43%,0.15), hsl(187,92%,60%,0.05))",
+                  border: "1px solid hsl(187,92%,46%,0.32)",
+                  boxShadow: "0 0 28px hsl(187 92% 46% / 0.25), inset 0 1px 0 rgba(255,255,255,0.2)",
                 }}>
                 <span className="text-primary"><Ic.Shield s={30} /></span>
               </div>
@@ -493,9 +594,9 @@ const LoginPage = () => {
                 style={{ color: tk.text }}>
                 CYBER{" "}
                 <span style={{
-                  background: "linear-gradient(90deg, hsl(174,72%,55%), hsl(174,85%,70%), hsl(174,72%,55%))",
+                  background: "linear-gradient(90deg, hsl(187,92%,48%), hsl(187,95%,65%), hsl(187,92%,48%))",
                   WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
-                  filter: "drop-shadow(0 0 12px hsl(174 72% 50% / 0.4))",
+                  filter: "drop-shadow(0 0 14px hsl(187 92% 46% / 0.4))",
                 }}>TMSAH</span>
               </h1>
               <p className="text-[11px] mt-1 font-medium tracking-wide" style={{ color: tk.textFaint }}>
@@ -505,9 +606,9 @@ const LoginPage = () => {
           </div>
 
           {/* ── Tab switcher ── */}
-          <div className="relative flex p-1 rounded-xl" style={{ background: tk.tabBg, border: `1px solid ${tk.tabBorder}` }}>
-            {/* sliding indicator */}
-            <div className="absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg transition-all duration-300 ease-out"
+          <div className="relative flex p-1 rounded-2xl" style={{ background: tk.tabBg, border: `1px solid ${tk.tabBorder}` }}>
+            {/* Sliding indicator */}
+            <div className="absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-xl transition-all duration-300 ease-out"
               style={{
                 [isRTL ? "right" : "left"]: tab === "login" ? "4px" : "calc(50%)",
                 background: tk.btnBg,
@@ -515,7 +616,7 @@ const LoginPage = () => {
               }} />
             {(["login", "join"] as Tab[]).map(tb => (
               <button key={tb} onClick={() => setTab(tb)}
-                className="relative flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold z-10 transition-colors duration-300 select-none"
+                className="relative flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold z-10 transition-colors duration-300 select-none"
                 style={{ color: tab === tb ? tk.btnText : tk.textMuted }}>
                 {tb === "login"
                   ? <><Ic.Login />{t.auth.signIn}</>
@@ -524,11 +625,11 @@ const LoginPage = () => {
             ))}
           </div>
 
-          {/* ══ LOGIN ══ */}
+          {/* ══ LOGIN TAB ══ */}
           {tab === "login" && (
             <form onSubmit={handleLogin} className="space-y-4">
               {lockRemaining > 0 && (
-                <div className="flex gap-3 p-3.5 rounded-xl"
+                <div className="flex gap-3 p-3.5 rounded-2xl"
                   style={{ background: "hsl(38,95%,55%,0.1)", border: "1px solid hsl(38,95%,55%,0.25)" }}>
                   <span style={{ color: "hsl(38,95%,55%)" }} className="shrink-0 mt-0.5"><Ic.Warn /></span>
                   <div>
@@ -538,30 +639,48 @@ const LoginPage = () => {
                 </div>
               )}
 
-              <Field id="l-user" label={t.auth.username} value={username} onChange={setUsername}
-                placeholder={t.auth.usernamePlaceholder} required autoComplete="username"
-                icon={<Ic.User />} {...fieldProps} />
-              <Field id="l-pass" label={t.auth.password} type={showPass ? "text" : "password"}
-                value={password} onChange={setPassword}
-                placeholder={t.auth.passwordPlaceholder} required autoComplete="current-password"
+              <Field
+                id="l-user"
+                label={t.auth.username}
+                value={username}
+                onChange={setUsername}
+                placeholder={t.auth.usernamePlaceholder}
+                required
+                autoComplete="username"
+                badge={getUsernameBadge()}
+                icon={<Ic.User />}
+                {...fieldProps}
+              />
+
+              <Field
+                id="l-pass"
+                label={t.auth.password}
+                type={showPass ? "text" : "password"}
+                value={password}
+                onChange={setPassword}
+                placeholder={t.auth.passwordPlaceholder}
+                required
+                autoComplete="current-password"
                 icon={<Ic.Lock />}
                 suffix={
                   <button type="button" onClick={() => setShowPass(v => !v)}
-                    style={{ color: tk.textFaint }} className="hover:text-primary transition-colors">
+                    style={{ color: tk.textFaint }} className="hover:text-primary transition-colors p-1"
+                    title={showPass ? (lang === "ar" ? "إخفاء كلمة المرور" : "Hide password") : (lang === "ar" ? "إظهار كلمة المرور" : "Show password")}>
                     <Ic.Eye off={showPass} />
                   </button>
                 }
-                {...fieldProps} />
+                {...fieldProps}
+              />
 
               {loginError && (
-                <div role="alert" className="flex items-center gap-2.5 p-3 rounded-xl text-sm font-medium"
+                <div role="alert" className="flex items-center gap-2.5 p-3 rounded-2xl text-xs font-semibold"
                   style={{ background: "hsl(0,72%,50%,0.1)", border: "1px solid hsl(0,72%,50%,0.25)", color: "hsl(0,72%,65%)" }}>
                   <Ic.Warn /> <span>{loginError}</span>
                 </div>
               )}
 
               <button type="submit" disabled={loginLoading || lockRemaining > 0}
-                className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full h-11 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 style={{
                   background: tk.btnBg,
                   color: tk.btnText,
@@ -575,19 +694,19 @@ const LoginPage = () => {
               <p className="text-center text-xs" style={{ color: tk.textFaint }}>
                 {lang === "ar" ? "ليس لديك حساب؟" : "No account?"}{" "}
                 <button type="button" onClick={() => setTab("join")}
-                  className="font-bold hover:underline" style={{ color: "hsl(174,72%,55%)" }}>
+                  className="font-bold hover:underline" style={{ color: "hsl(187,92%,45%)" }}>
                   {t.auth.joinTitle}
                 </button>
               </p>
             </form>
           )}
 
-          {/* ══ JOIN ══ */}
+          {/* ══ JOIN TAB ══ */}
           {tab === "join" && (
             joinSuccess ? (
               <div className="flex flex-col items-center gap-5 py-6 text-center">
                 <div className="flex items-center justify-center rounded-2xl"
-                  style={{ width: 72, height: 72, background: "hsl(174,72%,50%,0.12)", border: "1px solid hsl(174,72%,50%,0.28)" }}>
+                  style={{ width: 72, height: 72, background: "hsl(187,92%,46%,0.12)", border: "1px solid hsl(187,92%,46%,0.28)" }}>
                   <span className="text-primary"><Ic.Check s={36} /></span>
                 </div>
                 <div>
@@ -595,7 +714,7 @@ const LoginPage = () => {
                   <p className="text-sm mt-1" style={{ color: tk.textMuted }}>{t.auth.requestSent}</p>
                 </div>
                 <button onClick={() => { setJoinSuccess(false); setTab("login"); }}
-                  className="h-10 px-6 rounded-xl text-sm font-bold transition-all"
+                  className="h-10 px-6 rounded-2xl text-sm font-bold transition-all"
                   style={{ background: tk.btnBg, color: tk.btnText, boxShadow: tk.btnShadow }}>
                   {lang === "ar" ? "العودة لتسجيل الدخول" : "Back to Sign In"}
                 </button>
@@ -605,20 +724,27 @@ const LoginPage = () => {
                 <Field id="j-name" label={t.auth.fullName} value={fullName} onChange={setFullName}
                   placeholder={t.auth.fullNamePlaceholder} required dir={isRTL ? "rtl" : "ltr"}
                   icon={<Ic.User />} {...fieldProps} />
+
                 <Field id="j-user" label={t.auth.username} value={joinUsername} onChange={setJoinUsername}
                   placeholder={t.auth.usernamePlaceholder} required autoComplete="username"
                   icon={<Ic.User />} {...fieldProps} />
-                <Field id="j-pass" label={t.auth.password} type={showJoinPass ? "text" : "password"}
-                  value={joinPassword} onChange={setJoinPassword}
-                  placeholder={t.auth.passwordPlaceholder} required autoComplete="new-password"
-                  icon={<Ic.Lock />}
-                  suffix={
-                    <button type="button" onClick={() => setShowJoinPass(v => !v)}
-                      style={{ color: tk.textFaint }} className="hover:text-primary transition-colors">
-                      <Ic.Eye off={showJoinPass} />
-                    </button>
-                  }
-                  {...fieldProps} />
+
+                <div>
+                  <Field id="j-pass" label={t.auth.password} type={showJoinPass ? "text" : "password"}
+                    value={joinPassword} onChange={setJoinPassword}
+                    placeholder={t.auth.passwordPlaceholder} required autoComplete="new-password"
+                    icon={<Ic.Lock />}
+                    suffix={
+                      <button type="button" onClick={() => setShowJoinPass(v => !v)}
+                        style={{ color: tk.textFaint }} className="hover:text-primary transition-colors p-1">
+                        <Ic.Eye off={showJoinPass} />
+                      </button>
+                    }
+                    {...fieldProps} />
+                  {/* Live Password Strength Meter */}
+                  <PasswordStrengthBar password={joinPassword} lang={lang} />
+                </div>
+
                 <SelectField id="j-role" label={t.auth.chooseRole} value={joinRole}
                   onChange={v => setJoinRole(v as JoinRole)} icon={<Ic.Tag />}
                   options={[
@@ -627,6 +753,7 @@ const LoginPage = () => {
                     { value: "ta", label: t.auth.ta },
                   ]}
                   {...fieldProps} />
+
                 {isStudent && (
                   <div className="grid grid-cols-2 gap-3">
                     <Field id="j-seat" label={t.auth.seatNumber} value={seatNumber} onChange={setSeatNumber}
@@ -635,12 +762,14 @@ const LoginPage = () => {
                       onChange={setSectionNumber} placeholder={t.auth.sectionPlaceholder} icon={<Ic.Hash />} {...fieldProps} />
                   </div>
                 )}
+
                 {isStudent && (
                   <Field id="j-rank" label={t.auth.rankInList} type="number" value={rankInList}
                     onChange={setRankInList} placeholder={t.auth.rankPlaceholder} icon={<Ic.Hash />} {...fieldProps} />
                 )}
+
                 <button type="submit" disabled={joinLoading}
-                  className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full h-11 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   style={{
                     background: tk.btnBg,
                     color: tk.btnText,
@@ -650,6 +779,7 @@ const LoginPage = () => {
                     ? <><Loader2 className="w-4 h-4 animate-spin" /><span>{t.auth.submitting}</span></>
                     : <><Ic.UserPlus /><span>{t.auth.submitRequest}</span></>}
                 </button>
+
                 <p className="text-center text-xs" style={{ color: tk.textFaint }}>
                   {lang === "ar" ? "لديك حساب؟" : "Have an account?"}{" "}
                   <button type="button" onClick={() => setTab("login")}
@@ -660,11 +790,25 @@ const LoginPage = () => {
               </form>
             )
           )}
+
+          {/* ── Cyber Security Beacon ── */}
+          <div className="pt-1 border-t border-border/50">
+            <div className="flex items-center justify-center gap-2 py-1 select-none">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <span className="text-[10px] font-semibold tracking-wider" style={{ color: tk.textFaint }}>
+                {lang === "ar" ? "اتصال مشفر آمن · بروتوكول TLS 256-Bit" : "Secure Encrypted Connection · TLS 256-Bit"}
+              </span>
+            </div>
+          </div>
+
         </div>
 
         {/* Bottom rule + footer */}
         <div className="h-px" style={{ background: `linear-gradient(90deg, transparent, ${tk.cardBorder}, transparent)` }} />
-        <p className="text-center text-[10px] py-3 font-medium" style={{ color: tk.textFaint }}>
+        <p className="text-center text-[10px] py-2.5 font-medium" style={{ color: tk.textFaint }}>
           © 2026 CYBER TMSAH · {lang === "ar" ? "جامعة حلوان التكنولوجية الدولية" : "Helwan International Technological University"}
         </p>
       </div>
