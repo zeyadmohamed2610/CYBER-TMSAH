@@ -1,6 +1,21 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, X, LogOut, Sun, Moon, Globe, Shield, User } from "lucide-react";
+import {
+  Menu,
+  X,
+  LogOut,
+  Sun,
+  Moon,
+  Globe,
+  Shield,
+  User,
+  Settings,
+  Calendar,
+  ChevronDown,
+  Sparkles,
+  CheckCircle2,
+  Sliders,
+} from "lucide-react";
 import { useAttendanceAuth } from "@/features/attendance/context/AttendanceAuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useLang } from "@/i18n";
@@ -8,12 +23,28 @@ import { getAttendanceDashboardRoute } from "@/features/attendance/utils/dashboa
 
 export const Navbar = () => {
   const [open, setOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+
   const menuRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   const { user, role, fullName, signOut } = useAttendanceAuth();
-  const { isDark, toggleTheme } = useTheme();
-  const { lang, setLang } = useLang();
+  const { isDark, toggleTheme, setTheme } = useTheme();
+  const { lang, setLang, isRTL } = useLang();
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!userDropdownOpen) return;
+    const handle = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [userDropdownOpen]);
 
   // Close mobile drawer on outside click
   useEffect(() => {
@@ -27,15 +58,29 @@ export const Navbar = () => {
     return () => document.removeEventListener("mousedown", handle);
   }, [open]);
 
-  // Prevent scroll when mobile menu is open
+  // Prevent scroll when mobile menu or modal is open
   useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
+    document.body.style.overflow = open || profileModalOpen ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
-  }, [open]);
+  }, [open, profileModalOpen]);
+
+  // Close on Escape
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setUserDropdownOpen(false);
+        setProfileModalOpen(false);
+        setOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, []);
 
   const handleSignOut = async () => {
+    setUserDropdownOpen(false);
     await signOut();
     navigate("/", { replace: true });
     setOpen(false);
@@ -59,6 +104,8 @@ export const Navbar = () => {
 
   const roleInfo = getRoleBadge();
   const dashboardPath = role ? getAttendanceDashboardRoute(role) : "/";
+  const displayName = fullName || user?.email?.split("@")[0] || "User";
+  const userInitial = displayName.charAt(0).toUpperCase();
 
   return (
     <>
@@ -69,13 +116,16 @@ export const Navbar = () => {
         {lang === "ar" ? "تخطي إلى المحتوى" : "Skip to content"}
       </a>
 
+      {/* Top subtle cyan accent line */}
+      <div className="fixed top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-primary/60 to-transparent z-[51] pointer-events-none" />
+
       <nav
         ref={menuRef}
-        className="sticky top-0 z-50 border-b border-border/80 bg-background/85 backdrop-blur-xl transition-colors duration-200"
+        className="sticky top-0 z-50 border-b border-border/80 bg-background/85 backdrop-blur-2xl transition-colors duration-200 shadow-sm"
         role="navigation"
         aria-label="التنقل الرئيسي"
       >
-        <div className="section-container flex items-center justify-between py-3">
+        <div className="section-container flex items-center justify-between py-2.5">
           {/* Logo & Role Badge */}
           <div className="flex items-center gap-3">
             <Link
@@ -84,13 +134,14 @@ export const Navbar = () => {
               dir="ltr"
             >
               {/* Cyber Shield Icon */}
-              <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-primary/10 border border-primary/30 text-primary shadow-[0_0_15px_hsl(187_92%_45%/0.25)] transition-colors group-hover:border-primary">
+              <div className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 text-primary shadow-[0_0_20px_hsl(187_92%_45%/0.2)] transition-all duration-300 group-hover:border-primary group-hover:shadow-[0_0_28px_hsl(187_92%_45%/0.4)]">
                 <Shield className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary animate-ping" />
               </div>
 
               {/* Title */}
               <span className="font-black text-xl tracking-wider select-none">
-                <span className="bg-gradient-to-r from-cyan-400 via-primary to-cyan-300 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-cyan-400 via-primary to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_0_12px_hsl(187_92%_45%/0.3)]">
                   CYBER
                 </span>
                 <span className="text-foreground transition-colors group-hover:text-primary ml-1.5">
@@ -103,7 +154,7 @@ export const Navbar = () => {
             {roleInfo && (
               <Link
                 to={dashboardPath}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-primary/30 bg-primary/10 text-primary transition-all hover:bg-primary/15"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-primary/30 bg-primary/10 text-primary transition-all hover:bg-primary/20 hover:scale-105"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                 <span>{roleInfo.label}</span>
@@ -111,32 +162,22 @@ export const Navbar = () => {
             )}
           </div>
 
-          {/* Desktop Right Controls: Lang, Theme, User, SignOut */}
+          {/* Desktop Right Controls: Lang, Theme, User Account Popup */}
           <div className="hidden md:flex items-center gap-2.5">
-            {/* User Greeting (if logged in) */}
-            {user && (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-card/60 backdrop-blur-md text-xs font-semibold text-muted-foreground">
-                <User className="w-3.5 h-3.5 text-primary" />
-                <span className="max-w-[140px] truncate text-foreground font-bold">
-                  {fullName || user.email?.split("@")[0]}
-                </span>
-              </div>
-            )}
-
             {/* Language Switcher */}
             <button
               onClick={() => setLang(lang === "en" ? "ar" : "en")}
-              className="flex items-center gap-1.5 h-9 px-3 rounded-xl border border-border/70 bg-card/60 hover:bg-card hover:border-primary/40 text-xs font-bold transition-all text-foreground"
+              className="flex items-center gap-1.5 h-9 px-3 rounded-xl border border-border/80 bg-card/60 hover:bg-card hover:border-primary/40 text-xs font-bold transition-all text-foreground shadow-sm"
               title={lang === "en" ? "التبديل إلى العربية" : "Switch to English"}
             >
-              <Globe className="w-4 h-4 text-muted-foreground" />
+              <Globe className="w-3.5 h-3.5 text-muted-foreground" />
               <span>{lang === "en" ? "عربي" : "EN"}</span>
             </button>
 
             {/* Theme Switcher */}
             <button
               onClick={toggleTheme}
-              className="w-9 h-9 flex items-center justify-center rounded-xl border border-border/70 bg-card/60 hover:bg-card hover:border-primary/40 transition-all text-foreground"
+              className="w-9 h-9 flex items-center justify-center rounded-xl border border-border/80 bg-card/60 hover:bg-card hover:border-primary/40 transition-all text-foreground shadow-sm"
               title={isDark ? (lang === "ar" ? "الوضع الفاتح الهادئ" : "Light mode") : (lang === "ar" ? "الوضع الداكن" : "Dark mode")}
               aria-label="Toggle theme"
             >
@@ -147,20 +188,107 @@ export const Navbar = () => {
               )}
             </button>
 
-            {/* Logout / Login button */}
+            {/* User Account Button with Dropdown Popup */}
             {user ? (
-              <button
-                onClick={handleSignOut}
-                className="flex items-center gap-1.5 h-9 px-3.5 rounded-xl border border-destructive/30 bg-destructive/10 hover:bg-destructive hover:text-destructive-foreground text-destructive text-xs font-bold transition-all duration-200"
-                title={lang === "ar" ? "تسجيل الخروج" : "Sign Out"}
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>{lang === "ar" ? "خروج" : "Logout"}</span>
-              </button>
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setUserDropdownOpen((v) => !v)}
+                  className={`flex items-center gap-2.5 h-10 px-3 rounded-2xl border transition-all duration-200 select-none shadow-sm ${
+                    userDropdownOpen
+                      ? "border-primary bg-primary/10 shadow-[0_0_20px_hsl(187_92%_45%/0.2)]"
+                      : "border-border/80 bg-card/70 hover:bg-card hover:border-primary/50"
+                  }`}
+                  aria-expanded={userDropdownOpen}
+                  aria-haspopup="true"
+                >
+                  {/* Avatar Circle */}
+                  <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-primary to-cyan-400 flex items-center justify-center text-primary-foreground font-black text-xs shadow-inner">
+                    {userInitial}
+                  </div>
+
+                  {/* Name */}
+                  <span className="max-w-[130px] truncate text-xs font-bold text-foreground">
+                    {displayName}
+                  </span>
+
+                  {/* Arrow Icon */}
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 ${
+                      userDropdownOpen ? "rotate-180 text-primary" : ""
+                    }`}
+                  />
+                </button>
+
+                {/* ── Dropdown Popup Card ── */}
+                {userDropdownOpen && (
+                  <div
+                    className="absolute end-0 top-full mt-2 w-64 rounded-2xl border border-border/90 bg-card/95 backdrop-blur-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)] z-50 animate-fade-up"
+                    dir={isRTL ? "rtl" : "ltr"}
+                  >
+                    {/* User Info Header */}
+                    <div className="flex items-center gap-3 p-2 rounded-xl bg-background/60 border border-border/40">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary to-cyan-300 flex items-center justify-center text-primary-foreground font-black text-base shadow-md shrink-0">
+                        {userInitial}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-foreground truncate leading-tight">
+                          {displayName}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                          {user.email || "cyber.user"}
+                        </p>
+                        {roleInfo && (
+                          <span className="inline-block mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold border border-primary/30 bg-primary/10 text-primary">
+                            {roleInfo.label}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="my-2 h-px bg-border/60" />
+
+                    {/* Menu Actions */}
+                    <div className="space-y-1">
+                      {/* Profile & Settings Button */}
+                      <button
+                        onClick={() => {
+                          setUserDropdownOpen(false);
+                          setProfileModalOpen(true);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-foreground hover:bg-primary/10 hover:text-primary transition-all text-start"
+                      >
+                        <Settings className="w-4 h-4 text-primary" />
+                        <span>{lang === "ar" ? "الإعدادات والملف الشخصي" : "Settings & Profile"}</span>
+                      </button>
+
+                      {/* Schedule Shortcut */}
+                      <Link
+                        to="/schedule"
+                        onClick={() => setUserDropdownOpen(false)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-foreground hover:bg-primary/10 hover:text-primary transition-all text-start"
+                      >
+                        <Calendar className="w-4 h-4 text-primary" />
+                        <span>{lang === "ar" ? "الجدول الدراسي" : "Study Schedule"}</span>
+                      </Link>
+                    </div>
+
+                    <div className="my-2 h-px bg-border/60" />
+
+                    {/* Sign Out Button */}
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-destructive hover:bg-destructive/10 transition-all text-start"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>{lang === "ar" ? "تسجيل الخروج" : "Sign Out"}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <Link
                 to="/"
-                className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-primary text-primary-foreground font-bold text-xs shadow-[0_2px_12px_hsl(187_92%_45%/0.3)] hover:opacity-90 transition-all"
+                className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-primary text-primary-foreground font-bold text-xs shadow-[0_4px_16px_hsl(187_92%_45%/0.3)] hover:opacity-90 transition-all"
               >
                 <span>{lang === "ar" ? "تسجيل الدخول" : "Sign In"}</span>
               </Link>
@@ -169,10 +297,9 @@ export const Navbar = () => {
 
           {/* Mobile Menu Button */}
           <div className="flex md:hidden items-center gap-2">
-            {/* Quick theme button on mobile header */}
             <button
               onClick={toggleTheme}
-              className="w-8 h-8 flex items-center justify-center rounded-lg border border-border/70 bg-card/60 text-foreground"
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-border/80 bg-card/60 text-foreground"
               aria-label="Toggle theme"
             >
               {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-cyan-600" />}
@@ -194,11 +321,18 @@ export const Navbar = () => {
           <div className="md:hidden border-t border-border bg-background/95 backdrop-blur-xl px-4 py-4 space-y-3 animate-fade-up">
             {user && (
               <div className="flex items-center justify-between pb-3 border-b border-border/60">
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-primary" />
-                  <span className="font-bold text-sm text-foreground">
-                    {fullName || user.email?.split("@")[0]}
-                  </span>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-primary to-cyan-300 flex items-center justify-center text-primary-foreground font-bold text-xs">
+                    {userInitial}
+                  </div>
+                  <div>
+                    <span className="font-bold text-sm text-foreground block">
+                      {displayName}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {user.email || "cyber.user"}
+                    </span>
+                  </div>
                 </div>
                 {roleInfo && (
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-bold border border-primary/30 bg-primary/10 text-primary">
@@ -208,13 +342,37 @@ export const Navbar = () => {
               </div>
             )}
 
-            <div className="flex items-center justify-between pt-1">
+            <div className="space-y-1.5">
+              {user && (
+                <>
+                  <button
+                    onClick={() => {
+                      setOpen(false);
+                      setProfileModalOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border/70 bg-card/60 text-sm font-semibold text-foreground text-start"
+                  >
+                    <Settings className="w-4 h-4 text-primary" />
+                    <span>{lang === "ar" ? "الإعدادات والملف الشخصي" : "Settings & Profile"}</span>
+                  </button>
+
+                  <Link
+                    to="/schedule"
+                    onClick={() => setOpen(false)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border/70 bg-card/60 text-sm font-semibold text-foreground text-start"
+                  >
+                    <Calendar className="w-4 h-4 text-primary" />
+                    <span>{lang === "ar" ? "الجدول الدراسي" : "Study Schedule"}</span>
+                  </Link>
+                </>
+              )}
+
               <button
                 onClick={() => {
                   setLang(lang === "en" ? "ar" : "en");
                   setOpen(false);
                 }}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border bg-card/60 text-sm font-semibold text-foreground"
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border/70 bg-card/60 text-sm font-semibold text-foreground text-start"
               >
                 <Globe className="w-4 h-4 text-muted-foreground" />
                 <span>{lang === "en" ? "اللغة: العربية" : "Language: English"}</span>
@@ -223,16 +381,16 @@ export const Navbar = () => {
               {user ? (
                 <button
                   onClick={handleSignOut}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive text-sm font-bold"
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive text-sm font-bold text-start"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>{lang === "ar" ? "تسجيل الخروج" : "Logout"}</span>
+                  <span>{lang === "ar" ? "تسجيل الخروج" : "Sign Out"}</span>
                 </button>
               ) : (
                 <Link
                   to="/"
                   onClick={() => setOpen(false)}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-sm"
+                  className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground font-bold text-sm"
                 >
                   <span>{lang === "ar" ? "تسجيل الدخول" : "Sign In"}</span>
                 </Link>
@@ -241,6 +399,144 @@ export const Navbar = () => {
           </div>
         )}
       </nav>
+
+      {/* ── Settings & Profile Modal ── */}
+      {profileModalOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-up"
+          dir={isRTL ? "rtl" : "ltr"}
+        >
+          <div className="relative w-full max-w-md rounded-3xl border border-border/80 bg-card/95 backdrop-blur-2xl p-6 sm:p-7 shadow-[0_30px_70px_rgba(0,0,0,0.5)] space-y-6">
+            {/* Top Close Button */}
+            <button
+              onClick={() => setProfileModalOpen(false)}
+              className="absolute top-5 end-5 w-8 h-8 rounded-full border border-border/80 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-card transition-all"
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Header */}
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-primary to-cyan-300 flex items-center justify-center text-primary-foreground font-black text-2xl shadow-[0_0_24px_hsl(187_92%_45%/0.3)]">
+                {userInitial}
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-foreground">{displayName}</h3>
+                <p className="text-xs text-muted-foreground">{user?.email || "cyber.user"}</p>
+                {roleInfo && (
+                  <span className="inline-flex items-center gap-1.5 mt-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border border-primary/30 bg-primary/10 text-primary">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                    <span>{roleInfo.label}</span>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="h-px bg-border/60" />
+
+            {/* Account Information Card */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                {lang === "ar" ? "بيانات الحساب" : "Account Details"}
+              </h4>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="p-3 rounded-xl bg-background/60 border border-border/50">
+                  <span className="text-muted-foreground block mb-1">
+                    {lang === "ar" ? "المعرف التعريفي" : "Auth ID"}
+                  </span>
+                  <span className="font-mono font-bold text-foreground truncate block">
+                    {user?.id ? `${user.id.slice(0, 10)}…` : "—"}
+                  </span>
+                </div>
+                <div className="p-3 rounded-xl bg-background/60 border border-border/50">
+                  <span className="text-muted-foreground block mb-1">
+                    {lang === "ar" ? "حالة الأمان" : "Security"}
+                  </span>
+                  <span className="font-bold text-green-500 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>{lang === "ar" ? "مشفر ونشط" : "Encrypted"}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Preferences */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                {lang === "ar" ? "التفضيلات والمظهر" : "Appearance & Language"}
+              </h4>
+
+              {/* Theme Selector */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setTheme("dark")}
+                  className={`flex items-center justify-center gap-2 h-11 rounded-xl text-xs font-bold border transition-all ${
+                    isDark
+                      ? "border-primary bg-primary/15 text-primary shadow-[0_0_15px_hsl(187_92%_45%/0.2)]"
+                      : "border-border/70 bg-card/60 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Moon className="w-4 h-4" />
+                  <span>{lang === "ar" ? "الوضع الداكن" : "Dark"}</span>
+                </button>
+                <button
+                  onClick={() => setTheme("light")}
+                  className={`flex items-center justify-center gap-2 h-11 rounded-xl text-xs font-bold border transition-all ${
+                    !isDark
+                      ? "border-primary bg-primary/15 text-primary shadow-[0_0_15px_hsl(187_92%_45%/0.2)]"
+                      : "border-border/70 bg-card/60 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Sun className="w-4 h-4" />
+                  <span>{lang === "ar" ? "الوضع الفاتح" : "Light"}</span>
+                </button>
+              </div>
+
+              {/* Language Selector */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setLang("ar")}
+                  className={`flex items-center justify-center gap-2 h-11 rounded-xl text-xs font-bold border transition-all ${
+                    lang === "ar"
+                      ? "border-primary bg-primary/15 text-primary shadow-[0_0_15px_hsl(187_92%_45%/0.2)]"
+                      : "border-border/70 bg-card/60 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span>العربية</span>
+                </button>
+                <button
+                  onClick={() => setLang("en")}
+                  className={`flex items-center justify-center gap-2 h-11 rounded-xl text-xs font-bold border transition-all ${
+                    lang === "en"
+                      ? "border-primary bg-primary/15 text-primary shadow-[0_0_15px_hsl(187_92%_45%/0.2)]"
+                      : "border-border/70 bg-card/60 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span>English</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="pt-2 flex items-center gap-2.5">
+              <button
+                onClick={() => setProfileModalOpen(false)}
+                className="flex-1 h-11 rounded-xl bg-card border border-border/80 text-foreground text-xs font-bold hover:bg-background transition-all"
+              >
+                {lang === "ar" ? "إغلاق" : "Close"}
+              </button>
+              <button
+                onClick={handleSignOut}
+                className="h-11 px-4 rounded-xl bg-destructive/10 text-destructive border border-destructive/30 hover:bg-destructive hover:text-destructive-foreground text-xs font-bold transition-all flex items-center gap-2"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>{lang === "ar" ? "تسجيل الخروج" : "Sign Out"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
