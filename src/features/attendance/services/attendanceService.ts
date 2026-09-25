@@ -309,7 +309,7 @@ export const attendanceService = {
       if (role === "owner") {
         const [sessionsResult, studentsResult, attendanceResult] = await Promise.all([
           supabase.from("sessions").select("id, expires_at", { count: "exact" }),
-          supabase.from("users").select("id", { head: true, count: "exact" }).eq("role", "student"),
+          supabase.rpc("count_students"),
           supabase.from("attendance").select("id", { count: "exact" }),
         ]);
         if (sessionsResult.error) throw sessionsResult.error;
@@ -321,7 +321,7 @@ export const attendanceService = {
         const activeSessions = sessions.filter(
           (s) => s.expires_at && new Date(s.expires_at as string).getTime() > Date.now(),
         ).length;
-        const totalStudents = studentsResult.count ?? 0;
+        const totalStudents = Number(studentsResult.data ?? 0);
         const attendanceCount = attendanceResult.count ?? 0;
 
         // Attendance rate = actual records / possible records (1 per student per session)

@@ -68,9 +68,8 @@ export function JoinRequestsPanel() {
     try {
       // Use the server-side RPC that handles auth user creation + public.users insert
       // approve_join_request is SECURITY DEFINER so it can create auth users safely
-      const { error } = await supabase.rpc("approve_join_request", {
+      const { data, error } = await supabase.rpc("approve_join_request", {
         p_request_id: req.id,
-        p_auth_id: null, // will be created server-side
       });
 
       if (error) throw error;
