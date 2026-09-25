@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { Loader2, ShieldCheck, Lock, User, Eye, EyeOff, Hash, Tag, Globe, Sun, Moon, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Loader2, ShieldCheck, Lock, User, Eye, EyeOff, Hash, Tag, Globe, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabaseClient";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 import { getAttendanceDashboardRoute } from "../utils/dashboardRoutes";
-import { useTheme } from "@/context/ThemeContext";
 import { useLang } from "@/i18n";
 import type { AttendanceRole } from "../types";
 
@@ -336,38 +335,125 @@ function Field({
   );
 }
 
-function SelectField({ id, label, value, onChange, options, icon, tk }: {
-  id: string; label: string; value: string; onChange: (v: string) => void;
-  options: { value: string; label: string }[]; icon?: React.ReactNode;
-  tk: typeof THEME[ThemeKey];
+function CustomRoleSelect({
+  id,
+  label,
+  value,
+  onChange,
+  options,
+  icon,
+  tk,
+  isRTL,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string; icon?: string }[];
+  icon?: React.ReactNode;
+  tk: typeof THEME.dark;
+  isRTL?: boolean;
 }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [isOpen]);
+
+  const selected = options.find((o) => o.value === value) || options[0];
+
   return (
-    <div>
-      <label htmlFor={id} style={{ color: tk.label }}
-        className="block text-[10.5px] font-bold tracking-[0.12em] uppercase mb-1.5 select-none">
+    <div className="relative" ref={ref}>
+      <label
+        htmlFor={id}
+        style={{ color: tk.label }}
+        className="block text-[10.5px] font-bold tracking-[0.12em] uppercase mb-1.5 select-none"
+      >
         {label}
       </label>
-      <div className="relative">
-        {icon && (
-          <span className="absolute start-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10"
-            style={{ color: tk.textFaint }}>{icon}</span>
-        )}
-        <select id={id} value={value} onChange={e => onChange(e.target.value)}
-          style={{
-            paddingInlineStart: icon ? "2.75rem" : "1rem", paddingInlineEnd: "2.5rem",
-            background: tk.fieldBg, border: `1px solid ${tk.fieldBorder}`,
-            color: tk.text, outline: "none",
-          }}
-          className="w-full h-11 rounded-xl text-sm font-medium appearance-none cursor-pointer transition-all duration-200
-            focus:ring-2 focus:ring-primary/25 focus:border-primary/60">
-          {options.map(o => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-        <span className="absolute end-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: tk.textFaint }}>
+
+      {/* Trigger Button */}
+      <button
+        id={id}
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        style={{
+          background: isOpen ? tk.fieldFocus : tk.fieldBg,
+          border: `1px solid ${isOpen ? "hsl(187,92%,46%)" : tk.fieldBorder}`,
+          color: tk.text,
+          boxShadow: isOpen ? tk.fieldGlow : "inset 0 1px 0 rgba(255,255,255,0.03)",
+        }}
+        className="w-full h-11 px-3.5 rounded-xl text-sm font-semibold flex items-center justify-between transition-all duration-200 cursor-pointer select-none group"
+      >
+        <div className="flex items-center gap-2.5">
+          <span
+            className="transition-colors duration-200"
+            style={{ color: isOpen ? "hsl(187,92%,46%)" : tk.textFaint }}
+          >
+            {icon || <Ic.Tag />}
+          </span>
+          <div className="flex items-center gap-2">
+            {selected?.icon && <span className="text-sm">{selected.icon}</span>}
+            <span className="font-bold text-slate-100">{selected?.label}</span>
+          </div>
+        </div>
+
+        <span
+          className={`transition-transform duration-200 ${isOpen ? "rotate-180 text-primary" : ""}`}
+          style={{ color: isOpen ? "hsl(187,92%,46%)" : tk.textFaint }}
+        >
           <Ic.Chevron />
         </span>
-      </div>
+      </button>
+
+      {/* Floating Cyber Glass Dropdown Menu */}
+      {isOpen && (
+        <div
+          className="absolute z-50 start-0 end-0 mt-2 p-1.5 rounded-2xl backdrop-blur-2xl border shadow-2xl animate-fade-up overflow-hidden"
+          style={{
+            background: "rgba(11, 19, 38, 0.98)",
+            borderColor: "rgba(6, 182, 212, 0.35)",
+            boxShadow: "0 24px 60px rgba(0,0,0,0.95), 0 0 25px rgba(6,182,212,0.18)",
+          }}
+          dir={isRTL ? "rtl" : "ltr"}
+        >
+          <div className="space-y-1">
+            {options.map((opt) => {
+              const active = opt.value === value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.value);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer text-start ${
+                    active
+                      ? "bg-primary/20 text-primary border border-primary/40 shadow-[0_0_12px_hsl(187_92%_46%/0.25)]"
+                      : "text-slate-300 hover:text-white hover:bg-white/[0.08] border border-transparent"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    {opt.icon && <span className="text-base">{opt.icon}</span>}
+                    <span className="text-xs font-bold">{opt.label}</span>
+                  </div>
+                  {active && (
+                    <span className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_hsl(187_92%_46%)]" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -377,10 +463,10 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const { user, role, loading } = useAttendanceAuth();
   const { t, lang, setLang, isRTL } = useLang();
-  const { toggleTheme, isDark } = useTheme();
 
-  // Theme tokens
-  const tk: typeof THEME[ThemeKey] = isDark ? THEME.dark : THEME.light;
+  // Permanent Cyber Dark tokens
+  const tk = THEME.dark;
+  const isDark = true;
 
   const [tab, setTab] = useState<Tab>("login");
   const [lockRemaining, setLockRemaining] = useState(getLockoutRemaining);
@@ -525,18 +611,13 @@ const LoginPage = () => {
         backgroundSize: "32px 32px",
       }} />
 
-      {/* ── Top bar: Lang & Theme Toggles ── */}
+      {/* ── Top bar: Lang Toggle Only ── */}
       <div className="fixed top-4 end-4 flex items-center gap-2 z-50">
         <button onClick={() => setLang(lang === "en" ? "ar" : "en")}
           style={{ background: tk.tabBg, border: `1px solid ${tk.tabBorder}`, color: tk.textMuted }}
-          className="flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-bold backdrop-blur-xl transition-all hover:text-foreground hover:border-primary/40 shadow-sm">
+          className="flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-bold backdrop-blur-xl transition-all hover:text-foreground hover:border-primary/40 shadow-sm cursor-pointer"
+          title={lang === "en" ? "التبديل إلى العربية" : "Switch to English"}>
           <Ic.Globe /> <span>{lang === "en" ? "عربي" : "EN"}</span>
-        </button>
-        <button onClick={toggleTheme}
-          style={{ background: tk.tabBg, border: `1px solid ${tk.tabBorder}`, color: tk.textMuted }}
-          className="w-8 h-8 flex items-center justify-center rounded-xl backdrop-blur-xl transition-all hover:text-foreground hover:border-primary/40 shadow-sm"
-          title={isDark ? "الوضع الفاتح الهادئ" : "الوضع الداكن"}>
-          {isDark ? <Ic.Sun /> : <Ic.Moon />}
         </button>
       </div>
 
@@ -745,14 +826,20 @@ const LoginPage = () => {
                   <PasswordStrengthBar password={joinPassword} lang={lang} />
                 </div>
 
-                <SelectField id="j-role" label={t.auth.chooseRole} value={joinRole}
-                  onChange={v => setJoinRole(v as JoinRole)} icon={<Ic.Tag />}
+                <CustomRoleSelect
+                  id="j-role"
+                  label={t.auth.chooseRole}
+                  value={joinRole}
+                  onChange={v => setJoinRole(v as JoinRole)}
+                  icon={<Ic.Tag />}
                   options={[
-                    { value: "student", label: t.auth.student },
-                    { value: "doctor", label: t.auth.doctor },
-                    { value: "ta", label: t.auth.ta },
+                    { value: "student", label: t.auth.student, icon: "🎓" },
+                    { value: "doctor", label: t.auth.doctor, icon: "🩺" },
+                    { value: "ta", label: t.auth.ta, icon: "💼" },
                   ]}
-                  {...fieldProps} />
+                  tk={tk}
+                  isRTL={isRTL}
+                />
 
                 {isStudent && (
                   <div className="grid grid-cols-2 gap-3">

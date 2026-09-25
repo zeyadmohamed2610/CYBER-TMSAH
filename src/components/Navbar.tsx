@@ -4,8 +4,6 @@ import {
   Menu,
   X,
   LogOut,
-  Sun,
-  Moon,
   Globe,
   Shield,
   Settings,
@@ -13,7 +11,6 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useAttendanceAuth } from "@/features/attendance/context/AttendanceAuthContext";
-import { useTheme } from "@/context/ThemeContext";
 import { useLang } from "@/i18n";
 import { getAttendanceDashboardRoute } from "@/features/attendance/utils/dashboardRoutes";
 
@@ -27,7 +24,6 @@ export const Navbar = () => {
   const navigate = useNavigate();
 
   const { user, role, fullName, signOut } = useAttendanceAuth();
-  const { isDark, toggleTheme, setTheme } = useTheme();
   const { lang, setLang, isRTL } = useLang();
 
   // Close dropdown on outside click
@@ -171,19 +167,7 @@ export const Navbar = () => {
               <span>{lang === "en" ? "عربي" : "EN"}</span>
             </button>
 
-            {/* Theme Switcher */}
-            <button
-              onClick={toggleTheme}
-              className="w-9 h-9 flex items-center justify-center rounded-xl border border-border/80 bg-card/60 hover:bg-card hover:border-primary/40 transition-all text-foreground shadow-sm"
-              title={isDark ? (lang === "ar" ? "الوضع الفاتح الهادئ" : "Light mode") : (lang === "ar" ? "الوضع الداكن" : "Dark mode")}
-              aria-label="Toggle theme"
-            >
-              {isDark ? (
-                <Sun className="w-4 h-4 text-amber-400 transition-transform duration-200 hover:rotate-45" />
-              ) : (
-                <Moon className="w-4 h-4 text-cyan-600 transition-transform duration-200 hover:-rotate-12" />
-              )}
-            </button>
+
 
             {/* User Account Button with Dropdown Popup */}
             {user ? (
@@ -262,13 +246,7 @@ export const Navbar = () => {
 
           {/* Mobile Menu Button */}
           <div className="flex md:hidden items-center gap-2">
-            <button
-              onClick={toggleTheme}
-              className="w-8 h-8 flex items-center justify-center rounded-lg border border-border/80 bg-card/60 text-foreground"
-              aria-label="Toggle theme"
-            >
-              {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-cyan-600" />}
-            </button>
+
 
             <button
               className="flex items-center justify-center text-foreground p-2 rounded-xl hover:bg-primary/10 transition-colors"
