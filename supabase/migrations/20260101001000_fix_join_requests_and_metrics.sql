@@ -16,12 +16,11 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.count_students() TO authenticated, anon;
 
--- 2. Drop obsolete approve_join_request overload
+-- 2. Drop obsolete approve_join_request overloads
 DROP FUNCTION IF EXISTS public.approve_join_request(uuid, uuid);
 DROP FUNCTION IF EXISTS public.approve_join_request(uuid, text);
 
 -- 3. Robust approve_join_request that handles auth user & public.users creation
--- Accepts both p_temp_password and p_auth_id as optional to be backward compatible
 CREATE OR REPLACE FUNCTION public.approve_join_request(
   p_request_id uuid,
   p_temp_password text DEFAULT NULL::text,
@@ -30,7 +29,7 @@ CREATE OR REPLACE FUNCTION public.approve_join_request(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'public', 'private', 'auth'
+SET search_path TO 'public', 'private', 'auth', 'extensions'
 SET row_security TO 'off'
 AS $function$
 DECLARE
@@ -91,7 +90,7 @@ BEGIN
       v_auth_id,
       '00000000-0000-0000-0000-000000000000',
       v_email,
-      crypt(v_password, gen_salt('bf', 10)),
+      extensions.crypt(v_password, extensions.gen_salt('bf'::text, 10)),
       now(),
       jsonb_build_object('role', v_req.role::text, 'full_name', v_req.full_name),
       jsonb_build_object('provider', 'email', 'providers', ARRAY['email']),
