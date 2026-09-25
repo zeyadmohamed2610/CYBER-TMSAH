@@ -56,8 +56,8 @@ const App = () => (
                 syncFunction={offlineAttendanceService.syncPending}
                 getPendingCountFunction={offlineAttendanceService.getPendingCount}
               >
-                <AttendanceAuthProvider>
-                  <BrowserRouter>
+                <BrowserRouter>
+                  <AttendanceAuthProvider>
                     <Analytics />
                     <Suspense fallback={<LoadingScreen />}>
                       <PageTransition>
@@ -117,8 +117,8 @@ const App = () => (
                         </Routes>
                       </PageTransition>
                     </Suspense>
-                  </BrowserRouter>
-                </AttendanceAuthProvider>
+                  </AttendanceAuthProvider>
+                </BrowserRouter>
                 <OfflineIndicator />
               </OfflineStatusProvider>
             </TooltipProvider>
