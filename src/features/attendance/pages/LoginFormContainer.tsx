@@ -48,374 +48,239 @@ function recordAttempt(success: boolean): void {
   } catch { /**/ }
 }
 
-// ── Design Tokens ─────────────────────────────────────────────────────────────
-const C = {
-  bg:           "#050B17",
-  leftBg:       "linear-gradient(155deg,#0B1A30 0%,#070F1E 100%)",
-  rightBg:      "#08101E",
-  accent:       "#3B82F6",
-  accentHover:  "#2563EB",
-  accentMuted:  "rgba(59,130,246,0.12)",
-  accentBorder: "rgba(59,130,246,0.22)",
-  divider:      "rgba(255,255,255,0.06)",
-  fieldBg:      "rgba(255,255,255,0.04)",
-  fieldBorder:  "rgba(255,255,255,0.09)",
-  fieldFocusBg: "rgba(59,130,246,0.06)",
-  fieldFocusRing:"0 0 0 2px rgba(59,130,246,0.28)",
-  text:         "#E2E8F0",
-  muted:        "#64748B",
-  subtle:       "#94A3B8",
-  cardBg:       "rgba(255,255,255,0.03)",
-  cardBorder:   "rgba(255,255,255,0.07)",
-  error:        "rgba(239,68,68,0.12)",
-  errorBorder:  "rgba(239,68,68,0.28)",
-  errorText:    "#FCA5A5",
-  warn:         "rgba(245,158,11,0.1)",
-  warnBorder:   "rgba(245,158,11,0.25)",
-  warnText:     "#FCD34D",
-} as const;
-
-// ── Minimal Icons ─────────────────────────────────────────────────────────────
-const Ic = {
-  Logo: () => (
-    <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-      <rect x="2" y="2" width="28" height="28" rx="7" fill={C.accent} fillOpacity=".15" stroke={C.accent} strokeOpacity=".4" strokeWidth="1.5"/>
-      <path d="M16 6L7 10v8c0 6.3 4.8 12.2 9 13.8 4.2-1.6 9-7.5 9-13.8V10L16 6z"
-        fill={C.accent} fillOpacity=".2" stroke={C.accent} strokeWidth="1.4" strokeLinejoin="round"/>
-      <path d="M12 16l3 3 5-6" stroke={C.accent} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+// ────────────────────────────────────────────────────────────────────────────
+// Icons
+// ────────────────────────────────────────────────────────────────────────────
+const Icon = {
+  User: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.6"/>
+      <path d="M4 20c0-4 3.582-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
     </svg>
   ),
-  User: ({ s = 15 }: { s?: number }) => (
-    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
-      <circle cx="10" cy="7" r="3.5" stroke="currentColor" strokeWidth="1.4"/>
-      <path d="M3 17c0-3.314 2.686-6 6-6h2c3.314 0 6 2.686 6 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+  Lock: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+      <rect x="5" y="11" width="14" height="10" rx="2.5" stroke="currentColor" strokeWidth="1.6"/>
+      <path d="M8 11V7a4 4 0 018 0v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+      <circle cx="12" cy="16" r="1.5" fill="currentColor"/>
     </svg>
   ),
-  Lock: ({ s = 15 }: { s?: number }) => (
-    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
-      <rect x="4" y="9" width="12" height="9" rx="2" stroke="currentColor" strokeWidth="1.4"/>
-      <path d="M7 9V6.5a3 3 0 016 0V9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-      <circle cx="10" cy="13.5" r="1.2" fill="currentColor"/>
-    </svg>
-  ),
-  Eye: ({ off, s = 15 }: { off?: boolean; s?: number }) => off ? (
-    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
-      <path d="M3 3l14 14M8.5 8.7A3 3 0 0111.3 11.5M6.4 6.5C4.7 7.7 3.5 9 3.5 10c0 2 3 5 6.5 5 1.3 0 2.5-.4 3.5-1M10 5c3.5 0 6.5 3 6.5 5 0 .7-.3 1.5-.9 2.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+  Eye: ({ off }: { off?: boolean }) => off ? (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+      <path d="M3 3l18 18M10.5 10.7a3 3 0 004 3.8M7.4 7.6C5.3 9 4 11 4 12c0 2.5 3.6 6 8 6a9 9 0 004.6-1.4M12 6c4.4 0 8 3.5 8 6 0 .9-.4 1.9-1.1 2.8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
     </svg>
   ) : (
-    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
-      <ellipse cx="10" cy="10" rx="8.5" ry="5.5" stroke="currentColor" strokeWidth="1.4"/>
-      <circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.4"/>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+      <ellipse cx="12" cy="12" rx="10" ry="6.5" stroke="currentColor" strokeWidth="1.6"/>
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6"/>
     </svg>
   ),
-  Login: ({ s = 15 }: { s?: number }) => (
-    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
-      <path d="M13 3h4a1 1 0 011 1v12a1 1 0 01-1 1h-4M9 14l4-4-4-4M13 10H3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+  Hash: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+      <path d="M4 9h16M4 15h16M9 4l-2 16M15 4l-2 16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
     </svg>
   ),
-  UserPlus: ({ s = 15 }: { s?: number }) => (
-    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
-      <circle cx="8" cy="7" r="3" stroke="currentColor" strokeWidth="1.4"/>
-      <path d="M2 17c0-3.314 2.686-6 6-6M15 10v6M12 13h6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+  Tag: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+      <path d="M12 2H6a2 2 0 00-2 2v6l8 8 8-8-8-8z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+      <circle cx="8.5" cy="9.5" r="1.5" fill="currentColor"/>
     </svg>
   ),
-  Globe: ({ s = 14 }: { s?: number }) => (
-    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
-      <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.4"/>
-      <path d="M10 2c-2 2.5-3 5-3 8s1 5.5 3 8M10 2c2 2.5 3 5 3 8s-1 5.5-3 8M2 10h16" stroke="currentColor" strokeWidth="1.2"/>
+  LogIn: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+      <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   ),
-  Warn: ({ s = 15 }: { s?: number }) => (
-    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
-      <path d="M8.69 3.41L1.84 15.5A1.5 1.5 0 003.14 17.5h13.7a1.5 1.5 0 001.3-2.24L11.3 3.41a1.5 1.5 0 00-2.6 0z" stroke="currentColor" strokeWidth="1.4"/>
-      <path d="M10 8v4M10 14.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+  UserPlus: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+      <circle cx="9" cy="8" r="4" stroke="currentColor" strokeWidth="1.6"/>
+      <path d="M2 20c0-4 3.13-7 7-7M19 10v6M16 13h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
     </svg>
   ),
-  Check: ({ s = 32 }: { s?: number }) => (
-    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
-      <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.4"/>
-      <path d="M6.5 10l2.5 2.5 4.5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  Globe: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5"/>
+      <path d="M12 3c-2.5 3-4 6-4 9s1.5 6 4 9M12 3c2.5 3 4 6 4 9s-1.5 6-4 9M3 12h18" stroke="currentColor" strokeWidth="1.4"/>
     </svg>
   ),
-  Tag: ({ s = 15 }: { s?: number }) => (
-    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
-      <path d="M10 3H4a1 1 0 00-1 1v6l7 7 7-7-7-7z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
-      <circle cx="7" cy="8" r="1" fill="currentColor"/>
+  AlertTriangle: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+      <line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+      <circle cx="12" cy="17" r="0.8" fill="currentColor"/>
     </svg>
   ),
-  Hash: ({ s = 15 }: { s?: number }) => (
-    <svg width={s} height={s} viewBox="0 0 20 20" fill="none">
-      <path d="M4 8h12M4 12h12M8 4l-1.5 12M11.5 4L10 16" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-    </svg>
-  ),
-  ChevronRight: () => (
-    <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
-      <path d="M8 5l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  Check: () => (
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6"/>
+      <path d="M8 12l3 3 5-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   ),
 };
 
-// ── Clean Field Component ─────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────
+// Field Component — Premium
+// ────────────────────────────────────────────────────────────────────────────
 function Field({
   id, label, type = "text", value, onChange, placeholder,
-  required, autoComplete, dir = "ltr", icon, suffix, badge,
-  inputRef, autoFocus, onKeyDown,
+  required, autoComplete, dir = "ltr",
+  icon, suffix, badge, inputRef, autoFocus, onKeyDown,
 }: {
   id: string; label: string; type?: string; value: string;
   onChange: (v: string) => void; placeholder?: string; required?: boolean;
   autoComplete?: string; dir?: "ltr" | "rtl";
   icon?: React.ReactNode; suffix?: React.ReactNode; badge?: React.ReactNode;
-  inputRef?: React.Ref<HTMLInputElement>;
-  autoFocus?: boolean;
+  inputRef?: React.Ref<HTMLInputElement>; autoFocus?: boolean;
   onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
 }) {
   const [focused, setFocused] = useState(false);
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between">
+    <div>
+      <div className="flex items-center justify-between mb-[6px]">
         <label htmlFor={id}
-          className="text-[10.5px] font-semibold tracking-[0.08em] uppercase select-none transition-colors duration-150"
-          style={{ color: focused ? C.accent : C.subtle }}>
+          className="block text-[11px] font-semibold uppercase tracking-[0.07em] select-none transition-colors duration-150"
+          style={{ color: focused ? "rgba(129,140,248,1)" : "rgba(100,116,139,1)" }}>
           {label}
         </label>
         {badge}
       </div>
       <div className="relative">
         {icon && (
-          <span className="absolute start-3 top-1/2 -translate-y-1/2 pointer-events-none z-10 transition-colors duration-150"
-            style={{ color: focused ? C.accent : C.muted }}>
+          <span className="absolute start-[13px] top-1/2 -translate-y-1/2 pointer-events-none z-10 transition-colors duration-200"
+            style={{ color: focused ? "rgba(129,140,248,0.9)" : "rgba(71,85,105,1)" }}>
             {icon}
           </span>
         )}
         <input
-          ref={inputRef}
-          id={id} type={type} value={value}
+          ref={inputRef} id={id} type={type} value={value}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder} required={required}
           autoComplete={autoComplete} dir={dir}
           autoFocus={autoFocus} onKeyDown={onKeyDown}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+          className="w-full rounded-[10px] text-sm font-medium transition-all duration-200 placeholder:text-slate-600"
           style={{
-            paddingInlineStart: icon ? "2.5rem" : "0.875rem",
-            paddingInlineEnd: suffix ? "3rem" : "0.875rem",
-            background: focused ? C.fieldFocusBg : C.fieldBg,
-            border: `1px solid ${focused ? "rgba(59,130,246,0.5)" : C.fieldBorder}`,
-            color: C.text,
-            boxShadow: focused ? C.fieldFocusRing : "none",
+            height: "44px",
+            paddingInlineStart: icon ? "42px" : "14px",
+            paddingInlineEnd: suffix ? "44px" : "14px",
+            background: focused ? "rgba(79,70,229,0.06)" : "rgba(255,255,255,0.035)",
+            border: `1.5px solid ${focused ? "rgba(99,102,241,0.7)" : "rgba(255,255,255,0.08)"}`,
+            color: "#E2E8F0",
+            boxShadow: focused
+              ? "0 0 0 3px rgba(99,102,241,0.12), 0 1px 2px rgba(0,0,0,0.2)"
+              : "0 1px 2px rgba(0,0,0,0.15)",
             outline: "none",
-            transition: "all 0.15s ease",
           }}
-          className="w-full h-10 rounded-lg text-sm font-medium placeholder:text-slate-600"
         />
-        {suffix && <span className="absolute end-3 top-1/2 -translate-y-1/2 z-10">{suffix}</span>}
+        {suffix && (
+          <span className="absolute end-[10px] top-1/2 -translate-y-1/2 z-10">{suffix}</span>
+        )}
       </div>
     </div>
   );
 }
 
-// ── Left Branding Panel ───────────────────────────────────────────────────────
-function BrandPanel({ lang, isRTL }: { lang: string; isRTL: boolean }) {
-  return (
-    <div className="hidden lg:flex flex-col justify-between h-full relative overflow-hidden p-10 xl:p-14"
-      style={{ background: C.leftBg, borderInlineEnd: `1px solid ${C.divider}` }}>
-
-      {/* Architectural grid lines decoration */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">
-        <defs>
-          <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
-            <path d="M 48 0 L 0 0 0 48" fill="none" stroke="rgba(59,130,246,0.05)" strokeWidth="1"/>
-          </pattern>
-          <radialGradient id="fadeGrid" cx="50%" cy="50%" r="60%">
-            <stop offset="0%" stopColor="white" stopOpacity="1"/>
-            <stop offset="100%" stopColor="white" stopOpacity="0"/>
-          </radialGradient>
-          <mask id="gridMask">
-            <rect width="100%" height="100%" fill="url(#fadeGrid)"/>
-          </mask>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#grid)" mask="url(#gridMask)"/>
-        {/* Accent line */}
-        <line x1="0" y1="0" x2="0" y2="100%" stroke={C.accent} strokeOpacity="0.2" strokeWidth="1"/>
-      </svg>
-
-      {/* Top: Logo + wordmark */}
-      <div className="relative z-10 flex items-center gap-3">
-        <Ic.Logo />
-        <div>
-          <div className="text-[13px] font-black tracking-[0.2em] text-white" dir="ltr">
-            CYBER<span style={{ color: C.accent }}>·</span>TMSAH
-          </div>
-          <div className="text-[10px] tracking-widest font-medium mt-0.5" style={{ color: C.muted }}>
-            {lang === "ar" ? "نظام الحضور والمتابعة" : "ATTENDANCE SYSTEM"}
-          </div>
-        </div>
-      </div>
-
-      {/* Center: Main headline */}
-      <div className="relative z-10 space-y-5">
-        <div className="space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold"
-            style={{ background: C.accentMuted, border: `1px solid ${C.accentBorder}`, color: C.accent }}>
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"/>
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500"/>
-            </span>
-            {lang === "ar" ? "النظام متاح الآن" : "System Online"}
-          </div>
-
-          <h1 className="font-black leading-[1.1] tracking-tight"
-            style={{ color: C.text, fontSize: "clamp(2rem,3vw,2.75rem)" }}>
-            {lang === "ar"
-              ? (<>منصة التعليم<br /><span style={{ color: C.accent }}>الرقمي</span> المتكاملة</>)
-              : (<>The Integrated<br /><span style={{ color: C.accent }}>Academic</span> Platform</>)}
-          </h1>
-
-          <p className="text-sm leading-relaxed max-w-xs" style={{ color: C.muted }}>
-            {lang === "ar"
-              ? "إدارة الحضور والغياب، الجداول، والمواد الدراسية في مكان واحد."
-              : "Manage attendance, schedules, and course materials — all in one place."}
-          </p>
-        </div>
-
-        {/* Stats row */}
-        <div className="flex gap-5 pt-2">
-          {[
-            { n: "2,400+", label: lang === "ar" ? "طالب" : "Students" },
-            { n: "40+",    label: lang === "ar" ? "دكتور" : "Faculty" },
-            { n: "99.9%",  label: lang === "ar" ? "وقت التشغيل" : "Uptime" },
-          ].map(({ n, label }) => (
-            <div key={label}>
-              <div className="text-lg font-black" style={{ color: C.text }}>{n}</div>
-              <div className="text-[11px] font-medium" style={{ color: C.muted }}>{label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Bottom: University name */}
-      <div className="relative z-10">
-        <div className="h-px mb-4" style={{ background: C.divider }}/>
-        <p className="text-[11px] font-medium" style={{ color: C.muted }}>
-          {lang === "ar"
-            ? "جامعة حلوان التكنولوجية الدولية · كلية الحاسبات"
-            : "Helwan International Technological University"}
-        </p>
-        <p className="text-[10px] mt-0.5" style={{ color: "rgba(100,116,139,0.6)" }}>
-          © 2026 CYBER TMSAH
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// ── Main Login Page ───────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────
+// Main Component
+// ────────────────────────────────────────────────────────────────────────────
 const LoginPage = () => {
   const navigate = useNavigate();
   const { user, role, loading } = useAttendanceAuth();
   const { t, lang, setLang, isRTL, interpolate } = useLang();
 
-  const [tab, setTab]                     = useState<Tab>("login");
-  const [lockRemaining, setLockRemaining] = useState(getLockoutRemaining);
-  const passInputRef                      = useRef<HTMLInputElement>(null);
+  const [tab, setTab]                       = useState<Tab>("login");
+  const [lockRemaining, setLockRemaining]   = useState(getLockoutRemaining);
+  const passRef                             = useRef<HTMLInputElement>(null);
 
-  const [username, setUsername]           = useState("");
-  const [password, setPassword]           = useState("");
-  const [showPass, setShowPass]           = useState(false);
-  const [rememberMe, setRememberMe]       = useState(false);
+  const [username, setUsername]             = useState("");
+  const [password, setPassword]             = useState("");
+  const [showPass, setShowPass]             = useState(false);
+  const [rememberMe, setRememberMe]         = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
-  const [loginError, setLoginError]       = useState<string | null>(null);
-  const [loginLoading, setLoginLoading]   = useState(false);
+  const [loginError, setLoginError]         = useState<string | null>(null);
+  const [loginLoading, setLoginLoading]     = useState(false);
 
-  const [joinRole, setJoinRole]           = useState<JoinRole>("student");
-  const [fullName, setFullName]           = useState("");
-  const [joinUsername, setJoinUsername]   = useState("");
-  const [joinPassword, setJoinPassword]   = useState("");
-  const [showJoinPass, setShowJoinPass]   = useState(false);
-  const [seatNumber, setSeatNumber]       = useState("");
-  const [sectionNumber, setSectionNumber] = useState("");
-  const [rankInList, setRankInList]       = useState("");
-  const [joinLoading, setJoinLoading]     = useState(false);
-  const [joinSuccess, setJoinSuccess]     = useState(false);
+  const [joinRole, setJoinRole]             = useState<JoinRole>("student");
+  const [fullName, setFullName]             = useState("");
+  const [joinUsername, setJoinUsername]     = useState("");
+  const [joinPassword, setJoinPassword]     = useState("");
+  const [showJoinPass, setShowJoinPass]     = useState(false);
+  const [seatNumber, setSeatNumber]         = useState("");
+  const [sectionNumber, setSectionNumber]   = useState("");
+  const [rankInList, setRankInList]         = useState("");
+  const [joinLoading, setJoinLoading]       = useState(false);
+  const [joinSuccess, setJoinSuccess]       = useState(false);
 
   useEffect(() => {
     try {
-      const savedUser = localStorage.getItem(REMEMBER_KEY);
-      if (savedUser) { setUsername(savedUser); setRememberMe(true); }
-    } catch { /* ignore */ }
+      const saved = localStorage.getItem(REMEMBER_KEY);
+      if (saved) { setUsername(saved); setRememberMe(true); }
+    } catch { /**/ }
   }, []);
 
   useEffect(() => {
     if (lockRemaining <= 0) return;
-    const timer = setInterval(() => {
+    const id = setInterval(() => {
       const r = getLockoutRemaining();
       setLockRemaining(r);
-      if (!r) clearInterval(timer);
+      if (!r) clearInterval(id);
     }, 1000);
-    return () => clearInterval(timer);
+    return () => clearInterval(id);
   }, [lockRemaining]);
 
   useEffect(() => {
-    if (!loading && user && role) navigate(getAttendanceDashboardRoute(role), { replace: true });
+    if (!loading && user && role)
+      navigate(getAttendanceDashboardRoute(role), { replace: true });
   }, [loading, navigate, role, user]);
 
   if (loading) return (
-    <div className="fixed inset-0 flex items-center justify-center" style={{ background: C.bg }}>
-      <div className="flex flex-col items-center gap-3">
-        <Loader2 className="w-8 h-8 animate-spin" style={{ color: C.accent }}/>
-        <p className="text-sm font-medium" style={{ color: C.muted }}>{t.common.loading}</p>
-      </div>
+    <div className="fixed inset-0 flex items-center justify-center" style={{ background: "#02060F" }}>
+      <Loader2 className="w-7 h-7 animate-spin" style={{ color: "#6366F1" }}/>
     </div>
   );
 
+  // ── Login handler ──────────────────────────────────────────────────────────
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (lockRemaining > 0) return;
     setLoginLoading(true); setLoginError(null);
 
-    const rawIdentifier = username.trim();
-    let email = rawIdentifier;
+    const raw = username.trim();
+    let email = raw;
 
     if (!email.includes("@")) {
-      const { data: resolvedEmail } = await supabase.rpc("resolve_login_identifier", { p_identifier: email });
-      email = resolvedEmail || null;
+      const { data } = await supabase.rpc("resolve_login_identifier", { p_identifier: email });
+      email = data || null;
       if (!email) {
-        recordAttempt(false);
-        setLockRemaining(getLockoutRemaining());
-        await recordAuditLog({ action: "login_failed", identifier: rawIdentifier, notes: "user_not_found" });
+        recordAttempt(false); setLockRemaining(getLockoutRemaining());
+        await recordAuditLog({ action: "login_failed", identifier: raw, notes: "user_not_found" });
         setLoginError(lang === "ar"
-          ? "⚠️ لم يتم العثور على حساب بهذا المعرّف."
-          : "⚠️ No account found with this identifier.");
-        setLoginLoading(false);
-        return;
+          ? "لم يتم العثور على حساب بهذا المعرّف."
+          : "No account found with this identifier.");
+        setLoginLoading(false); return;
       }
     }
 
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      recordAttempt(false);
-      setLockRemaining(getLockoutRemaining());
-      const isWrongPassword = error.message?.toLowerCase().includes("invalid") || error.message?.toLowerCase().includes("password");
-      const specificMsg = isWrongPassword
-        ? (lang === "ar" ? "🔑 كلمة المرور غير صحيحة." : "🔑 Incorrect password.")
-        : (lang === "ar" ? "❌ فشل تسجيل الدخول. حاول مرة أخرى." : "❌ Sign-in failed. Please try again.");
-      await recordAuditLog({ action: "login_failed", identifier: rawIdentifier, notes: isWrongPassword ? "wrong_password" : error.message });
-      setLoginError(specificMsg);
-      setLoginLoading(false);
-      return;
+      recordAttempt(false); setLockRemaining(getLockoutRemaining());
+      const isPass = error.message?.toLowerCase().includes("invalid") || error.message?.toLowerCase().includes("password");
+      await recordAuditLog({ action: "login_failed", identifier: raw, notes: isPass ? "wrong_password" : error.message });
+      setLoginError(isPass
+        ? (lang === "ar" ? "كلمة المرور غير صحيحة." : "Incorrect password.")
+        : (lang === "ar" ? "فشل تسجيل الدخول. حاول مرة أخرى." : "Sign-in failed. Try again."));
+      setLoginLoading(false); return;
     }
 
-    try {
-      rememberMe ? localStorage.setItem(REMEMBER_KEY, rawIdentifier) : localStorage.removeItem(REMEMBER_KEY);
-    } catch { /* ignore */ }
-
+    try { rememberMe ? localStorage.setItem(REMEMBER_KEY, raw) : localStorage.removeItem(REMEMBER_KEY); } catch { /**/ }
     playCyberSuccessChime();
-    await recordAuditLog({ action: "login_success", identifier: rawIdentifier });
+    await recordAuditLog({ action: "login_success", identifier: raw });
     recordAttempt(true);
     navigate("/attendance", { replace: true });
     setLoginLoading(false);
   };
 
+  // ── Join handler ───────────────────────────────────────────────────────────
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault(); setJoinLoading(true);
     const { error } = await supabase.from("join_requests").insert({
@@ -426,8 +291,7 @@ const LoginPage = () => {
     });
     if (error) {
       toast.error(lang === "ar" ? "فشل إرسال الطلب." : "Failed to submit.");
-      setJoinLoading(false);
-      return;
+      setJoinLoading(false); return;
     }
     await recordAuditLog({ action: "join_request", identifier: joinUsername.trim(), role: joinRole });
     setJoinSuccess(true);
@@ -435,333 +299,391 @@ const LoginPage = () => {
     setJoinLoading(false);
   };
 
-  const lockMinutes   = Math.ceil(lockRemaining / 60_000);
-  const isStudent     = joinRole === "student";
+  const lockMins  = Math.ceil(lockRemaining / 60_000);
+  const isStudent = joinRole === "student";
 
-  // Smart identifier badge
-  const getUsernameBadge = () => {
+  const getBadge = () => {
     const v = username.trim();
     if (!v) return null;
-    if (/^[0-9]+$/.test(v)) return (
-      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md"
-        style={{ background: C.accentMuted, color: C.accent, border: `1px solid ${C.accentBorder}` }}>
-        {lang === "ar" ? "رقم" : "ID"}
-      </span>
-    );
-    if (v.includes("@")) return (
-      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md"
-        style={{ background: "rgba(16,185,129,0.1)", color: "#34D399", border: "1px solid rgba(16,185,129,0.25)" }}>
-        {lang === "ar" ? "بريد" : "Email"}
-      </span>
-    );
+    const [bg, color, border, label] = /^[0-9]+$/.test(v)
+      ? ["rgba(99,102,241,0.1)", "#818CF8", "rgba(99,102,241,0.25)", lang === "ar" ? "رقم" : "ID"]
+      : v.includes("@")
+      ? ["rgba(16,185,129,0.08)", "#34D399", "rgba(16,185,129,0.2)", lang === "ar" ? "بريد" : "Email"]
+      : ["rgba(255,255,255,0.06)", "#64748B", "rgba(255,255,255,0.1)", lang === "ar" ? "مستخدم" : "User"];
     return (
-      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md"
-        style={{ background: C.fieldBg, color: C.muted, border: `1px solid ${C.fieldBorder}` }}>
-        {lang === "ar" ? "مستخدم" : "User"}
+      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md"
+        style={{ background: bg, color, border: `1px solid ${border}` }}>
+        {label}
       </span>
     );
   };
 
-  // ── Shared button style ────────────────────────────────────────────────────
-  const btnStyle: React.CSSProperties = {
-    background: C.accent,
-    color: "#fff",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.4), 0 4px 16px rgba(59,130,246,0.2)",
-    transition: "all 0.15s ease",
-  };
+  // Primary button style
+  const PrimaryBtn = ({
+    children, loading: ld, disabled,
+  }: { children: React.ReactNode; loading?: boolean; disabled?: boolean }) => (
+    <button
+      type="submit"
+      disabled={disabled || ld}
+      className="w-full flex items-center justify-center gap-2 rounded-[10px] text-sm font-semibold text-white transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.985] cursor-pointer"
+      style={{
+        height: "44px",
+        background: "linear-gradient(180deg, #5B52F0 0%, #4338CA 100%)",
+        boxShadow: "0 1px 0 rgba(255,255,255,0.12) inset, 0 3px 12px rgba(79,70,229,0.45), 0 1px 3px rgba(0,0,0,0.3)",
+      }}
+      onMouseEnter={e => (e.currentTarget.style.background = "linear-gradient(180deg, #6366F1 0%, #4F46E5 100%)")}
+      onMouseLeave={e => (e.currentTarget.style.background = "linear-gradient(180deg, #5B52F0 0%, #4338CA 100%)")}>
+      {ld ? <><Loader2 className="w-4 h-4 animate-spin"/><span>{t.auth.signingIn}</span></> : children}
+    </button>
+  );
 
   return (
     <div
-      className="min-h-[100dvh] w-full flex"
+      className="min-h-[100dvh] w-full flex flex-col items-center justify-center relative overflow-hidden px-4 py-10"
       dir={isRTL ? "rtl" : "ltr"}
-      style={{ background: C.bg, fontFamily: "'Inter', 'Cairo', sans-serif" }}>
+      style={{ background: "#02060F" }}>
 
-      {/* ── LEFT: Branding Panel ── */}
-      <BrandPanel lang={lang} isRTL={isRTL} />
+      {/* ── Background: layered gradients ───────────────────────────── */}
+      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
+        {/* Deep purple blob — top */}
+        <div style={{
+          position: "absolute", top: "-20%", left: "10%",
+          width: "70vw", height: "70vh",
+          background: "radial-gradient(ellipse at center, rgba(79,70,229,0.13) 0%, transparent 65%)",
+          filter: "blur(40px)",
+        }}/>
+        {/* Blue blob — bottom right */}
+        <div style={{
+          position: "absolute", bottom: "-15%", right: "5%",
+          width: "50vw", height: "55vh",
+          background: "radial-gradient(ellipse at center, rgba(59,130,246,0.09) 0%, transparent 65%)",
+          filter: "blur(60px)",
+        }}/>
+        {/* Noise texture */}
+        <div style={{
+          position: "absolute", inset: 0, opacity: 0.025,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+          backgroundRepeat: "repeat",
+          backgroundSize: "256px 256px",
+        }}/>
+        {/* Subtle grid */}
+        <div style={{
+          position: "absolute", inset: 0, opacity: 1,
+          backgroundImage: `
+            linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px)
+          `,
+          backgroundSize: "64px 64px",
+          maskImage: "radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)",
+        }}/>
+      </div>
 
-      {/* ── RIGHT: Form Panel ── */}
-      <div className="flex-1 flex flex-col min-h-[100dvh] overflow-y-auto">
+      {/* ── Lang toggle ──────────────────────────────────────────────── */}
+      <div className="fixed top-4 end-4 z-50">
+        <button
+          onClick={() => setLang(lang === "en" ? "ar" : "en")}
+          className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-[11px] font-semibold cursor-pointer transition-all duration-150"
+          style={{
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            color: "rgba(100,116,139,1)",
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.07)";
+            (e.currentTarget as HTMLButtonElement).style.color = "#CBD5E1";
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.04)";
+            (e.currentTarget as HTMLButtonElement).style.color = "rgba(100,116,139,1)";
+          }}>
+          <Icon.Globe/>{lang === "en" ? "عربي" : "EN"}
+        </button>
+      </div>
 
-        {/* Top bar */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-0 shrink-0">
-          {/* Mobile-only logo */}
-          <div className="flex lg:hidden items-center gap-2">
-            <Ic.Logo />
-            <span className="text-[12px] font-black tracking-[0.18em]" style={{ color: C.text }} dir="ltr">
-              CYBER<span style={{ color: C.accent }}>·</span>TMSAH
-            </span>
-          </div>
-          <div className="hidden lg:block"/>
-
-          {/* Lang toggle */}
-          <button
-            onClick={() => setLang(lang === "en" ? "ar" : "en")}
-            className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-[11px] font-semibold transition-all cursor-pointer"
-            style={{ background: C.fieldBg, border: `1px solid ${C.fieldBorder}`, color: C.subtle }}
-            title={lang === "en" ? "التبديل إلى العربية" : "Switch to English"}>
-            <Ic.Globe />
-            {lang === "en" ? "عربي" : "EN"}
-          </button>
+      {/* ── Brand mark ───────────────────────────────────────────────── */}
+      <div className="relative z-10 flex flex-col items-center mb-8" style={{ animation: "rise 0.5s cubic-bezier(0.22,1,0.36,1) both" }}>
+        {/* Logo mark */}
+        <div className="flex items-center justify-center mb-4"
+          style={{
+            width: 52, height: 52, borderRadius: 14,
+            background: "linear-gradient(135deg, rgba(99,102,241,0.22), rgba(79,70,229,0.1))",
+            border: "1px solid rgba(99,102,241,0.35)",
+            boxShadow: "0 0 0 1px rgba(99,102,241,0.1), 0 8px 24px rgba(79,70,229,0.25)",
+          }}>
+          <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
+            <path d="M16 3L5 8v9c0 7 5 13.5 11 15.5C22 30.5 27 24 27 17V8L16 3z"
+              fill="rgba(99,102,241,0.2)" stroke="#818CF8" strokeWidth="1.4" strokeLinejoin="round"/>
+            <path d="M11 16.5l3.5 3.5L21 13" stroke="#818CF8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </div>
 
-        {/* Form area */}
-        <div className="flex-1 flex items-center justify-center px-5 py-8">
-          <div className="w-full max-w-[400px]" style={{ animation: "fadeUp .35s ease forwards" }}>
-
-            {/* ── Page header (mobile shows, desktop optional) ── */}
-            <div className="mb-6">
-              <h2 className="text-2xl font-black leading-tight" style={{ color: C.text }}>
-                {tab === "login"
-                  ? (lang === "ar" ? "تسجيل الدخول" : "Sign In")
-                  : (lang === "ar" ? "طلب الانضمام" : "Request Access")}
-              </h2>
-              <p className="text-sm mt-1" style={{ color: C.muted }}>
-                {tab === "login"
-                  ? (lang === "ar" ? "أدخل بيانات حسابك للمتابعة" : "Enter your credentials to continue")
-                  : (lang === "ar" ? "أرسل طلبك وسيتم مراجعته" : "Submit a request and we'll review it")}
-              </p>
-            </div>
-
-            {/* ── Tab Switcher ── */}
-            <div className="flex rounded-xl p-1 mb-5"
-              style={{ background: C.fieldBg, border: `1px solid ${C.fieldBorder}` }}>
-              {(["login", "join"] as Tab[]).map(tb => (
-                <button key={tb} onClick={() => setTab(tb)}
-                  className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer"
-                  style={{
-                    background: tab === tb ? C.accent : "transparent",
-                    color: tab === tb ? "#fff" : C.muted,
-                    boxShadow: tab === tb ? "0 1px 6px rgba(59,130,246,0.35)" : "none",
-                  }}>
-                  {tb === "login" ? <><Ic.Login />{t.auth.signIn}</> : <><Ic.UserPlus />{t.auth.joinTitle}</>}
-                </button>
-              ))}
-            </div>
-
-            {/* ═══ LOGIN TAB ═══ */}
-            {tab === "login" && (
-              <form onSubmit={handleLogin} className="space-y-4">
-
-                {/* Lockout warning */}
-                {lockRemaining > 0 && (
-                  <div className="flex gap-2.5 p-3 rounded-xl text-xs font-medium"
-                    style={{ background: C.warn, border: `1px solid ${C.warnBorder}`, color: C.warnText }}>
-                    <Ic.Warn s={14}/>
-                    <span>{interpolate(t.auth.lockedOutTimer, { minutes: lockMinutes })}</span>
-                  </div>
-                )}
-
-                <Field
-                  id="l-user"
-                  label={t.auth.username}
-                  value={username}
-                  onChange={setUsername}
-                  placeholder={t.auth.usernamePlaceholder}
-                  required
-                  autoComplete="username"
-                  autoFocus={typeof window !== "undefined" && window.innerWidth >= 768}
-                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); passInputRef.current?.focus(); } }}
-                  badge={getUsernameBadge()}
-                  icon={<Ic.User />}
-                />
-
-                <Field
-                  id="l-pass"
-                  label={t.auth.password}
-                  type={showPass ? "text" : "password"}
-                  value={password}
-                  onChange={setPassword}
-                  placeholder={t.auth.passwordPlaceholder}
-                  required
-                  autoComplete="current-password"
-                  inputRef={passInputRef}
-                  icon={<Ic.Lock />}
-                  suffix={
-                    <button type="button" onClick={() => setShowPass(v => !v)}
-                      className="transition-colors p-0.5 cursor-pointer"
-                      style={{ color: C.muted }}
-                      title={showPass ? (lang === "ar" ? "إخفاء" : "Hide") : (lang === "ar" ? "إظهار" : "Show")}>
-                      <Ic.Eye off={showPass}/>
-                    </button>
-                  }
-                />
-
-                {/* Remember me + Forgot */}
-                <div className="flex items-center justify-between">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={e => setRememberMe(e.target.checked)}
-                      className="w-3.5 h-3.5 rounded accent-blue-500 cursor-pointer"
-                    />
-                    <span className="text-xs font-medium" style={{ color: C.muted }}>
-                      {lang === "ar" ? "تذكرني" : "Remember me"}
-                    </span>
-                  </label>
-                  <button type="button" onClick={() => setShowForgotModal(true)}
-                    className="text-xs font-semibold transition-colors cursor-pointer"
-                    style={{ color: C.accent }}>
-                    {lang === "ar" ? "نسيت كلمة المرور؟" : "Forgot password?"}
-                  </button>
-                </div>
-
-                {/* Error */}
-                {loginError && (
-                  <div role="alert" className="flex items-start gap-2 p-3 rounded-xl text-xs font-medium"
-                    style={{ background: C.error, border: `1px solid ${C.errorBorder}`, color: C.errorText }}>
-                    <Ic.Warn s={14}/>
-                    <span>{loginError}</span>
-                  </div>
-                )}
-
-                {/* Submit */}
-                <button type="submit" disabled={loginLoading || lockRemaining > 0}
-                  className="w-full h-10 rounded-xl font-bold text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
-                  style={btnStyle}
-                  onMouseEnter={e => { if (!loginLoading) (e.currentTarget as HTMLButtonElement).style.background = C.accentHover; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = C.accent; }}>
-                  {loginLoading
-                    ? <><Loader2 className="w-4 h-4 animate-spin"/><span>{t.auth.signingIn}</span></>
-                    : <><Ic.Login /><span>{t.auth.signIn}</span></>}
-                </button>
-
-                <p className="text-center text-xs" style={{ color: C.muted }}>
-                  {lang === "ar" ? "ليس لديك حساب؟" : "No account?"}{" "}
-                  <button type="button" onClick={() => setTab("join")}
-                    className="font-semibold transition-colors cursor-pointer hover:underline"
-                    style={{ color: C.accent }}>
-                    {t.auth.joinTitle}
-                  </button>
-                </p>
-              </form>
-            )}
-
-            {/* ═══ JOIN TAB ═══ */}
-            {tab === "join" && (
-              joinSuccess ? (
-                <div className="flex flex-col items-center gap-5 py-8 text-center">
-                  <div className="flex items-center justify-center w-16 h-16 rounded-2xl"
-                    style={{ background: C.accentMuted, border: `1px solid ${C.accentBorder}` }}>
-                    <span style={{ color: C.accent }}><Ic.Check s={30}/></span>
-                  </div>
-                  <div>
-                    <h3 className="text-base font-black" style={{ color: C.text }}>
-                      {lang === "ar" ? "تم الإرسال!" : "Request Sent!"}
-                    </h3>
-                    <p className="text-sm mt-1" style={{ color: C.muted }}>{t.auth.requestSent}</p>
-                  </div>
-                  <button onClick={() => { setJoinSuccess(false); setTab("login"); }}
-                    className="h-9 px-6 rounded-xl text-sm font-bold cursor-pointer active:scale-[0.98]"
-                    style={btnStyle}>
-                    {lang === "ar" ? "العودة لتسجيل الدخول" : "Back to Sign In"}
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handleJoin} className="space-y-3.5">
-                  <Field id="j-name" label={t.auth.fullName} value={fullName} onChange={setFullName}
-                    placeholder={t.auth.fullNamePlaceholder} required dir={isRTL ? "rtl" : "ltr"}
-                    icon={<Ic.User />}/>
-
-                  <Field id="j-user" label={t.auth.username} value={joinUsername} onChange={setJoinUsername}
-                    placeholder={t.auth.usernamePlaceholder} required autoComplete="username"
-                    icon={<Ic.User />}/>
-
-                  <div>
-                    <Field id="j-pass" label={t.auth.password} type={showJoinPass ? "text" : "password"}
-                      value={joinPassword} onChange={setJoinPassword}
-                      placeholder={t.auth.passwordPlaceholder} required autoComplete="new-password"
-                      icon={<Ic.Lock />}
-                      suffix={
-                        <button type="button" onClick={() => setShowJoinPass(v => !v)}
-                          className="transition-colors p-0.5 cursor-pointer" style={{ color: C.muted }}>
-                          <Ic.Eye off={showJoinPass}/>
-                        </button>
-                      }/>
-                    <PasswordStrengthMeter password={joinPassword} lang={lang}/>
-                  </div>
-
-                  <CustomRoleSelect
-                    id="j-role"
-                    label={t.auth.chooseRole}
-                    value={joinRole}
-                    onChange={v => setJoinRole(v as JoinRole)}
-                    icon={<Ic.Tag />}
-                    options={[
-                      { value: "student", label: t.auth.student, icon: "🎓" },
-                      { value: "doctor",  label: t.auth.doctor,  icon: "🩺" },
-                      { value: "ta",      label: t.auth.ta,      icon: "💼" },
-                    ]}
-                    labelColor={C.subtle}
-                    fieldBg={C.fieldBg}
-                    fieldBorder={C.fieldBorder}
-                    fieldFocus={C.fieldFocusBg}
-                    fieldGlow={C.fieldFocusRing}
-                    textColor={C.text}
-                    faintColor={C.muted}
-                    isRTL={isRTL}
-                  />
-
-                  {isStudent && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <Field id="j-seat" label={t.auth.seatNumber} value={seatNumber} onChange={setSeatNumber}
-                        placeholder={t.auth.seatNumberPlaceholder} icon={<Ic.Hash />}/>
-                      <Field id="j-sec" label={t.auth.sectionNumber} type="number" value={sectionNumber}
-                        onChange={setSectionNumber} placeholder={t.auth.sectionPlaceholder} icon={<Ic.Hash />}/>
-                    </div>
-                  )}
-
-                  {isStudent && (
-                    <Field id="j-rank" label={t.auth.rankInList} type="number" value={rankInList}
-                      onChange={setRankInList} placeholder={t.auth.rankPlaceholder} icon={<Ic.Hash />}/>
-                  )}
-
-                  <button type="submit" disabled={joinLoading}
-                    className="w-full h-10 rounded-xl font-bold text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
-                    style={btnStyle}>
-                    {joinLoading
-                      ? <><Loader2 className="w-4 h-4 animate-spin"/><span>{t.auth.submitting}</span></>
-                      : <><Ic.UserPlus /><span>{t.auth.submitRequest}</span></>}
-                  </button>
-
-                  <p className="text-center text-xs" style={{ color: C.muted }}>
-                    {lang === "ar" ? "لديك حساب؟" : "Have an account?"}{" "}
-                    <button type="button" onClick={() => setTab("login")}
-                      className="font-semibold transition-colors cursor-pointer hover:underline"
-                      style={{ color: C.accent }}>
-                      {t.auth.signIn}
-                    </button>
-                  </p>
-                </form>
-              )
-            )}
-
+        {/* Wordmark */}
+        <div className="text-center" dir="ltr">
+          <div className="font-black tracking-[0.22em] text-white" style={{ fontSize: 17, letterSpacing: "0.22em" }}>
+            CYBER<span style={{ color: "#6366F1" }}>·</span>TMSAH
           </div>
-        </div>
-
-        {/* Bottom footer (mobile only) */}
-        <div className="lg:hidden shrink-0 pb-5 text-center">
-          <p className="text-[10px] font-medium" style={{ color: "rgba(100,116,139,0.5)" }}>
-            © 2026 CYBER TMSAH · {lang === "ar" ? "جامعة حلوان التكنولوجية الدولية" : "Helwan International Technological University"}
-          </p>
+          <div className="text-[11px] font-medium mt-1 tracking-wide" style={{ color: "rgba(71,85,105,1)" }}>
+            {lang === "ar" ? "نظام الحضور والمتابعة الأكاديمي" : "Academic Attendance Platform"}
+          </div>
         </div>
       </div>
 
-      {/* Forgot Password Modal */}
+      {/* ── Card ─────────────────────────────────────────────────────── */}
+      <div
+        className="relative z-10 w-full overflow-hidden"
+        style={{
+          maxWidth: 420,
+          borderRadius: 18,
+          background: "rgba(8,13,24,0.92)",
+          border: "1px solid rgba(255,255,255,0.07)",
+          boxShadow: `
+            0 0 0 1px rgba(255,255,255,0.03),
+            0 24px 48px rgba(0,0,0,0.8),
+            0 8px 16px rgba(0,0,0,0.5),
+            inset 0 1px 0 rgba(255,255,255,0.06)
+          `,
+          backdropFilter: "blur(20px)",
+          animation: "rise 0.55s cubic-bezier(0.22,1,0.36,1) 0.05s both",
+        }}>
+
+        {/* Card top accent line */}
+        <div style={{
+          height: 1,
+          background: "linear-gradient(90deg, transparent 0%, rgba(99,102,241,0.5) 50%, transparent 100%)",
+        }}/>
+
+        <div className="px-7 pt-6 pb-7">
+
+          {/* ── Card header ─────────────────────────────────────────── */}
+          <div className="mb-6">
+            <h1 className="font-bold text-white" style={{ fontSize: 20, letterSpacing: "-0.02em" }}>
+              {tab === "login"
+                ? (lang === "ar" ? "تسجيل الدخول" : "Sign in")
+                : (lang === "ar" ? "طلب الانضمام" : "Request Access")}
+            </h1>
+            <p className="mt-1 text-[13px]" style={{ color: "#475569" }}>
+              {tab === "login"
+                ? (lang === "ar" ? "أدخل بيانات حسابك للمتابعة" : "Enter your credentials to continue")
+                : (lang === "ar" ? "أرسل طلبك للانضمام للمنصة" : "Submit a request to join the platform")}
+            </p>
+          </div>
+
+          {/* ── Tabs — underline style ──────────────────────────────── */}
+          <div className="relative flex mb-6" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+            {(["login", "join"] as Tab[]).map(tb => (
+              <button key={tb} onClick={() => setTab(tb)}
+                className="flex items-center gap-1.5 pb-3 me-6 text-[13px] font-semibold cursor-pointer transition-colors duration-150 relative"
+                style={{ color: tab === tb ? "#818CF8" : "#475569" }}>
+                {tb === "login"
+                  ? <><Icon.LogIn/>{t.auth.signIn}</>
+                  : <><Icon.UserPlus/>{t.auth.joinTitle}</>}
+                {tab === tb && (
+                  <span className="absolute bottom-[-1px] start-0 end-0 h-[2px] rounded-full"
+                    style={{ background: "#6366F1", boxShadow: "0 0 8px rgba(99,102,241,0.6)" }}/>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* ══════ LOGIN ══════ */}
+          {tab === "login" && (
+            <form onSubmit={handleLogin} className="space-y-4">
+
+              {lockRemaining > 0 && (
+                <div className="flex items-start gap-2.5 p-3 rounded-xl text-[13px]"
+                  style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", color: "#FCD34D" }}>
+                  <span className="shrink-0 mt-[1px]"><Icon.AlertTriangle/></span>
+                  <span>{interpolate(t.auth.lockedOutTimer, { minutes: lockMins })}</span>
+                </div>
+              )}
+
+              <Field
+                id="l-user" label={t.auth.username} value={username} onChange={setUsername}
+                placeholder={t.auth.usernamePlaceholder} required autoComplete="username"
+                autoFocus={typeof window !== "undefined" && window.innerWidth >= 768}
+                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); passRef.current?.focus(); } }}
+                badge={getBadge()} icon={<Icon.User/>}/>
+
+              <Field
+                id="l-pass" label={t.auth.password} type={showPass ? "text" : "password"}
+                value={password} onChange={setPassword}
+                placeholder={t.auth.passwordPlaceholder} required autoComplete="current-password"
+                inputRef={passRef} icon={<Icon.Lock/>}
+                suffix={
+                  <button type="button" onClick={() => setShowPass(v => !v)}
+                    className="flex items-center justify-center w-8 h-8 rounded-md cursor-pointer transition-colors"
+                    style={{ color: "#475569" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "#CBD5E1")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "#475569")}>
+                    <Icon.Eye off={showPass}/>
+                  </button>
+                }/>
+
+              {/* Remember + Forgot */}
+              <div className="flex items-center justify-between pt-0.5">
+                <label className="flex items-center gap-2 cursor-pointer select-none group">
+                  <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)}
+                    className="w-3.5 h-3.5 rounded cursor-pointer" style={{ accentColor: "#6366F1" }}/>
+                  <span className="text-[12px] font-medium transition-colors" style={{ color: "#475569" }}>
+                    {lang === "ar" ? "تذكرني" : "Remember me"}
+                  </span>
+                </label>
+                <button type="button" onClick={() => setShowForgotModal(true)}
+                  className="text-[12px] font-semibold cursor-pointer transition-colors"
+                  style={{ color: "#6366F1" }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "#818CF8")}
+                  onMouseLeave={e => (e.currentTarget.style.color = "#6366F1")}>
+                  {lang === "ar" ? "نسيت كلمة المرور؟" : "Forgot password?"}
+                </button>
+              </div>
+
+              {/* Error */}
+              {loginError && (
+                <div role="alert"
+                  className="flex items-start gap-2 p-3 rounded-xl text-[13px] font-medium"
+                  style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#FCA5A5" }}>
+                  <span className="shrink-0 mt-[1px]"><Icon.AlertTriangle/></span>
+                  <span>{loginError}</span>
+                </div>
+              )}
+
+              <div className="pt-1">
+                <PrimaryBtn loading={loginLoading} disabled={lockRemaining > 0}>
+                  <Icon.LogIn/><span>{t.auth.signIn}</span>
+                </PrimaryBtn>
+              </div>
+
+              <p className="text-center text-[12px] pt-1" style={{ color: "#475569" }}>
+                {lang === "ar" ? "ليس لديك حساب؟" : "No account?"}{" "}
+                <button type="button" onClick={() => setTab("join")}
+                  className="font-semibold cursor-pointer transition-colors"
+                  style={{ color: "#6366F1" }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "#818CF8")}
+                  onMouseLeave={e => (e.currentTarget.style.color = "#6366F1")}>
+                  {t.auth.joinTitle}
+                </button>
+              </p>
+            </form>
+          )}
+
+          {/* ══════ JOIN ══════ */}
+          {tab === "join" && (
+            joinSuccess ? (
+              <div className="flex flex-col items-center gap-5 py-6 text-center">
+                <div className="flex items-center justify-center w-16 h-16 rounded-2xl"
+                  style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.25)" }}>
+                  <span style={{ color: "#818CF8" }}><Icon.Check/></span>
+                </div>
+                <div>
+                  <p className="font-bold text-white">{lang === "ar" ? "تم الإرسال بنجاح!" : "Request Sent!"}</p>
+                  <p className="text-[13px] mt-1" style={{ color: "#475569" }}>{t.auth.requestSent}</p>
+                </div>
+                <button onClick={() => { setJoinSuccess(false); setTab("login"); }}
+                  className="h-10 px-6 rounded-xl text-sm font-semibold text-white cursor-pointer active:scale-[0.98] transition-all"
+                  style={{
+                    background: "linear-gradient(180deg, #5B52F0 0%, #4338CA 100%)",
+                    boxShadow: "0 1px 0 rgba(255,255,255,0.12) inset, 0 3px 12px rgba(79,70,229,0.4)",
+                  }}>
+                  {lang === "ar" ? "العودة لتسجيل الدخول" : "Back to Sign In"}
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleJoin} className="space-y-3.5">
+                <Field id="j-name" label={t.auth.fullName} value={fullName} onChange={setFullName}
+                  placeholder={t.auth.fullNamePlaceholder} required dir={isRTL ? "rtl" : "ltr"} icon={<Icon.User/>}/>
+
+                <Field id="j-user" label={t.auth.username} value={joinUsername} onChange={setJoinUsername}
+                  placeholder={t.auth.usernamePlaceholder} required autoComplete="username" icon={<Icon.User/>}/>
+
+                <div>
+                  <Field id="j-pass" label={t.auth.password} type={showJoinPass ? "text" : "password"}
+                    value={joinPassword} onChange={setJoinPassword}
+                    placeholder={t.auth.passwordPlaceholder} required autoComplete="new-password"
+                    icon={<Icon.Lock/>}
+                    suffix={
+                      <button type="button" onClick={() => setShowJoinPass(v => !v)}
+                        className="flex items-center justify-center w-8 h-8 rounded-md cursor-pointer transition-colors"
+                        style={{ color: "#475569" }}
+                        onMouseEnter={e => (e.currentTarget.style.color = "#CBD5E1")}
+                        onMouseLeave={e => (e.currentTarget.style.color = "#475569")}>
+                        <Icon.Eye off={showJoinPass}/>
+                      </button>
+                    }/>
+                  <PasswordStrengthMeter password={joinPassword} lang={lang}/>
+                </div>
+
+                <CustomRoleSelect
+                  id="j-role" label={t.auth.chooseRole} value={joinRole}
+                  onChange={v => setJoinRole(v as JoinRole)} icon={<Icon.Tag/>}
+                  options={[
+                    { value: "student", label: t.auth.student, icon: "🎓" },
+                    { value: "doctor",  label: t.auth.doctor,  icon: "🩺" },
+                    { value: "ta",      label: t.auth.ta,      icon: "💼" },
+                  ]}
+                  labelColor="#64748B"
+                  fieldBg="rgba(255,255,255,0.035)"
+                  fieldBorder="rgba(255,255,255,0.08)"
+                  fieldFocus="rgba(79,70,229,0.06)"
+                  fieldGlow="0 0 0 3px rgba(99,102,241,0.12)"
+                  textColor="#E2E8F0"
+                  faintColor="#475569"
+                  isRTL={isRTL}/>
+
+                {isStudent && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field id="j-seat" label={t.auth.seatNumber} value={seatNumber} onChange={setSeatNumber}
+                      placeholder={t.auth.seatNumberPlaceholder} icon={<Icon.Hash/>}/>
+                    <Field id="j-sec" label={t.auth.sectionNumber} type="number" value={sectionNumber}
+                      onChange={setSectionNumber} placeholder={t.auth.sectionPlaceholder} icon={<Icon.Hash/>}/>
+                  </div>
+                )}
+
+                {isStudent && (
+                  <Field id="j-rank" label={t.auth.rankInList} type="number" value={rankInList}
+                    onChange={setRankInList} placeholder={t.auth.rankPlaceholder} icon={<Icon.Hash/>}/>
+                )}
+
+                <div className="pt-1">
+                  <PrimaryBtn loading={joinLoading}>
+                    <Icon.UserPlus/><span>{t.auth.submitRequest}</span>
+                  </PrimaryBtn>
+                </div>
+
+                <p className="text-center text-[12px] pt-1" style={{ color: "#475569" }}>
+                  {lang === "ar" ? "لديك حساب؟" : "Have an account?"}{" "}
+                  <button type="button" onClick={() => setTab("login")}
+                    className="font-semibold cursor-pointer"
+                    style={{ color: "#6366F1" }}>
+                    {t.auth.signIn}
+                  </button>
+                </p>
+              </form>
+            )
+          )}
+        </div>
+      </div>
+
+      {/* ── Page footer ──────────────────────────────────────────────── */}
+      <p className="relative z-10 mt-8 text-[11px] font-medium text-center"
+        style={{ color: "rgba(51,65,85,1)", animation: "rise 0.6s cubic-bezier(0.22,1,0.36,1) 0.1s both" }}>
+        © 2026 CYBER TMSAH ·{" "}
+        {lang === "ar" ? "جامعة حلوان التكنولوجية الدولية" : "Helwan International Technological University"}
+      </p>
+
       <ForgotPasswordModal
         isOpen={showForgotModal}
         onClose={() => setShowForgotModal(false)}
         lang={lang}
-        isRTL={isRTL}
-      />
+        isRTL={isRTL}/>
 
       <style>{`
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(12px); }
+        @keyframes rise {
+          from { opacity: 0; transform: translateY(16px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        input::placeholder { color: #334155; }
-        input[type="number"]::-webkit-inner-spin-button { opacity: 0; }
+        input::placeholder { color: #1E293B; }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button { opacity: 0; }
       `}</style>
     </div>
   );
