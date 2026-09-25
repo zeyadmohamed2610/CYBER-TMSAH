@@ -136,18 +136,18 @@ function Field({
   const [focused, setFocused] = useState(false);
   return (
     <div>
-      <div className="flex items-center justify-between mb-[6px]">
+      <div className="flex items-center justify-between mb-1.5">
         <label htmlFor={id}
-          className="block text-[11px] font-semibold uppercase tracking-[0.07em] select-none transition-colors duration-150"
-          style={{ color: focused ? "rgba(129,140,248,1)" : "rgba(100,116,139,1)" }}>
+          className="block text-[12px] font-semibold tracking-wide select-none transition-colors duration-150"
+          style={{ color: focused ? "#818CF8" : "#CBD5E1" }}>
           {label}
         </label>
         {badge}
       </div>
       <div className="relative">
         {icon && (
-          <span className="absolute start-[13px] top-1/2 -translate-y-1/2 pointer-events-none z-10 transition-colors duration-200"
-            style={{ color: focused ? "rgba(129,140,248,0.9)" : "rgba(71,85,105,1)" }}>
+          <span className="absolute start-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10 transition-colors duration-200"
+            style={{ color: focused ? "#818CF8" : "#94A3B8" }}>
             {icon}
           </span>
         )}
@@ -158,22 +158,22 @@ function Field({
           autoComplete={autoComplete} dir={dir}
           autoFocus={autoFocus} onKeyDown={onKeyDown}
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
-          className="w-full rounded-[10px] text-sm font-medium transition-all duration-200 placeholder:text-slate-600"
+          className="w-full rounded-xl text-sm font-medium transition-all duration-200"
           style={{
-            height: "44px",
+            height: "46px",
             paddingInlineStart: icon ? "42px" : "14px",
             paddingInlineEnd: suffix ? "44px" : "14px",
-            background: focused ? "rgba(79,70,229,0.06)" : "rgba(255,255,255,0.035)",
-            border: `1.5px solid ${focused ? "rgba(99,102,241,0.7)" : "rgba(255,255,255,0.08)"}`,
-            color: "#E2E8F0",
+            background: focused ? "rgba(99,102,241,0.08)" : "rgba(255,255,255,0.045)",
+            border: `1.5px solid ${focused ? "#6366F1" : "rgba(255,255,255,0.12)"}`,
+            color: "#FFFFFF",
             boxShadow: focused
-              ? "0 0 0 3px rgba(99,102,241,0.12), 0 1px 2px rgba(0,0,0,0.2)"
+              ? "0 0 0 3.5px rgba(99,102,241,0.22), 0 2px 4px rgba(0,0,0,0.2)"
               : "0 1px 2px rgba(0,0,0,0.15)",
             outline: "none",
           }}
         />
         {suffix && (
-          <span className="absolute end-[10px] top-1/2 -translate-y-1/2 z-10">{suffix}</span>
+          <span className="absolute end-2.5 top-1/2 -translate-y-1/2 z-10">{suffix}</span>
         )}
       </div>
     </div>
@@ -325,14 +325,15 @@ const LoginPage = () => {
     <button
       type="submit"
       disabled={disabled || ld}
-      className="w-full flex items-center justify-center gap-2 rounded-[10px] text-sm font-semibold text-white transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.985] cursor-pointer"
+      className="w-full flex items-center justify-center gap-2 rounded-xl text-sm font-bold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.985] cursor-pointer"
       style={{
-        height: "44px",
-        background: "linear-gradient(180deg, #5B52F0 0%, #4338CA 100%)",
-        boxShadow: "0 1px 0 rgba(255,255,255,0.12) inset, 0 3px 12px rgba(79,70,229,0.45), 0 1px 3px rgba(0,0,0,0.3)",
+        height: "46px",
+        background: "linear-gradient(180deg, #6366F1 0%, #4F46E5 100%)",
+        boxShadow: "0 1px 0 rgba(255,255,255,0.25) inset, 0 4px 18px rgba(79,70,229,0.5), 0 2px 4px rgba(0,0,0,0.3)",
+        border: "1px solid rgba(255,255,255,0.12)",
       }}
-      onMouseEnter={e => (e.currentTarget.style.background = "linear-gradient(180deg, #6366F1 0%, #4F46E5 100%)")}
-      onMouseLeave={e => (e.currentTarget.style.background = "linear-gradient(180deg, #5B52F0 0%, #4338CA 100%)")}>
+      onMouseEnter={e => (e.currentTarget.style.background = "linear-gradient(180deg, #6E72FF 0%, #5548ED 100%)")}
+      onMouseLeave={e => (e.currentTarget.style.background = "linear-gradient(180deg, #6366F1 0%, #4F46E5 100%)")}>
       {ld ? <><Loader2 className="w-4 h-4 animate-spin"/><span>{t.auth.signingIn}</span></> : children}
     </button>
   );
@@ -400,290 +401,300 @@ const LoginPage = () => {
         </button>
       </div>
 
-      {/* ── Brand mark ───────────────────────────────────────────────── */}
-      <div className="relative z-10 flex flex-col items-center mb-8" style={{ animation: "rise 0.5s cubic-bezier(0.22,1,0.36,1) both" }}>
+      {/* ── Brand Wordmark as the Logo ─────────────────────────────────── */}
+      <div className="relative z-10 flex flex-col items-center mb-7 select-none text-center"
+        style={{ animation: "rise 0.5s cubic-bezier(0.22,1,0.36,1) both" }}>
 
-        {/* Monogram mark — CSS only, no SVG color conflicts */}
-        <div className="flex items-center justify-center mb-5 select-none"
-          style={{
-            width: 56, height: 56, borderRadius: 16,
-            background: "linear-gradient(145deg, rgba(79,70,229,0.18) 0%, rgba(99,102,241,0.08) 100%)",
-            border: "1px solid rgba(99,102,241,0.3)",
-            boxShadow: "0 0 0 1px rgba(99,102,241,0.08), 0 8px 28px rgba(79,70,229,0.2)",
-          }}>
+        {/* Hero Wordmark */}
+        <div className="flex items-center justify-center gap-2.5" dir="ltr">
           <span
+            className="font-black text-white text-[28px] md:text-[34px] tracking-[0.14em]"
             style={{
-              color: "#818CF8",
-              fontSize: 22,
-              fontWeight: 900,
-              letterSpacing: "-0.04em",
-              lineHeight: 1,
               fontFamily: "'Inter', sans-serif",
-            }}
-            dir="ltr">
-            CT
+              letterSpacing: "0.14em",
+              textShadow: "0 2px 24px rgba(255,255,255,0.22)",
+            }}>
+            CYBER
+          </span>
+          <span
+            className="font-black text-[28px] md:text-[34px] tracking-[0.14em]"
+            style={{
+              fontFamily: "'Inter', sans-serif",
+              letterSpacing: "0.14em",
+              background: "linear-gradient(135deg, #C7D2FE 0%, #818CF8 50%, #6366F1 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              filter: "drop-shadow(0 0 20px rgba(99,102,241,0.5))",
+            }}>
+            TMSAH
           </span>
         </div>
 
-        {/* Wordmark */}
-        <div className="text-center" dir="ltr">
-          <div style={{
-            fontSize: 15,
-            fontWeight: 800,
-            letterSpacing: "0.25em",
-            color: "#F1F5F9",
-            fontFamily: "'Inter', sans-serif",
+        {/* System Descriptor Pill */}
+        <div className="inline-flex items-center gap-2 mt-2 px-3.5 py-1 rounded-full"
+          style={{
+            background: "rgba(99,102,241,0.08)",
+            border: "1px solid rgba(99,102,241,0.22)",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
           }}>
-            CYBER<span style={{ color: "#6366F1", marginInline: "1px" }}>·</span>TMSAH
-          </div>
-          <div style={{ fontSize: 11, color: "#334155", marginTop: 4, fontWeight: 500, letterSpacing: "0.04em" }}>
-            {lang === "ar" ? "نظام الحضور والمتابعة الأكاديمي" : "Academic Attendance Platform"}
-          </div>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-[11.5px] font-semibold tracking-wider text-slate-300">
+            {lang === "ar" ? "المنظومة الأكاديمية الذكية للتحقق والحضور" : "Academic Attendance & Verification System"}
+          </span>
         </div>
       </div>
 
+      {/* ── Card Container with Ambient Depth ─────────────────────────── */}
+      <div className="relative z-10 w-full flex flex-col items-center">
+        {/* Soft radial spotlight behind card */}
+        <div
+          className="absolute pointer-events-none -z-10"
+          style={{
+            width: "560px",
+            height: "560px",
+            background: "radial-gradient(circle, rgba(99,102,241,0.15) 0%, rgba(79,70,229,0.04) 45%, transparent 70%)",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            filter: "blur(50px)",
+          }}
+        />
 
-      {/* ── Card ─────────────────────────────────────────────────────── */}
-      <div
-        className="relative z-10 w-full overflow-hidden"
-        style={{
-          maxWidth: 420,
-          borderRadius: 18,
-          background: "rgba(8,13,24,0.92)",
-          border: "1px solid rgba(255,255,255,0.07)",
-          boxShadow: `
-            0 0 0 1px rgba(255,255,255,0.03),
-            0 24px 48px rgba(0,0,0,0.8),
-            0 8px 16px rgba(0,0,0,0.5),
-            inset 0 1px 0 rgba(255,255,255,0.06)
-          `,
-          backdropFilter: "blur(20px)",
-          animation: "rise 0.55s cubic-bezier(0.22,1,0.36,1) 0.05s both",
-        }}>
+        {/* ── Card ─────────────────────────────────────────────────────── */}
+        <div
+          className="w-full overflow-hidden"
+          style={{
+            maxWidth: 460,
+            borderRadius: 22,
+            background: "rgba(10, 15, 29, 0.90)",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            boxShadow: `
+              0 0 0 1px rgba(255,255,255,0.04),
+              0 25px 60px -15px rgba(0,0,0,0.85),
+              0 10px 25px -5px rgba(0,0,0,0.5),
+              inset 0 1px 0 rgba(255,255,255,0.08)
+            `,
+            backdropFilter: "blur(24px)",
+            animation: "rise 0.55s cubic-bezier(0.22,1,0.36,1) 0.05s both",
+          }}>
 
-        {/* Card top accent line */}
-        <div style={{
-          height: 1,
-          background: "linear-gradient(90deg, transparent 0%, rgba(99,102,241,0.5) 50%, transparent 100%)",
-        }}/>
+          {/* Card top accent line */}
+          <div style={{
+            height: 1,
+            background: "linear-gradient(90deg, transparent 0%, rgba(99,102,241,0.7) 50%, transparent 100%)",
+          }}/>
 
-        <div className="px-7 pt-6 pb-7">
+          <div className="px-8 pt-7 pb-8">
 
-          {/* ── Card header ─────────────────────────────────────────── */}
-          <div className="mb-6">
-            <h1 className="font-bold text-white" style={{ fontSize: 20, letterSpacing: "-0.02em" }}>
-              {tab === "login"
-                ? (lang === "ar" ? "تسجيل الدخول" : "Sign in")
-                : (lang === "ar" ? "طلب الانضمام" : "Request Access")}
-            </h1>
-            <p className="mt-1 text-[13px]" style={{ color: "#475569" }}>
-              {tab === "login"
-                ? (lang === "ar" ? "أدخل بيانات حسابك للمتابعة" : "Enter your credentials to continue")
-                : (lang === "ar" ? "أرسل طلبك للانضمام للمنصة" : "Submit a request to join the platform")}
-            </p>
-          </div>
-
-          {/* ── Tabs — underline style ──────────────────────────────── */}
-          <div className="relative flex mb-6" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-            {(["login", "join"] as Tab[]).map(tb => (
-              <button key={tb} onClick={() => setTab(tb)}
-                className="flex items-center gap-1.5 pb-3 me-6 text-[13px] font-semibold cursor-pointer transition-colors duration-150 relative"
-                style={{ color: tab === tb ? "#818CF8" : "#475569" }}>
-                {tb === "login"
-                  ? <><Icon.LogIn/>{t.auth.signIn}</>
-                  : <><Icon.UserPlus/>{t.auth.joinTitle}</>}
-                {tab === tb && (
-                  <span className="absolute bottom-[-1px] start-0 end-0 h-[2px] rounded-full"
-                    style={{ background: "#6366F1", boxShadow: "0 0 8px rgba(99,102,241,0.6)" }}/>
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* ══════ LOGIN ══════ */}
-          {tab === "login" && (
-            <form onSubmit={handleLogin} className="space-y-4">
-
-              {lockRemaining > 0 && (
-                <div className="flex items-start gap-2.5 p-3 rounded-xl text-[13px]"
-                  style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", color: "#FCD34D" }}>
-                  <span className="shrink-0 mt-[1px]"><Icon.AlertTriangle/></span>
-                  <span>{interpolate(t.auth.lockedOutTimer, { minutes: lockMins })}</span>
-                </div>
-              )}
-
-              <Field
-                id="l-user" label={t.auth.username} value={username} onChange={setUsername}
-                placeholder={t.auth.usernamePlaceholder} required autoComplete="username"
-                autoFocus={typeof window !== "undefined" && window.innerWidth >= 768}
-                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); passRef.current?.focus(); } }}
-                badge={getBadge()} icon={<Icon.User/>}/>
-
-              <Field
-                id="l-pass" label={t.auth.password} type={showPass ? "text" : "password"}
-                value={password} onChange={setPassword}
-                placeholder={t.auth.passwordPlaceholder} required autoComplete="current-password"
-                inputRef={passRef} icon={<Icon.Lock/>}
-                suffix={
-                  <button type="button" onClick={() => setShowPass(v => !v)}
-                    className="flex items-center justify-center w-8 h-8 rounded-md cursor-pointer transition-colors"
-                    style={{ color: "#475569" }}
-                    onMouseEnter={e => (e.currentTarget.style.color = "#CBD5E1")}
-                    onMouseLeave={e => (e.currentTarget.style.color = "#475569")}>
-                    <Icon.Eye off={showPass}/>
-                  </button>
-                }/>
-
-              {/* Remember + Forgot */}
-              <div className="flex items-center justify-between pt-0.5">
-                <label className="flex items-center gap-2 cursor-pointer select-none group">
-                  <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)}
-                    className="w-3.5 h-3.5 rounded cursor-pointer" style={{ accentColor: "#6366F1" }}/>
-                  <span className="text-[12px] font-medium transition-colors" style={{ color: "#475569" }}>
-                    {lang === "ar" ? "تذكرني" : "Remember me"}
-                  </span>
-                </label>
-                <button type="button" onClick={() => setShowForgotModal(true)}
-                  className="text-[12px] font-semibold cursor-pointer transition-colors"
-                  style={{ color: "#6366F1" }}
-                  onMouseEnter={e => (e.currentTarget.style.color = "#818CF8")}
-                  onMouseLeave={e => (e.currentTarget.style.color = "#6366F1")}>
-                  {lang === "ar" ? "نسيت كلمة المرور؟" : "Forgot password?"}
-                </button>
-              </div>
-
-              {/* Error */}
-              {loginError && (
-                <div role="alert"
-                  className="flex items-start gap-2 p-3 rounded-xl text-[13px] font-medium"
-                  style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#FCA5A5" }}>
-                  <span className="shrink-0 mt-[1px]"><Icon.AlertTriangle/></span>
-                  <span>{loginError}</span>
-                </div>
-              )}
-
-              <div className="pt-1">
-                <PrimaryBtn loading={loginLoading} disabled={lockRemaining > 0}>
-                  <Icon.LogIn/><span>{t.auth.signIn}</span>
-                </PrimaryBtn>
-              </div>
-
-              <p className="text-center text-[12px] pt-1" style={{ color: "#475569" }}>
-                {lang === "ar" ? "ليس لديك حساب؟" : "No account?"}{" "}
-                <button type="button" onClick={() => setTab("join")}
-                  className="font-semibold cursor-pointer transition-colors"
-                  style={{ color: "#6366F1" }}
-                  onMouseEnter={e => (e.currentTarget.style.color = "#818CF8")}
-                  onMouseLeave={e => (e.currentTarget.style.color = "#6366F1")}>
-                  {t.auth.joinTitle}
-                </button>
+            {/* ── Card header ─────────────────────────────────────────── */}
+            <div className="mb-6">
+              <h1 className="font-bold text-white text-[22px] tracking-tight">
+                {tab === "login"
+                  ? (lang === "ar" ? "تسجيل الدخول" : "Sign in")
+                  : (lang === "ar" ? "طلب الانضمام" : "Request Access")}
+              </h1>
+              <p className="mt-1 text-[13px] text-slate-400 font-normal">
+                {tab === "login"
+                  ? (lang === "ar" ? "أدخل بيانات حسابك الأكاديمي للمتابعة" : "Enter your academic credentials to continue")
+                  : (lang === "ar" ? "أرسل بياناتك لاعتماد حسابك في المنصة" : "Submit your information to join the platform")}
               </p>
-            </form>
-          )}
+            </div>
 
-          {/* ══════ JOIN ══════ */}
-          {tab === "join" && (
-            joinSuccess ? (
-              <div className="flex flex-col items-center gap-5 py-6 text-center">
-                <div className="flex items-center justify-center w-16 h-16 rounded-2xl"
-                  style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.25)" }}>
-                  <span style={{ color: "#818CF8" }}><Icon.Check/></span>
-                </div>
-                <div>
-                  <p className="font-bold text-white">{lang === "ar" ? "تم الإرسال بنجاح!" : "Request Sent!"}</p>
-                  <p className="text-[13px] mt-1" style={{ color: "#475569" }}>{t.auth.requestSent}</p>
-                </div>
-                <button onClick={() => { setJoinSuccess(false); setTab("login"); }}
-                  className="h-10 px-6 rounded-xl text-sm font-semibold text-white cursor-pointer active:scale-[0.98] transition-all"
-                  style={{
-                    background: "linear-gradient(180deg, #5B52F0 0%, #4338CA 100%)",
-                    boxShadow: "0 1px 0 rgba(255,255,255,0.12) inset, 0 3px 12px rgba(79,70,229,0.4)",
-                  }}>
-                  {lang === "ar" ? "العودة لتسجيل الدخول" : "Back to Sign In"}
+            {/* ── Tabs — underline style ──────────────────────────────── */}
+            <div className="relative flex mb-6 border-b border-white/10">
+              {(["login", "join"] as Tab[]).map(tb => (
+                <button key={tb} onClick={() => setTab(tb)}
+                  className="flex items-center gap-1.5 pb-3.5 me-6 text-[13.5px] font-semibold cursor-pointer transition-colors duration-150 relative"
+                  style={{ color: tab === tb ? "#FFFFFF" : "#94A3B8" }}>
+                  {tb === "login"
+                    ? <><Icon.LogIn/>{t.auth.signIn}</>
+                    : <><Icon.UserPlus/>{t.auth.joinTitle}</>}
+                  {tab === tb && (
+                    <span className="absolute bottom-[-1px] start-0 end-0 h-[2.5px] rounded-full"
+                      style={{ background: "#6366F1", boxShadow: "0 0 10px rgba(99,102,241,0.8)" }}/>
+                  )}
                 </button>
-              </div>
-            ) : (
-              <form onSubmit={handleJoin} className="space-y-3.5">
-                <Field id="j-name" label={t.auth.fullName} value={fullName} onChange={setFullName}
-                  placeholder={t.auth.fullNamePlaceholder} required dir={isRTL ? "rtl" : "ltr"} icon={<Icon.User/>}/>
+              ))}
+            </div>
 
-                <Field id="j-user" label={t.auth.username} value={joinUsername} onChange={setJoinUsername}
-                  placeholder={t.auth.usernamePlaceholder} required autoComplete="username" icon={<Icon.User/>}/>
+            {/* ══════ LOGIN ══════ */}
+            {tab === "login" && (
+              <form onSubmit={handleLogin} className="space-y-4">
 
-                <div>
-                  <Field id="j-pass" label={t.auth.password} type={showJoinPass ? "text" : "password"}
-                    value={joinPassword} onChange={setJoinPassword}
-                    placeholder={t.auth.passwordPlaceholder} required autoComplete="new-password"
-                    icon={<Icon.Lock/>}
-                    suffix={
-                      <button type="button" onClick={() => setShowJoinPass(v => !v)}
-                        className="flex items-center justify-center w-8 h-8 rounded-md cursor-pointer transition-colors"
-                        style={{ color: "#475569" }}
-                        onMouseEnter={e => (e.currentTarget.style.color = "#CBD5E1")}
-                        onMouseLeave={e => (e.currentTarget.style.color = "#475569")}>
-                        <Icon.Eye off={showJoinPass}/>
-                      </button>
-                    }/>
-                  <PasswordStrengthMeter password={joinPassword} lang={lang}/>
-                </div>
-
-                <CustomRoleSelect
-                  id="j-role" label={t.auth.chooseRole} value={joinRole}
-                  onChange={v => setJoinRole(v as JoinRole)} icon={<Icon.Tag/>}
-                  options={[
-                    { value: "student", label: t.auth.student, icon: "🎓" },
-                    { value: "doctor",  label: t.auth.doctor,  icon: "🩺" },
-                    { value: "ta",      label: t.auth.ta,      icon: "💼" },
-                  ]}
-                  labelColor="#64748B"
-                  fieldBg="rgba(255,255,255,0.035)"
-                  fieldBorder="rgba(255,255,255,0.08)"
-                  fieldFocus="rgba(79,70,229,0.06)"
-                  fieldGlow="0 0 0 3px rgba(99,102,241,0.12)"
-                  textColor="#E2E8F0"
-                  faintColor="#475569"
-                  isRTL={isRTL}/>
-
-                {isStudent && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field id="j-seat" label={t.auth.seatNumber} value={seatNumber} onChange={setSeatNumber}
-                      placeholder={t.auth.seatNumberPlaceholder} icon={<Icon.Hash/>}/>
-                    <Field id="j-sec" label={t.auth.sectionNumber} type="number" value={sectionNumber}
-                      onChange={setSectionNumber} placeholder={t.auth.sectionPlaceholder} icon={<Icon.Hash/>}/>
+                {lockRemaining > 0 && (
+                  <div className="flex items-start gap-2.5 p-3.5 rounded-xl text-[13px]"
+                    style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)", color: "#FCD34D" }}>
+                    <span className="shrink-0 mt-[1px]"><Icon.AlertTriangle/></span>
+                    <span>{interpolate(t.auth.lockedOutTimer, { minutes: lockMins })}</span>
                   </div>
                 )}
 
-                {isStudent && (
-                  <Field id="j-rank" label={t.auth.rankInList} type="number" value={rankInList}
-                    onChange={setRankInList} placeholder={t.auth.rankPlaceholder} icon={<Icon.Hash/>}/>
+                <Field
+                  id="l-user" label={t.auth.username} value={username} onChange={setUsername}
+                  placeholder={t.auth.usernamePlaceholder} required autoComplete="username"
+                  autoFocus={typeof window !== "undefined" && window.innerWidth >= 768}
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); passRef.current?.focus(); } }}
+                  badge={getBadge()} icon={<Icon.User/>}/>
+
+                <Field
+                  id="l-pass" label={t.auth.password} type={showPass ? "text" : "password"}
+                  value={password} onChange={setPassword}
+                  placeholder={t.auth.passwordPlaceholder} required autoComplete="current-password"
+                  inputRef={passRef} icon={<Icon.Lock/>}
+                  suffix={
+                    <button type="button" onClick={() => setShowPass(v => !v)}
+                      className="flex items-center justify-center w-8 h-8 rounded-md cursor-pointer transition-colors text-slate-400 hover:text-white">
+                      <Icon.Eye off={showPass}/>
+                    </button>
+                  }/>
+
+                {/* Remember + Forgot */}
+                <div className="flex items-center justify-between pt-0.5">
+                  <label className="flex items-center gap-2 cursor-pointer select-none group">
+                    <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)}
+                      className="w-4 h-4 rounded cursor-pointer" style={{ accentColor: "#6366F1" }}/>
+                    <span className="text-[12.5px] font-medium text-slate-300 group-hover:text-white transition-colors">
+                      {lang === "ar" ? "تذكرني" : "Remember me"}
+                    </span>
+                  </label>
+                  <button type="button" onClick={() => setShowForgotModal(true)}
+                    className="text-[12.5px] font-semibold text-indigo-400 hover:text-indigo-300 cursor-pointer transition-colors">
+                    {lang === "ar" ? "نسيت كلمة المرور؟" : "Forgot password?"}
+                  </button>
+                </div>
+
+                {/* Error */}
+                {loginError && (
+                  <div role="alert"
+                    className="flex items-start gap-2.5 p-3.5 rounded-xl text-[13px] font-medium"
+                    style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "#FCA5A5" }}>
+                    <span className="shrink-0 mt-[1px]"><Icon.AlertTriangle/></span>
+                    <span>{loginError}</span>
+                  </div>
                 )}
 
-                <div className="pt-1">
-                  <PrimaryBtn loading={joinLoading}>
-                    <Icon.UserPlus/><span>{t.auth.submitRequest}</span>
+                <div className="pt-1.5">
+                  <PrimaryBtn loading={loginLoading} disabled={lockRemaining > 0}>
+                    <Icon.LogIn/><span>{t.auth.signIn}</span>
                   </PrimaryBtn>
                 </div>
 
-                <p className="text-center text-[12px] pt-1" style={{ color: "#475569" }}>
-                  {lang === "ar" ? "لديك حساب؟" : "Have an account?"}{" "}
-                  <button type="button" onClick={() => setTab("login")}
-                    className="font-semibold cursor-pointer"
-                    style={{ color: "#6366F1" }}>
-                    {t.auth.signIn}
+                <p className="text-center text-[12.5px] pt-1.5 text-slate-400">
+                  {lang === "ar" ? "ليس لديك حساب؟" : "No account?"}{" "}
+                  <button type="button" onClick={() => setTab("join")}
+                    className="font-semibold text-indigo-400 hover:text-indigo-300 cursor-pointer transition-colors">
+                    {t.auth.joinTitle}
                   </button>
                 </p>
               </form>
-            )
-          )}
+            )}
+
+            {/* ══════ JOIN ══════ */}
+            {tab === "join" && (
+              joinSuccess ? (
+                <div className="flex flex-col items-center gap-5 py-6 text-center">
+                  <div className="flex items-center justify-center w-16 h-16 rounded-2xl"
+                    style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.3)" }}>
+                    <span style={{ color: "#818CF8" }}><Icon.Check/></span>
+                  </div>
+                  <div>
+                    <p className="font-bold text-white text-lg">{lang === "ar" ? "تم إرسال طلبك بنجاح!" : "Request Sent!"}</p>
+                    <p className="text-[13px] mt-1 text-slate-400">{t.auth.requestSent}</p>
+                  </div>
+                  <button onClick={() => { setJoinSuccess(false); setTab("login"); }}
+                    className="h-11 px-7 rounded-xl text-sm font-semibold text-white cursor-pointer active:scale-[0.98] transition-all"
+                    style={{
+                      background: "linear-gradient(180deg, #6366F1 0%, #4F46E5 100%)",
+                      boxShadow: "0 1px 0 rgba(255,255,255,0.2) inset, 0 4px 18px rgba(79,70,229,0.45)",
+                    }}>
+                    {lang === "ar" ? "العودة لتسجيل الدخول" : "Back to Sign In"}
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleJoin} className="space-y-3.5">
+                  <Field id="j-name" label={t.auth.fullName} value={fullName} onChange={setFullName}
+                    placeholder={t.auth.fullNamePlaceholder} required dir={isRTL ? "rtl" : "ltr"} icon={<Icon.User/>}/>
+
+                  <Field id="j-user" label={t.auth.username} value={joinUsername} onChange={setJoinUsername}
+                    placeholder={t.auth.usernamePlaceholder} required autoComplete="username" icon={<Icon.User/>}/>
+
+                  <div>
+                    <Field id="j-pass" label={t.auth.password} type={showJoinPass ? "text" : "password"}
+                      value={joinPassword} onChange={setJoinPassword}
+                      placeholder={t.auth.passwordPlaceholder} required autoComplete="new-password"
+                      icon={<Icon.Lock/>}
+                      suffix={
+                        <button type="button" onClick={() => setShowJoinPass(v => !v)}
+                          className="flex items-center justify-center w-8 h-8 rounded-md cursor-pointer transition-colors text-slate-400 hover:text-white">
+                          <Icon.Eye off={showJoinPass}/>
+                        </button>
+                      }/>
+                    <PasswordStrengthMeter password={joinPassword} lang={lang}/>
+                  </div>
+
+                  <CustomRoleSelect
+                    id="j-role" label={t.auth.chooseRole} value={joinRole}
+                    onChange={v => setJoinRole(v as JoinRole)} icon={<Icon.Tag/>}
+                    options={[
+                      { value: "student", label: t.auth.student, icon: "🎓" },
+                      { value: "doctor",  label: t.auth.doctor,  icon: "🩺" },
+                      { value: "ta",      label: t.auth.ta,      icon: "💼" },
+                    ]}
+                    labelColor="#CBD5E1"
+                    fieldBg="rgba(255,255,255,0.045)"
+                    fieldBorder="rgba(255,255,255,0.12)"
+                    fieldFocus="rgba(99,102,241,0.08)"
+                    fieldGlow="0 0 0 3px rgba(99,102,241,0.2)"
+                    textColor="#FFFFFF"
+                    faintColor="#94A3B8"
+                    isRTL={isRTL}/>
+
+                  {isStudent && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field id="j-seat" label={t.auth.seatNumber} value={seatNumber} onChange={setSeatNumber}
+                        placeholder={t.auth.seatNumberPlaceholder} icon={<Icon.Hash/>}/>
+                      <Field id="j-sec" label={t.auth.sectionNumber} type="number" value={sectionNumber}
+                        onChange={setSectionNumber} placeholder={t.auth.sectionPlaceholder} icon={<Icon.Hash/>}/>
+                    </div>
+                  )}
+
+                  {isStudent && (
+                    <Field id="j-rank" label={t.auth.rankInList} type="number" value={rankInList}
+                      onChange={setRankInList} placeholder={t.auth.rankPlaceholder} icon={<Icon.Hash/>}/>
+                  )}
+
+                  <div className="pt-1.5">
+                    <PrimaryBtn loading={joinLoading}>
+                      <Icon.UserPlus/><span>{t.auth.submitRequest}</span>
+                    </PrimaryBtn>
+                  </div>
+
+                  <p className="text-center text-[12.5px] pt-1.5 text-slate-400">
+                    {lang === "ar" ? "لديك حساب؟" : "Have an account?"}{" "}
+                    <button type="button" onClick={() => setTab("login")}
+                      className="font-semibold text-indigo-400 hover:text-indigo-300 cursor-pointer transition-colors">
+                      {t.auth.signIn}
+                    </button>
+                  </p>
+                </form>
+              )
+            )}
+          </div>
         </div>
       </div>
 
       {/* ── Page footer ──────────────────────────────────────────────── */}
-      <p className="relative z-10 mt-8 text-[11px] font-medium text-center"
-        style={{ color: "rgba(51,65,85,1)", animation: "rise 0.6s cubic-bezier(0.22,1,0.36,1) 0.1s both" }}>
-        © 2026 CYBER TMSAH ·{" "}
-        {lang === "ar" ? "جامعة حلوان التكنولوجية الدولية" : "Helwan International Technological University"}
-      </p>
+      <div className="relative z-10 mt-8 flex flex-col items-center gap-1.5 text-center"
+        style={{ animation: "rise 0.6s cubic-bezier(0.22,1,0.36,1) 0.1s both" }}>
+        <p className="text-[12px] font-medium text-slate-400">
+          © 2026 CYBER TMSAH ·{" "}
+          {lang === "ar" ? "جامعة حلوان التكنولوجية الدولية" : "Helwan International Technological University"}
+        </p>
+        <div className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          <span>{lang === "ar" ? "اتصال مشفّر وآمن بموجب معايير TLS 1.3" : "Encrypted & Secure Connection (TLS 1.3)"}</span>
+        </div>
+      </div>
 
       <ForgotPasswordModal
         isOpen={showForgotModal}
@@ -696,7 +707,7 @@ const LoginPage = () => {
           from { opacity: 0; transform: translateY(16px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        input::placeholder { color: #1E293B; }
+        input::placeholder { color: #64748B !important; }
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button { opacity: 0; }
       `}</style>
