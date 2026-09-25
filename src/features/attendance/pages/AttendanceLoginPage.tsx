@@ -271,8 +271,11 @@ const LoginPage = () => {
     if (lockMs > 0) { setLockRemaining(lockMs); return; }
 
     setLoginLoading(true);
-    // Username → email mapping: username@cyber.local
-    const authEmail = username.includes("@") ? username : `${username.trim()}@cyber.local`;
+    let authEmail = username.trim();
+    if (!authEmail.includes("@")) {
+      const { data: resolved } = await supabase.rpc("resolve_login_identifier", { p_identifier: authEmail });
+      authEmail = resolved || `${authEmail}@cyber.local`;
+    }
 
     const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password });
 

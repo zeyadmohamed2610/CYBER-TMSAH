@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Pencil, Save, Globe, CheckCircle2, Trash2, ChevronDown, ChevronRight, ChevronLeft, Calendar, Loader2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Pencil, Save, Globe, CheckCircle2, Trash2, ChevronDown, ChevronRight, ChevronLeft, Calendar, Loader2, FileSpreadsheet, UploadCloud, Download, FileText, GraduationCap, Coffee } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,20 +13,27 @@ interface Entry { subject: string; instructor: string; room: string; entry_type:
 interface DayData { day: string; entries: (Entry | null)[]; isHoliday?: boolean; isTraining?: boolean }
 type AllSections = Record<number, DayData[]>;
 
-const DAYS = ["السبت", "الاحد", "الاثنين", "الثلاثاء", "الاربعاء", "الخميس"];
+const DAYS = ["الجمعة", "السبت", "الاحد", "الاثنين", "الثلاثاء", "الاربعاء", "الخميس"];
 const PERIODS = [
-  { time: "9:00 AM - 10:00 AM", label: "الاولى" },
-  { time: "10:05 AM - 11:05 AM", label: "الثانية" },
-  { time: "11:10 AM - 12:10 PM", label: "الثالثة" },
-  { time: "12:15 PM - 1:15 PM", label: "الرابعة" },
-  { time: "1:20 PM - 2:20 PM", label: "الخامسة" },
-  { time: "2:25 PM - 3:25 PM", label: "السادسة" },
-  { time: "3:30 PM - 4:30 PM", label: "السابعة" },
-  { time: "4:35 PM - 5:35 PM", label: "الثامنة" },
+  { time: "09:00 AM - 10:00 AM", label: "الأولى (1)" },
+  { time: "10:00 AM - 11:00 AM", label: "الثانية (2)" },
+  { time: "11:00 AM - 12:00 PM", label: "الثالثة (3)" },
+  { time: "12:00 PM - 01:00 PM", label: "الرابعة (4)" },
+  { time: "01:00 PM - 02:00 PM", label: "الخامسة (5)" },
+  { time: "02:00 PM - 03:00 PM", label: "السادسة (6)" },
+  { time: "03:00 PM - 04:00 PM", label: "السابعة (7)" },
+  { time: "04:00 PM - 05:00 PM", label: "الثامنة (8)" },
+  { time: "05:00 PM - 06:00 PM", label: "التاسعة (9)" },
+  { time: "06:00 PM - 07:00 PM", label: "العاشرة (10)" },
+  { time: "07:00 PM - 08:00 PM", label: "الحادية عشرة (11)" },
 ];
 
 function makeEmpty(): DayData[] {
-  return [...DAYS.map(d => ({ day: d, entries: new Array(8).fill(null) })), { day: "الجمعة", isHoliday: true, entries: [] }];
+  return DAYS.map(d => ({
+    day: d,
+    entries: new Array(11).fill(null),
+    isHoliday: d === "السبت" || d === "الخميس",
+  }));
 }
 
 function initAll(): AllSections {
@@ -45,6 +52,7 @@ export function QuickScheduleEditor() {
   const [loading, setLoading] = useState(true);
   const [mobileDay, setMobileDay] = useState(0);
   const [scheduleTab, setScheduleTab] = useState("schedule");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Exam state
   const [examFiles, setExamFiles] = useState<{id: string, title: string, type: string, url: string, section: number}[]>([]);
@@ -60,10 +68,16 @@ export function QuickScheduleEditor() {
         for (const row of data) {
           const di = DAYS.indexOf(row.day);
           if (di === -1 || !init[row.section]) continue;
-          init[row.section][di].entries[row.period - 1] = {
-            subject: row.subject, instructor: row.instructor, room: row.room,
-            entry_type: (row.entry_type as "lecture" | "section") || "lecture",
-          };
+          if (row.is_holiday) init[row.section][di].isHoliday = true;
+          if (row.is_training) init[row.section][di].isTraining = true;
+          if (row.subject && row.period >= 1 && row.period <= 11) {
+            init[row.section][di].entries[row.period - 1] = {
+              subject: row.subject,
+              instructor: row.instructor,
+              room: row.room,
+              entry_type: (row.entry_type as "lecture" | "section") || "lecture",
+            };
+          }
         }
         setAllSections(init);
       }
@@ -92,14 +106,14 @@ export function QuickScheduleEditor() {
   const toggleHoliday = (di: number) => {
     const n = current.map(d => ({ ...d, entries: [...d.entries] }));
     n[di].isHoliday = !n[di].isHoliday;
-    if (n[di].isHoliday) { n[di].isTraining = false; n[di].entries = new Array(8).fill(null); }
+    if (n[di].isHoliday) { n[di].isTraining = false; n[di].entries = new Array(11).fill(null); }
     update(n);
   };
 
   const toggleTraining = (di: number) => {
     const n = current.map(d => ({ ...d, entries: [...d.entries] }));
     n[di].isTraining = !n[di].isTraining;
-    if (n[di].isTraining) { n[di].isHoliday = false; n[di].entries = new Array(8).fill(null); }
+    if (n[di].isTraining) { n[di].isHoliday = false; n[di].entries = new Array(11).fill(null); }
     update(n);
   };
 
@@ -138,7 +152,7 @@ export function QuickScheduleEditor() {
             rows.push({ section: Number(sec), day: DAYS[di], period: 1, subject: "", instructor: "", room: "", entry_type: "lecture", is_holiday: isHoliday, is_training: isTraining });
           }
 
-          for (let pi = 0; pi < 8; pi++) {
+          for (let pi = 0; pi < 11; pi++) {
             const e = dayData.entries[pi];
             if (e && e.subject) {
               rows.push({ section: Number(sec), day: DAYS[di], period: pi + 1, subject: e.subject, instructor: e.instructor, room: e.room, entry_type: e.entry_type, is_holiday: false, is_training: false });
@@ -149,9 +163,97 @@ export function QuickScheduleEditor() {
       const { error } = await supabase.rpc("publish_all_schedule", { p_rows: rows });
       if (error) throw error;
       setHasChanges(false);
-      toast.success("تم نشر الجدول للطلاب");
+      toast.success("تم نشر الجدول للطلاب بنجاح");
     } catch { toast.error("فشل النشر"); }
     setPublishing(false);
+  };
+
+  // ── CSV / Excel Export
+  const exportAsCSV = () => {
+    const header = "Section,Day,Period,Subject,Instructor,Room,Type,IsHoliday\n";
+    let rows = "";
+    for (const [sec, days] of Object.entries(allSections)) {
+      for (let di = 0; di < DAYS.length; di++) {
+        const d = days[di];
+        if (d.isHoliday) {
+          rows += `${sec},"${DAYS[di]}",1,"","","","lecture",true\n`;
+        }
+        for (let pi = 0; pi < 11; pi++) {
+          const e = d.entries[pi];
+          if (e && e.subject) {
+            rows += `${sec},"${DAYS[di]}",${pi + 1},"${e.subject}","${e.instructor}","${e.room}","${e.entry_type}",false\n`;
+          }
+        }
+      }
+    }
+    const blob = new Blob(["\uFEFF" + header + rows], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Cyber_Security_Schedule_2026_2027.csv`;
+    link.click();
+    toast.success("تم تحميل ملف الإكسيل (CSV) بنجاح");
+  };
+
+  // ── CSV / Excel Import
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const text = evt.target?.result as string;
+        if (!text) return;
+        const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+        if (lines.length < 2) {
+          toast.error("الملف فارغ أو غير صالح");
+          return;
+        }
+
+        const newInit = initAll();
+        // Skip header line
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i];
+          // regex to handle quoted csv
+          const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(p => p.replace(/^"|"$/g, "").trim());
+          if (parts.length < 4) continue;
+
+          const sec = parseInt(parts[0]);
+          const day = parts[1];
+          const period = parseInt(parts[2]);
+          const subject = parts[3] || "";
+          const instructor = parts[4] || "";
+          const room = parts[5] || "";
+          const type = (parts[6] as "lecture" | "section") || "lecture";
+          const isHol = parts[7] === "true";
+
+          const di = DAYS.indexOf(day);
+          if (di === -1 || !newInit[sec]) continue;
+
+          if (isHol) {
+            newInit[sec][di].isHoliday = true;
+          }
+          if (subject && period >= 1 && period <= 11) {
+            newInit[sec][di].entries[period - 1] = {
+              subject,
+              instructor,
+              room,
+              entry_type: type
+            };
+          }
+        }
+
+        setAllSections(newInit);
+        setHasChanges(true);
+        toast.success("تم قراءة ملف الإكسيل بنجاح! اضغط 'نشر' لحفظ التغييرات");
+      } catch (err) {
+        console.error(err);
+        toast.error("خطأ أثناء قراءة ملف الإكسيل");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
   };
 
   const stats = {
@@ -254,11 +356,38 @@ export function QuickScheduleEditor() {
             <Calendar className="h-4 w-4 text-primary" />
             ادارة الجدول والامتحانات
           </CardTitle>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".csv"
+              onChange={handleImportCSV}
+              className="hidden"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              className="gap-1.5 text-xs h-9"
+              title="استيراد جدول كامل من ملف CSV/Excel"
+            >
+              <UploadCloud className="h-3.5 w-3.5 text-primary" />
+              استيراد إكسيل
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportAsCSV}
+              className="gap-1.5 text-xs h-9"
+              title="تصدير جدول كل السكاشن كملف متوافق مع Excel"
+            >
+              <Download className="h-3.5 w-3.5 text-emerald-500" />
+              تصدير إكسيل
+            </Button>
             {hasChanges && <span className="text-xs text-amber-500 font-medium">غير منشور</span>}
             {!hasChanges && <span className="flex items-center gap-1 text-xs text-green-500"><CheckCircle2 className="h-3.5 w-3.5" />منشور</span>}
-            <Button onClick={handlePublish} disabled={publishing} className="gap-2">
-              <Globe className="h-4 w-4" />{publishing ? "جاري النشر" : "نشر"}
+            <Button onClick={handlePublish} disabled={publishing} size="sm" className="gap-2 h-9">
+              <Globe className="h-4 w-4" />{publishing ? "جاري النشر" : "نشر الجدول"}
             </Button>
           </div>
         </div>

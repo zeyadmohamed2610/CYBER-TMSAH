@@ -17,15 +17,48 @@ function normalizeDay(raw: string): string {
   return raw.replace("الإثنين", "الاثنين").replace("الأحد", "الاحد").replace("الأربعاء", "الاربعاء");
 }
 
-const DAYS_ORDER = ["السبت", "الاحد", "الاثنين", "الثلاثاء", "الاربعاء", "الخميس", "الجمعة"];
+const DAYS_ORDER = ["الجمعة", "السبت", "الاحد", "الاثنين", "الثلاثاء", "الاربعاء", "الخميس"];
 const todayName = normalizeDay(new Date().toLocaleDateString("ar-EG", { weekday: "long" }));
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-const PERIODS_TIME = [
-  "9:00 AM - 10:00 AM", "10:05 AM - 11:05 AM", "11:10 AM - 12:10 PM", "12:15 PM - 1:15 PM",
-  "1:20 PM - 2:20 PM", "2:25 PM - 3:25 PM", "3:30 PM - 4:30 PM", "4:35 PM - 5:35 PM",
+const FRIDAY_PERIODS_TIME: Record<number, string> = {
+  1: "09:00 - 10:00 ص",
+  2: "10:00 - 11:00 ص",
+  3: "11:00 - 12:00 م",
+  4: "02:00 - 03:00 م",
+  5: "03:00 - 04:00 م",
+  6: "04:00 - 05:00 م",
+  7: "05:00 - 06:00 م",
+  8: "06:00 - 07:00 م",
+  9: "07:00 - 08:00 م",
+};
+
+const STANDARD_PERIODS_TIME: Record<number, string> = {
+  1: "09:00 - 10:00 ص",
+  2: "10:00 - 11:00 ص",
+  3: "11:00 - 12:00 م",
+  4: "12:00 - 01:00 م",
+  5: "01:00 - 02:00 م",
+  6: "02:00 - 03:00 م",
+  7: "03:00 - 04:00 م",
+  8: "04:00 - 05:00 م",
+  9: "05:00 - 06:00 م",
+  10: "06:00 - 07:00 م",
+  11: "07:00 - 08:00 م",
+};
+
+const PERIODS_LABEL = [
+  "الفترة الأولى (1)", "الفترة الثانية (2)", "الفترة الثالثة (3)", "الفترة الرابعة (4)",
+  "الفترة الخامسة (5)", "الفترة السادسة (6)", "الفترة السابعة (7)", "الفترة الثامنة (8)",
+  "الفترة التاسعة (9)", "الفترة العاشرة (10)", "الفترة الحادية عشرة (11)"
 ];
-const PERIODS_LABEL = ["الأولى", "الثانية", "الثالثة", "الرابعة", "الخامسة", "السادسة", "السابعة", "الثامنة"];
+
+function getTimeSlot(day: string, period: number): string {
+  if (day === "الجمعة") {
+    return FRIDAY_PERIODS_TIME[period] || `فترة ${period}`;
+  }
+  return STANDARD_PERIODS_TIME[period] || `فترة ${period}`;
+}
 
 const Schedule = () => {
   const [selectedSection, setSelectedSection] = useState("مجموعة 1");
@@ -74,26 +107,26 @@ const Schedule = () => {
           grouped[row.day].push({ subject: row.subject, instructor: row.instructor, room: row.room, entry_type: row.entry_type, period: row.period });
         }
 
-        const baseData: UnifiedDay[] = DAYS_ORDER.filter(d => d !== "الجمعة").map(day => {
+        const baseData: UnifiedDay[] = DAYS_ORDER.map(day => {
           const flags = dayFlags[day] || { isHoliday: false, isTraining: false };
           const entries = (grouped[day] || []).sort((a, b) => a.period - b.period);
+          const isOff = flags.isHoliday || (entries.length === 0 && (day === "السبت" || day === "الخميس"));
           return {
             day,
             entries: entries.map((e) => ({
               id: `${day}-${e.period}-${e.subject}`,
-              time_slot: PERIODS_TIME[e.period - 1] || "",
+              time_slot: getTimeSlot(day, e.period),
               subject: e.subject,
               instructor: e.instructor,
               room: e.room,
               entry_type: e.entry_type,
-              period_label: PERIODS_LABEL[e.period - 1] || "",
+              period_label: PERIODS_LABEL[e.period - 1] || `فترة ${e.period}`,
             })),
-            isHoliday: flags.isHoliday,
+            isHoliday: isOff,
             isTraining: flags.isTraining,
           };
         });
 
-        baseData.push({ day: "الجمعة", entries: [], isHoliday: true });
         setSchedule(baseData);
       } catch {
         setSchedule([]);
