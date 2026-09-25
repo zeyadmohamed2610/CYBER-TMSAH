@@ -219,46 +219,29 @@ export const Navbar = () => {
                 {/* ── Dropdown Popup Card (Strictly 2 buttons: Settings & Sign Out) ── */}
                 {userDropdownOpen && (
                   <div
-                    className="absolute end-0 top-full mt-2.5 w-60 rounded-2xl border border-border/90 bg-card/95 backdrop-blur-2xl p-2 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 animate-fade-up"
+                    className="absolute end-0 top-full mt-2 w-44 rounded-2xl border border-border/90 bg-card/95 backdrop-blur-2xl p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.5)] z-50 animate-fade-up"
                     dir={isRTL ? "rtl" : "ltr"}
                   >
-                    {/* Compact Profile Header */}
-                    <div className="flex items-center gap-3 p-2.5 rounded-xl bg-background/50 border border-border/40">
-                      <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-primary to-cyan-400 flex items-center justify-center text-primary-foreground font-black text-sm shadow-md shrink-0">
-                        {userInitial}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-black text-foreground truncate leading-tight">
-                          {displayName}
-                        </p>
-                        {roleInfo && (
-                          <span className="inline-block mt-0.5 text-[10px] font-bold text-primary truncate">
-                            {roleInfo.label}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="my-1.5 h-px bg-border/60" />
-
-                    {/* ONLY 2 Actions: Settings & Sign Out */}
-                    <div className="space-y-1">
+                    <div className="space-y-0.5">
                       {/* Button 1: Settings */}
                       <button
                         onClick={() => {
                           setUserDropdownOpen(false);
                           setProfileModalOpen(true);
                         }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-foreground hover:bg-primary/10 hover:text-primary transition-all text-start"
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-foreground hover:bg-primary/10 hover:text-primary transition-all text-start"
                       >
                         <Settings className="w-4 h-4 text-primary" />
                         <span>{lang === "ar" ? "الإعدادات" : "Settings"}</span>
                       </button>
 
+                      {/* Divider */}
+                      <div className="my-1 h-px bg-border/60 mx-1" />
+
                       {/* Button 2: Sign Out */}
                       <button
                         onClick={handleSignOut}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-destructive hover:bg-destructive/10 transition-all text-start"
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-destructive hover:bg-destructive/10 transition-all text-start"
                       >
                         <LogOut className="w-4 h-4" />
                         <span>{lang === "ar" ? "تسجيل الخروج" : "Sign Out"}</span>
@@ -300,71 +283,49 @@ export const Navbar = () => {
 
         {/* Mobile menu drawer */}
         {open && (
-          <div className="md:hidden border-t border-border bg-background/95 backdrop-blur-xl px-4 py-4 space-y-3 animate-fade-up">
+          <div className="md:hidden border-t border-border bg-background/95 backdrop-blur-xl px-4 py-4 space-y-2 animate-fade-up">
+            {/* Mobile Actions: ONLY Settings & Sign Out */}
             {user && (
-              <div className="flex items-center justify-between pb-3 border-b border-border/60">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-primary to-cyan-300 flex items-center justify-center text-primary-foreground font-bold text-sm">
-                    {userInitial}
-                  </div>
-                  <div>
-                    <span className="font-bold text-sm text-foreground block">
-                      {displayName}
-                    </span>
-                    {roleInfo && (
-                      <span className="text-xs text-primary font-bold">
-                        {roleInfo.label}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Mobile Actions: ONLY Settings, Language & Sign Out */}
-            <div className="space-y-1.5">
-              {user && (
-                <button
-                  onClick={() => {
-                    setOpen(false);
-                    setProfileModalOpen(true);
-                  }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border/70 bg-card/60 text-sm font-semibold text-foreground text-start"
-                >
-                  <Settings className="w-4 h-4 text-primary" />
-                  <span>{lang === "ar" ? "الإعدادات" : "Settings"}</span>
-                </button>
-              )}
-
               <button
                 onClick={() => {
-                  setLang(lang === "en" ? "ar" : "en");
                   setOpen(false);
+                  setProfileModalOpen(true);
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border/70 bg-card/60 text-sm font-semibold text-foreground text-start"
+                className="w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl border border-border/70 bg-card/60 text-sm font-bold text-foreground text-start hover:border-primary/50"
               >
-                <Globe className="w-4 h-4 text-muted-foreground" />
-                <span>{lang === "en" ? "اللغة: العربية" : "Language: English"}</span>
+                <Settings className="w-4 h-4 text-primary" />
+                <span>{lang === "ar" ? "الإعدادات" : "Settings"}</span>
               </button>
+            )}
 
-              {user ? (
-                <button
-                  onClick={handleSignOut}
-                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive text-sm font-bold text-start"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>{lang === "ar" ? "تسجيل الخروج" : "Sign Out"}</span>
-                </button>
-              ) : (
-                <Link
-                  to="/"
-                  onClick={() => setOpen(false)}
-                  className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground font-bold text-sm"
-                >
-                  <span>{lang === "ar" ? "تسجيل الدخول" : "Sign In"}</span>
-                </Link>
-              )}
-            </div>
+            <button
+              onClick={() => {
+                setLang(lang === "en" ? "ar" : "en");
+                setOpen(false);
+              }}
+              className="w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl border border-border/70 bg-card/60 text-sm font-semibold text-foreground text-start"
+            >
+              <Globe className="w-4 h-4 text-muted-foreground" />
+              <span>{lang === "en" ? "اللغة: العربية" : "Language: English"}</span>
+            </button>
+
+            {user ? (
+              <button
+                onClick={handleSignOut}
+                className="w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive text-sm font-bold text-start"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>{lang === "ar" ? "تسجيل الخروج" : "Sign Out"}</span>
+              </button>
+            ) : (
+              <Link
+                to="/"
+                onClick={() => setOpen(false)}
+                className="w-full flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm"
+              >
+                <span>{lang === "ar" ? "تسجيل الدخول" : "Sign In"}</span>
+              </Link>
+            )}
           </div>
         )}
       </nav>
