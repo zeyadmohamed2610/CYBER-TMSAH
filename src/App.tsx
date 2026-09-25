@@ -41,22 +41,22 @@ const App = () => (
     <ThemeProvider>
       <LanguageProvider>
         <AppWrapper>
-          <ErrorBoundary>
-            <TooltipProvider delayDuration={200}>
-              <Toaster />
-              <Sonner
-                position="top-center"
-                toastOptions={{
-                  style: {
-                    fontFamily: "'Cairo', sans-serif",
-                  },
-                }}
-              />
-              <OfflineStatusProvider
-                syncFunction={offlineAttendanceService.syncPending}
-                getPendingCountFunction={offlineAttendanceService.getPendingCount}
-              >
-                <BrowserRouter>
+          <TooltipProvider delayDuration={200}>
+            <Toaster />
+            <Sonner
+              position="top-center"
+              toastOptions={{
+                style: {
+                  fontFamily: "'Cairo', sans-serif",
+                },
+              }}
+            />
+            <OfflineStatusProvider
+              syncFunction={offlineAttendanceService.syncPending}
+              getPendingCountFunction={offlineAttendanceService.getPendingCount}
+            >
+              <BrowserRouter>
+                <ErrorBoundary>
                   <AttendanceAuthProvider>
                     <Analytics />
                     <Suspense fallback={<LoadingScreen />}>
@@ -118,11 +118,11 @@ const App = () => (
                       </PageTransition>
                     </Suspense>
                   </AttendanceAuthProvider>
-                </BrowserRouter>
+                </ErrorBoundary>
+              </BrowserRouter>
                 <OfflineIndicator />
               </OfflineStatusProvider>
             </TooltipProvider>
-          </ErrorBoundary>
         </AppWrapper>
       </LanguageProvider>
     </ThemeProvider>
