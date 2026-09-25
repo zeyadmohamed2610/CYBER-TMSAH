@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Activity, BookOpenCheck, ChevronDown, Clock3, GraduationCap, Stethoscope, Users, Users2 } from "lucide-react";
+import { Activity, BookOpenCheck, ChevronDown, Clock3, Users, Users2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AttendanceRecordsPanel } from "../components/AttendanceRecordsPanel";
@@ -14,6 +14,7 @@ import { StatCard } from "../components/StatCard";
 import { DeviceLockPanel } from "../components/DeviceLockPanel";
 import { UserList } from "../components/UserList";
 import { TAManagementPanel } from "../components/TAManagementPanel";
+import { JoinRequestsPanel } from "../components/JoinRequestsPanel";
 import { useAttendanceDashboardData } from "../hooks/useAttendanceDashboardData";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 import type { Lecture } from "../types";
@@ -30,6 +31,7 @@ export const OwnerDashboard = () => {
   };
 
   const TABS = [
+    { value: "requests", label: "🔔 الطلبات" },
     { value: "lectures", label: "المحاضرات" },
     { value: "schedule", label: "الجدول" },
     { value: "materials", label: "المواد" },
@@ -105,6 +107,8 @@ export const OwnerDashboard = () => {
             ))}
           </TabsList>
         </div>
+
+        <TabsContent value="requests"><JoinRequestsPanel /></TabsContent>
 
         <TabsContent value="lectures">
           <LectureManagementPanel onSelectLecture={setSelectedLecture} />
