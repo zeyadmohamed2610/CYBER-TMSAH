@@ -40,54 +40,60 @@ function recordAttempt(success: boolean) {
   } catch { /**/ }
 }
 
-// ── Theme tokens (both modes dark-premium) ───────────────────────────────────
+// ── Theme tokens (dark & calm non-glaring light mode) ─────────────────────────
 const THEME = {
   dark: {
-    bg:          "hsl(222, 28%, 5%)",
-    card:        "rgba(255,255,255,0.04)",
-    cardBorder:  "rgba(255,255,255,0.07)",
-    cardShadow:  "0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04)",
-    fieldBg:     "rgba(255,255,255,0.05)",
-    fieldBorder: "rgba(255,255,255,0.09)",
-    fieldFocus:  "rgba(255,255,255,0.09)",
-    tabBg:       "rgba(255,255,255,0.05)",
-    tabBorder:   "rgba(255,255,255,0.07)",
-    text:        "#f1f5f9",
-    textMuted:   "rgba(148,163,184,0.75)",
-    textFaint:   "rgba(100,116,139,0.6)",
-    label:       "rgba(100,116,139,0.7)",
-    orb1:        "hsl(174,72%,50%,0.09)",
-    orb2:        "hsl(210,80%,60%,0.06)",
-    orb3:        "hsl(280,60%,60%,0.04)",
+    bg:          "hsl(222, 32%, 6%)",
+    card:        "rgba(15, 23, 42, 0.75)",
+    cardBorder:  "rgba(255, 255, 255, 0.08)",
+    cardShadow:  "0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.05)",
+    fieldBg:     "rgba(255, 255, 255, 0.04)",
+    fieldBorder: "rgba(255, 255, 255, 0.08)",
+    fieldFocus:  "rgba(255, 255, 255, 0.08)",
+    tabBg:       "rgba(255, 255, 255, 0.05)",
+    tabBorder:   "rgba(255, 255, 255, 0.08)",
+    text:        "#f8fafc",
+    textMuted:   "rgba(148, 163, 184, 0.85)",
+    textFaint:   "rgba(148, 163, 184, 0.55)",
+    label:       "rgba(148, 163, 184, 0.8)",
+    btnBg:       "hsl(187, 92%, 46%)",
+    btnText:     "hsl(222, 35%, 6%)",
+    btnShadow:   "0 4px 24px hsl(187 92% 46% / 0.35)",
+    orb1:        "hsl(187, 92%, 46%, 0.09)",
+    orb2:        "hsl(210, 80%, 60%, 0.06)",
+    orb3:        "hsl(280, 60%, 60%, 0.04)",
     particleL:   58,
     particleA:   0.45,
-    dotA:        0.14,
+    dotA:        0.12,
   },
-  dim: {
-    // "Light" mode = deep navy-slate — NOT white
-    bg:          "hsl(222, 22%, 11%)",
-    card:        "rgba(255,255,255,0.06)",
-    cardBorder:  "rgba(255,255,255,0.1)",
-    cardShadow:  "0 24px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06)",
-    fieldBg:     "rgba(255,255,255,0.06)",
-    fieldBorder: "rgba(255,255,255,0.11)",
-    fieldFocus:  "rgba(255,255,255,0.1)",
-    tabBg:       "rgba(255,255,255,0.06)",
-    tabBorder:   "rgba(255,255,255,0.09)",
-    text:        "#e2e8f0",
-    textMuted:   "rgba(148,163,184,0.85)",
-    textFaint:   "rgba(100,116,139,0.7)",
-    label:       "rgba(100,116,139,0.75)",
-    orb1:        "hsl(174,72%,50%,0.12)",
-    orb2:        "hsl(210,80%,60%,0.08)",
-    orb3:        "hsl(280,60%,60%,0.05)",
-    particleL:   52,
-    particleA:   0.35,
-    dotA:        0.18,
+  light: {
+    // Soft, eye-friendly off-white / light slate (NOT blinding #fff, matching reference)
+    bg:          "hsl(215, 28%, 95%)",
+    card:        "rgba(255, 255, 255, 0.98)",
+    cardBorder:  "rgba(226, 232, 240, 0.95)",
+    cardShadow:  "0 24px 60px -12px rgba(15, 23, 42, 0.09), 0 0 0 1px rgba(0, 0, 0, 0.04)",
+    fieldBg:     "#f8fafc",
+    fieldBorder: "#cbd5e1",
+    fieldFocus:  "#ffffff",
+    tabBg:       "#f1f5f9",
+    tabBorder:   "#e2e8f0",
+    text:        "#0f172a",
+    textMuted:   "#475569",
+    textFaint:   "#94a3b8",
+    label:       "#334155",
+    btnBg:       "hsl(187, 92%, 43%)",
+    btnText:     "#ffffff",
+    btnShadow:   "0 4px 20px hsl(187 92% 43% / 0.35)",
+    orb1:        "hsl(187, 85%, 60%, 0.12)",
+    orb2:        "hsl(210, 85%, 65%, 0.09)",
+    orb3:        "hsl(280, 70%, 70%, 0.05)",
+    particleL:   45,
+    particleA:   0.25,
+    dotA:        0.06,
   },
 } as const;
 
-type ThemeKey = "dark" | "dim";
+type ThemeKey = "dark" | "light";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 const Ic = {
@@ -321,8 +327,8 @@ const LoginPage = () => {
   const { t, lang, setLang, isRTL } = useLang();
   const { toggleTheme, isDark } = useTheme();
 
-  // Both modes are dark-premium — isDark = deeper black, !isDark = navy-slate
-  const tk: typeof THEME[ThemeKey] = isDark ? THEME.dark : THEME.dim;
+  // Theme tokens: Dark mode and calm non-glaring light mode
+  const tk: typeof THEME[ThemeKey] = isDark ? THEME.dark : THEME.light;
 
   const [tab, setTab] = useState<Tab>("login");
   const [lockRemaining, setLockRemaining] = useState(getLockoutRemaining);
@@ -504,13 +510,13 @@ const LoginPage = () => {
             <div className="absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg transition-all duration-300 ease-out"
               style={{
                 [isRTL ? "right" : "left"]: tab === "login" ? "4px" : "calc(50%)",
-                background: "hsl(174,72%,50%)",
-                boxShadow: "0 0 20px hsl(174 72% 50% / 0.4), 0 2px 8px rgba(0,0,0,0.3)",
+                background: tk.btnBg,
+                boxShadow: tk.btnShadow,
               }} />
             {(["login", "join"] as Tab[]).map(tb => (
               <button key={tb} onClick={() => setTab(tb)}
                 className="relative flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold z-10 transition-colors duration-300 select-none"
-                style={{ color: tab === tb ? "hsl(222,28%,5%)" : tk.textMuted }}>
+                style={{ color: tab === tb ? tk.btnText : tk.textMuted }}>
                 {tb === "login"
                   ? <><Ic.Login />{t.auth.signIn}</>
                   : <><Ic.UserPlus />{t.auth.joinTitle}</>}
@@ -557,12 +563,10 @@ const LoginPage = () => {
               <button type="submit" disabled={loginLoading || lockRemaining > 0}
                 className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
-                  background: "hsl(174,72%,50%)",
-                  color: "hsl(222,28%,5%)",
-                  boxShadow: "0 4px 24px hsl(174 72% 50% / 0.35), 0 0 0 1px hsl(174 72% 55% / 0.3)",
-                }}
-                onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 6px 32px hsl(174 72% 50% / 0.5), 0 0 0 1px hsl(174 72% 55% / 0.4)")}
-                onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 4px 24px hsl(174 72% 50% / 0.35), 0 0 0 1px hsl(174 72% 55% / 0.3)")}>
+                  background: tk.btnBg,
+                  color: tk.btnText,
+                  boxShadow: tk.btnShadow,
+                }}>
                 {loginLoading
                   ? <><Loader2 className="w-4 h-4 animate-spin" /><span>{t.auth.signingIn}</span></>
                   : <><Ic.Login /><span>{t.auth.signIn}</span></>}
@@ -592,7 +596,7 @@ const LoginPage = () => {
                 </div>
                 <button onClick={() => { setJoinSuccess(false); setTab("login"); }}
                   className="h-10 px-6 rounded-xl text-sm font-bold transition-all"
-                  style={{ background: "hsl(174,72%,50%)", color: "hsl(222,28%,5%)", boxShadow: "0 4px 20px hsl(174 72% 50% / 0.35)" }}>
+                  style={{ background: tk.btnBg, color: tk.btnText, boxShadow: tk.btnShadow }}>
                   {lang === "ar" ? "العودة لتسجيل الدخول" : "Back to Sign In"}
                 </button>
               </div>
@@ -638,9 +642,9 @@ const LoginPage = () => {
                 <button type="submit" disabled={joinLoading}
                   className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
-                    background: "hsl(174,72%,50%)",
-                    color: "hsl(222,28%,5%)",
-                    boxShadow: "0 4px 24px hsl(174 72% 50% / 0.35)",
+                    background: tk.btnBg,
+                    color: tk.btnText,
+                    boxShadow: tk.btnShadow,
                   }}>
                   {joinLoading
                     ? <><Loader2 className="w-4 h-4 animate-spin" /><span>{t.auth.submitting}</span></>
@@ -649,7 +653,7 @@ const LoginPage = () => {
                 <p className="text-center text-xs" style={{ color: tk.textFaint }}>
                   {lang === "ar" ? "لديك حساب؟" : "Have an account?"}{" "}
                   <button type="button" onClick={() => setTab("login")}
-                    className="font-bold hover:underline" style={{ color: "hsl(174,72%,55%)" }}>
+                    className="font-bold hover:underline" style={{ color: "hsl(187,92%,45%)" }}>
                     {t.auth.signIn}
                   </button>
                 </p>
@@ -671,8 +675,8 @@ const LoginPage = () => {
           from { opacity: 0; transform: translateY(18px) scale(0.98); }
           to   { opacity: 1; transform: translateY(0)    scale(1);    }
         }
-        input::placeholder { opacity: 0.3; }
-        select option { background: hsl(222,28%,8%); color: #e2e8f0; }
+        input::placeholder { opacity: 0.45; }
+        select option { background: var(--card, #ffffff); color: var(--foreground, #0f172a); }
       `}</style>
     </div>
   );

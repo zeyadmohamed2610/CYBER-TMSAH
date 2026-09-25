@@ -1,30 +1,21 @@
 import { useState, useEffect, useRef } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Calendar, ShieldCheck, Home } from "lucide-react";
-import { NavLink } from "@/components/NavLink";
+import { Link, useNavigate } from "react-router-dom";
+import { Menu, X, LogOut, Sun, Moon, Globe, Shield, User } from "lucide-react";
+import { useAttendanceAuth } from "@/features/attendance/context/AttendanceAuthContext";
+import { useTheme } from "@/context/ThemeContext";
+import { useLang } from "@/i18n";
+import { getAttendanceDashboardRoute } from "@/features/attendance/utils/dashboardRoutes";
 
-type NavItem = { label: string; path: string; icon: React.ElementType };
-
-const navLinks: NavItem[] = [
-  { label: "الجدول الدراسي", path: "/schedule",  icon: Calendar },
-  { label: "الحضور",          path: "/attendance", icon: ShieldCheck },
-];
-
-// Mobile menu includes Home
-const mobileNavLinks: NavItem[] = [
-  { label: "الرئيسية",        path: "/",          icon: Home },
-  ...navLinks,
-];
-
-const Navbar = () => {
+export const Navbar = () => {
   const [open, setOpen] = useState(false);
-  const location = useLocation();
   const menuRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
-  // Close on route change
-  useEffect(() => { setOpen(false); }, [location.pathname]);
+  const { user, role, fullName, signOut } = useAttendanceAuth();
+  const { isDark, toggleTheme } = useTheme();
+  const { lang, setLang } = useLang();
 
-  // Close on outside click
+  // Close mobile drawer on outside click
   useEffect(() => {
     if (!open) return;
     const handle = (e: MouseEvent) => {
@@ -36,18 +27,38 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handle);
   }, [open]);
 
-  // Close on Escape
-  useEffect(() => {
-    const handle = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
-    window.addEventListener("keydown", handle);
-    return () => window.removeEventListener("keydown", handle);
-  }, []);
-
-  // Prevent body scroll when menu open
+  // Prevent scroll when mobile menu is open
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [open]);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/", { replace: true });
+    setOpen(false);
+  };
+
+  const getRoleBadge = () => {
+    if (!role) return null;
+    switch (role) {
+      case "student":
+        return { label: lang === "ar" ? "بوابة الطالب" : "Student Portal", icon: "🎓" };
+      case "doctor":
+        return { label: lang === "ar" ? "بوابة المحاضر" : "Doctor Portal", icon: "👨‍🏫" };
+      case "ta":
+        return { label: lang === "ar" ? "بوابة المعيد" : "TA Portal", icon: "🔬" };
+      case "owner":
+        return { label: lang === "ar" ? "الإدارة الأكاديمية" : "Admin Portal", icon: "⚡" };
+      default:
+        return null;
+    }
+  };
+
+  const roleInfo = getRoleBadge();
+  const dashboardPath = role ? getAttendanceDashboardRoute(role) : "/";
 
   return (
     <>
@@ -55,127 +66,181 @@ const Navbar = () => {
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:right-4 focus:z-[60] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-lg"
       >
-        تخطي إلى المحتوى
+        {lang === "ar" ? "تخطي إلى المحتوى" : "Skip to content"}
       </a>
 
       <nav
         ref={menuRef}
-        className="sticky top-0 z-50 border-b border-border bg-background/85 backdrop-blur-xl"
+        className="sticky top-0 z-50 border-b border-border/80 bg-background/85 backdrop-blur-xl transition-colors duration-200"
         role="navigation"
         aria-label="التنقل الرئيسي"
       >
-        <div className="section-container flex items-center justify-between py-3.5">
-          {/* Logo */}
-          <Link to="/" className="group relative flex items-center" dir="ltr">
-            <span className="relative text-2xl md:text-3xl font-black tracking-widest">
-              <span
-                className="bg-gradient-to-r from-cyan-400 via-primary to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_0_10px_hsl(var(--primary)/0.8)]"
-                style={{
-                  textShadow:
-                    "0 0 20px hsl(174 72% 50% / 0.6), 0 0 40px hsl(174 72% 50% / 0.4), 0 0 60px hsl(174 72% 50% / 0.2)",
-                }}
+        <div className="section-container flex items-center justify-between py-3">
+          {/* Logo & Role Badge */}
+          <div className="flex items-center gap-3">
+            <Link
+              to={dashboardPath}
+              className="group flex items-center gap-2.5 transition-transform duration-200 active:scale-95"
+              dir="ltr"
+            >
+              {/* Cyber Shield Icon */}
+              <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-primary/10 border border-primary/30 text-primary shadow-[0_0_15px_hsl(187_92%_45%/0.25)] transition-colors group-hover:border-primary">
+                <Shield className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
+              </div>
+
+              {/* Title */}
+              <span className="font-black text-xl tracking-wider select-none">
+                <span className="bg-gradient-to-r from-cyan-400 via-primary to-cyan-300 bg-clip-text text-transparent">
+                  CYBER
+                </span>
+                <span className="text-foreground transition-colors group-hover:text-primary ml-1.5">
+                  TMSAH
+                </span>
+              </span>
+            </Link>
+
+            {/* Active Role Badge (if logged in) */}
+            {roleInfo && (
+              <Link
+                to={dashboardPath}
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-primary/30 bg-primary/10 text-primary transition-all hover:bg-primary/15"
               >
-                CYBER
-              </span>
-              <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-cyan-400 via-primary to-cyan-400 shadow-[0_0_10px_hsl(var(--primary))]" />
-            </span>
-
-            <span className="text-primary text-3xl md:text-4xl font-thin mx-2 animate-pulse">⟡</span>
-
-            <span className="relative text-2xl md:text-3xl font-black tracking-widest">
-              <span className="text-foreground group-hover:text-primary transition-all duration-500 ease-out group-hover:drop-shadow-[0_0_15px_hsl(var(--primary)/0.8)]">
-                TMSAH
-              </span>
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary via-cyan-400 to-primary group-hover:w-full transition-all duration-700 ease-out shadow-[0_0_10px_hsl(var(--primary))]" />
-            </span>
-          </Link>
-
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-2">
-            {navLinks.map((link) => {
-              const isActive = location.pathname === link.path;
-              return (
-                <NavLink
-                  key={link.path}
-                  to={link.path}
-                  className="group relative px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 overflow-hidden text-muted-foreground hover:text-primary hover:bg-primary/10"
-                  activeClassName="text-primary-foreground bg-primary shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
-                >
-                  {!isActive && (
-                    <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/0 via-primary/10 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  )}
-                  {isActive && <span className="absolute inset-0 bg-gradient-to-r from-primary via-accent to-primary opacity-100" />}
-                  <span className="relative z-10">{link.label}</span>
-                  {!isActive && (
-                    <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-primary rounded-full group-hover:w-2/3 transition-all duration-300" />
-                  )}
-                </NavLink>
-              );
-            })}
+                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                <span>{roleInfo.label}</span>
+              </Link>
+            )}
           </div>
 
-          {/* Mobile hamburger */}
-          <button
-            className="md:hidden flex items-center justify-center text-foreground p-2.5 rounded-xl hover:bg-primary/10 transition-colors min-h-[44px] min-w-[44px]"
-            onClick={() => setOpen((v) => !v)}
-            aria-label={open ? "إغلاق القائمة" : "فتح القائمة"}
-            aria-expanded={open}
-            aria-controls="mobile-menu"
-          >
-            {open
-              ? <X className="h-6 w-6 transition-all duration-200" />
-              : <Menu className="h-6 w-6 transition-all duration-200" />}
-          </button>
+          {/* Desktop Right Controls: Lang, Theme, User, SignOut */}
+          <div className="hidden md:flex items-center gap-2.5">
+            {/* User Greeting (if logged in) */}
+            {user && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-card/60 backdrop-blur-md text-xs font-semibold text-muted-foreground">
+                <User className="w-3.5 h-3.5 text-primary" />
+                <span className="max-w-[140px] truncate text-foreground font-bold">
+                  {fullName || user.email?.split("@")[0]}
+                </span>
+              </div>
+            )}
+
+            {/* Language Switcher */}
+            <button
+              onClick={() => setLang(lang === "en" ? "ar" : "en")}
+              className="flex items-center gap-1.5 h-9 px-3 rounded-xl border border-border/70 bg-card/60 hover:bg-card hover:border-primary/40 text-xs font-bold transition-all text-foreground"
+              title={lang === "en" ? "التبديل إلى العربية" : "Switch to English"}
+            >
+              <Globe className="w-4 h-4 text-muted-foreground" />
+              <span>{lang === "en" ? "عربي" : "EN"}</span>
+            </button>
+
+            {/* Theme Switcher */}
+            <button
+              onClick={toggleTheme}
+              className="w-9 h-9 flex items-center justify-center rounded-xl border border-border/70 bg-card/60 hover:bg-card hover:border-primary/40 transition-all text-foreground"
+              title={isDark ? (lang === "ar" ? "الوضع الفاتح الهادئ" : "Light mode") : (lang === "ar" ? "الوضع الداكن" : "Dark mode")}
+              aria-label="Toggle theme"
+            >
+              {isDark ? (
+                <Sun className="w-4 h-4 text-amber-400 transition-transform duration-200 hover:rotate-45" />
+              ) : (
+                <Moon className="w-4 h-4 text-cyan-600 transition-transform duration-200 hover:-rotate-12" />
+              )}
+            </button>
+
+            {/* Logout / Login button */}
+            {user ? (
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-1.5 h-9 px-3.5 rounded-xl border border-destructive/30 bg-destructive/10 hover:bg-destructive hover:text-destructive-foreground text-destructive text-xs font-bold transition-all duration-200"
+                title={lang === "ar" ? "تسجيل الخروج" : "Sign Out"}
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>{lang === "ar" ? "خروج" : "Logout"}</span>
+              </button>
+            ) : (
+              <Link
+                to="/"
+                className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-primary text-primary-foreground font-bold text-xs shadow-[0_2px_12px_hsl(187_92%_45%/0.3)] hover:opacity-90 transition-all"
+              >
+                <span>{lang === "ar" ? "تسجيل الدخول" : "Sign In"}</span>
+              </Link>
+            )}
+          </div>
+
+          {/* Mobile Menu Button */}
+          <div className="flex md:hidden items-center gap-2">
+            {/* Quick theme button on mobile header */}
+            <button
+              onClick={toggleTheme}
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-border/70 bg-card/60 text-foreground"
+              aria-label="Toggle theme"
+            >
+              {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-cyan-600" />}
+            </button>
+
+            <button
+              className="flex items-center justify-center text-foreground p-2 rounded-xl hover:bg-primary/10 transition-colors"
+              onClick={() => setOpen((v) => !v)}
+              aria-label={open ? "إغلاق القائمة" : "فتح القائمة"}
+              aria-expanded={open}
+            >
+              {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          </div>
         </div>
 
-        {/* Mobile menu — animates via max-height */}
-        <div
-          id="mobile-menu"
-          role="menu"
-          className={`md:hidden border-t border-border bg-background/95 backdrop-blur-xl overflow-hidden transition-all duration-300 ease-in-out ${
-            open ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
-          }`}
-        >
-          <div className="section-container flex flex-col gap-1 py-4">
-            {mobileNavLinks.map((link) => {
-              const isHome = link.path === "/";
-              const isActive = isHome
-                ? location.pathname === "/"
-                : location.pathname.startsWith(link.path);
-              return (
-                <NavLink
-                  key={link.path}
-                  to={link.path}
-                  role="menuitem"
-                  onClick={() => setOpen(false)}
-                  className={`flex items-center justify-between px-4 py-3.5 rounded-xl text-base font-semibold transition-all duration-200 min-h-[48px] ${
-                    isActive
-                      ? "text-primary bg-primary/10 border border-primary/30"
-                      : "text-muted-foreground hover:text-primary hover:bg-primary/5"
-                  }`}
-                  activeClassName=""
-                >
-                  {/* RTL: text on right, icon on left — but flex row-reverse keeps icon on right in RTL */}
-                  <span className="flex items-center gap-3">
-                    <link.icon className={`h-5 w-5 shrink-0 ${isActive ? "text-primary" : "text-muted-foreground/60"}`} />
-                    <span>{link.label}</span>
+        {/* Mobile menu dropdown */}
+        {open && (
+          <div className="md:hidden border-t border-border bg-background/95 backdrop-blur-xl px-4 py-4 space-y-3 animate-fade-up">
+            {user && (
+              <div className="flex items-center justify-between pb-3 border-b border-border/60">
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-primary" />
+                  <span className="font-bold text-sm text-foreground">
+                    {fullName || user.email?.split("@")[0]}
                   </span>
-                  {isActive && <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />}
-                </NavLink>
-              );
-            })}
-          </div>
-        </div>
-      </nav>
+                </div>
+                {roleInfo && (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold border border-primary/30 bg-primary/10 text-primary">
+                    {roleInfo.label}
+                  </span>
+                )}
+              </div>
+            )}
 
-      {/* Backdrop for mobile menu */}
-      {open && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
-          onClick={() => setOpen(false)}
-          aria-hidden="true"
-        />
-      )}
+            <div className="flex items-center justify-between pt-1">
+              <button
+                onClick={() => {
+                  setLang(lang === "en" ? "ar" : "en");
+                  setOpen(false);
+                }}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border bg-card/60 text-sm font-semibold text-foreground"
+              >
+                <Globe className="w-4 h-4 text-muted-foreground" />
+                <span>{lang === "en" ? "اللغة: العربية" : "Language: English"}</span>
+              </button>
+
+              {user ? (
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive text-sm font-bold"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>{lang === "ar" ? "تسجيل الخروج" : "Logout"}</span>
+                </button>
+              ) : (
+                <Link
+                  to="/"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-sm"
+                >
+                  <span>{lang === "ar" ? "تسجيل الدخول" : "Sign In"}</span>
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
+      </nav>
     </>
   );
 };
