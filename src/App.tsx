@@ -22,7 +22,7 @@ const NotFound     = lazy(() => import("./pages/NotFound"));
 const HealthCheck  = lazy(() => import("./pages/HealthCheck"));
 
 // ── Auth / Dashboard pages ─────────────────────────────────────────────────────
-const LoginPage           = lazy(() => import("./features/attendance/pages/AttendanceLoginPage"));
+const LoginPage           = lazy(() => import("./features/auth/pages/LoginPage"));
 const AttendancePage      = lazy(() => import("./features/attendance/pages/AttendancePage"));
 const AttendanceOwnerPage = lazy(() => import("./features/attendance/pages/AttendanceOwnerPage"));
 const AttendanceDoctorPage = lazy(() => import("./features/attendance/pages/AttendanceDoctorPage"));

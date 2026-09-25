@@ -154,12 +154,16 @@ const Ic = {
 function Field({
   id, label, type = "text", value, onChange, placeholder,
   required, autoComplete, dir = "ltr", icon, suffix, badge, tk,
+  inputRef, autoFocus, onKeyDown,
 }: {
   id: string; label: string; type?: string; value: string;
   onChange: (v: string) => void; placeholder?: string; required?: boolean;
   autoComplete?: string; dir?: "ltr" | "rtl";
   icon?: React.ReactNode; suffix?: React.ReactNode; badge?: React.ReactNode;
   tk: typeof THEME;
+  inputRef?: React.Ref<HTMLInputElement>;
+  autoFocus?: boolean;
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
 }) {
   const [focused, setFocused] = useState(false);
   return (
@@ -179,8 +183,10 @@ function Field({
           </span>
         )}
         <input
+          ref={inputRef}
           id={id} type={type} value={value} onChange={e => onChange(e.target.value)}
           placeholder={placeholder} required={required} autoComplete={autoComplete} dir={dir}
+          autoFocus={autoFocus} onKeyDown={onKeyDown}
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
           style={{
             paddingInlineStart: icon ? "2.75rem" : "1rem",
@@ -214,6 +220,7 @@ const LoginPage = () => {
   const [tab, setTab] = useState<Tab>("login");
   const [lockRemaining, setLockRemaining] = useState(getLockoutRemaining);
 
+  const passInputRef = useRef<HTMLInputElement>(null);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -390,7 +397,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden py-8 px-4"
+    <div className="relative min-h-[100dvh] w-full flex items-center justify-center overflow-y-auto py-8 px-4"
       style={{ background: tk.bg }}
       dir={isRTL ? "rtl" : "ltr"}>
 
@@ -526,6 +533,13 @@ const LoginPage = () => {
                 placeholder={t.auth.usernamePlaceholder}
                 required
                 autoComplete="username"
+                autoFocus={typeof window !== "undefined" && window.innerWidth >= 768}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    passInputRef.current?.focus();
+                  }
+                }}
                 badge={getUsernameBadge()}
                 icon={<Ic.User />}
                 {...fieldProps}
@@ -540,6 +554,7 @@ const LoginPage = () => {
                 placeholder={t.auth.passwordPlaceholder}
                 required
                 autoComplete="current-password"
+                inputRef={passInputRef}
                 icon={<Ic.Lock />}
                 suffix={
                   <button type="button" onClick={() => setShowPass(v => !v)}

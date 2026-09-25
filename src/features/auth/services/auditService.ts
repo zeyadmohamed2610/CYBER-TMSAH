@@ -1,5 +1,6 @@
 // src/features/auth/services/auditService.ts
 import { supabase } from "@/lib/supabaseClient";
+import { computeFingerprint } from "@/features/attendance/utils/fingerprint";
 
 export interface AuditLogEntry {
   action: "login_success" | "login_failed" | "join_request" | "password_reset_request";
@@ -10,13 +11,18 @@ export interface AuditLogEntry {
 
 export const recordAuditLog = async (entry: AuditLogEntry): Promise<void> => {
   try {
+    const fingerprint = await computeFingerprint();
+
     const payload = {
       action: entry.action,
       identifier: entry.identifier,
       role: entry.role || null,
       user_agent: navigator.userAgent,
       screen_resolution: `${window.screen.width}x${window.screen.height}`,
-      metadata: entry.metadata || {},
+      metadata: {
+        ...(entry.metadata || {}),
+        fingerprint,
+      },
       created_at: new Date().toISOString(),
     };
 
