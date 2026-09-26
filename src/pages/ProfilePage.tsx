@@ -22,7 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { supabase } from "@/lib/supabaseClient";
 import { useAttendanceAuth } from "@/features/attendance/context/AttendanceAuthContext";
-import { getAttendanceDashboardRoute } from "@/features/attendance/utils/attendanceRouting";
+import { getAttendanceDashboardRoute } from "@/features/attendance/utils/dashboardRoutes";
 import { DEPARTMENTS, ACADEMIC_YEARS } from "@/features/attendance/types";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
