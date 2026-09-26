@@ -638,9 +638,9 @@ const LoginPage = () => {
                     id="j-role" label={t.auth.chooseRole} value={joinRole}
                     onChange={v => setJoinRole(v as JoinRole)} icon={<Icon.Tag/>}
                     options={[
-                      { value: "student", label: t.auth.student, icon: "🎓" },
-                      { value: "doctor",  label: t.auth.doctor,  icon: "🩺" },
-                      { value: "ta",      label: t.auth.ta,      icon: "💼" },
+                      { value: "student", label: t.auth.student },
+                      { value: "doctor",  label: t.auth.doctor  },
+                      { value: "ta",      label: t.auth.ta      },
                     ]}
                     labelColor="#CBD5E1"
                     fieldBg="rgba(255,255,255,0.045)"

@@ -58,15 +58,27 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
         status: "pending",
       });
 
-      if (dbError) throw dbError;
+      let dbFailed = false;
+      if (dbError) {
+        console.error("Failed to insert into password_reset_requests:", dbError);
+        dbFailed = true;
+      }
 
       // 2. Trigger Supabase auth reset email if user exists in auth (Option B self-service)
       try {
-        await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+        const { error: resetErr } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
           redirectTo: `${window.location.origin}/reset-password`,
         });
-      } catch {
-        // Continue even if standard auth reset email encounters an issue
+        if (resetErr) {
+          console.warn("Supabase resetPasswordForEmail warning/error:", resetErr);
+        }
+      } catch (err) {
+        console.warn("Exception calling resetPasswordForEmail:", err);
+      }
+
+      // If DB failed, throw so the user knows
+      if (dbFailed) {
+        throw dbError;
       }
 
       // 3. Record audit log
