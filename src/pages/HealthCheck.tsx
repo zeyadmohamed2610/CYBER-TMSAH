@@ -31,7 +31,7 @@ export const HealthCheck = () => {
     try {
       // Query a lightweight table to verify database connectivity
       const { error } = await supabase
-        .from("academic_departments")
+        .from("subjects")
         .select("id")
         .limit(1);
 
