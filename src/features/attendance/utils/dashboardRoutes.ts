@@ -1,11 +1,11 @@
 import type { AttendanceRole } from "../types";
 
 export const attendanceDashboardRoutes: Record<AttendanceRole, string> = {
-  owner: "/attendance/owner-dashboard",
-  coordinator: "/attendance/owner-dashboard",
-  doctor: "/attendance/doctor-dashboard",
-  student: "/attendance/student-panel",
-  ta: "/attendance/ta-dashboard",
+  owner: "/owner-dashboard",
+  coordinator: "/owner-dashboard",
+  doctor: "/doctor-dashboard",
+  student: "/student-panel",
+  ta: "/ta-dashboard",
 };
 
 export const getAttendanceDashboardRoute = (role: AttendanceRole): string => {

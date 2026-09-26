@@ -68,7 +68,7 @@ export function CustomRoleSelect({
   const selected = options.find((o) => o.value === value) || options[0];
 
   return (
-    <div className="relative" ref={ref}>
+    <div className={`relative ${isOpen ? "z-50" : "z-10"}`} ref={ref}>
       <label
         htmlFor={id}
         style={{ color: isOpen ? "#C084FC" : labelColor }}
@@ -116,7 +116,8 @@ export function CustomRoleSelect({
             openUp ? "bottom-full mb-2" : "top-full mt-2"
           }`}
           style={{
-            backgroundColor: "#060A14", // 100% solid opaque background - absolutely no elements bleed through
+            backgroundColor: "#070B16", // 100% solid completely opaque dark background
+            isolation: "isolate",
             borderColor: "rgba(168, 85, 247, 0.45)",
             boxShadow: "0 25px 70px rgba(0,0,0,0.98), 0 0 35px rgba(147, 51, 234, 0.25)",
           }}

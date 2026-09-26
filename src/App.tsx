@@ -18,22 +18,18 @@ import { LanguageProvider } from "@/i18n";
 import { GlobalCursorGlow } from "@/components/GlobalCursorGlow";
 import { ErrorModal } from "@/components/ErrorModal";
 
-// ── Pages ─────────────────────────────────────────────────────────────────────
-const Schedule     = lazy(() => import("./pages/Schedule"));
-const NotFound     = lazy(() => import("./pages/NotFound"));
-const HealthCheck  = lazy(() => import("./pages/HealthCheck"));
-
 // ── Auth Entrypoint (Eagerly loaded for instant root page rendering) ──────────
 import LoginPage from "./features/auth/pages/LoginPage";
 
 // ── Lazy Pages ────────────────────────────────────────────────────────────────
 const ResetPasswordPage   = lazy(() => import("./features/auth/pages/ResetPasswordPage"));
-const AttendancePage      = lazy(() => import("./features/attendance/pages/AttendancePage"));
 const AttendanceOwnerPage = lazy(() => import("./features/attendance/pages/AttendanceOwnerPage"));
 const AttendanceDoctorPage = lazy(() => import("./features/attendance/pages/AttendanceDoctorPage"));
 const AttendanceStudentPage = lazy(() => import("./features/attendance/pages/AttendanceStudentPage"));
 const AttendanceTAPage    = lazy(() => import("./features/attendance/pages/AttendanceTAPage"));
 const ProfilePage         = lazy(() => import("./pages/ProfilePage"));
+const HealthCheck         = lazy(() => import("./pages/HealthCheck"));
+const NotFound            = lazy(() => import("./pages/NotFound"));
 
 const AppWrapper = ({ children }: { children: React.ReactNode }) => {
   usePerformanceMonitoring();
@@ -68,25 +64,15 @@ const App = () => (
                     <Suspense fallback={<LoadingScreen />}>
                       <PageTransition>
                         <Routes>
-                          {/* ── Public: Root redirects to /login ──────────── */}
+                          {/* ── Public Auth Routes ───────────────────────────── */}
                           <Route path="/" element={<Navigate to="/login" replace />} />
                           <Route path="/login" element={<LoginPage />} />
                           <Route path="/join" element={<LoginPage initialTab="join" />} />
                           <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-                          {/* ── Legacy public routes (still accessible) ─────── */}
-                          <Route path="/schedule" element={<Schedule />} />
-
-                          {/* ── Health ──────────────────────────────────────── */}
-                          <Route path="/health" element={<HealthCheck />} />
-
-                          {/* ── Attendance hub → redirects by role ──────────── */}
-                          <Route path="/attendance" element={<AttendancePage />} />
-                          <Route path="/attendance/login" element={<Navigate to="/login" replace />} />
-
-                          {/* ── Role dashboards ─────────────────────────────── */}
+                          {/* ── Direct Role Dashboards (Clean URLs without /attendance) ── */}
                           <Route
-                            path="/attendance/owner-dashboard"
+                            path="/owner-dashboard"
                             element={
                               <AttendanceRoleGate allowedRole={["owner", "coordinator"]}>
                                 <AttendanceOwnerPage />
@@ -94,7 +80,7 @@ const App = () => (
                             }
                           />
                           <Route
-                            path="/attendance/doctor-dashboard"
+                            path="/doctor-dashboard"
                             element={
                               <AttendanceRoleGate allowedRole="doctor">
                                 <AttendanceDoctorPage />
@@ -102,7 +88,7 @@ const App = () => (
                             }
                           />
                           <Route
-                            path="/attendance/student-panel"
+                            path="/student-panel"
                             element={
                               <AttendanceRoleGate allowedRole="student">
                                 <AttendanceStudentPage />
@@ -110,7 +96,7 @@ const App = () => (
                             }
                           />
                           <Route
-                            path="/attendance/ta-dashboard"
+                            path="/ta-dashboard"
                             element={
                               <AttendanceRoleGate allowedRole="ta">
                                 <AttendanceTAPage />
@@ -128,6 +114,25 @@ const App = () => (
                             }
                           />
 
+                          {/* ── System Diagnostics & Health (Secured for Owner/Coordinator) ── */}
+                          <Route
+                            path="/health"
+                            element={
+                              <AttendanceRoleGate allowedRole={["owner", "coordinator"]}>
+                                <HealthCheck />
+                              </AttendanceRoleGate>
+                            }
+                          />
+
+                          {/* ── Backward Compatibility Redirects ───────────── */}
+                          <Route path="/attendance" element={<Navigate to="/login" replace />} />
+                          <Route path="/attendance/login" element={<Navigate to="/login" replace />} />
+                          <Route path="/attendance/owner-dashboard" element={<Navigate to="/owner-dashboard" replace />} />
+                          <Route path="/attendance/doctor-dashboard" element={<Navigate to="/doctor-dashboard" replace />} />
+                          <Route path="/attendance/student-panel" element={<Navigate to="/student-panel" replace />} />
+                          <Route path="/attendance/ta-dashboard" element={<Navigate to="/ta-dashboard" replace />} />
+                          <Route path="/schedule" element={<Navigate to="/login" replace />} />
+
                           {/* ── 404 ─────────────────────────────────────────── */}
                           <Route path="*" element={<NotFound />} />
                         </Routes>
@@ -136,9 +141,9 @@ const App = () => (
                   </AttendanceAuthProvider>
                 </ErrorBoundary>
               </BrowserRouter>
-                <OfflineIndicator />
-              </OfflineStatusProvider>
-            </TooltipProvider>
+              <OfflineIndicator />
+            </OfflineStatusProvider>
+          </TooltipProvider>
         </AppWrapper>
       </LanguageProvider>
     </ThemeProvider>

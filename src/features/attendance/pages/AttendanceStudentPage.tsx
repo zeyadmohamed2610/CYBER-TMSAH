@@ -98,13 +98,6 @@ const AttendanceStudentPage = () => {
               <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground md:text-4xl tracking-tight">مركز الحضور السيبراني</h1>
             </div>
             <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-3 mt-2 sm:mt-0">
-              <a
-                href="/schedule"
-                className="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-border/80 bg-card/60 hover:bg-card hover:border-primary/50 text-sm font-bold text-foreground transition-all shadow-sm"
-              >
-                <span className="text-primary">📅</span>
-                <span>الجدول الدراسي</span>
-              </a>
               <Button variant="destructive" size="sm" onClick={signOut} className="h-10 px-4 rounded-xl shadow-md transition-all hover:scale-105 shrink-0 gap-2 font-medium">
                 <LogOut className="h-4 w-4" /><span>تسجيل الخروج</span>
               </Button>

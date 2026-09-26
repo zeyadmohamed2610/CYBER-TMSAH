@@ -21,18 +21,24 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     // Check if the user arrived via a valid recovery token/session from Supabase
     const checkSession = async () => {
+      const hash = window.location.hash || window.location.search;
+      const isRecovery = hash.includes("type=recovery") || hash.includes("access_token");
+
+      if (!isRecovery) {
+        // Direct navigation with no recovery parameters - block immediately
+        setValidSession(false);
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
-      // Supabase parses hash fragments like #access_token=... into an active session
       if (session) {
         setValidSession(true);
       } else {
-        // Listen to auth state change in case hash is still processing
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
           if (event === "PASSWORD_RECOVERY" || s) {
             setValidSession(true);
           }
         });
-        // Give 1.5s grace period before showing expired/missing warning
         const timer = setTimeout(() => {
           setValidSession((prev) => (prev === null ? false : prev));
         }, 1500);
@@ -127,7 +133,14 @@ export default function ResetPasswordPage() {
             </p>
           </div>
 
-          {success ? (
+          {validSession === null ? (
+            <div className="text-center py-10 space-y-4">
+              <Loader2 className="w-8 h-8 mx-auto animate-spin text-purple-400" />
+              <p className="text-xs text-slate-300">
+                {lang === "ar" ? "جارٍ التحقق من صلاحية رابط الاستعادة..." : "Verifying recovery link..."}
+              </p>
+            </div>
+          ) : success ? (
             <div className="text-center py-6 space-y-4 animate-fade-up">
               <div className="w-16 h-16 mx-auto rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
                 <CheckCircle2 className="w-8 h-8" />

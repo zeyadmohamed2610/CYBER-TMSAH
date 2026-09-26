@@ -18,8 +18,8 @@ describe("formatDateTime", () => {
 describe("dashboardRoutes", () => {
   it("should return correct route for each role", async () => {
     const { getAttendanceDashboardRoute } = await import("../utils/dashboardRoutes");
-    expect(getAttendanceDashboardRoute("owner")).toBe("/attendance/owner-dashboard");
-    expect(getAttendanceDashboardRoute("doctor")).toBe("/attendance/doctor-dashboard");
-    expect(getAttendanceDashboardRoute("student")).toBe("/attendance/student-panel");
+    expect(getAttendanceDashboardRoute("owner")).toBe("/owner-dashboard");
+    expect(getAttendanceDashboardRoute("doctor")).toBe("/doctor-dashboard");
+    expect(getAttendanceDashboardRoute("student")).toBe("/student-panel");
   });
 });

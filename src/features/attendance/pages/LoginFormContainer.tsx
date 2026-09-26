@@ -267,6 +267,16 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
   };
 
   useEffect(() => {
+    if (initialTab) {
+      setTab(initialTab);
+    } else if (location.pathname === "/join") {
+      setTab("join");
+    } else if (location.pathname === "/login") {
+      setTab("login");
+    }
+  }, [initialTab, location.pathname]);
+
+  useEffect(() => {
     if (!loading && user && role)
       navigate(getAttendanceDashboardRoute(role), { replace: true });
   }, [loading, navigate, role, user]);
@@ -591,7 +601,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
       </div>
 
       {/* ── Card Container with Ambient Depth ─────────────────────────── */}
-      <div className="relative z-10 w-full flex flex-col items-center">
+      <div className="relative z-30 w-full flex flex-col items-center">
         {/* Soft radial spotlight behind card */}
         <div
           className="absolute pointer-events-none -z-10"
@@ -977,7 +987,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
 
                   <p className="text-center text-[12.5px] pt-1.5 text-slate-400">
                     {lang === "ar" ? "لديك حساب؟" : "Have an account?"}{" "}
-                    <button type="button" onClick={() => setTab("login")}
+                    <button type="button" onClick={() => handleTabChange("login")}
                       className="font-semibold text-purple-400 hover:text-purple-300 cursor-pointer transition-colors">
                       {t.auth.signIn}
                     </button>
@@ -990,7 +1000,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
       </div>
 
       {/* ── Page footer ──────────────────────────────────────────────── */}
-      <div className="relative z-10 mt-8 text-center"
+      <div className="relative z-0 mt-8 text-center"
         style={{ animation: "rise 0.6s cubic-bezier(0.22,1,0.36,1) 0.1s both" }}>
         <p className="text-[12px] font-medium text-slate-400">
           © 2026 CYBER TMSAH ·{" "}
