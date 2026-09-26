@@ -21,7 +21,7 @@ import type { Lecture } from "../types";
 
 export const OwnerDashboard = () => {
   const { error, metrics } = useAttendanceDashboardData("owner");
-  const { fullName } = useAttendanceAuth();
+  const { role, fullName } = useAttendanceAuth();
   const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "lectures";
@@ -34,7 +34,7 @@ export const OwnerDashboard = () => {
     { value: "requests", label: "🔔 الطلبات" },
     { value: "lectures", label: "المحاضرات" },
     { value: "schedule", label: "الجدول" },
-
+    ...(role === "owner" ? [{ value: "coordinators", label: "رؤساء الأقسام" }] : []),
     { value: "students", label: "الطلاب" },
     { value: "doctors", label: "الدكاترة" },
     { value: "tas", label: "المعيدين" },
@@ -117,7 +117,11 @@ export const OwnerDashboard = () => {
 
         <TabsContent value="schedule"><QuickScheduleEditor /></TabsContent>
 
-
+        {role === "owner" && (
+          <TabsContent value="coordinators">
+            <UserList role="coordinator" title="قائمة منسقي البرامج (رؤساء الأقسام)" />
+          </TabsContent>
+        )}
 
         <TabsContent value="students">
           <UserList role="student" title="قائمة الطلاب" />

@@ -5,7 +5,8 @@ import { OwnerDashboard } from "./OwnerDashboard";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 
 const AttendanceOwnerPage = () => {
-  const { signOut } = useAttendanceAuth();
+  const { role, signOut } = useAttendanceAuth();
+  const isCoordinator = role === "coordinator";
 
   return (
     <Layout>
@@ -13,10 +14,10 @@ const AttendanceOwnerPage = () => {
         <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div className="space-y-2 min-w-0">
             <span className="inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-bold tracking-wide text-primary backdrop-blur-sm">
-              لوحة تحكم رئيس المنصة
+              {isCoordinator ? "لوحة تحكم منسق البرنامج (رئيس قسم)" : "لوحة تحكم رئيس المنصة (المالك)"}
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground md:text-4xl tracking-tight truncate">
-              مركز الحضور — الرئيس
+              {isCoordinator ? "مركز الحضور — منسق البرنامج" : "مركز الحضور — المالك العام"}
             </h1>
           </div>
           <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-3 shrink-0">

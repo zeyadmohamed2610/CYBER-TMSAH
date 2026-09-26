@@ -16,6 +16,7 @@ interface UserRecord {
   role: string;
   national_id?: string;
   subject_id?: string;
+  department?: string;
   created_at?: string;
 }
 
@@ -48,7 +49,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
     try {
       let query = supabase
         .from("users")
-        .select("id, full_name, role, national_id, subject_id")
+        .select("id, full_name, role, national_id, subject_id, department")
         .eq("role", role);
 
       if (debouncedSearch) {
@@ -226,6 +227,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
       case "student": return "طالب";
       case "doctor": return "دكتور";
       case "ta": return "معيد";
+      case "coordinator": return "منسق قسم";
       default: return "مستخدم";
     }
   };
@@ -429,13 +431,21 @@ export function UserList({ role, title }: { role: string; title: string }) {
                     <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                       role === "student" ? "bg-blue-500/20 text-blue-400" : 
                       role === "doctor" ? "bg-green-500/20 text-green-400" : 
+                      role === "coordinator" ? "bg-purple-500/20 text-purple-400 border border-purple-500/30" :
                       "bg-cyan-500/20 text-cyan-400"
                     }`}>
                       {idx + 1}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold truncate text-right">{user.full_name}</p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-bold truncate text-right">{user.full_name}</p>
+                        {user.department && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                            {user.department}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                         <span className="text-xs font-muted-foreground">{user.id.split("-")[0]}</span>
                         {user.national_id && (
                           <>
