@@ -31,7 +31,7 @@ export const ReadingProgress = () => {
       aria-label="تقدم القراءة"
     >
       <div
-        className="h-full bg-gradient-to-r from-primary to-cyan-400 transition-all duration-150 ease-out"
+        className="h-full bg-gradient-to-r from-primary to-violet-400 transition-all duration-150 ease-out"
         style={{ width: `${progress}%` }}
       />
     </div>

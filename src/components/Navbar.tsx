@@ -134,7 +134,7 @@ export const Navbar = () => {
 
               {/* Title */}
               <span className="font-black text-xl tracking-wider select-none">
-                <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-indigo-300 bg-clip-text text-transparent drop-shadow-[0_0_12px_hsl(var(--primary)/0.3)]">
+                <span className="bg-gradient-to-r from-purple-400 via-violet-400 to-purple-300 bg-clip-text text-transparent drop-shadow-[0_0_12px_hsl(var(--primary)/0.3)]">
                   CYBER
                 </span>
                 <span className="text-foreground transition-colors group-hover:text-primary ml-1.5">

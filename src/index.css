@@ -531,7 +531,7 @@ html, body {
   [role="tab"]:hover,
   a:hover {
     filter: brightness(1.1);
-    box-shadow: 0 0 20px rgba(99, 102, 241, 0.28);
+    box-shadow: 0 0 20px rgba(147, 51, 234, 0.28);
     transition: filter 0.18s ease, box-shadow 0.22s ease, transform 0.18s ease, border-color 0.22s ease;
   }
 
@@ -539,8 +539,8 @@ html, body {
   input:not([type="checkbox"]):hover,
   select:hover,
   textarea:hover {
-    border-color: rgba(99, 102, 241, 0.5) !important;
-    box-shadow: 0 0 16px rgba(99, 102, 241, 0.14);
+    border-color: rgba(147, 51, 234, 0.5) !important;
+    box-shadow: 0 0 16px rgba(147, 51, 234, 0.14);
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
 
@@ -548,8 +548,8 @@ html, body {
   .card:hover,
   .glass-card:hover,
   .glass-panel:hover {
-    border-color: rgba(99, 102, 241, 0.35) !important;
-    box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.7), 0 0 28px rgba(99, 102, 241, 0.16) !important;
+    border-color: rgba(147, 51, 234, 0.35) !important;
+    box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.7), 0 0 28px rgba(147, 51, 234, 0.16) !important;
     transition: border-color 0.25s ease, box-shadow 0.25s ease;
   }
 }

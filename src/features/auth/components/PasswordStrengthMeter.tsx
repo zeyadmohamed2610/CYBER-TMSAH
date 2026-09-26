@@ -18,7 +18,7 @@ export function PasswordStrengthMeter({ password, lang }: PasswordStrengthMeterP
   const config = [
     { label: lang === "ar" ? "ضعيفة" : "Weak", color: "bg-red-500", glow: "shadow-[0_0_8px_rgba(239,68,68,0.5)]" },
     { label: lang === "ar" ? "مقبولة" : "Fair", color: "bg-amber-500", glow: "shadow-[0_0_8px_rgba(245,158,11,0.5)]" },
-    { label: lang === "ar" ? "جيدة" : "Good", color: "bg-cyan-500", glow: "shadow-[0_0_8px_rgba(6,182,212,0.5)]" },
+    { label: lang === "ar" ? "جيدة" : "Good", color: "bg-purple-500", glow: "shadow-[0_0_8px_rgba(147,51,234,0.5)]" },
     { label: lang === "ar" ? "قوية جداً 🛡️" : "Very Strong 🛡️", color: "bg-emerald-500", glow: "shadow-[0_0_8px_rgba(16,185,129,0.5)]" },
   ];
 

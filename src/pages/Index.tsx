@@ -119,8 +119,8 @@ const Index = () => {
             <h1 className="animate-fade-up text-4xl md:text-5xl lg:text-6xl font-black leading-tight text-foreground">
               منصة{" "}
               <span className="relative inline-block" dir="ltr">
-                <span className="bg-gradient-to-r from-cyan-400 via-primary to-cyan-300 bg-clip-text text-transparent" style={{
-                  textShadow: '0 0 30px hsl(174 72% 50% / 0.5), 0 0 60px hsl(174 72% 50% / 0.3)'
+                <span className="bg-gradient-to-r from-purple-400 via-primary to-violet-300 bg-clip-text text-transparent" style={{
+                  textShadow: '0 0 30px hsl(270 80% 65% / 0.6), 0 0 60px hsl(270 80% 65% / 0.3)'
                 }}>
                   CYBER TMSAH
                 </span>
@@ -142,9 +142,9 @@ const Index = () => {
               <Link to="/schedule" className="group relative inline-flex items-center justify-center gap-3 rounded-xl bg-primary px-8 py-4 text-base font-bold text-primary-foreground overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_hsl(var(--primary)/0.5)] w-full sm:w-auto">
                 <span className="relative z-10">الجدول الدراسي</span>
                 <ArrowLeft className="h-5 w-5 relative z-10 transition-transform group-hover:-translate-x-1" />
-                <div className="absolute inset-0 bg-gradient-to-r from-primary via-cyan-500 to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="absolute inset-0 bg-gradient-to-r from-primary via-purple-400 to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </Link>
-              <Link to="/attendance" className="group inline-flex items-center justify-center gap-3 rounded-xl border-2 border-cyan-400/40 bg-cyan-400/10 backdrop-blur-sm px-8 py-4 text-base font-bold text-cyan-300 transition-all duration-300 hover:border-cyan-300 hover:bg-cyan-400/15 hover:scale-105 w-full sm:w-auto">
+              <Link to="/attendance" className="group inline-flex items-center justify-center gap-3 rounded-xl border-2 border-purple-400/40 bg-purple-400/10 backdrop-blur-sm px-8 py-4 text-base font-bold text-purple-300 transition-all duration-300 hover:border-purple-300 hover:bg-purple-400/15 hover:scale-105 w-full sm:w-auto">
                 <Shield className="h-5 w-5" />
                 <span>الحضور</span>
               </Link>
@@ -262,10 +262,10 @@ const Index = () => {
               </div>
             </div>
           ) : isTraining ? (
-            <div className="relative rounded-2xl bg-gradient-to-br from-card to-card/50 p-10 text-center border border-cyan-500/30 overflow-hidden">
-              <div className="absolute inset-0 bg-cyan-500/5" />
+            <div className="relative rounded-2xl bg-gradient-to-br from-card to-card/50 p-10 text-center border border-purple-500/30 overflow-hidden">
+              <div className="absolute inset-0 bg-purple-500/5" />
               <div className="relative">
-                <GraduationCap className="w-16 h-16 mx-auto mb-4 text-cyan-500/40" />
+                <GraduationCap className="w-16 h-16 mx-auto mb-4 text-purple-400/50" />
                 <h3 className="text-2xl font-bold text-foreground mb-2">يوم التدريب</h3>
                 <p className="text-muted-foreground">لا توجد محاضرات اليوم</p>
               </div>

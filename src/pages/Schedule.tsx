@@ -228,7 +228,7 @@ const Schedule = () => {
                   <span>تكنولوجيا الأمن السيبراني • الفرقة الثانية 2026/2027</span>
                 </div>
                 <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-foreground tracking-tight">
-                  الجدول الدراسي <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-cyan-400">الأسبوعي</span>
+                  الجدول الدراسي <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-violet-400">الأسبوعي</span>
                 </h1>
                 <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                   مواعيد وقاعات المحاضرات النظرية والسكاشن العملية لجميع الشعب من سكشن 1 إلى 15
@@ -238,14 +238,14 @@ const Schedule = () => {
                   {[
                     { icon: Calendar, label: "أيام دراسية", value: "7 أيام" },
                     { icon: GraduationCap, label: "محاضرة", value: loading ? "..." : totalLectures },
-                    { icon: Sparkles, label: "سكشن عملي", value: loading ? "..." : totalSections, cyan: true },
+                    { icon: Sparkles, label: "سكشن عملي", value: loading ? "..." : totalSections, isPurple: true },
                   ].map((s) => (
                     <div key={s.label} className="flex items-center gap-3 bg-card/60 border border-border/50 px-3.5 py-2 rounded-xl backdrop-blur-sm">
                       <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <s.icon className={`h-4 w-4 ${s.cyan ? "text-cyan-400" : "text-primary"}`} />
+                        <s.icon className={`h-4 w-4 ${s.isPurple ? "text-violet-400" : "text-primary"}`} />
                       </div>
                       <div>
-                        <div className={`text-base font-bold ${s.cyan ? "text-cyan-400" : "text-primary"}`}>{s.value}</div>
+                        <div className={`text-base font-bold ${s.isPurple ? "text-violet-400" : "text-primary"}`}>{s.value}</div>
                         <div className="text-[11px] text-muted-foreground">{s.label}</div>
                       </div>
                     </div>
@@ -347,7 +347,7 @@ const Schedule = () => {
             /* Luxury Empty State */
             <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-b from-card/90 via-card/50 to-background/90 p-8 sm:p-14 text-center backdrop-blur-xl shadow-2xl">
               <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-48 bg-primary/15 rounded-full blur-3xl pointer-events-none" />
-              <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-tr from-primary/20 to-cyan-500/20 flex items-center justify-center border border-primary/30 shadow-[0_0_30px_hsl(var(--primary)/0.2)]">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-tr from-primary/20 to-violet-500/20 flex items-center justify-center border border-primary/30 shadow-[0_0_30px_hsl(var(--primary)/0.25)]">
                 <Calendar className="h-10 w-10 text-primary animate-pulse" />
               </div>
               <h3 className="text-2xl font-bold text-foreground mb-2">الجدول الدراسي قيد التجهيز والتحديث</h3>
@@ -359,7 +359,7 @@ const Schedule = () => {
                   <Sparkles className="h-3.5 w-3.5" />
                   تحديثات فورية ومباشرة
                 </span>
-                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold bg-violet-500/10 text-violet-400 border border-violet-500/30">
                   <Clock className="h-3.5 w-3.5" />
                   11 فترة مخصصة لجميع الشعب
                 </span>
@@ -418,10 +418,10 @@ const Schedule = () => {
 
                         const isSec = entry.entry_type === "section";
                         return (
-                          <td key={day} className={`p-2 border-r border-border/40 align-top ${isSec ? "bg-cyan-500/5" : "bg-primary/5"}`}>
+                          <td key={day} className={`p-2 border-r border-border/40 align-top ${isSec ? "bg-violet-500/5" : "bg-primary/5"}`}>
                             <div className="rounded-lg p-2 border border-border/40 h-full flex flex-col justify-between gap-1 shadow-sm">
                               <div>
-                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${isSec ? "bg-cyan-500/20 text-cyan-400" : "bg-primary/20 text-primary"}`}>
+                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${isSec ? "bg-violet-500/20 text-violet-400" : "bg-primary/20 text-primary"}`}>
                                   {isSec ? "سكشن" : "محاضرة"}
                                 </span>
                                 <h4 className="font-bold text-xs text-foreground mt-1 leading-snug">{entry.subject}</h4>
@@ -476,7 +476,7 @@ const Schedule = () => {
                                 </span>
                               )}
                               {day.entries.some(e => e.entry_type === "section") && (
-                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400">
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400">
                                   {day.entries.filter(e => e.entry_type === "section").length} سكشن
                                 </span>
                               )}
@@ -493,9 +493,9 @@ const Schedule = () => {
                             <p className="text-xs text-muted-foreground mt-1">عطلة أسبوعية خالية من المحاضرات</p>
                           </div>
                         ) : day.isTraining ? (
-                          <div className="text-center py-8 rounded-xl bg-cyan-500/5 border border-dashed border-cyan-500/20">
-                            <GraduationCap className="h-8 w-8 mx-auto mb-2 text-cyan-500/50" />
-                            <p className="font-bold text-cyan-500">يوم التدريب الميداني</p>
+                          <div className="text-center py-8 rounded-xl bg-violet-500/5 border border-dashed border-violet-500/20">
+                            <GraduationCap className="h-8 w-8 mx-auto mb-2 text-violet-500/50" />
+                            <p className="font-bold text-violet-400">يوم التدريب الميداني</p>
                           </div>
                         ) : day.entries.length === 0 ? (
                           <div className="text-center py-8 rounded-xl bg-muted/20 border border-dashed border-border/40">
@@ -513,12 +513,12 @@ const Schedule = () => {
                                   key={entry.id || li}
                                   className={`flex items-center gap-3 md:gap-4 rounded-xl p-3 md:p-4 border-r-4 border border-l-0 transition-all hover:brightness-110 overflow-hidden ${
                                     isSec
-                                      ? "bg-cyan-500/5 border-r-cyan-400 border-border/20"
+                                      ? "bg-violet-500/5 border-r-violet-400 border-border/20"
                                       : "bg-secondary/20 border-r-primary/60 border-border/30"
                                   }`}
                                 >
                                   <div className="text-center min-w-[70px] sm:min-w-[90px] shrink-0">
-                                    <div className={`text-[10px] font-bold mb-0.5 ${isSec ? "text-cyan-400" : "text-primary"}`}>
+                                    <div className={`text-[10px] font-bold mb-0.5 ${isSec ? "text-violet-400" : "text-primary"}`}>
                                       {entry.period_label || `فترة ${entry.period}`}
                                     </div>
                                     <div className="text-xs sm:text-sm font-bold text-foreground" dir="ltr">
@@ -528,10 +528,10 @@ const Schedule = () => {
                                   <div className="w-px h-10 bg-border/40 hidden sm:block" />
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
-                                      <h3 className={`font-bold text-sm md:text-base leading-snug ${isSec ? "text-cyan-400" : "text-foreground"}`}>
+                                      <h3 className={`font-bold text-sm md:text-base leading-snug ${isSec ? "text-violet-400" : "text-foreground"}`}>
                                         {entry.subject}
                                       </h3>
-                                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded shrink-0 ${isSec ? "bg-cyan-500/15 text-cyan-400" : "bg-primary/15 text-primary"}`}>
+                                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded shrink-0 ${isSec ? "bg-violet-500/15 text-violet-400" : "bg-primary/15 text-primary"}`}>
                                         {isSec ? "سكشن عملي" : "محاضرة نظرية"}
                                       </span>
                                     </div>

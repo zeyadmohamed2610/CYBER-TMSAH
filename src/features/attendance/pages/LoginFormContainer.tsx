@@ -560,7 +560,7 @@ const LoginPage = () => {
                     </span>
                   </label>
                   <button type="button" onClick={() => setShowForgotModal(true)}
-                    className="text-[12.5px] font-semibold text-indigo-400 hover:text-indigo-300 cursor-pointer transition-colors">
+                    className="text-[12.5px] font-semibold text-purple-400 hover:text-purple-300 cursor-pointer transition-colors">
                     {lang === "ar" ? "نسيت كلمة المرور؟" : "Forgot password?"}
                   </button>
                 </div>
@@ -584,7 +584,7 @@ const LoginPage = () => {
                 <p className="text-center text-[12.5px] pt-1.5 text-slate-400">
                   {lang === "ar" ? "ليس لديك حساب؟" : "No account?"}{" "}
                   <button type="button" onClick={() => setTab("join")}
-                    className="font-semibold text-indigo-400 hover:text-indigo-300 cursor-pointer transition-colors">
+                    className="font-semibold text-purple-400 hover:text-purple-300 cursor-pointer transition-colors">
                     {t.auth.joinTitle}
                   </button>
                 </p>
@@ -674,7 +674,7 @@ const LoginPage = () => {
                   <p className="text-center text-[12.5px] pt-1.5 text-slate-400">
                     {lang === "ar" ? "لديك حساب؟" : "Have an account?"}{" "}
                     <button type="button" onClick={() => setTab("login")}
-                      className="font-semibold text-indigo-400 hover:text-indigo-300 cursor-pointer transition-colors">
+                      className="font-semibold text-purple-400 hover:text-purple-300 cursor-pointer transition-colors">
                       {t.auth.signIn}
                     </button>
                   </p>

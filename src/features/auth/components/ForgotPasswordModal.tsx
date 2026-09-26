@@ -103,7 +103,7 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
       }}
     >
       <div
-        className="relative w-full max-w-md rounded-3xl border border-indigo-500/30 bg-[#0A0F1D]/95 backdrop-blur-2xl p-6 sm:p-7 space-y-5 shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_35px_rgba(99,102,241,0.2)]"
+        className="relative w-full max-w-md rounded-3xl border border-purple-500/30 bg-[#0A0F1D]/95 backdrop-blur-2xl p-6 sm:p-7 space-y-5 shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_35px_rgba(147,51,234,0.2)]"
       >
         {/* Close Button */}
         <button
@@ -117,7 +117,7 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
 
         {/* Header */}
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.25)]">
+          <div className="w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shadow-[0_0_15px_rgba(147,51,234,0.25)]">
             <KeyRound className="w-5 h-5" />
           </div>
           <div>
@@ -174,7 +174,7 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
                 <label className="block text-[11.5px] font-semibold text-slate-300 tracking-wide">
                   {lang === "ar" ? "بريد Gmail المسجل (شرط الاستعادة)" : "Registered Gmail (Required)"}
                 </label>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-400 border border-indigo-500/30">
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30">
                   @gmail.com
                 </span>
               </div>
@@ -187,7 +187,7 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
                   onChange={(e) => setEmailInput(e.target.value)}
                   placeholder="example@gmail.com"
                   dir="ltr"
-                  className="w-full h-11 ps-10 pe-3.5 rounded-xl text-sm font-medium bg-white/[0.045] border border-white/12 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/25 transition-all"
+                  className="w-full h-11 ps-10 pe-3.5 rounded-xl text-sm font-medium bg-white/[0.045] border border-white/12 text-white placeholder:text-slate-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/25 transition-all"
                 />
               </div>
             </div>
@@ -211,7 +211,7 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
                   onChange={(e) => setPhoneInput(e.target.value)}
                   placeholder={lang === "ar" ? "01xxxxxxxxx" : "WhatsApp Number"}
                   dir="ltr"
-                  className="w-full h-11 ps-10 pe-3.5 rounded-xl text-sm font-medium bg-white/[0.045] border border-white/12 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/25 transition-all"
+                  className="w-full h-11 ps-10 pe-3.5 rounded-xl text-sm font-medium bg-white/[0.045] border border-white/12 text-white placeholder:text-slate-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/25 transition-all"
                 />
               </div>
             </div>
@@ -219,9 +219,9 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
             <button
               type="submit"
               disabled={submitting}
-              className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 text-white active:scale-[0.985] transition-all disabled:opacity-50 cursor-pointer shadow-[0_4px_20px_rgba(79,70,229,0.45)] mt-1"
+              className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 text-white active:scale-[0.985] transition-all disabled:opacity-50 cursor-pointer shadow-[0_4px_20px_rgba(147,51,234,0.45)] mt-1"
               style={{
-                background: "linear-gradient(180deg, #6366F1 0%, #4F46E5 100%)",
+                background: "linear-gradient(180deg, #a855f7 0%, #9333ea 100%)",
                 border: "1px solid rgba(255,255,255,0.12)",
               }}
             >
@@ -263,7 +263,7 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
                   className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
                   title={SUPPORT_WHATSAPP}
                 >
-                  <Copy className="w-3.5 h-3.5 text-indigo-400" />
+                  <Copy className="w-3.5 h-3.5 text-purple-400" />
                   <span dir="ltr">{SUPPORT_WHATSAPP}</span>
                 </button>
               </div>

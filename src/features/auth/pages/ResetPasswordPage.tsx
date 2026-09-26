@@ -106,15 +106,15 @@ export default function ResetPasswordPage() {
     >
       {/* Background ambient mesh */}
       <div className="absolute inset-0 pointer-events-none select-none overflow-hidden">
-        <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-indigo-600/10 blur-[100px]" />
+        <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-purple-600/10 blur-[100px]" />
         <div className="absolute -bottom-40 -right-40 w-96 h-96 rounded-full bg-violet-600/10 blur-[100px]" />
       </div>
 
       <div className="w-full max-w-md relative z-10 animate-fade-up">
-        <div className="rounded-3xl border border-indigo-500/20 bg-[#0B0F19]/90 backdrop-blur-2xl p-7 sm:p-8 shadow-[0_25px_70px_rgba(0,0,0,0.9),0_0_30px_rgba(99,102,241,0.15)] space-y-6">
+        <div className="rounded-3xl border border-purple-500/20 bg-[#0B0F19]/90 backdrop-blur-2xl p-7 sm:p-8 shadow-[0_25px_70px_rgba(0,0,0,0.9),0_0_30px_rgba(147,51,234,0.15)] space-y-6">
           {/* Brand header */}
           <div className="text-center space-y-2">
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.3)]">
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shadow-[0_0_20px_rgba(147,51,234,0.3)]">
               <KeyRound className="w-7 h-7" />
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-white">
@@ -144,7 +144,7 @@ export default function ResetPasswordPage() {
               </div>
               <Link
                 to="/login"
-                className="inline-flex items-center justify-center gap-2 h-11 px-6 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-500 transition-all shadow-[0_4px_16px_rgba(79,70,229,0.35)]"
+                className="inline-flex items-center justify-center gap-2 h-11 px-6 rounded-xl bg-purple-600 text-white font-bold text-sm hover:bg-purple-500 transition-all shadow-[0_4px_16px_rgba(147,51,234,0.35)]"
               >
                 <span>{lang === "ar" ? "تسجيل الدخول الآن" : "Go to Login"}</span>
                 <ArrowRight className={`w-4 h-4 ${isRTL ? "rotate-180" : ""}`} />
@@ -188,7 +188,7 @@ export default function ResetPasswordPage() {
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="••••••••"
                     dir="ltr"
-                    className="w-full h-11 ps-10 pe-11 rounded-xl text-sm font-medium bg-white/[0.045] border border-white/12 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/25 transition-all"
+                    className="w-full h-11 ps-10 pe-11 rounded-xl text-sm font-medium bg-white/[0.045] border border-white/12 text-white placeholder:text-slate-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/25 transition-all"
                   />
                   <button
                     type="button"
@@ -215,7 +215,7 @@ export default function ResetPasswordPage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="••••••••"
                     dir="ltr"
-                    className="w-full h-11 ps-10 pe-3.5 rounded-xl text-sm font-medium bg-white/[0.045] border border-white/12 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/25 transition-all"
+                    className="w-full h-11 ps-10 pe-3.5 rounded-xl text-sm font-medium bg-white/[0.045] border border-white/12 text-white placeholder:text-slate-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/25 transition-all"
                   />
                 </div>
               </div>
@@ -224,9 +224,9 @@ export default function ResetPasswordPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 text-white active:scale-[0.985] transition-all disabled:opacity-50 cursor-pointer shadow-[0_4px_20px_rgba(79,70,229,0.45)] mt-2"
+                className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 text-white active:scale-[0.985] transition-all disabled:opacity-50 cursor-pointer shadow-[0_4px_20px_rgba(147,51,234,0.45)] mt-2"
                 style={{
-                  background: "linear-gradient(180deg, #6366F1 0%, #4F46E5 100%)",
+                  background: "linear-gradient(180deg, #a855f7 0%, #9333ea 100%)",
                   border: "1px solid rgba(255,255,255,0.12)",
                 }}
               >

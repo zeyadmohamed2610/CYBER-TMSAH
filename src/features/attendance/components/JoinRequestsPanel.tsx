@@ -260,7 +260,7 @@ export function JoinRequestsPanel() {
           onClick={() => setActiveTab("join")}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer ${
             activeTab === "join"
-              ? "bg-indigo-600 text-white shadow-[0_4px_16px_rgba(79,70,229,0.35)]"
+              ? "bg-purple-600 text-white shadow-[0_4px_16px_rgba(147,51,234,0.35)]"
               : "text-slate-400 hover:text-white hover:bg-white/5"
           }`}
         >
@@ -278,14 +278,14 @@ export function JoinRequestsPanel() {
           onClick={() => setActiveTab("password_reset")}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer ${
             activeTab === "password_reset"
-              ? "bg-indigo-600 text-white shadow-[0_4px_16px_rgba(79,70,229,0.35)]"
+              ? "bg-purple-600 text-white shadow-[0_4px_16px_rgba(147,51,234,0.35)]"
               : "text-slate-400 hover:text-white hover:bg-white/5"
           }`}
         >
           <KeyRound className="w-4 h-4" />
           <span>{lang === "ar" ? "استعادة كلمة المرور" : "Password Reset Requests"}</span>
           {pendingResetCount > 0 && (
-            <span className="px-2 py-0.5 text-xs rounded-full bg-indigo-400/25 text-indigo-200 font-black border border-indigo-400/40">
+            <span className="px-2 py-0.5 text-xs rounded-full bg-purple-400/25 text-purple-200 font-black border border-purple-400/40">
               {pendingResetCount}
             </span>
           )}
@@ -300,7 +300,7 @@ export function JoinRequestsPanel() {
           {/* Sub Header & Filters */}
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-indigo-400" />
+              <Users className="w-4 h-4 text-purple-400" />
               <h3 className="text-sm font-bold text-white">
                 {lang === "ar" ? "قائمة طلبات إنشاء الحسابات" : "Account Creation Requests"}
               </h3>
@@ -315,7 +315,7 @@ export function JoinRequestsPanel() {
                     onClick={() => setJoinFilter(f.value)}
                     className={`px-3 py-1.5 font-semibold transition-colors ${
                       joinFilter === f.value
-                        ? "bg-indigo-600 text-white"
+                        ? "bg-purple-600 text-white"
                         : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                     }`}
                   >
@@ -338,7 +338,7 @@ export function JoinRequestsPanel() {
           {/* Join List */}
           {loadingJoin ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
+              <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
             </div>
           ) : joinRequests.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
@@ -354,7 +354,7 @@ export function JoinRequestsPanel() {
                 >
                   <div className="flex items-start gap-3 flex-wrap">
                     {/* Avatar */}
-                    <div className="w-10 h-10 rounded-full bg-indigo-500/15 flex items-center justify-center shrink-0 text-indigo-400 font-bold text-sm">
+                    <div className="w-10 h-10 rounded-full bg-purple-500/15 flex items-center justify-center shrink-0 text-purple-400 font-bold text-sm">
                       {req.full_name.charAt(0).toUpperCase()}
                     </div>
 
@@ -456,7 +456,7 @@ export function JoinRequestsPanel() {
           {/* Sub Header & Filters */}
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2">
-              <KeyRound className="w-4 h-4 text-indigo-400" />
+              <KeyRound className="w-4 h-4 text-purple-400" />
               <h3 className="text-sm font-bold text-white">
                 {lang === "ar" ? "طلبات استعادة كلمة المرور عبر Gmail" : "Gmail Password Recovery Requests"}
               </h3>
@@ -471,7 +471,7 @@ export function JoinRequestsPanel() {
                     onClick={() => setResetFilter(f.value)}
                     className={`px-3 py-1.5 font-semibold transition-colors ${
                       resetFilter === f.value
-                        ? "bg-indigo-600 text-white"
+                        ? "bg-purple-600 text-white"
                         : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                     }`}
                   >
@@ -492,8 +492,8 @@ export function JoinRequestsPanel() {
           </div>
 
           {/* Guide Banner for Admin Workflow */}
-          <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-start gap-3 text-xs text-indigo-200">
-            <div className="w-6 h-6 rounded-lg bg-indigo-500/20 flex items-center justify-center shrink-0 text-indigo-300 font-bold mt-0.5">
+          <div className="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-start gap-3 text-xs text-purple-200">
+            <div className="w-6 h-6 rounded-lg bg-purple-500/20 flex items-center justify-center shrink-0 text-purple-300 font-bold mt-0.5">
               💡
             </div>
             <div className="leading-relaxed">
@@ -509,7 +509,7 @@ export function JoinRequestsPanel() {
           {/* Reset List */}
           {loadingReset ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
+              <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
             </div>
           ) : resetRequests.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
@@ -540,7 +540,7 @@ export function JoinRequestsPanel() {
                     <div className="flex items-center justify-between gap-3 flex-wrap">
                       {/* User info */}
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-full bg-indigo-500/15 flex items-center justify-center shrink-0 text-indigo-400">
+                        <div className="w-10 h-10 rounded-full bg-purple-500/15 flex items-center justify-center shrink-0 text-purple-400">
                           <Mail className="w-4 h-4" />
                         </div>
                         <div className="min-w-0">
@@ -566,7 +566,7 @@ export function JoinRequestsPanel() {
                           <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                             <span>{new Date(req.created_at).toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}</span>
                             {req.notes && (
-                              <span className="text-indigo-300">({req.notes})</span>
+                              <span className="text-purple-300">({req.notes})</span>
                             )}
                           </div>
                         </div>
@@ -626,7 +626,7 @@ export function JoinRequestsPanel() {
                               type="button"
                               disabled={processingResetId === req.id}
                               onClick={() => handleSendResetEmail(req.id, req.email)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 font-semibold transition-all shadow-[0_2px_8px_rgba(79,70,229,0.3)] cursor-pointer disabled:opacity-50"
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-purple-600 text-white hover:bg-purple-500 font-semibold transition-all shadow-[0_2px_8px_rgba(147,51,234,0.3)] cursor-pointer disabled:opacity-50"
                               title={lang === "ar" ? "إرسال رابط استعادة إلى البريد تلقائياً" : "Dispatch reset link"}
                             >
                               {processingResetId === req.id ? (
