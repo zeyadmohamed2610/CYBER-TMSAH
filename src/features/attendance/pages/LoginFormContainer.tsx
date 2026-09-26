@@ -341,6 +341,25 @@ const LoginPage = () => {
       return;
     }
 
+    // Check if email already exists via secure RPC
+    try {
+      const { data: emailExists } = await supabase.rpc("check_email_exists", {
+        p_email: trimmedEmail,
+      });
+
+      if (emailExists) {
+        toast.error(
+          lang === "ar"
+            ? "هذا البريد الإلكتروني مسجل بالفعل أو لديه طلب معلق."
+            : "This email is already registered or has a pending request."
+        );
+        setJoinLoading(false);
+        return;
+      }
+    } catch {
+      // Non-blocking fallback
+    }
+
     // 3. Username validation: unique, English alphanumeric
     const trimmedUsername = joinUsername.trim().toLowerCase();
     const userRegex = /^[a-zA-Z0-9_]{3,30}$/;
@@ -354,15 +373,13 @@ const LoginPage = () => {
       return;
     }
 
-    // Check if username already exists in users
+    // Check if username already exists via secure RPC (no permission error in console)
     try {
-      const { data: existingUser } = await supabase
-        .from("users")
-        .select("id")
-        .eq("username", trimmedUsername)
-        .maybeSingle();
+      const { data: usernameExists } = await supabase.rpc("check_username_exists", {
+        p_username: trimmedUsername,
+      });
 
-      if (existingUser) {
+      if (usernameExists) {
         toast.error(
           lang === "ar"
             ? "اسم المستخدم هذا مسجل بالفعل، يرجى اختيار اسم مستخدم آخر."
@@ -372,7 +389,7 @@ const LoginPage = () => {
         return;
       }
     } catch {
-      // Continue if table doesn't have username check or network error
+      // Non-blocking fallback
     }
 
     // 4. Password validation
