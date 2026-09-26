@@ -1,5 +1,9 @@
+// src/features/attendance/components/JoinRequestsPanel.tsx
 import { useEffect, useState, useCallback } from "react";
-import { CheckCircle2, Clock, Loader2, UserX, XCircle, RefreshCw, Users } from "lucide-react";
+import {
+  CheckCircle2, Clock, Loader2, UserX, XCircle, RefreshCw,
+  Users, KeyRound, Mail, Send, Copy, Ban, Check
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabaseClient";
 import { useLang } from "@/i18n";
@@ -15,6 +19,15 @@ interface JoinRequest {
   status: "pending" | "approved" | "rejected";
   created_at: string;
   rejection_note: string | null;
+}
+
+interface PasswordResetRequest {
+  id: string;
+  email: string;
+  status: "pending" | "resolved" | "dismissed";
+  notes: string | null;
+  created_at: string;
+  resolved_at: string | null;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -33,42 +46,95 @@ const STATUS_COLORS: Record<string, string> = {
   pending: "text-amber-400 bg-amber-400/10 border-amber-400/20",
   approved: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20",
   rejected: "text-red-400 bg-red-400/10 border-red-400/20",
+  resolved: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20",
+  dismissed: "text-slate-400 bg-slate-400/10 border-slate-400/20",
 };
 
 export function JoinRequestsPanel() {
-  const { t, lang } = useLang();
-  const [requests, setRequests] = useState<JoinRequest[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { lang } = useLang();
+
+  // Main Section: 'join' | 'password_reset'
+  const [activeTab, setActiveTab] = useState<"join" | "password_reset">("join");
+
+  // Join Requests state
+  const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
+  const [loadingJoin, setLoadingJoin] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [rejectNote, setRejectNote] = useState<{ id: string; note: string } | null>(null);
-  const [filter, setFilter] = useState<"pending" | "approved" | "rejected" | "all">("pending");
+  const [joinFilter, setJoinFilter] = useState<"pending" | "approved" | "rejected" | "all">("pending");
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  // Password Reset Requests state
+  const [resetRequests, setResetRequests] = useState<PasswordResetRequest[]>([]);
+  const [loadingReset, setLoadingReset] = useState(true);
+  const [resetFilter, setResetFilter] = useState<"pending" | "resolved" | "dismissed" | "all">("pending");
+  const [processingResetId, setProcessingResetId] = useState<string | null>(null);
+
+  // Counts for badges
+  const [pendingJoinCount, setPendingJoinCount] = useState(0);
+  const [pendingResetCount, setPendingResetCount] = useState(0);
+
+  // Load join requests
+  const loadJoinRequests = useCallback(async () => {
+    setLoadingJoin(true);
     const query = supabase
       .from("join_requests")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (filter !== "all") query.eq("status", filter);
+    if (joinFilter !== "all") query.eq("status", joinFilter);
 
     const { data, error } = await query;
     if (error) {
-      toast.error(lang === "ar" ? "فشل تحميل الطلبات" : "Failed to load requests");
+      toast.error(lang === "ar" ? "فشل تحميل طلبات الانضمام" : "Failed to load join requests");
     } else {
-      setRequests((data ?? []) as JoinRequest[]);
+      setJoinRequests((data ?? []) as JoinRequest[]);
     }
-    setLoading(false);
-  }, [filter, lang]);
+    setLoadingJoin(false);
 
-  useEffect(() => { void load(); }, [load]);
+    // Get pending count
+    const { count } = await supabase
+      .from("join_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending");
+    setPendingJoinCount(count ?? 0);
+  }, [joinFilter, lang]);
 
+  // Load password reset requests
+  const loadResetRequests = useCallback(async () => {
+    setLoadingReset(true);
+    const query = supabase
+      .from("password_reset_requests")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (resetFilter !== "all") query.eq("status", resetFilter);
+
+    const { data, error } = await query;
+    if (error) {
+      toast.error(lang === "ar" ? "فشل تحميل طلبات استعادة المرور" : "Failed to load password reset requests");
+    } else {
+      setResetRequests((data ?? []) as PasswordResetRequest[]);
+    }
+    setLoadingReset(false);
+
+    // Get pending count
+    const { count } = await supabase
+      .from("password_reset_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending");
+    setPendingResetCount(count ?? 0);
+  }, [resetFilter, lang]);
+
+  useEffect(() => {
+    void loadJoinRequests();
+    void loadResetRequests();
+  }, [loadJoinRequests, loadResetRequests]);
+
+  // ── Join Requests Actions ──────────────────────────────────────────────────
   const handleApprove = async (req: JoinRequest) => {
     setProcessingId(req.id);
     try {
-      // Use the server-side RPC that handles auth user creation + public.users insert
-      // approve_join_request is SECURITY DEFINER so it can create auth users safely
-      const { data, error } = await supabase.rpc("approve_join_request", {
+      const { error } = await supabase.rpc("approve_join_request", {
         p_request_id: req.id,
       });
 
@@ -78,7 +144,7 @@ export function JoinRequestsPanel() {
         ? `تمت الموافقة على طلب ${req.full_name}`
         : `Approved ${req.full_name}'s request`
       );
-      void load();
+      void loadJoinRequests();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       toast.error(lang === "ar" ? `فشل الموافقة: ${msg}` : `Approval failed: ${msg}`);
@@ -97,165 +163,443 @@ export function JoinRequestsPanel() {
     } else {
       toast.success(lang === "ar" ? "تم رفض الطلب" : "Request rejected");
       setRejectNote(null);
-      void load();
+      void loadJoinRequests();
     }
     setProcessingId(null);
   };
 
-  const filters: { value: typeof filter; label: string }[] = [
-    { value: "pending", label: lang === "ar" ? "قيد الانتظار" : "Pending" },
-    { value: "approved", label: lang === "ar" ? "مقبولة" : "Approved" },
-    { value: "rejected", label: lang === "ar" ? "مرفوضة" : "Rejected" },
-    { value: "all", label: lang === "ar" ? "الكل" : "All" },
+  // ── Password Reset Requests Actions ────────────────────────────────────────
+  const handleResolveReset = async (id: string) => {
+    setProcessingResetId(id);
+    const { error } = await supabase
+      .from("password_reset_requests")
+      .update({
+        status: "resolved",
+        resolved_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+
+    if (error) {
+      toast.error(lang === "ar" ? "تعذر تحديث حالة الطلب" : "Failed to update status");
+    } else {
+      toast.success(lang === "ar" ? "تم تحديد الطلب كـ منتهي/تم التعامل" : "Request marked as resolved");
+      void loadResetRequests();
+    }
+    setProcessingResetId(null);
+  };
+
+  const handleSendResetEmail = async (id: string, email: string) => {
+    setProcessingResetId(id);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) throw error;
+
+      // Mark as resolved
+      await supabase
+        .from("password_reset_requests")
+        .update({
+          status: "resolved",
+          resolved_at: new Date().toISOString(),
+          notes: "تم إرسال رابط الاستعادة إلى البريد",
+        })
+        .eq("id", id);
+
+      toast.success(lang === "ar" ? `تم إرسال رابط إعادة التعيين إلى ${email}` : `Reset link dispatched to ${email}`);
+      void loadResetRequests();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error sending link";
+      toast.error(lang === "ar" ? `فشل إرسال الرابط: ${msg}` : `Failed: ${msg}`);
+    } finally {
+      setProcessingResetId(null);
+    }
+  };
+
+  const handleDismissReset = async (id: string) => {
+    setProcessingResetId(id);
+    const { error } = await supabase
+      .from("password_reset_requests")
+      .update({
+        status: "dismissed",
+        resolved_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+
+    if (error) {
+      toast.error(lang === "ar" ? "تعذر تجاهل الطلب" : "Failed to dismiss");
+    } else {
+      toast.success(lang === "ar" ? "تم تجاهل الطلب" : "Request dismissed");
+      void loadResetRequests();
+    }
+    setProcessingResetId(null);
+  };
+
+  const joinFilters: { value: typeof joinFilter; label: string }[] = [
+    { value: "pending",  label: lang === "ar" ? "قيد الانتظار" : "Pending" },
+    { value: "approved", label: lang === "ar" ? "المقبولة" : "Approved" },
+    { value: "rejected", label: lang === "ar" ? "المرفوضة" : "Rejected" },
+    { value: "all",      label: lang === "ar" ? "الكل" : "All" },
+  ];
+
+  const resetFilters: { value: typeof resetFilter; label: string }[] = [
+    { value: "pending",   label: lang === "ar" ? "قيد الانتظار" : "Pending" },
+    { value: "resolved",  label: lang === "ar" ? "تم الحل" : "Resolved" },
+    { value: "dismissed", label: lang === "ar" ? "تم التجاهل" : "Dismissed" },
+    { value: "all",       label: lang === "ar" ? "الكل" : "All" },
   ];
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-2">
-          <Users className="w-5 h-5 text-primary" />
-          <h2 className="text-lg font-bold">
-            {lang === "ar" ? "طلبات الانضمام" : "Join Requests"}
-          </h2>
-        </div>
+    <div className="space-y-5">
+      {/* ── Top Level Section Tabs (Join vs Password Reset) ──────────────── */}
+      <div className="flex items-center gap-3 border-b border-white/10 pb-3 flex-wrap">
+        <button
+          type="button"
+          onClick={() => setActiveTab("join")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer ${
+            activeTab === "join"
+              ? "bg-indigo-600 text-white shadow-[0_4px_16px_rgba(79,70,229,0.35)]"
+              : "text-slate-400 hover:text-white hover:bg-white/5"
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>{lang === "ar" ? "طلبات الانضمام" : "Join Requests"}</span>
+          {pendingJoinCount > 0 && (
+            <span className="px-2 py-0.5 text-xs rounded-full bg-amber-400/20 text-amber-300 font-black border border-amber-400/30">
+              {pendingJoinCount}
+            </span>
+          )}
+        </button>
 
-        <div className="flex items-center gap-2">
-          {/* Filter tabs */}
-          <div className="flex rounded-lg border border-white/10 overflow-hidden text-xs">
-            {filters.map(f => (
-              <button
-                key={f.value}
-                onClick={() => setFilter(f.value)}
-                className={`px-3 py-1.5 font-semibold transition-colors ${filter === f.value
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={load}
-            disabled={loading}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-            title={lang === "ar" ? "تحديث" : "Refresh"}
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setActiveTab("password_reset")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer ${
+            activeTab === "password_reset"
+              ? "bg-indigo-600 text-white shadow-[0_4px_16px_rgba(79,70,229,0.35)]"
+              : "text-slate-400 hover:text-white hover:bg-white/5"
+          }`}
+        >
+          <KeyRound className="w-4 h-4" />
+          <span>{lang === "ar" ? "استعادة كلمة المرور" : "Password Reset Requests"}</span>
+          {pendingResetCount > 0 && (
+            <span className="px-2 py-0.5 text-xs rounded-full bg-indigo-400/25 text-indigo-200 font-black border border-indigo-400/40">
+              {pendingResetCount}
+            </span>
+          )}
+        </button>
       </div>
 
-      {/* List */}
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
-        </div>
-      ) : requests.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
-          <Clock className="w-10 h-10 opacity-30" />
-          <p className="text-sm">{lang === "ar" ? "لا توجد طلبات." : "No requests found."}</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {requests.map(req => (
-            <div
-              key={req.id}
-              className="rounded-xl border border-white/8 bg-white/[0.02] p-4 hover:bg-white/[0.04] transition-colors"
-            >
-              <div className="flex items-start gap-3 flex-wrap">
-                {/* Avatar */}
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-primary font-bold text-sm">
-                  {req.full_name.charAt(0).toUpperCase()}
-                </div>
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* 1. JOIN REQUESTS SUB-PANEL                                         */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {activeTab === "join" && (
+        <div className="space-y-4 animate-fade-up">
+          {/* Sub Header & Filters */}
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-indigo-400" />
+              <h3 className="text-sm font-bold text-white">
+                {lang === "ar" ? "قائمة طلبات إنشاء الحسابات" : "Account Creation Requests"}
+              </h3>
+            </div>
 
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-sm">{req.full_name}</span>
-                    <span className="text-xs text-muted-foreground">@{req.username}</span>
-                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${STATUS_COLORS[req.status]}`}>
-                      {req.status === "pending"
-                        ? (lang === "ar" ? "قيد الانتظار" : "Pending")
-                        : req.status === "approved"
-                          ? (lang === "ar" ? "مقبول" : "Approved")
-                          : (lang === "ar" ? "مرفوض" : "Rejected")
-                      }
-                    </span>
-                  </div>
+            <div className="flex items-center gap-2">
+              {/* Filter tabs */}
+              <div className="flex rounded-lg border border-white/10 overflow-hidden text-xs">
+                {joinFilters.map(f => (
+                  <button
+                    key={f.value}
+                    onClick={() => setJoinFilter(f.value)}
+                    className={`px-3 py-1.5 font-semibold transition-colors ${
+                      joinFilter === f.value
+                        ? "bg-indigo-600 text-white"
+                        : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
 
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
-                    <span>{lang === "ar" ? ROLE_LABELS[req.role] : ROLE_LABELS_EN[req.role]}</span>
-                    {req.section_number && <span>{lang === "ar" ? `سكشن ${req.section_number}` : `Section ${req.section_number}`}</span>}
-                    {req.seat_number && <span>{lang === "ar" ? `رقم الجلوس: ${req.seat_number}` : `Seat: ${req.seat_number}`}</span>}
-                    {req.rank_in_list && <span>{lang === "ar" ? `الترتيب: ${req.rank_in_list}` : `Rank: ${req.rank_in_list}`}</span>}
-                    <span className="text-xs opacity-60">
-                      {new Date(req.created_at).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US")}
-                    </span>
-                  </div>
+              <button
+                onClick={loadJoinRequests}
+                disabled={loadingJoin}
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+                title={lang === "ar" ? "تحديث" : "Refresh"}
+              >
+                <RefreshCw className={`w-4 h-4 ${loadingJoin ? "animate-spin" : ""}`} />
+              </button>
+            </div>
+          </div>
 
-                  {req.rejection_note && (
-                    <p className="text-xs text-red-400 mt-1">
-                      {lang === "ar" ? "سبب الرفض:" : "Rejection note:"} {req.rejection_note}
-                    </p>
-                  )}
-                </div>
+          {/* Join List */}
+          {loadingJoin ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
+            </div>
+          ) : joinRequests.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
+              <Clock className="w-10 h-10 opacity-30" />
+              <p className="text-sm">{lang === "ar" ? "لا توجد طلبات انضمام حالياً." : "No join requests found."}</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {joinRequests.map(req => (
+                <div
+                  key={req.id}
+                  className="rounded-xl border border-white/8 bg-white/[0.02] p-4 hover:bg-white/[0.04] transition-colors"
+                >
+                  <div className="flex items-start gap-3 flex-wrap">
+                    {/* Avatar */}
+                    <div className="w-10 h-10 rounded-full bg-indigo-500/15 flex items-center justify-center shrink-0 text-indigo-400 font-bold text-sm">
+                      {req.full_name.charAt(0).toUpperCase()}
+                    </div>
 
-                {/* Actions */}
-                {req.status === "pending" && (
-                  <div className="flex items-center gap-2 shrink-0">
-                    {rejectNote?.id === req.id ? (
-                      <div className="flex items-center gap-2">
-                        <input
-                          value={rejectNote.note}
-                          onChange={e => setRejectNote({ id: req.id, note: e.target.value })}
-                          placeholder={lang === "ar" ? "سبب الرفض (اختياري)" : "Rejection note (optional)"}
-                          className="text-xs px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-foreground w-40"
-                        />
-                        <button
-                          onClick={() => handleReject(req.id, rejectNote.note)}
-                          disabled={processingId === req.id}
-                          className="px-2 py-1 text-xs rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors font-semibold"
-                        >
-                          {processingId === req.id ? <Loader2 className="w-3 h-3 animate-spin" /> : (lang === "ar" ? "تأكيد" : "Confirm")}
-                        </button>
-                        <button
-                          onClick={() => setRejectNote(null)}
-                          className="p-1 text-muted-foreground hover:text-foreground"
-                        >
-                          <XCircle className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => handleApprove(req)}
-                          disabled={processingId === req.id}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/25 transition-colors font-semibold"
-                        >
-                          {processingId === req.id
-                            ? <Loader2 className="w-3 h-3 animate-spin" />
-                            : <CheckCircle2 className="w-3.5 h-3.5" />
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-sm text-white">{req.full_name}</span>
+                        <span className="text-xs text-muted-foreground">@{req.username}</span>
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${STATUS_COLORS[req.status]}`}>
+                          {req.status === "pending"
+                            ? (lang === "ar" ? "قيد الانتظار" : "Pending")
+                            : req.status === "approved"
+                              ? (lang === "ar" ? "مقبول" : "Approved")
+                              : (lang === "ar" ? "مرفوض" : "Rejected")
                           }
-                          {lang === "ar" ? "قبول" : "Approve"}
-                        </button>
-                        <button
-                          onClick={() => setRejectNote({ id: req.id, note: "" })}
-                          disabled={processingId === req.id}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-red-500/15 text-red-400 border border-red-500/25 hover:bg-red-500/25 transition-colors font-semibold"
-                        >
-                          <UserX className="w-3.5 h-3.5" />
-                          {lang === "ar" ? "رفض" : "Reject"}
-                        </button>
-                      </>
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
+                        <span>{lang === "ar" ? ROLE_LABELS[req.role] : ROLE_LABELS_EN[req.role]}</span>
+                        {req.section_number && <span>{lang === "ar" ? `سكشن ${req.section_number}` : `Section ${req.section_number}`}</span>}
+                        {req.seat_number && <span>{lang === "ar" ? `رقم الجلوس: ${req.seat_number}` : `Seat: ${req.seat_number}`}</span>}
+                        {req.rank_in_list && <span>{lang === "ar" ? `الترتيب: ${req.rank_in_list}` : `Rank: ${req.rank_in_list}`}</span>}
+                        <span className="text-xs opacity-60">
+                          {new Date(req.created_at).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US")}
+                        </span>
+                      </div>
+
+                      {req.rejection_note && (
+                        <p className="text-xs text-red-400 mt-1">
+                          {lang === "ar" ? "سبب الرفض:" : "Rejection note:"} {req.rejection_note}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    {req.status === "pending" && (
+                      <div className="flex items-center gap-2 shrink-0">
+                        {rejectNote?.id === req.id ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              value={rejectNote.note}
+                              onChange={e => setRejectNote({ id: req.id, note: e.target.value })}
+                              placeholder={lang === "ar" ? "سبب الرفض (اختياري)" : "Rejection note (optional)"}
+                              className="text-xs px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-foreground w-40"
+                            />
+                            <button
+                              onClick={() => handleReject(req.id, rejectNote.note)}
+                              disabled={processingId === req.id}
+                              className="px-2 py-1 text-xs rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors font-semibold cursor-pointer"
+                            >
+                              {processingId === req.id ? <Loader2 className="w-3 h-3 animate-spin" /> : (lang === "ar" ? "تأكيد" : "Confirm")}
+                            </button>
+                            <button
+                              onClick={() => setRejectNote(null)}
+                              className="p-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleApprove(req)}
+                              disabled={processingId === req.id}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/25 transition-colors font-semibold cursor-pointer"
+                            >
+                              {processingId === req.id
+                                ? <Loader2 className="w-3 h-3 animate-spin" />
+                                : <CheckCircle2 className="w-3.5 h-3.5" />
+                              }
+                              {lang === "ar" ? "قبول" : "Approve"}
+                            </button>
+                            <button
+                              onClick={() => setRejectNote({ id: req.id, note: "" })}
+                              disabled={processingId === req.id}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-red-500/15 text-red-400 border border-red-500/25 hover:bg-red-500/25 transition-colors font-semibold cursor-pointer"
+                            >
+                              <UserX className="w-3.5 h-3.5" />
+                              {lang === "ar" ? "رفض" : "Reject"}
+                            </button>
+                          </>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* 2. PASSWORD RESET REQUESTS SUB-PANEL                                */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {activeTab === "password_reset" && (
+        <div className="space-y-4 animate-fade-up">
+          {/* Sub Header & Filters */}
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-indigo-400" />
+              <h3 className="text-sm font-bold text-white">
+                {lang === "ar" ? "طلبات استعادة كلمة المرور عبر Gmail" : "Gmail Password Recovery Requests"}
+              </h3>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Filter tabs */}
+              <div className="flex rounded-lg border border-white/10 overflow-hidden text-xs">
+                {resetFilters.map(f => (
+                  <button
+                    key={f.value}
+                    onClick={() => setResetFilter(f.value)}
+                    className={`px-3 py-1.5 font-semibold transition-colors ${
+                      resetFilter === f.value
+                        ? "bg-indigo-600 text-white"
+                        : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={loadResetRequests}
+                disabled={loadingReset}
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+                title={lang === "ar" ? "تحديث" : "Refresh"}
+              >
+                <RefreshCw className={`w-4 h-4 ${loadingReset ? "animate-spin" : ""}`} />
+              </button>
+            </div>
+          </div>
+
+          {/* Reset List */}
+          {loadingReset ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
+            </div>
+          ) : resetRequests.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
+              <KeyRound className="w-10 h-10 opacity-30" />
+              <p className="text-sm">{lang === "ar" ? "لا توجد طلبات استعادة كلمة مرور حالياً." : "No password reset requests found."}</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {resetRequests.map(req => (
+                <div
+                  key={req.id}
+                  className="rounded-xl border border-white/8 bg-white/[0.02] p-4 hover:bg-white/[0.04] transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    {/* User info */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-full bg-indigo-500/15 flex items-center justify-center shrink-0 text-indigo-400">
+                        <Mail className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-sm text-white select-all" dir="ltr">
+                            {req.email}
+                          </span>
+                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${STATUS_COLORS[req.status]}`}>
+                            {req.status === "pending"
+                              ? (lang === "ar" ? "قيد الانتظار" : "Pending")
+                              : req.status === "resolved"
+                                ? (lang === "ar" ? "تم الحل" : "Resolved")
+                                : (lang === "ar" ? "تم التجاهل" : "Dismissed")
+                            }
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                          <span>{new Date(req.created_at).toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}</span>
+                          {req.notes && (
+                            <span className="text-indigo-300">({req.notes})</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {/* Copy email */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(req.email);
+                          toast.success(lang === "ar" ? "تم نسخ البريد" : "Email copied");
+                        }}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
+                        title={lang === "ar" ? "نسخ الإيميل" : "Copy email"}
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">{lang === "ar" ? "نسخ" : "Copy"}</span>
+                      </button>
+
+                      {req.status === "pending" && (
+                        <>
+                          {/* Send Reset Email directly */}
+                          <button
+                            type="button"
+                            disabled={processingResetId === req.id}
+                            onClick={() => handleSendResetEmail(req.id, req.email)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 font-semibold transition-all shadow-[0_2px_8px_rgba(79,70,229,0.3)] cursor-pointer disabled:opacity-50"
+                            title={lang === "ar" ? "إرسال رابط استعادة إلى البريد تلقائياً" : "Dispatch reset link"}
+                          >
+                            {processingResetId === req.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Send className="w-3.5 h-3.5" />
+                            )}
+                            <span>{lang === "ar" ? "إرسال الرابط" : "Send Link"}</span>
+                          </button>
+
+                          {/* Mark Resolved */}
+                          <button
+                            type="button"
+                            disabled={processingResetId === req.id}
+                            onClick={() => handleResolveReset(req.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/25 font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>{lang === "ar" ? "تم الحل" : "Resolved"}</span>
+                          </button>
+
+                          {/* Dismiss */}
+                          <button
+                            type="button"
+                            disabled={processingResetId === req.id}
+                            onClick={() => handleDismissReset(req.id)}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg bg-white/5 text-slate-400 border border-white/10 hover:bg-red-500/15 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50"
+                            title={lang === "ar" ? "تجاهل الطلب" : "Dismiss"}
+                          >
+                            <Ban className="w-3.5 h-3.5" />
+                            <span>{lang === "ar" ? "تجاهل" : "Dismiss"}</span>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
