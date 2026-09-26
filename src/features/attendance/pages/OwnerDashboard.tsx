@@ -18,9 +18,14 @@ export const OwnerDashboard = () => {
   const { error, metrics } = useAttendanceDashboardData("owner");
   const { role, fullName } = useAttendanceAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get("tab") || "requests";
+  const activeTab = searchParams.get("tab") || sessionStorage.getItem("cyber_owner_active_tab") || "requests";
 
   const setActiveTab = (tab: string) => {
+    try {
+      sessionStorage.setItem("cyber_owner_active_tab", tab);
+    } catch {
+      // ignore
+    }
     setSearchParams({ tab });
   };
 

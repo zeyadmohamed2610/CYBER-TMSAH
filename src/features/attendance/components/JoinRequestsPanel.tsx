@@ -85,9 +85,11 @@ export function JoinRequestsPanel() {
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (joinFilter !== "all") query.eq("status", joinFilter);
+    let finalJoinQuery = query;
+    if (joinFilter !== "all") finalJoinQuery = query.eq("status", joinFilter);
 
-    const { data, error } = await query;
+
+    const { data, error } = await finalJoinQuery;
     if (error) {
       toast.error(lang === "ar" ? "فشل تحميل طلبات الانضمام" : "Failed to load join requests");
     } else {
@@ -111,9 +113,11 @@ export function JoinRequestsPanel() {
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (resetFilter !== "all") query.eq("status", resetFilter);
+    let finalResetQuery = query;
+    if (resetFilter !== "all") finalResetQuery = query.eq("status", resetFilter);
 
-    const { data, error } = await query;
+
+    const { data, error } = await finalResetQuery;
     if (error) {
       toast.error(lang === "ar" ? "فشل تحميل طلبات استعادة المرور" : "Failed to load password reset requests");
     } else {

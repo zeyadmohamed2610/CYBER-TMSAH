@@ -57,7 +57,19 @@ export function UserList({ role, title }: { role: string; title: string }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
-  const [showCreate, setShowCreate] = useState(false);
+  const DRAFT_KEY = `cyber_userlist_draft_${role}`;
+
+  // Restore draft so switching to WhatsApp to copy data never loses the form or inputs
+  const [showCreate, setShowCreate] = useState<boolean>(() => {
+    try {
+      const saved = sessionStorage.getItem(DRAFT_KEY);
+      if (saved) return JSON.parse(saved).showCreate ?? false;
+    } catch {
+      // fallback
+    }
+    return false;
+  });
+
   const [submitting, setSubmitting] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [showPassword, setShowPassword] = useState(false);
@@ -81,17 +93,56 @@ export function UserList({ role, title }: { role: string; title: string }) {
     return DEPARTMENTS;
   });
 
-  // Manual User Creation Form Data
-  const [formData, setFormData] = useState({
-    name: "",
-    username: "",
-    email: "",
-    password: "",
-    department: "cybersecurity",
-    academicYear: "1",
-    sectionNumber: "1",
-    subjectId: "",
+  // Manual User Creation Form Data with draft restore
+  const [formData, setFormData] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(DRAFT_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.formData) return parsed.formData;
+      }
+    } catch {
+      // fallback
+    }
+    return {
+      name: "",
+      username: "",
+      email: "",
+      password: "",
+      department: "cybersecurity",
+      academicYear: "1",
+      sectionNumber: "1",
+      subjectId: "",
+    };
   });
+
+  // Persist draft to sessionStorage whenever user types or toggles the form
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ showCreate, formData }));
+    } catch {
+      // ignore
+    }
+  }, [showCreate, formData, DRAFT_KEY]);
+
+  const resetFormAndDraft = useCallback(() => {
+    try {
+      sessionStorage.removeItem(DRAFT_KEY);
+    } catch {
+      // ignore
+    }
+    setShowCreate(false);
+    setFormData({
+      name: "",
+      username: "",
+      email: "",
+      password: "",
+      department: "cybersecurity",
+      academicYear: "1",
+      sectionNumber: "1",
+      subjectId: "",
+    });
+  }, [DRAFT_KEY]);
 
   // Edit Data
   const [editData, setEditData] = useState({
@@ -248,32 +299,12 @@ export function UserList({ role, title }: { role: string; title: string }) {
           toast.error(`تم إنشاء الطلب ولكن فشل التفعيل المباشر: ${approveErr.message}`);
         } else {
           toast.success(`تمت إضافة الحساب بنجاح لـ ${trimmedName} ✓`);
-          setShowCreate(false);
-          setFormData({
-            name: "",
-            username: "",
-            email: "",
-            password: "",
-            department: "cybersecurity",
-            academicYear: "1",
-            sectionNumber: "1",
-            subjectId: "",
-          });
+          resetFormAndDraft();
           void loadUsers();
         }
       } else {
         toast.success(`تمت إضافة الحساب بنجاح لـ ${trimmedName} ✓`);
-        setShowCreate(false);
-        setFormData({
-          name: "",
-          username: "",
-          email: "",
-          password: "",
-          department: "cybersecurity",
-          academicYear: "1",
-          sectionNumber: "1",
-          subjectId: "",
-        });
+        resetFormAndDraft();
         void loadUsers();
       }
     } catch (err: unknown) {
@@ -569,7 +600,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowCreate(false)}
+                onClick={resetFormAndDraft}
                 className="text-slate-400 hover:text-white"
               >
                 إلغاء

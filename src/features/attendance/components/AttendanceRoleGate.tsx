@@ -14,24 +14,25 @@ export const AttendanceRoleGate = ({ allowedRole, children }: AttendanceRoleGate
   const location = useLocation();
   const { user, role, loading } = useAttendanceAuth();
 
-  // Phase 3: Block render until role is resolved to prevent flash
-  // Show loading screen while authentication is being resolved
-  if (loading) {
+  // Show loading screen only on cold initial start when no role has been resolved yet
+  if (loading && !role) {
     return <LoadingScreen />;
   }
 
-  // Prevent dashboard access before role is confirmed
-  if (!user || role === null) {
+  // Redirect to login only when loading is complete and user/role is definitely absent
+  if (!loading && (!user || role === null)) {
     return <Navigate to="/attendance/login" replace state={{ from: location.pathname }} />;
   }
 
-  // Check if user has one of the allowed roles
-  const isAllowed = Array.isArray(allowedRole)
-    ? allowedRole.includes(role)
-    : role === allowedRole;
+  // If role is active, check permissions
+  if (role) {
+    const isAllowed = Array.isArray(allowedRole)
+      ? allowedRole.includes(role)
+      : role === allowedRole;
 
-  if (!isAllowed) {
-    return <Navigate to={getAttendanceDashboardRoute(role)} replace />;
+    if (!isAllowed) {
+      return <Navigate to={getAttendanceDashboardRoute(role)} replace />;
+    }
   }
 
   return <>{children}</>;
