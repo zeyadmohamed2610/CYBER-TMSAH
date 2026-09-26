@@ -523,4 +523,33 @@ html, body {
   width: 100%;
 }
 
-/* (scroll-behavior is already set in @layer base above) */
+/* ── Global Interactive Cursor Glow Reaction ────────────────────────── */
+@media (hover: hover) and (pointer: fine) {
+  /* Buttons, tabs, and clickable elements react dynamically to cursor */
+  button:not(:disabled):hover,
+  [role="button"]:hover,
+  [role="tab"]:hover,
+  a:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.28);
+    transition: filter 0.18s ease, box-shadow 0.22s ease, transform 0.18s ease, border-color 0.22s ease;
+  }
+
+  /* Inputs, selects, and textareas react to cursor hover */
+  input:not([type="checkbox"]):hover,
+  select:hover,
+  textarea:hover {
+    border-color: rgba(99, 102, 241, 0.5) !important;
+    box-shadow: 0 0 16px rgba(99, 102, 241, 0.14);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  /* Cards and floating panels reflect subtle interactive ambient lighting */
+  .card:hover,
+  .glass-card:hover,
+  .glass-panel:hover {
+    border-color: rgba(99, 102, 241, 0.35) !important;
+    box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.7), 0 0 28px rgba(99, 102, 241, 0.16) !important;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+}

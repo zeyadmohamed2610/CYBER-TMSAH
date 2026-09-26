@@ -15,6 +15,7 @@ import { OfflineStatusProvider, OfflineIndicator } from "@/components/OfflineSta
 import { offlineAttendanceService } from "@/features/attendance/services/offlineAttendanceService";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { LanguageProvider } from "@/i18n";
+import { GlobalCursorGlow } from "@/components/GlobalCursorGlow";
 
 // ── Pages ─────────────────────────────────────────────────────────────────────
 const Schedule     = lazy(() => import("./pages/Schedule"));
@@ -54,6 +55,7 @@ const App = () => (
               getPendingCountFunction={offlineAttendanceService.getPendingCount}
             >
               <BrowserRouter>
+                <GlobalCursorGlow />
                 <ErrorBoundary>
                   <AttendanceAuthProvider>
                     <Analytics />

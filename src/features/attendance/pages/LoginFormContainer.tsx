@@ -686,16 +686,12 @@ const LoginPage = () => {
       </div>
 
       {/* ── Page footer ──────────────────────────────────────────────── */}
-      <div className="relative z-10 mt-8 flex flex-col items-center gap-1.5 text-center"
+      <div className="relative z-10 mt-8 text-center"
         style={{ animation: "rise 0.6s cubic-bezier(0.22,1,0.36,1) 0.1s both" }}>
         <p className="text-[12px] font-medium text-slate-400">
           © 2026 CYBER TMSAH ·{" "}
           {lang === "ar" ? "جامعة حلوان التكنولوجية الدولية" : "Helwan International Technological University"}
         </p>
-        <div className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-          <span>{lang === "ar" ? "اتصال مشفّر وآمن بموجب معايير TLS 1.3" : "Encrypted & Secure Connection (TLS 1.3)"}</span>
-        </div>
       </div>
 
       <ForgotPasswordModal
