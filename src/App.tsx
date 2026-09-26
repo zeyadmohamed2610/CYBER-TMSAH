@@ -68,9 +68,10 @@ const App = () => (
                     <Suspense fallback={<LoadingScreen />}>
                       <PageTransition>
                         <Routes>
-                          {/* ── Public: Login is now the root ─────────────────── */}
-                          <Route path="/" element={<LoginPage />} />
+                          {/* ── Public: Root redirects to /login ──────────── */}
+                          <Route path="/" element={<Navigate to="/login" replace />} />
                           <Route path="/login" element={<LoginPage />} />
+                          <Route path="/join" element={<LoginPage initialTab="join" />} />
                           <Route path="/reset-password" element={<ResetPasswordPage />} />
 
                           {/* ── Legacy public routes (still accessible) ─────── */}
@@ -81,7 +82,7 @@ const App = () => (
 
                           {/* ── Attendance hub → redirects by role ──────────── */}
                           <Route path="/attendance" element={<AttendancePage />} />
-                          <Route path="/attendance/login" element={<Navigate to="/" replace />} />
+                          <Route path="/attendance/login" element={<Navigate to="/login" replace />} />
 
                           {/* ── Role dashboards ─────────────────────────────── */}
                           <Route

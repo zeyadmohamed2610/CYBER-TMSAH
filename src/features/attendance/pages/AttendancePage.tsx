@@ -23,7 +23,7 @@ const AttendancePage = () => {
 
   // Prevent dashboard access before role is confirmed
   if (!user || role === null) {
-    return <Navigate to="/attendance/login" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   if (role === "owner" || role === "coordinator" || role === "doctor" || role === "student" || role === "ta") {

@@ -1,4 +1,4 @@
-﻿import { Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { ShieldX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -19,7 +19,7 @@ const AttendanceForbiddenPage = () => {
             <Link to="/attendance">العودة إلى بوابة الحضور</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link to="/attendance/login">تسجيل الدخول بحساب آخر</Link>
+            <Link to="/login">تسجيل الدخول بحساب آخر</Link>
           </Button>
         </div>
       </div>

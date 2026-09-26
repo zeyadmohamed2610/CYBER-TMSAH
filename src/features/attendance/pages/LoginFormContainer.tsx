@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { LoadingScreen } from "@/components/Loading";
 import { toast } from "sonner";
@@ -204,12 +204,15 @@ function Field({
 // ────────────────────────────────────────────────────────────────────────────
 // Main Component
 // ────────────────────────────────────────────────────────────────────────────
-const LoginPage = () => {
+const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, role, loading } = useAttendanceAuth();
   const { t, lang, isRTL, interpolate } = useLang();
 
-  const [tab, setTab]                       = useState<Tab>("login");
+  // Determine initial tab from prop or current URL path
+  const resolvedInitialTab: Tab = initialTab ?? (location.pathname === "/join" ? "join" : "login");
+  const [tab, setTab]                       = useState<Tab>(resolvedInitialTab);
   const [lockRemaining, setLockRemaining]   = useState(getLockoutRemaining);
   const passRef                             = useRef<HTMLInputElement>(null);
 
@@ -252,6 +255,16 @@ const LoginPage = () => {
     }, 1000);
     return () => clearInterval(id);
   }, [lockRemaining]);
+
+  // Navigate URL when tab changes
+  const handleTabChange = (newTab: Tab) => {
+    setTab(newTab);
+    if (newTab === "join") {
+      navigate("/join", { replace: true });
+    } else {
+      navigate("/login", { replace: true });
+    }
+  };
 
   useEffect(() => {
     if (!loading && user && role)
@@ -643,7 +656,7 @@ const LoginPage = () => {
                   <button
                     key={tb}
                     type="button"
-                    onClick={() => setTab(tb)}
+                    onClick={() => handleTabChange(tb)}
                     className="relative py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer select-none outline-none flex items-center justify-center gap-2"
                     style={{
                       background: isActive
@@ -762,7 +775,7 @@ const LoginPage = () => {
 
                 <p className="text-center text-[12.5px] pt-1.5 text-slate-400">
                   {lang === "ar" ? "ليس لديك حساب؟" : "No account?"}{" "}
-                  <button type="button" onClick={() => setTab("join")}
+                  <button type="button" onClick={() => handleTabChange("join")}
                     className="font-semibold text-purple-400 hover:text-purple-300 cursor-pointer transition-colors">
                     {t.auth.joinTitle}
                   </button>
@@ -782,7 +795,7 @@ const LoginPage = () => {
                     <p className="font-bold text-white text-lg">{lang === "ar" ? "تم إرسال طلبك بنجاح!" : "Request Sent!"}</p>
                     <p className="text-[13px] mt-1 text-slate-400">{t.auth.requestSent}</p>
                   </div>
-                  <button onClick={() => { setJoinSuccess(false); setTab("login"); }}
+                  <button onClick={() => { setJoinSuccess(false); handleTabChange("login"); }}
                     className="h-11 px-7 rounded-xl text-sm font-semibold text-white cursor-pointer active:scale-[0.98] transition-all"
                     style={{
                       background: "linear-gradient(180deg, #9333EA 0%, #7E22CE 100%)",
