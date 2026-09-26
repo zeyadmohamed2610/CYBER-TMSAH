@@ -516,25 +516,31 @@ const LoginPage = () => {
         }}/>
       </div>
 
-      {/* ── Lang toggle ──────────────────────────────────────────────── */}
-      <div className="fixed top-4 end-4 z-50">
+      {/* ── Floating Language Switcher ─────────────────────────────────── */}
+      <div className="fixed top-4 sm:top-6 end-4 sm:end-6 z-50">
         <button
+          type="button"
           onClick={() => setLang(lang === "en" ? "ar" : "en")}
-          className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-[11px] font-semibold cursor-pointer transition-all duration-150"
+          className="flex items-center gap-2 h-9 sm:h-10 px-3.5 sm:px-4 rounded-full text-xs font-bold cursor-pointer transition-all duration-200 select-none active:scale-95 shadow-[0_4px_20px_rgba(0,0,0,0.45)] hover:shadow-[0_4px_25px_rgba(147,51,234,0.35)]"
           style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            color: "rgba(100,116,139,1)",
+            background: "rgba(10, 15, 29, 0.85)",
+            border: "1px solid rgba(147, 51, 234, 0.35)",
+            backdropFilter: "blur(16px)",
+            color: "#FFFFFF",
           }}
           onMouseEnter={e => {
-            (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.07)";
-            (e.currentTarget as HTMLButtonElement).style.color = "#CBD5E1";
+            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(168, 85, 247, 0.7)";
+            (e.currentTarget as HTMLButtonElement).style.background = "rgba(147, 51, 234, 0.18)";
           }}
           onMouseLeave={e => {
-            (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.04)";
-            (e.currentTarget as HTMLButtonElement).style.color = "rgba(100,116,139,1)";
-          }}>
-          <Icon.Globe/>{lang === "en" ? "عربي" : "EN"}
+            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(147, 51, 234, 0.35)";
+            (e.currentTarget as HTMLButtonElement).style.background = "rgba(10, 15, 29, 0.85)";
+          }}
+          aria-label={lang === "en" ? "التبديل إلى العربية" : "Switch to English"}
+        >
+          <Icon.Globe />
+          <span className="tracking-wide">{lang === "en" ? "العربية" : "English"}</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse shrink-0" />
         </button>
       </div>
 
@@ -558,10 +564,10 @@ const LoginPage = () => {
             style={{
               fontFamily: "'Inter', sans-serif",
               letterSpacing: "0.14em",
-              background: "linear-gradient(135deg, #C7D2FE 0%, #818CF8 50%, #6366F1 100%)",
+              background: "linear-gradient(135deg, #E9D5FF 0%, #C084FC 50%, #9333EA 100%)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
-              filter: "drop-shadow(0 0 20px rgba(99,102,241,0.5))",
+              filter: "drop-shadow(0 0 20px rgba(147,51,234,0.5))",
             }}>
             TMSAH
           </span>
@@ -570,8 +576,8 @@ const LoginPage = () => {
         {/* System Descriptor Pill */}
         <div className="inline-flex items-center gap-2 mt-2 px-3.5 py-1 rounded-full"
           style={{
-            background: "rgba(99,102,241,0.08)",
-            border: "1px solid rgba(99,102,241,0.22)",
+            background: "rgba(147,51,234,0.08)",
+            border: "1px solid rgba(147,51,234,0.25)",
             boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
           }}>
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -623,7 +629,7 @@ const LoginPage = () => {
             borderTopRightRadius: 22,
           }}/>
 
-          <div className="px-8 pt-7 pb-8">
+          <div className="px-5 sm:px-8 pt-6 sm:pt-7 pb-7 sm:pb-8">
 
             {/* ── Card header ─────────────────────────────────────────── */}
             <div className="mb-6">
@@ -896,8 +902,8 @@ const LoginPage = () => {
                     labelColor="#CBD5E1"
                     fieldBg="rgba(255,255,255,0.045)"
                     fieldBorder="rgba(255,255,255,0.12)"
-                    fieldFocus="rgba(99,102,241,0.08)"
-                    fieldGlow="0 0 0 3px rgba(99,102,241,0.2)"
+                    fieldFocus="rgba(147,51,234,0.08)"
+                    fieldGlow="0 0 0 3px rgba(147,51,234,0.22)"
                     textColor="#FFFFFF"
                     faintColor="#94A3B8"
                     isRTL={isRTL}
@@ -917,8 +923,8 @@ const LoginPage = () => {
                     labelColor="#CBD5E1"
                     fieldBg="rgba(255,255,255,0.045)"
                     fieldBorder="rgba(255,255,255,0.12)"
-                    fieldFocus="rgba(99,102,241,0.08)"
-                    fieldGlow="0 0 0 3px rgba(99,102,241,0.2)"
+                    fieldFocus="rgba(147,51,234,0.08)"
+                    fieldGlow="0 0 0 3px rgba(147,51,234,0.22)"
                     textColor="#FFFFFF"
                     faintColor="#94A3B8"
                     isRTL={isRTL}
@@ -940,8 +946,8 @@ const LoginPage = () => {
                         labelColor="#CBD5E1"
                         fieldBg="rgba(255,255,255,0.045)"
                         fieldBorder="rgba(255,255,255,0.12)"
-                        fieldFocus="rgba(99,102,241,0.08)"
-                        fieldGlow="0 0 0 3px rgba(99,102,241,0.2)"
+                        fieldFocus="rgba(147,51,234,0.08)"
+                        fieldGlow="0 0 0 3px rgba(147,51,234,0.22)"
                         textColor="#FFFFFF"
                         faintColor="#94A3B8"
                         isRTL={isRTL}
