@@ -1,54 +1,49 @@
-// src/i18n/index.ts — Language context + hook
+// src/i18n/index.ts — Language context (Arabic-first, translation removed)
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import en from "./en";
 import ar from "./ar";
 import type { Translations } from "./en";
 
-export type Language = "en" | "ar";
-
-const translations: Record<Language, Translations> = { en, ar };
+export type Language = "ar";
 
 interface LanguageContextValue {
   lang: Language;
   t: Translations;
   setLang: (l: Language) => void;
-  dir: "ltr" | "rtl";
-  isRTL: boolean;
+  dir: "rtl";
+  isRTL: true;
 }
 
 const LanguageContext = createContext<LanguageContextValue | undefined>(undefined);
 
-const STORAGE_KEY = "cyber_lang";
-
-const getStoredLang = (): Language => {
-  try {
-    const v = localStorage.getItem(STORAGE_KEY);
-    if (v === "en" || v === "ar") return v;
-  } catch { /* ignore */ }
-  return "en"; // default: English
-};
-
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
-  const [lang, setLangState] = useState<Language>(getStoredLang);
+  // Always Arabic across the entire site
+  const [lang] = useState<Language>("ar");
 
-  const setLang = useCallback((l: Language) => {
-    setLangState(l);
-    try { localStorage.setItem(STORAGE_KEY, l); } catch { /* ignore */ }
+  const setLang = useCallback(() => {
+    // No-op: Arabic is the permanent and only language
   }, []);
 
-  const dir = lang === "ar" ? "rtl" : "ltr";
-  const isRTL = dir === "rtl";
-
   useEffect(() => {
-    document.documentElement.lang = lang;
-    document.documentElement.dir = dir;
-  }, [lang, dir]);
+    document.documentElement.lang = "ar";
+    document.documentElement.dir = "rtl";
+    try {
+      localStorage.setItem("cyber_lang", "ar");
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const value = useMemo<LanguageContextValue>(
-    () => ({ lang, t: translations[lang], setLang, dir, isRTL }),
-    [lang, setLang, dir, isRTL],
+    () => ({
+      lang: "ar",
+      t: ar as unknown as Translations,
+      setLang,
+      dir: "rtl",
+      isRTL: true,
+    }),
+    [setLang],
   );
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;

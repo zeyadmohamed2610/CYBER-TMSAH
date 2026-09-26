@@ -18,20 +18,24 @@ const Footer = () => {
       <div className="section-container relative py-12">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
           <div className="flex flex-col items-center lg:items-start gap-4 order-2 lg:order-1">
-            <Link to="/" className="group flex items-center" dir="ltr">
-              <span className="text-2xl font-black tracking-widest">
-                <span
-                  className="bg-gradient-to-r from-purple-400 via-violet-400 to-purple-300 bg-clip-text text-transparent"
-                  style={{
-                    textShadow: "0 0 20px hsl(var(--primary) / 0.5)",
-                  }}
-                >
-                  CYBER
-                </span>
+            <Link to="/" className="group flex items-center select-none" dir="ltr" aria-label="CYBER TMSAH Home">
+              <span className="font-black text-2xl text-white tracking-[0.14em] drop-shadow-[0_2px_12px_rgba(255,255,255,0.3)]">
+                CYBER
               </span>
-              <span className="text-primary text-2xl font-thin mx-2">⟡</span>
-              <span className="text-2xl font-black tracking-widest text-foreground group-hover:text-primary transition-colors">
+              <span
+                className="font-black text-2xl tracking-[0.14em] ml-2 transition-transform duration-300 group-hover:scale-105"
+                style={{
+                  background: "linear-gradient(135deg, #F3E8FF 0%, #C084FC 45%, #9333EA 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  filter: "drop-shadow(0 0 16px rgba(168,85,247,0.7))",
+                }}
+              >
                 TMSAH
+              </span>
+              <span className="relative flex h-2 w-2 ml-1.5 -top-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-400 shadow-[0_0_8px_#A855F7]" />
               </span>
             </Link>
 

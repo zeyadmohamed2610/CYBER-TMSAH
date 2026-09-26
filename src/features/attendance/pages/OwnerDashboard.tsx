@@ -99,7 +99,7 @@ export const OwnerDashboard = () => {
             {TABS.map((tab) => (
               <TabsTrigger
                 key={tab.value}
-                className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary px-4 py-2 rounded-xl"
+                className="data-[state=active]:bg-purple-600/20 data-[state=active]:text-purple-300 data-[state=active]:border-purple-500/50 data-[state=active]:shadow-[0_0_20px_rgba(168,85,247,0.25)] border border-transparent px-4 py-2 rounded-xl font-bold transition-all text-slate-300 hover:text-white hover:bg-white/5"
                 value={tab.value}
               >
                 {tab.label}

@@ -207,7 +207,7 @@ function Field({
 const LoginPage = () => {
   const navigate = useNavigate();
   const { user, role, loading } = useAttendanceAuth();
-  const { t, lang, setLang, isRTL, interpolate } = useLang();
+  const { t, lang, isRTL, interpolate } = useLang();
 
   const [tab, setTab]                       = useState<Tab>("login");
   const [lockRemaining, setLockRemaining]   = useState(getLockoutRemaining);
@@ -533,33 +533,6 @@ const LoginPage = () => {
         }}/>
       </div>
 
-      {/* ── Floating Language Switcher ─────────────────────────────────── */}
-      <div className="fixed top-4 sm:top-6 end-4 sm:end-6 z-50">
-        <button
-          type="button"
-          onClick={() => setLang(lang === "en" ? "ar" : "en")}
-          className="flex items-center gap-2 h-9 sm:h-10 px-3.5 sm:px-4 rounded-full text-xs font-bold cursor-pointer transition-all duration-200 select-none active:scale-95 shadow-[0_4px_20px_rgba(0,0,0,0.45)] hover:shadow-[0_4px_25px_rgba(147,51,234,0.35)]"
-          style={{
-            background: "rgba(10, 15, 29, 0.85)",
-            border: "1px solid rgba(147, 51, 234, 0.35)",
-            backdropFilter: "blur(16px)",
-            color: "#FFFFFF",
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(168, 85, 247, 0.7)";
-            (e.currentTarget as HTMLButtonElement).style.background = "rgba(147, 51, 234, 0.18)";
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(147, 51, 234, 0.35)";
-            (e.currentTarget as HTMLButtonElement).style.background = "rgba(10, 15, 29, 0.85)";
-          }}
-          aria-label={lang === "en" ? "التبديل إلى العربية" : "Switch to English"}
-        >
-          <Icon.Globe />
-          <span className="tracking-wide">{lang === "en" ? "العربية" : "English"}</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse shrink-0" />
-        </button>
-      </div>
 
       {/* ── Brand Wordmark as the Logo ─────────────────────────────────── */}
       <div className="relative z-10 flex flex-col items-center mb-7 select-none text-center"
