@@ -158,7 +158,7 @@ function Field({
       <div className="flex items-center justify-between mb-1.5">
         <label htmlFor={id}
           className="block text-[12px] font-semibold tracking-wide select-none transition-colors duration-150"
-          style={{ color: focused ? "#818CF8" : "#CBD5E1" }}>
+          style={{ color: focused ? "#C084FC" : "#CBD5E1" }}>
           {label}
         </label>
         {badge}
@@ -166,7 +166,7 @@ function Field({
       <div className="relative">
         {icon && (
           <span className="absolute start-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10 transition-colors duration-200"
-            style={{ color: focused ? "#818CF8" : "#94A3B8" }}>
+            style={{ color: focused ? "#C084FC" : "#94A3B8" }}>
             {icon}
           </span>
         )}
@@ -182,11 +182,11 @@ function Field({
             height: "46px",
             paddingInlineStart: icon ? "42px" : "14px",
             paddingInlineEnd: suffix ? "44px" : "14px",
-            background: focused ? "rgba(99,102,241,0.08)" : "rgba(255,255,255,0.045)",
-            border: `1.5px solid ${focused ? "#6366F1" : "rgba(255,255,255,0.12)"}`,
+            background: focused ? "rgba(147, 51, 234, 0.08)" : "rgba(255,255,255,0.045)",
+            border: `1.5px solid ${focused ? "#A855F7" : "rgba(255,255,255,0.12)"}`,
             color: "#FFFFFF",
             boxShadow: focused
-              ? "0 0 0 3.5px rgba(99,102,241,0.22), 0 2px 4px rgba(0,0,0,0.2)"
+              ? "0 0 0 3.5px rgba(147, 51, 234, 0.22), 0 2px 4px rgba(0,0,0,0.2)"
               : "0 1px 2px rgba(0,0,0,0.15)",
             outline: "none",
           }}
@@ -454,12 +454,12 @@ const LoginPage = () => {
       className="w-full flex items-center justify-center gap-2 rounded-xl text-sm font-bold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.985] cursor-pointer"
       style={{
         height: "46px",
-        background: "linear-gradient(180deg, #6366F1 0%, #4F46E5 100%)",
-        boxShadow: "0 1px 0 rgba(255,255,255,0.25) inset, 0 4px 18px rgba(79,70,229,0.5), 0 2px 4px rgba(0,0,0,0.3)",
-        border: "1px solid rgba(255,255,255,0.12)",
+        background: "linear-gradient(180deg, #9333EA 0%, #7E22CE 100%)",
+        boxShadow: "0 1px 0 rgba(255,255,255,0.25) inset, 0 4px 18px rgba(147,51,234,0.5), 0 2px 4px rgba(0,0,0,0.3)",
+        border: "1px solid rgba(255,255,255,0.15)",
       }}
-      onMouseEnter={e => (e.currentTarget.style.background = "linear-gradient(180deg, #6E72FF 0%, #5548ED 100%)")}
-      onMouseLeave={e => (e.currentTarget.style.background = "linear-gradient(180deg, #6366F1 0%, #4F46E5 100%)")}>
+      onMouseEnter={e => (e.currentTarget.style.background = "linear-gradient(180deg, #A855F7 0%, #9333EA 100%)")}
+      onMouseLeave={e => (e.currentTarget.style.background = "linear-gradient(180deg, #9333EA 0%, #7E22CE 100%)")}>
       {ld ? <><Loader2 className="w-4 h-4 animate-spin"/><span>{t.auth.signingIn}</span></> : children}
     </button>
   );
@@ -578,7 +578,7 @@ const LoginPage = () => {
           style={{
             width: "560px",
             height: "560px",
-            background: "radial-gradient(circle, rgba(99,102,241,0.15) 0%, rgba(79,70,229,0.04) 45%, transparent 70%)",
+            background: "radial-gradient(circle, rgba(147,51,234,0.18) 0%, rgba(126,34,206,0.06) 45%, transparent 70%)",
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
@@ -607,7 +607,7 @@ const LoginPage = () => {
           {/* Card top accent line */}
           <div style={{
             height: 1,
-            background: "linear-gradient(90deg, transparent 0%, rgba(99,102,241,0.7) 50%, transparent 100%)",
+            background: "linear-gradient(90deg, transparent 0%, rgba(168,85,247,0.7) 50%, transparent 100%)",
             borderTopLeftRadius: 22,
             borderTopRightRadius: 22,
           }}/>
@@ -628,21 +628,53 @@ const LoginPage = () => {
               </p>
             </div>
 
-            {/* ── Tabs — underline style ──────────────────────────────── */}
-            <div className="relative flex mb-6 border-b border-white/10">
-              {(["login", "join"] as Tab[]).map(tb => (
-                <button key={tb} onClick={() => setTab(tb)}
-                  className="flex items-center gap-1.5 pb-3.5 me-6 text-[13.5px] font-semibold cursor-pointer transition-colors duration-150 relative"
-                  style={{ color: tab === tb ? "#FFFFFF" : "#94A3B8" }}>
-                  {tb === "login"
-                    ? <><Icon.LogIn/>{t.auth.signIn}</>
-                    : <><Icon.UserPlus/>{t.auth.joinTitle}</>}
-                  {tab === tb && (
-                    <span className="absolute bottom-[-1px] start-0 end-0 h-[2.5px] rounded-full"
-                      style={{ background: "#6366F1", boxShadow: "0 0 10px rgba(99,102,241,0.8)" }}/>
-                  )}
-                </button>
-              ))}
+            {/* ── Modern Premium Segmented Pill Tabs ─────────────────────── */}
+            <div className="relative p-1.5 mb-6 rounded-2xl bg-white/[0.04] border border-white/[0.08] grid grid-cols-2 gap-1.5 shadow-inner">
+              {(["login", "join"] as Tab[]).map((tb) => {
+                const isActive = tab === tb;
+                return (
+                  <button
+                    key={tb}
+                    type="button"
+                    onClick={() => setTab(tb)}
+                    className="relative py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer select-none outline-none flex items-center justify-center gap-2"
+                    style={{
+                      background: isActive
+                        ? "linear-gradient(135deg, rgba(147, 51, 234, 0.35) 0%, rgba(126, 34, 206, 0.2) 100%)"
+                        : "transparent",
+                      border: isActive
+                        ? "1px solid rgba(168, 85, 247, 0.55)"
+                        : "1px solid transparent",
+                      color: isActive ? "#FFFFFF" : "#94A3B8",
+                      boxShadow: isActive
+                        ? "0 4px 18px rgba(147, 51, 234, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2)"
+                        : "none",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.color = "#FFFFFF";
+                        e.currentTarget.style.background = "rgba(255, 255, 255, 0.06)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.color = "#94A3B8";
+                        e.currentTarget.style.background = "transparent";
+                      }
+                    }}
+                  >
+                    {isActive && (
+                      <span
+                        className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0"
+                        style={{ boxShadow: "0 0 8px #C084FC" }}
+                      />
+                    )}
+                    <span className="tracking-wide">
+                      {tb === "login" ? t.auth.signIn : t.auth.joinTitle}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* ══════ LOGIN ══════ */}
