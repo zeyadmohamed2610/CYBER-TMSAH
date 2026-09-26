@@ -536,10 +536,11 @@ html, body {
 /* ── Global Interactive Cursor Glow Reaction ────────────────────────── */
 @media (hover: hover) and (pointer: fine) {
   /* Buttons, tabs, and clickable elements react dynamically to cursor */
-  button:not(:disabled):hover,
-  [role="button"]:hover,
+  button:not(:disabled):not(.no-glow):hover,
+  [role="button"]:not(.no-glow):hover,
   [role="tab"]:hover,
-  a:hover {
+  a.btn:hover,
+  a.glow-hover:hover {
     filter: brightness(1.1);
     box-shadow: 0 0 20px rgba(147, 51, 234, 0.28);
     transition: filter 0.18s ease, box-shadow 0.22s ease, transform 0.18s ease, border-color 0.22s ease;

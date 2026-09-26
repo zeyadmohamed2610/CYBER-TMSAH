@@ -126,32 +126,31 @@ export const Navbar = () => {
           <div className="flex items-center gap-3">
             <Link
               to={dashboardPath}
-              className="group relative flex items-center gap-2 select-none py-1 transition-transform duration-300 active:scale-95"
+              className="group relative flex items-center gap-2 select-none py-1 transition-transform duration-300 active:scale-95 no-glow !outline-none !ring-0 !border-0 !shadow-none"
               dir="ltr"
               aria-label="CYBER TMSAH Home"
             >
-              {/* Ambient backlight glow on hover */}
-              <div className="absolute -inset-x-3 -inset-y-1.5 rounded-2xl bg-gradient-to-r from-purple-600/0 via-purple-600/20 to-indigo-600/0 opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-500 pointer-events-none" />
+              {/* Soft ambient backlight glow on hover */}
+              <div className="absolute -inset-x-3 -inset-y-1.5 rounded-full bg-gradient-to-r from-purple-600/0 via-purple-600/25 to-indigo-600/0 opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-500 pointer-events-none" />
 
               {/* Wordmark Logo */}
-              <div className="relative flex items-center tracking-[0.14em] font-sans">
+              <div className="relative flex items-center tracking-[0.14em] font-sans drop-shadow-[0_0_15px_rgba(168,85,247,0.35)]">
                 {/* CYBER in pure neon white with ambient glow */}
                 <span
-                  className="font-black text-xl sm:text-2xl text-white tracking-[0.14em] transition-all duration-300 drop-shadow-[0_2px_14px_rgba(255,255,255,0.3)] group-hover:drop-shadow-[0_0_20px_rgba(255,255,255,0.65)]"
-                  style={{ fontFamily: "'Inter', sans-serif" }}
+                  className="font-black text-xl sm:text-2xl text-white tracking-[0.14em] transition-all duration-300"
+                  style={{
+                    fontFamily: "'Inter', sans-serif",
+                    textShadow: "0 0 20px rgba(255,255,255,0.4)",
+                  }}
                 >
                   CYBER
                 </span>
 
-                {/* TMSAH in vibrant purple/violet gradient with radiant drop-shadow */}
+                {/* TMSAH in smooth gradient */}
                 <span
-                  className="font-black text-xl sm:text-2xl tracking-[0.14em] ml-2 transition-all duration-300 group-hover:scale-105"
+                  className="font-black text-xl sm:text-2xl tracking-[0.14em] ml-2 transition-all duration-300 group-hover:scale-105 bg-gradient-to-r from-[#F3E8FF] via-[#C084FC] to-[#9333EA] bg-clip-text text-transparent"
                   style={{
                     fontFamily: "'Inter', sans-serif",
-                    background: "linear-gradient(135deg, #F3E8FF 0%, #C084FC 45%, #9333EA 100%)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    filter: "drop-shadow(0 0 16px rgba(168,85,247,0.7))",
                   }}
                 >
                   TMSAH

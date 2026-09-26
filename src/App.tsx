@@ -16,6 +16,7 @@ import { offlineAttendanceService } from "@/features/attendance/services/offline
 import { ThemeProvider } from "@/context/ThemeContext";
 import { LanguageProvider } from "@/i18n";
 import { GlobalCursorGlow } from "@/components/GlobalCursorGlow";
+import { ErrorModal } from "@/components/ErrorModal";
 
 // ── Pages ─────────────────────────────────────────────────────────────────────
 const Schedule     = lazy(() => import("./pages/Schedule"));
@@ -59,6 +60,7 @@ const App = () => (
             >
               <BrowserRouter>
                 <GlobalCursorGlow />
+                <ErrorModal />
                 <ErrorBoundary>
                   <AttendanceAuthProvider>
                     <Analytics />

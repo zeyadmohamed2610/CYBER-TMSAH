@@ -1,58 +1,45 @@
-import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Activity, BookOpenCheck, ChevronDown, Clock3, Users, Users2 } from "lucide-react";
+import { Activity, BookOpenCheck, ChevronDown, Clock3, Users, Wrench } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AttendanceRecordsPanel } from "../components/AttendanceRecordsPanel";
-import { ExportButtons } from "../components/ExportButtons";
 import { QuickScheduleEditor } from "../components/QuickScheduleEditor";
-import { LectureManagementPanel } from "../components/LectureManagementPanel";
-import { LectureDetailView } from "../components/LectureDetailView";
 import { ManualAttendancePanel } from "../components/ManualAttendancePanel";
-
 import { StatCard } from "../components/StatCard";
 import { DeviceLockPanel } from "../components/DeviceLockPanel";
 import { UserList } from "../components/UserList";
-import { TAManagementPanel } from "../components/TAManagementPanel";
 import { JoinRequestsPanel } from "../components/JoinRequestsPanel";
+import { DepartmentsAndSubjectsPanel } from "../components/DepartmentsAndSubjectsPanel";
+import { FixesReportsPanel } from "../components/FixesReportsPanel";
 import { useAttendanceDashboardData } from "../hooks/useAttendanceDashboardData";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
-import type { Lecture } from "../types";
 
 export const OwnerDashboard = () => {
   const { error, metrics } = useAttendanceDashboardData("owner");
   const { role, fullName } = useAttendanceAuth();
-  const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get("tab") || "lectures";
-  
+  const activeTab = searchParams.get("tab") || "requests";
+
   const setActiveTab = (tab: string) => {
     setSearchParams({ tab });
   };
 
   const TABS = [
     { value: "requests", label: "🔔 الطلبات" },
-    { value: "lectures", label: "المحاضرات" },
     { value: "schedule", label: "الجدول" },
+    { value: "departments", label: "الأقسام والمواد" },
     ...(role === "owner" ? [{ value: "coordinators", label: "رؤساء الأقسام" }] : []),
-    { value: "students", label: "الطلاب" },
     { value: "doctors", label: "الدكاترة" },
     { value: "tas", label: "المعيدين" },
+    { value: "students", label: "الطلاب" },
+    { value: "fixes", label: "🛠️ إصلاحات" },
     { value: "devices", label: "الأجهزة" },
     { value: "manual-attendance", label: "تسجيل يدوي" },
     { value: "attendance-records", label: "سجلات الحضور" },
   ];
 
-
-
-
-
-  if (selectedLecture) {
-    return <LectureDetailView lecture={selectedLecture} onBack={() => setSelectedLecture(null)} />;
-  }
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir="rtl">
       {error && (
         <Alert variant="destructive">
           <AlertTitle>خطأ في قاعدة البيانات</AlertTitle>
@@ -62,7 +49,9 @@ export const OwnerDashboard = () => {
 
       <div className="flex items-center justify-between gap-4 flex-wrap">
         {fullName && (
-          <p className="text-lg font-bold">مرحباً يا <span className="text-primary">{fullName}</span></p>
+          <p className="text-lg font-bold text-white">
+            مرحباً بك يا <span className="text-purple-400">{fullName}</span>
+          </p>
         )}
       </div>
 
@@ -82,11 +71,13 @@ export const OwnerDashboard = () => {
               name="dashboard-tab"
               value={activeTab}
               onChange={(e) => setActiveTab(e.target.value)}
-              className="w-full appearance-none rounded-xl border border-border bg-card px-4 py-3 text-sm font-bold text-foreground outline-none pr-10 cursor-pointer"
+              className="w-full appearance-none rounded-xl border border-white/10 bg-card/80 px-4 py-3 text-sm font-bold text-white outline-none pr-10 cursor-pointer"
               aria-label="اختر القسم"
             >
               {TABS.map((tab) => (
-                <option key={tab.value} value={tab.value}>{tab.label}</option>
+                <option key={tab.value} value={tab.value} className="bg-[#120d1c] text-white">
+                  {tab.label}
+                </option>
               ))}
             </select>
             <ChevronDown className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -95,7 +86,7 @@ export const OwnerDashboard = () => {
 
         {/* Desktop: horizontal scrollable tabs */}
         <div className="hidden md:block w-full overflow-x-auto pb-2 custom-scrollbar mb-4 border-b border-white/10">
-          <TabsList className="flex h-auto w-max min-w-full justify-start gap-2 bg-transparent p-0" dir="rtl">
+          <TabsList className="flex h-auto w-max min-w-full justify-start gap-2 bg-transparent p-0">
             {TABS.map((tab) => (
               <TabsTrigger
                 key={tab.value}
@@ -108,14 +99,17 @@ export const OwnerDashboard = () => {
           </TabsList>
         </div>
 
-        <TabsContent value="requests"><JoinRequestsPanel /></TabsContent>
-
-        <TabsContent value="lectures">
-          <LectureManagementPanel onSelectLecture={setSelectedLecture} />
-          <div className="mt-6"><ExportButtons role="owner" /></div>
+        <TabsContent value="requests">
+          <JoinRequestsPanel />
         </TabsContent>
 
-        <TabsContent value="schedule"><QuickScheduleEditor /></TabsContent>
+        <TabsContent value="schedule">
+          <QuickScheduleEditor />
+        </TabsContent>
+
+        <TabsContent value="departments">
+          <DepartmentsAndSubjectsPanel />
+        </TabsContent>
 
         {role === "owner" && (
           <TabsContent value="coordinators">
@@ -123,24 +117,33 @@ export const OwnerDashboard = () => {
           </TabsContent>
         )}
 
-        <TabsContent value="students">
-          <UserList role="student" title="قائمة الطلاب" />
-        </TabsContent>
-
         <TabsContent value="doctors">
           <UserList role="doctor" title="قائمة الدكاترة" />
         </TabsContent>
 
         <TabsContent value="tas">
-          <TAManagementPanel />
+          <UserList role="ta" title="قائمة المعيدين" />
         </TabsContent>
 
-        <TabsContent value="devices"><DeviceLockPanel /></TabsContent>
+        <TabsContent value="students">
+          <UserList role="student" title="قائمة الطلاب" />
+        </TabsContent>
 
-        <TabsContent value="manual-attendance"><ManualAttendancePanel /></TabsContent>
+        <TabsContent value="fixes">
+          <FixesReportsPanel />
+        </TabsContent>
 
-        <TabsContent value="attendance-records"><AttendanceRecordsPanel /></TabsContent>
+        <TabsContent value="devices">
+          <DeviceLockPanel />
+        </TabsContent>
 
+        <TabsContent value="manual-attendance">
+          <ManualAttendancePanel />
+        </TabsContent>
+
+        <TabsContent value="attendance-records">
+          <AttendanceRecordsPanel />
+        </TabsContent>
       </Tabs>
     </div>
   );
