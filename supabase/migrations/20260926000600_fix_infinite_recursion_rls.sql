@@ -244,3 +244,215 @@ CREATE POLICY "system_logs_admin_consolidated" ON public.system_logs
     (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
     OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
   );
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- STEP 4: Grant execute on helper function to authenticated role
+-- (required so RLS policies can call private.get_current_user_role())
+-- ─────────────────────────────────────────────────────────────────────────────
+GRANT EXECUTE ON FUNCTION private.get_current_user_role() TO authenticated;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- STEP 5: Fix REMAINING old policies that still used recursive subqueries
+-- These were created by earlier migrations not covered in migration 000500
+-- ─────────────────────────────────────────────────────────────────────────────
+-- GRANT execute first
+GRANT EXECUTE ON FUNCTION private.get_current_user_role() TO authenticated;
+
+-- ── course_materials ──────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "course_materials_delete_consolidated" ON public.course_materials;
+DROP POLICY IF EXISTS "course_materials_insert_consolidated" ON public.course_materials;
+DROP POLICY IF EXISTS "course_materials_update_consolidated" ON public.course_materials;
+
+CREATE POLICY "course_materials_delete_consolidated" ON public.course_materials
+  FOR DELETE TO authenticated
+  USING (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  );
+
+CREATE POLICY "course_materials_insert_consolidated" ON public.course_materials
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  );
+
+CREATE POLICY "course_materials_update_consolidated" ON public.course_materials
+  FOR UPDATE TO authenticated
+  USING (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  )
+  WITH CHECK (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  );
+
+-- ── device_locks ──────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "device_locks_delete_consolidated" ON public.device_locks;
+DROP POLICY IF EXISTS "device_locks_insert_consolidated" ON public.device_locks;
+DROP POLICY IF EXISTS "device_locks_select_consolidated" ON public.device_locks;
+DROP POLICY IF EXISTS "device_locks_update_consolidated" ON public.device_locks;
+
+CREATE POLICY "device_locks_delete_consolidated" ON public.device_locks
+  FOR DELETE TO authenticated
+  USING (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  );
+
+CREATE POLICY "device_locks_insert_consolidated" ON public.device_locks
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  );
+
+CREATE POLICY "device_locks_select_consolidated" ON public.device_locks
+  FOR SELECT TO authenticated
+  USING (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  );
+
+CREATE POLICY "device_locks_update_consolidated" ON public.device_locks
+  FOR UPDATE TO authenticated
+  USING (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  )
+  WITH CHECK (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  );
+
+-- ── exam_schedules ────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "exam_schedules_delete_consolidated" ON public.exam_schedules;
+DROP POLICY IF EXISTS "exam_schedules_insert_consolidated" ON public.exam_schedules;
+DROP POLICY IF EXISTS "exam_schedules_update_consolidated" ON public.exam_schedules;
+
+CREATE POLICY "exam_schedules_delete_consolidated" ON public.exam_schedules
+  FOR DELETE TO authenticated
+  USING (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  );
+
+CREATE POLICY "exam_schedules_insert_consolidated" ON public.exam_schedules
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  );
+
+CREATE POLICY "exam_schedules_update_consolidated" ON public.exam_schedules
+  FOR UPDATE TO authenticated
+  USING (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  )
+  WITH CHECK (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  );
+
+-- ── join_requests ─────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "join_requests_delete_consolidated" ON public.join_requests;
+DROP POLICY IF EXISTS "join_requests_select_consolidated" ON public.join_requests;
+DROP POLICY IF EXISTS "join_requests_update_consolidated" ON public.join_requests;
+
+CREATE POLICY "join_requests_delete_consolidated" ON public.join_requests
+  FOR DELETE TO authenticated
+  USING (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  );
+
+CREATE POLICY "join_requests_select_consolidated" ON public.join_requests
+  FOR SELECT TO authenticated
+  USING (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  );
+
+CREATE POLICY "join_requests_update_consolidated" ON public.join_requests
+  FOR UPDATE TO authenticated
+  USING (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  )
+  WITH CHECK (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  );
+
+-- ── password_reset_requests ───────────────────────────────────────────────────
+DROP POLICY IF EXISTS "password_reset_requests_delete_consolidated" ON public.password_reset_requests;
+DROP POLICY IF EXISTS "password_reset_requests_select_consolidated" ON public.password_reset_requests;
+DROP POLICY IF EXISTS "password_reset_requests_update_consolidated" ON public.password_reset_requests;
+
+CREATE POLICY "password_reset_requests_delete_consolidated" ON public.password_reset_requests
+  FOR DELETE TO authenticated
+  USING (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  );
+
+CREATE POLICY "password_reset_requests_select_consolidated" ON public.password_reset_requests
+  FOR SELECT TO authenticated
+  USING (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  );
+
+CREATE POLICY "password_reset_requests_update_consolidated" ON public.password_reset_requests
+  FOR UPDATE TO authenticated
+  USING (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  )
+  WITH CHECK (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  );
+
+-- ── published_schedule ────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "published_schedule_delete_consolidated" ON public.published_schedule;
+DROP POLICY IF EXISTS "published_schedule_insert_consolidated" ON public.published_schedule;
+DROP POLICY IF EXISTS "published_schedule_update_consolidated" ON public.published_schedule;
+
+CREATE POLICY "published_schedule_delete_consolidated" ON public.published_schedule
+  FOR DELETE TO authenticated
+  USING (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  );
+
+CREATE POLICY "published_schedule_insert_consolidated" ON public.published_schedule
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  );
+
+CREATE POLICY "published_schedule_update_consolidated" ON public.published_schedule
+  FOR UPDATE TO authenticated
+  USING (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  )
+  WITH CHECK (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  );
+
+-- ── system_logs ───────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "system_logs_select_consolidated" ON public.system_logs;
+
+CREATE POLICY "system_logs_select_consolidated" ON public.system_logs
+  FOR SELECT TO authenticated
+  USING (
+    (SELECT auth.jwt() -> 'app_metadata' ->> 'role') IN ('owner', 'coordinator')
+    OR (SELECT private.get_current_user_role()) IN ('owner', 'coordinator')
+  );
+
