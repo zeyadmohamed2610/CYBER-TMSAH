@@ -8,6 +8,7 @@ interface AttendanceAuthContextValue {
   user: User | null;
   role: AttendanceRole | null;
   fullName: string | null;
+  department: string | null;
   loading: boolean;
   refreshRole: () => Promise<void>;
   signOut: () => Promise<{ error: string | null }>;
@@ -17,6 +18,7 @@ const AttendanceAuthContext = createContext<AttendanceAuthContextValue | undefin
 
 const ROLE_STORAGE_KEY = "cyber_cached_role";
 const NAME_STORAGE_KEY = "cyber_cached_fullname";
+const DEPT_STORAGE_KEY = "cyber_cached_department";
 const USERID_STORAGE_KEY = "cyber_cached_userid";
 
 const isAttendanceRole = (value: unknown): value is AttendanceRole => {
@@ -24,16 +26,16 @@ const isAttendanceRole = (value: unknown): value is AttendanceRole => {
 };
 
 /** Fetch role and full_name from database */
-const fetchUserProfile = async (authId: string): Promise<{ role: AttendanceRole; fullName: string | null }> => {
+const fetchUserProfile = async (authId: string): Promise<{ role: AttendanceRole; fullName: string | null; department: string | null }> => {
   const { data, error } = await supabase
     .from("users")
-    .select("role, full_name")
+    .select("role, full_name, department")
     .eq("auth_id", authId)
     .maybeSingle();
 
   if (error) throw error;
   if (!isAttendanceRole(data?.role)) throw new Error("Unable to resolve user role.");
-  return { role: data.role, fullName: data.full_name ?? null };
+  return { role: data.role, fullName: data.full_name ?? null, department: data.department ?? null };
 };
 
 /** Wrap a promise with a timeout */
@@ -64,6 +66,13 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
       return null;
     }
   });
+  const [department, setDepartment] = useState<string | null>(() => {
+    try {
+      return sessionStorage.getItem(DEPT_STORAGE_KEY) || localStorage.getItem(DEPT_STORAGE_KEY) || null;
+    } catch {
+      return null;
+    }
+  });
 
   // If we already have a cached role in storage, start with loading=false so the view doesn't flash or unmount
   const [loading, setLoading] = useState<boolean>(() => {
@@ -89,14 +98,17 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
         setUser(null);
         setRole(null);
         setFullName(null);
+        setDepartment(null);
         setLoading(false);
         currentUserRef.current = null;
         try {
           sessionStorage.removeItem(ROLE_STORAGE_KEY);
           sessionStorage.removeItem(NAME_STORAGE_KEY);
+          sessionStorage.removeItem(DEPT_STORAGE_KEY);
           sessionStorage.removeItem(USERID_STORAGE_KEY);
           localStorage.removeItem(ROLE_STORAGE_KEY);
           localStorage.removeItem(NAME_STORAGE_KEY);
+          localStorage.removeItem(DEPT_STORAGE_KEY);
         } catch {
           // ignore
         }
@@ -118,14 +130,17 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
 
         setRole(profile.role);
         setFullName(profile.fullName);
+        setDepartment(profile.department);
 
-        // Cache role and name
+        // Cache role, name, department
         try {
           sessionStorage.setItem(ROLE_STORAGE_KEY, profile.role);
           if (profile.fullName) sessionStorage.setItem(NAME_STORAGE_KEY, profile.fullName);
+          if (profile.department) sessionStorage.setItem(DEPT_STORAGE_KEY, profile.department);
           sessionStorage.setItem(USERID_STORAGE_KEY, sessionUser.id);
           localStorage.setItem(ROLE_STORAGE_KEY, profile.role);
           if (profile.fullName) localStorage.setItem(NAME_STORAGE_KEY, profile.fullName);
+          if (profile.department) localStorage.setItem(DEPT_STORAGE_KEY, profile.department);
         } catch {
           // ignore
         }
@@ -202,9 +217,11 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
       const profile = await withTimeout(fetchUserProfile(user.id), 10_000, "refreshRole");
       setRole(profile.role);
       setFullName(profile.fullName);
+      setDepartment(profile.department);
       try {
         sessionStorage.setItem(ROLE_STORAGE_KEY, profile.role);
         if (profile.fullName) sessionStorage.setItem(NAME_STORAGE_KEY, profile.fullName);
+        if (profile.department) sessionStorage.setItem(DEPT_STORAGE_KEY, profile.department);
       } catch {
         // ignore
       }
@@ -218,13 +235,16 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
     setUser(null);
     setRole(null);
     setFullName(null);
+    setDepartment(null);
     currentUserRef.current = null;
     try {
       sessionStorage.removeItem(ROLE_STORAGE_KEY);
       sessionStorage.removeItem(NAME_STORAGE_KEY);
+      sessionStorage.removeItem(DEPT_STORAGE_KEY);
       sessionStorage.removeItem(USERID_STORAGE_KEY);
       localStorage.removeItem(ROLE_STORAGE_KEY);
       localStorage.removeItem(NAME_STORAGE_KEY);
+      localStorage.removeItem(DEPT_STORAGE_KEY);
     } catch {
       // ignore
     }
@@ -232,8 +252,8 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
   }, []);
 
   const value = useMemo<AttendanceAuthContextValue>(
-    () => ({ user, role, fullName, loading, refreshRole, signOut }),
-    [loading, role, fullName, user, refreshRole, signOut],
+    () => ({ user, role, fullName, department, loading, refreshRole, signOut }),
+    [loading, role, fullName, department, user, refreshRole, signOut],
   );
 
   return <AttendanceAuthContext.Provider value={value}>{children}</AttendanceAuthContext.Provider>;

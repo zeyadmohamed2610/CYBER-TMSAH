@@ -74,7 +74,15 @@ const App = () => (
                           <Route
                             path="/owner-dashboard"
                             element={
-                              <AttendanceRoleGate allowedRole={["owner", "coordinator"]}>
+                              <AttendanceRoleGate allowedRole="owner">
+                                <AttendanceOwnerPage />
+                              </AttendanceRoleGate>
+                            }
+                          />
+                          <Route
+                            path="/coordinator-dashboard"
+                            element={
+                              <AttendanceRoleGate allowedRole="coordinator">
                                 <AttendanceOwnerPage />
                               </AttendanceRoleGate>
                             }
