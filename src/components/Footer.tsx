@@ -45,22 +45,7 @@ const Footer = () => {
             </div>
           </div>
 
-          <div className="flex flex-col items-center gap-3 order-1 lg:order-2">
-            <span className="text-xs font-bold text-primary uppercase tracking-wider">روابط سريعة</span>
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <Link to="/login" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                تسجيل الدخول
-              </Link>
-              <span className="w-1 h-1 rounded-full bg-primary/50" />
-              <Link to="/join" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                طلب الانضمام
-              </Link>
-              <span className="w-1 h-1 rounded-full bg-primary/50" />
-              <Link to="/profile" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                الملف الشخصي
-              </Link>
-            </div>
-          </div>
+
 
           <div className="flex flex-col items-center lg:items-end gap-4 order-3">
             <span className="text-xs font-bold text-primary uppercase tracking-wider">تواصل معنا</span>

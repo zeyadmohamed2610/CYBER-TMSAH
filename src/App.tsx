@@ -28,7 +28,6 @@ const AttendanceDoctorPage = lazy(() => import("./features/attendance/pages/Atte
 const AttendanceStudentPage = lazy(() => import("./features/attendance/pages/AttendanceStudentPage"));
 const AttendanceTAPage    = lazy(() => import("./features/attendance/pages/AttendanceTAPage"));
 const ProfilePage         = lazy(() => import("./pages/ProfilePage"));
-const HealthCheck         = lazy(() => import("./pages/HealthCheck"));
 const NotFound            = lazy(() => import("./pages/NotFound"));
 
 const AppWrapper = ({ children }: { children: React.ReactNode }) => {
@@ -122,15 +121,7 @@ const App = () => (
                             }
                           />
 
-                          {/* ── System Diagnostics & Health (Secured for Owner/Coordinator) ── */}
-                          <Route
-                            path="/health"
-                            element={
-                              <AttendanceRoleGate allowedRole={["owner", "coordinator"]}>
-                                <HealthCheck />
-                              </AttendanceRoleGate>
-                            }
-                          />
+
 
                           {/* ── Backward Compatibility Redirects ───────────── */}
                           <Route path="/attendance" element={<Navigate to="/login" replace />} />

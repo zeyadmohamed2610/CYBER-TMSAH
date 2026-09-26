@@ -4,29 +4,21 @@ import {
   Menu,
   X,
   LogOut,
-  Settings,
   ChevronDown,
-  CheckCircle2,
-  Moon,
-  Sun,
   User,
 } from "lucide-react";
 import { useAttendanceAuth } from "@/features/attendance/context/AttendanceAuthContext";
-import { useTheme } from "@/context/ThemeContext";
 import { getAttendanceDashboardRoute } from "@/features/attendance/utils/dashboardRoutes";
 
 export const Navbar = () => {
   const [open, setOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
-  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   const { user, role, fullName, signOut } = useAttendanceAuth();
-  const { theme, setTheme } = useTheme();
-  const isDark = theme === "dark";
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -52,20 +44,19 @@ export const Navbar = () => {
     return () => document.removeEventListener("mousedown", handle);
   }, [open]);
 
-  // Prevent scroll when mobile menu or modal is open
+  // Prevent scroll when mobile menu is open
   useEffect(() => {
-    document.body.style.overflow = open || profileModalOpen ? "hidden" : "";
+    document.body.style.overflow = open ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
-  }, [open, profileModalOpen]);
+  }, [open]);
 
   // Close on Escape
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setUserDropdownOpen(false);
-        setProfileModalOpen(false);
         setOpen(false);
       }
     };
@@ -75,7 +66,6 @@ export const Navbar = () => {
 
   const handleSignOut = async () => {
     setUserDropdownOpen(false);
-    setProfileModalOpen(false);
     await signOut();
     navigate("/", { replace: true });
     setOpen(false);
@@ -215,17 +205,6 @@ export const Navbar = () => {
                         <span>الملف الشخصي</span>
                       </Link>
 
-                      {/* Button 1: Settings */}
-                      <button
-                        onClick={() => {
-                          setUserDropdownOpen(false);
-                          setProfileModalOpen(true);
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-200 hover:bg-purple-600/15 hover:text-purple-300 transition-all text-start"
-                      >
-                        <Settings className="w-4 h-4 text-purple-400" />
-                        <span>الإعدادات</span>
-                      </button>
 
                       {/* Divider */}
                       <div className="my-1 h-px bg-white/10 mx-1" />
@@ -279,16 +258,6 @@ export const Navbar = () => {
                   <span>الملف الشخصي</span>
                 </Link>
 
-                <button
-                  onClick={() => {
-                    setOpen(false);
-                    setProfileModalOpen(true);
-                  }}
-                  className="w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl border border-white/10 bg-[#0A0F1D]/70 text-sm font-bold text-slate-100 text-start hover:border-purple-500/40"
-                >
-                  <Settings className="w-4 h-4 text-purple-400" />
-                  <span>الإعدادات</span>
-                </button>
 
                 <button
                   onClick={handleSignOut}
@@ -311,119 +280,7 @@ export const Navbar = () => {
         )}
       </nav>
 
-      {/* Settings Modal (Refined dark cyberpunk style) */}
-      {profileModalOpen && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-3.5 sm:p-4 bg-black/75 backdrop-blur-md animate-fade-up overflow-y-auto"
-          dir="rtl"
-        >
-          <div className="relative w-full max-w-sm sm:max-w-md my-auto rounded-3xl border border-purple-500/30 bg-[#0A0F1D]/95 backdrop-blur-2xl p-5 sm:p-7 shadow-[0_30px_80px_rgba(0,0,0,0.7)] space-y-5">
-            {/* Top Close Button */}
-            <button
-              onClick={() => setProfileModalOpen(false)}
-              className="absolute top-4 start-4 sm:top-5 sm:start-5 w-8 h-8 rounded-full border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 transition-all"
-              aria-label="Close"
-            >
-              <X className="w-4 h-4" />
-            </button>
 
-            {/* Profile Info Header */}
-            <div className="flex items-center gap-3.5 sm:gap-4">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-white font-black text-xl sm:text-2xl shadow-[0_0_24px_rgba(168,85,247,0.4)] shrink-0">
-                {userInitial}
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base sm:text-lg font-black text-white truncate">{displayName}</h3>
-                <p className="text-xs text-slate-400 truncate">{user?.email || "cyber.user"}</p>
-                {roleLabel && (
-                  <span className="inline-flex items-center gap-1.5 mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border border-purple-500/40 bg-purple-600/15 text-purple-300">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-                    <span>{roleLabel}</span>
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="h-px bg-white/10" />
-
-            {/* Account Details */}
-            <div className="space-y-2.5">
-              <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                بيانات الحساب
-              </h4>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="p-3 rounded-2xl bg-black/40 border border-white/10">
-                  <span className="text-slate-400 block text-[10px] mb-1">
-                    معرف المستخدم
-                  </span>
-                  <span className="font-mono font-bold text-white text-xs truncate block">
-                    {user?.id ? `${user.id.slice(0, 8)}…` : "—"}
-                  </span>
-                </div>
-                <div className="p-3 rounded-2xl bg-black/40 border border-white/10">
-                  <span className="text-slate-400 block text-[10px] mb-1">
-                    حالة الأمان
-                  </span>
-                  <span className="font-bold text-emerald-400 flex items-center gap-1 text-xs">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>مشفر ونشط</span>
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Appearance Preferences */}
-            <div className="space-y-2.5">
-              <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                المظهر
-              </h4>
-
-              {/* Theme Buttons */}
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setTheme("dark")}
-                  className={`flex items-center justify-center gap-2 h-10 sm:h-11 rounded-xl text-xs font-bold border transition-all ${
-                    isDark
-                      ? "border-purple-500 bg-purple-600/20 text-purple-300 shadow-[0_0_20px_rgba(168,85,247,0.3)]"
-                      : "border-white/10 bg-black/40 text-slate-400 hover:text-white"
-                  }`}
-                >
-                  <Moon className="w-4 h-4" />
-                  <span>الوضع الداكن (الافتراضي)</span>
-                </button>
-                <button
-                  onClick={() => setTheme("light")}
-                  className={`flex items-center justify-center gap-2 h-10 sm:h-11 rounded-xl text-xs font-bold border transition-all ${
-                    !isDark
-                      ? "border-purple-500 bg-purple-600/20 text-purple-300 shadow-[0_0_20px_rgba(168,85,247,0.3)]"
-                      : "border-white/10 bg-black/40 text-slate-400 hover:text-white"
-                  }`}
-                >
-                  <Sun className="w-4 h-4" />
-                  <span>الوضع الفاتح</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Bottom Actions: Close & Sign Out */}
-            <div className="pt-2 flex items-center gap-2">
-              <button
-                onClick={() => setProfileModalOpen(false)}
-                className="flex-1 h-10 sm:h-11 rounded-xl bg-white/5 border border-white/10 text-slate-200 text-xs font-bold hover:bg-white/10 transition-all"
-              >
-                إغلاق
-              </button>
-              <button
-                onClick={handleSignOut}
-                className="h-10 sm:h-11 px-4 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>تسجيل الخروج</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 };

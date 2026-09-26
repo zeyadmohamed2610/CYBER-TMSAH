@@ -51,6 +51,7 @@ interface UserRecord {
 interface Subject {
   id: string;
   name: string;
+  department?: string | null;
 }
 
 const DEPARTMENTS_STORAGE_KEY = "cyber_departments_custom_names";
@@ -75,6 +76,8 @@ export function UserList({ role, title }: { role: string; title: string }) {
 
   const [submitting, setSubmitting] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  // Map of userId -> array of assigned subject objects
+  const [userSubjects, setUserSubjects] = useState<Record<string, Subject[]>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
@@ -109,6 +112,18 @@ export function UserList({ role, title }: { role: string; title: string }) {
     return DEPARTMENTS;
   });
 
+  const isDeptMatch = useCallback(
+    (subjDept?: string | null, targetDept?: string | null) => {
+      if (!subjDept || !targetDept) return true;
+      if (subjDept === targetDept) return true;
+      const foundSubj = deptList.find((d) => d.id === subjDept || d.nameAr === subjDept || d.nameEn === subjDept);
+      const foundTarget = deptList.find((d) => d.id === targetDept || d.nameAr === targetDept || d.nameEn === targetDept);
+      if (foundSubj && foundTarget && foundSubj.id === foundTarget.id) return true;
+      return false;
+    },
+    [deptList]
+  );
+
   // Manual User Creation Form Data with draft restore
   const [formData, setFormData] = useState(() => {
     try {
@@ -128,7 +143,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
       department: "cybersecurity",
       academicYear: "1",
       sectionNumber: "1",
-      subjectId: "",
+      subjectIds: [] as string[],
     };
   });
 
@@ -156,7 +171,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
       department: "cybersecurity",
       academicYear: "1",
       sectionNumber: "1",
-      subjectId: "",
+      subjectIds: [] as string[],
     });
   }, [DRAFT_KEY]);
 
@@ -166,14 +181,14 @@ export function UserList({ role, title }: { role: string; title: string }) {
     department: "",
     academicYear: "",
     sectionNumber: "",
-    subjectId: "",
+    subjectIds: [] as string[],
   });
 
-  // Load subjects
+  // Load ALL subjects (will filter client-side by department)
   useEffect(() => {
     supabase
       .from("subjects")
-      .select("id, name")
+      .select("id, name, department")
       .then(({ data }) => {
         if (data) {
           const sorted = [...data].sort((a, b) => a.name.localeCompare(b.name, "ar"));
@@ -181,6 +196,25 @@ export function UserList({ role, title }: { role: string; title: string }) {
         }
       });
   }, []);
+
+  // Load multi-subject assignments for doctor/TA users
+  const loadUserSubjects = useCallback(async (userIds: string[]) => {
+    if (!userIds.length || (role !== "doctor" && role !== "ta" && role !== "coordinator")) return;
+    const results: Record<string, Subject[]> = {};
+    await Promise.all(
+      userIds.map(async (uid) => {
+        const { data } = await supabase.rpc("get_user_subjects", { p_user_id: uid });
+        if (data) {
+          results[uid] = (data as Array<{ subject_id: string; subject_name: string; department: string | null }>).map(
+            (r) => ({ id: r.subject_id, name: r.subject_name, department: r.department })
+          );
+        } else {
+          results[uid] = [];
+        }
+      })
+    );
+    setUserSubjects((prev) => ({ ...prev, ...results }));
+  }, [role]);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -206,6 +240,8 @@ export function UserList({ role, title }: { role: string; title: string }) {
           a.full_name.localeCompare(b.full_name, "ar")
         );
         setUsers(sortedData as UserRecord[]);
+        // Load multi-subjects for doctors/TAs
+        void loadUserSubjects(sortedData.map((u) => u.id));
       }
     } catch (err) {
       console.error(err);
@@ -213,7 +249,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
     } finally {
       setLoading(false);
     }
-  }, [role, debouncedSearch]);
+  }, [role, debouncedSearch, loadUserSubjects]);
 
   useEffect(() => {
     void loadUsers();
@@ -254,8 +290,8 @@ export function UserList({ role, title }: { role: string; title: string }) {
       return;
     }
 
-    if ((role === "doctor" || role === "ta") && !formData.subjectId) {
-      toast.error("يرجى اختيار المادة المسندة");
+    if ((role === "doctor" || role === "ta") && formData.subjectIds.length === 0) {
+      toast.error("يرجى اختيار مادة واحدة على الأقل");
       return;
     }
 
@@ -272,8 +308,18 @@ export function UserList({ role, title }: { role: string; title: string }) {
         p_department: formData.department,
         p_academic_year: role === "student" ? formData.academicYear : null,
         p_section_number: role === "student" ? parseInt(formData.sectionNumber) : null,
-        p_subject_id: (role === "doctor" || role === "ta") && formData.subjectId ? formData.subjectId : null,
+        p_subject_id: (role === "doctor" || role === "ta" || role === "coordinator") && formData.subjectIds.length > 0 ? formData.subjectIds[0] : null,
       });
+
+      // After user created, assign all subjects via junction table
+      const assignSubjectsAfterCreate = async (userId: string) => {
+        if ((role === "doctor" || role === "ta" || role === "coordinator") && formData.subjectIds.length > 0) {
+          await supabase.rpc("assign_user_subjects", {
+            p_user_id: userId,
+            p_subject_ids: formData.subjectIds,
+          });
+        }
+      };
 
       if (rpcError) {
         // Fallback: If RPC not found yet or error, insert join_request and approve it immediately
@@ -306,7 +352,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
         }
 
         // Approve it immediately
-        const { error: approveErr } = await supabase.rpc("approve_join_request", {
+        const { data: approveResult, error: approveErr } = await supabase.rpc("approve_join_request", {
           p_request_id: joinReq.id,
           p_temp_password: formData.password,
         });
@@ -314,11 +360,20 @@ export function UserList({ role, title }: { role: string; title: string }) {
         if (approveErr) {
           toast.error(`تم إنشاء الطلب ولكن فشل التفعيل المباشر: ${approveErr.message}`);
         } else {
+          // If coordinator, doctor, or TA had subjects selected, assign them
+          const createdUid = (approveResult as { user_id?: string })?.user_id;
+          if (createdUid && formData.subjectIds.length > 0) {
+            await assignSubjectsAfterCreate(createdUid);
+          }
           toast.success(`تمت إضافة الحساب بنجاح لـ ${trimmedName} ✓`);
           resetFormAndDraft();
           void loadUsers();
         }
       } else {
+        // Assign multiple subjects if provided
+        if (newUserId && (role === "doctor" || role === "ta" || role === "coordinator") && formData.subjectIds.length > 0) {
+          await assignSubjectsAfterCreate(newUserId as string);
+        }
         toast.success(`تمت إضافة الحساب بنجاح لـ ${trimmedName} ✓`);
         resetFormAndDraft();
         void loadUsers();
@@ -349,7 +404,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
       department: user.department || "cybersecurity",
       academicYear: user.academic_year || "1",
       sectionNumber: user.section_number ? String(user.section_number) : "1",
-      subjectId: user.subject_id || "",
+      subjectIds: userSubjects[user.id]?.map((s) => s.id) ?? (user.subject_id ? [user.subject_id] : []),
     });
   };
 
@@ -372,19 +427,31 @@ export function UserList({ role, title }: { role: string; title: string }) {
     if (role === "student") {
       updatePayload.academic_year = editData.academicYear;
       updatePayload.section_number = parseInt(editData.sectionNumber) || 1;
-    } else if (role === "doctor" || role === "ta") {
-      updatePayload.subject_id = editData.subjectId || null;
     }
 
+    // Update basic user record
     const { error } = await supabase.from("users").update(updatePayload).eq("id", userId);
 
     if (error) {
       toast.error("فشل تحديث البيانات: " + error.message);
-    } else {
-      toast.success("تم تحديث البيانات بنجاح ✓");
-      setEditingId(null);
-      void loadUsers();
+      setSubmitting(false);
+      return;
     }
+
+    // For doctor/TA: update multi-subject assignments
+    if (role === "doctor" || role === "ta" || role === "coordinator") {
+      const { error: subjectErr } = await supabase.rpc("assign_user_subjects", {
+        p_user_id: userId,
+        p_subject_ids: editData.subjectIds,
+      });
+      if (subjectErr) {
+        toast.error("تم تحديث البيانات ولكن فشل تحديث المواد: " + subjectErr.message);
+      }
+    }
+
+    toast.success("تم تحديث البيانات بنجاح ✓");
+    setEditingId(null);
+    void loadUsers();
     setSubmitting(false);
   };
 
@@ -587,26 +654,50 @@ export function UserList({ role, title }: { role: string; title: string }) {
                 </>
               )}
 
-              {/* Doctor / TA specific: Subject */}
-              {(role === "doctor" || role === "ta") && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-slate-300">المادة الدراسية المسندة*</Label>
-                  <Select
-                    value={formData.subjectId}
-                    onValueChange={(val) => setFormData({ ...formData, subjectId: val })}
-                    disabled={submitting}
-                  >
-                    <SelectTrigger className="bg-black/50 border-white/10 text-white h-10 rounded-xl">
-                      <SelectValue placeholder="اختر المادة" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#120d1c] border-purple-500/30 text-white">
-                      {subjects.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {/* Doctor / TA / Coordinator specific: Subject (multi-select filtered by department) */}
+              {(role === "doctor" || role === "ta" || role === "coordinator") && (
+                <div className="space-y-1.5 col-span-1 sm:col-span-2 lg:col-span-3">
+                  <Label className="text-xs text-slate-300">
+                    المواد الدراسية المسندة {role === "coordinator" ? "(اختياري لمدرس القسم)" : "*"} (اختر مادة أو أكثر من قسمك)
+                  </Label>
+                  <div className="rounded-xl border border-white/10 bg-black/50 p-3 space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                    {subjects
+                      .filter((s) => isDeptMatch(s.department, formData.department))
+                      .length === 0 ? (
+                      <p className="text-xs text-slate-500 text-center py-2">
+                        لا توجد مواد مسجلة لهذا القسم بعد. أضف مواد من تبويب الأقسام.
+                      </p>
+                    ) : (
+                      subjects
+                        .filter((s) => isDeptMatch(s.department, formData.department))
+                        .map((s) => (
+                          <label
+                            key={s.id}
+                            className="flex items-center gap-2.5 cursor-pointer group hover:bg-purple-500/10 rounded-lg px-2 py-1.5 transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              className="w-4 h-4 rounded border-white/20 bg-black/40 accent-purple-500 cursor-pointer"
+                              checked={formData.subjectIds.includes(s.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFormData({ ...formData, subjectIds: [...formData.subjectIds, s.id] });
+                                } else {
+                                  setFormData({ ...formData, subjectIds: formData.subjectIds.filter((id) => id !== s.id) });
+                                }
+                              }}
+                              disabled={submitting}
+                            />
+                            <span className="text-xs text-slate-200 group-hover:text-white transition-colors">{s.name}</span>
+                          </label>
+                        ))
+                    )}
+                  </div>
+                  {formData.subjectIds.length > 0 && (
+                    <p className="text-[11px] text-purple-400">
+                      ✓ تم اختيار {formData.subjectIds.length} مادة
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -751,24 +842,40 @@ export function UserList({ role, title }: { role: string; title: string }) {
                         </>
                       )}
 
-                      {(role === "doctor" || role === "ta") && (
-                        <div>
-                          <Label className="text-xs text-slate-400">المادة المسندة:</Label>
-                          <Select
-                            value={editData.subjectId}
-                            onValueChange={(val) => setEditData({ ...editData, subjectId: val })}
-                          >
-                            <SelectTrigger className="bg-black/60 border-white/10 text-white h-9 text-xs rounded-lg">
-                              <SelectValue placeholder="المادة" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-[#120d1c] border-purple-500/30 text-white">
-                              {subjects.map((s) => (
-                                <SelectItem key={s.id} value={s.id}>
-                                  {s.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                      {(role === "doctor" || role === "ta" || role === "coordinator") && (
+                        <div className="col-span-2">
+                          <Label className="text-xs text-slate-400">المواد المسندة:</Label>
+                          <div className="rounded-lg border border-white/10 bg-black/40 p-2 space-y-1 max-h-40 overflow-y-auto custom-scrollbar mt-1">
+                            {subjects
+                              .filter((s) => isDeptMatch(s.department, editData.department))
+                              .map((s) => (
+                                <label
+                                  key={s.id}
+                                  className="flex items-center gap-2 cursor-pointer hover:bg-purple-500/10 rounded px-1.5 py-1 transition-colors"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    className="w-3.5 h-3.5 rounded accent-purple-500 cursor-pointer"
+                                    checked={editData.subjectIds.includes(s.id)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setEditData({ ...editData, subjectIds: [...editData.subjectIds, s.id] });
+                                      } else {
+                                        setEditData({ ...editData, subjectIds: editData.subjectIds.filter((id) => id !== s.id) });
+                                      }
+                                    }}
+                                  />
+                                  <span className="text-[11px] text-slate-200">{s.name}</span>
+                                </label>
+                              ))
+                            }
+                            {subjects.filter((s) => isDeptMatch(s.department, editData.department)).length === 0 && (
+                              <p className="text-[11px] text-slate-500 text-center py-1">لا توجد مواد لهذا القسم</p>
+                            )}
+                          </div>
+                          {editData.subjectIds.length > 0 && (
+                            <p className="text-[11px] text-purple-400 mt-1">✓ {editData.subjectIds.length} مادة محددة</p>
+                          )}
                         </div>
                       )}
                     </div>
@@ -841,11 +948,19 @@ export function UserList({ role, title }: { role: string; title: string }) {
                             سكشن {user.section_number}
                           </span>
                         )}
-                        {(role === "doctor" || role === "ta") && user.subject_id && (
-                          <span className="flex items-center gap-1 text-purple-300 font-medium">
-                            <BookOpen className="w-3.5 h-3.5" />
-                            {subjects.find((s) => s.id === user.subject_id)?.name || "مادة مسندة"}
-                          </span>
+                        {(role === "doctor" || role === "ta" || role === "coordinator") && (
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <BookOpen className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                            {(userSubjects[user.id] ?? (user.subject_id ? [{ id: user.subject_id, name: subjects.find((s) => s.id === user.subject_id)?.name || "مادة مسندة" }] : [])).length === 0 ? (
+                              <span className="text-slate-500 text-[11px]">لم تُسند له مواد</span>
+                            ) : (
+                              (userSubjects[user.id] ?? (user.subject_id ? [{ id: user.subject_id, name: subjects.find((s) => s.id === user.subject_id)?.name || "مادة مسندة" }] : [])).map((s) => (
+                                <span key={s.id} className="px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-purple-500/15 text-purple-300 border border-purple-500/20">
+                                  {s.name}
+                                </span>
+                              ))
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1022,13 +1137,21 @@ export function UserList({ role, title }: { role: string; title: string }) {
                 </div>
               )}
 
-              {/* Subject if Doctor / TA */}
-              {(role === "doctor" || role === "ta") && (
+              {/* Subject if Doctor / TA / Coordinator */}
+              {(role === "doctor" || role === "ta" || role === "coordinator") && (
                 <div className="p-3 rounded-2xl bg-black/40 border border-white/5">
-                  <span className="text-slate-400 block text-[10px] mb-0.5">المادة المسندة</span>
-                  <span className="font-bold text-purple-200">
-                    {subjects.find((s) => s.id === selectedUserForDetails.subject_id)?.name || "غير محدد"}
-                  </span>
+                  <span className="text-slate-400 block text-[10px] mb-1.5">المواد المسندة</span>
+                  {(userSubjects[selectedUserForDetails.id] ?? []).length === 0 ? (
+                    <span className="text-slate-500 text-xs">لم تُسند له مواد بعد</span>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {(userSubjects[selectedUserForDetails.id] ?? []).map((s) => (
+                        <span key={s.id} className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-purple-500/20 text-purple-200 border border-purple-500/30">
+                          {s.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
