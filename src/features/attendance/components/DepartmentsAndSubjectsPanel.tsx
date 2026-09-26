@@ -66,17 +66,21 @@ export const DepartmentsAndSubjectsPanel = () => {
   const loadSubjects = useCallback(async (dept: DepartmentInfo) => {
     setLoadingSubjects(true);
     try {
-      // Fetch subjects belonging to this department
+      // Fetch subjects
       const { data, error } = await supabase
         .from("subjects")
-        .select("id, name, doctor_name, created_at");
+        .select("id, name, doctor_name, department, created_at");
 
       if (error) {
         toast.error("فشل تحميل المواد الدراسية");
         setSubjects([]);
       } else {
-        // Filter or display subjects
-        setSubjects((data as SubjectItem[]) || []);
+        // Filter subjects belonging to this department, or unassigned ones
+        const allSubjects = (data as SubjectItem[]) || [];
+        const deptSubjects = allSubjects.filter(
+          (s) => !s.department || s.department === dept.id
+        );
+        setSubjects(deptSubjects);
       }
     } catch {
       setSubjects([]);
@@ -133,6 +137,7 @@ export const DepartmentsAndSubjectsPanel = () => {
         .insert({
           name: newSubjectName.trim(),
           doctor_name: "غير محدد",
+          department: selectedDept?.id || null,
         })
         .select()
         .single();
