@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { LoadingScreen } from "@/components/Loading";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabaseClient";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
@@ -143,7 +144,7 @@ const Icon = {
 function Field({
   id, label, type = "text", value, onChange, placeholder,
   required, autoComplete, dir = "ltr",
-  icon, suffix, badge, inputRef, autoFocus, onKeyDown,
+  icon, suffix, badge, inputRef, autoFocus, onKeyDown, onKeyUp,
 }: {
   id: string; label: string; type?: string; value: string;
   onChange: (v: string) => void; placeholder?: string; required?: boolean;
@@ -151,6 +152,7 @@ function Field({
   icon?: React.ReactNode; suffix?: React.ReactNode; badge?: React.ReactNode;
   inputRef?: React.Ref<HTMLInputElement>; autoFocus?: boolean;
   onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
+  onKeyUp?: React.KeyboardEventHandler<HTMLInputElement>;
 }) {
   const [focused, setFocused] = useState(false);
   return (
@@ -175,7 +177,7 @@ function Field({
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder} required={required}
           autoComplete={autoComplete} dir={dir}
-          autoFocus={autoFocus} onKeyDown={onKeyDown}
+          autoFocus={autoFocus} onKeyDown={onKeyDown} onKeyUp={onKeyUp}
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
           className="w-full rounded-xl text-sm font-medium transition-all duration-200"
           style={{
@@ -218,6 +220,7 @@ const LoginPage = () => {
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [loginError, setLoginError]         = useState<string | null>(null);
   const [loginLoading, setLoginLoading]     = useState(false);
+  const [isCapsLockOn, setIsCapsLockOn]     = useState(false);
 
   const [joinRole, setJoinRole]             = useState<JoinRole>("student");
   const [fullName, setFullName]             = useState("");
@@ -255,11 +258,19 @@ const LoginPage = () => {
       navigate(getAttendanceDashboardRoute(role), { replace: true });
   }, [loading, navigate, role, user]);
 
-  if (loading) return (
-    <div className="fixed inset-0 flex items-center justify-center" style={{ background: "#02060F" }}>
-      <Loader2 className="w-7 h-7 animate-spin" style={{ color: "#6366F1" }}/>
-    </div>
-  );
+  // Check if a saved authentication token exists in local storage
+  const hasSavedSession = typeof window !== "undefined" && Object.keys(localStorage).some(k => k.startsWith("sb-") && k.endsWith("-auth-token"));
+
+  // Only show the luxury loading screen if there is an active session being validated
+  // This allows the login page to open INSTANTANEOUSLY for visitors!
+  if (loading && hasSavedSession) {
+    return (
+      <LoadingScreen 
+        message={lang === "ar" ? "جاري استعادة الجلسة والتحقق من الصلاحيات..." : "Restoring session & verifying access..."} 
+        submessage="نظام CYBER-TMSAH"
+      />
+    );
+  }
 
   // ── Login handler ──────────────────────────────────────────────────────────
   const handleLogin = async (e: React.FormEvent) => {
@@ -696,23 +707,37 @@ const LoginPage = () => {
                   onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); passRef.current?.focus(); } }}
                   badge={getBadge()} icon={<Icon.User/>}/>
 
-                <Field
-                  id="l-pass" label={t.auth.password} type={showPass ? "text" : "password"}
-                  value={password} onChange={setPassword}
-                  placeholder={t.auth.passwordPlaceholder} required autoComplete="current-password"
-                  inputRef={passRef} icon={<Icon.Lock/>}
-                  suffix={
-                    <button type="button" onClick={() => setShowPass(v => !v)}
-                      className="flex items-center justify-center w-8 h-8 rounded-md cursor-pointer transition-colors text-slate-400 hover:text-white">
-                      <Icon.Eye off={showPass}/>
-                    </button>
-                  }/>
+                <div className="relative">
+                  <Field
+                    id="l-pass" label={t.auth.password} type={showPass ? "text" : "password"}
+                    value={password} onChange={setPassword}
+                    placeholder={t.auth.passwordPlaceholder} required autoComplete="current-password"
+                    inputRef={passRef} icon={<Icon.Lock/>}
+                    onKeyDown={e => {
+                      if (e.getModifierState) setIsCapsLockOn(e.getModifierState("CapsLock"));
+                    }}
+                    onKeyUp={e => {
+                      if (e.getModifierState) setIsCapsLockOn(e.getModifierState("CapsLock"));
+                    }}
+                    suffix={
+                      <button type="button" onClick={() => setShowPass(v => !v)}
+                        className="flex items-center justify-center w-8 h-8 rounded-md cursor-pointer transition-colors text-slate-400 hover:text-white">
+                        <Icon.Eye off={showPass}/>
+                      </button>
+                    }/>
+                  {isCapsLockOn && (
+                    <div className="flex items-center gap-1.5 mt-1 text-[11px] font-medium text-amber-400 px-1 animate-pulse">
+                      <span>⚠️</span>
+                      <span>{lang === "ar" ? "زر الحروف الكبيرة (Caps Lock) مفعّل" : "Caps Lock is on"}</span>
+                    </div>
+                  )}
+                </div>
 
                 {/* Remember + Forgot */}
                 <div className="flex items-center justify-between pt-0.5">
                   <label className="flex items-center gap-2 cursor-pointer select-none group">
                     <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)}
-                      className="w-4 h-4 rounded cursor-pointer" style={{ accentColor: "#6366F1" }}/>
+                      className="w-4 h-4 rounded cursor-pointer" style={{ accentColor: "#9333EA" }}/>
                     <span className="text-[12.5px] font-medium text-slate-300 group-hover:text-white transition-colors">
                       {lang === "ar" ? "تذكرني" : "Remember me"}
                     </span>
@@ -754,8 +779,8 @@ const LoginPage = () => {
               joinSuccess ? (
                 <div className="flex flex-col items-center gap-5 py-6 text-center">
                   <div className="flex items-center justify-center w-16 h-16 rounded-2xl"
-                    style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.3)" }}>
-                    <span style={{ color: "#818CF8" }}><Icon.Check/></span>
+                    style={{ background: "rgba(147,51,234,0.15)", border: "1px solid rgba(147,51,234,0.35)" }}>
+                    <span style={{ color: "#C084FC" }}><Icon.Check/></span>
                   </div>
                   <div>
                     <p className="font-bold text-white text-lg">{lang === "ar" ? "تم إرسال طلبك بنجاح!" : "Request Sent!"}</p>
@@ -764,8 +789,8 @@ const LoginPage = () => {
                   <button onClick={() => { setJoinSuccess(false); setTab("login"); }}
                     className="h-11 px-7 rounded-xl text-sm font-semibold text-white cursor-pointer active:scale-[0.98] transition-all"
                     style={{
-                      background: "linear-gradient(180deg, #6366F1 0%, #4F46E5 100%)",
-                      boxShadow: "0 1px 0 rgba(255,255,255,0.2) inset, 0 4px 18px rgba(79,70,229,0.45)",
+                      background: "linear-gradient(180deg, #9333EA 0%, #7E22CE 100%)",
+                      boxShadow: "0 1px 0 rgba(255,255,255,0.2) inset, 0 4px 18px rgba(147,51,234,0.45)",
                     }}>
                     {lang === "ar" ? "العودة لتسجيل الدخول" : "Back to Sign In"}
                   </button>

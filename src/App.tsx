@@ -22,8 +22,10 @@ const Schedule     = lazy(() => import("./pages/Schedule"));
 const NotFound     = lazy(() => import("./pages/NotFound"));
 const HealthCheck  = lazy(() => import("./pages/HealthCheck"));
 
-// ── Auth / Dashboard pages ─────────────────────────────────────────────────────
-const LoginPage           = lazy(() => import("./features/auth/pages/LoginPage"));
+// ── Auth Entrypoint (Eagerly loaded for instant root page rendering) ──────────
+import LoginPage from "./features/auth/pages/LoginPage";
+
+// ── Lazy Pages ────────────────────────────────────────────────────────────────
 const ResetPasswordPage   = lazy(() => import("./features/auth/pages/ResetPasswordPage"));
 const AttendancePage      = lazy(() => import("./features/attendance/pages/AttendancePage"));
 const AttendanceOwnerPage = lazy(() => import("./features/attendance/pages/AttendanceOwnerPage"));

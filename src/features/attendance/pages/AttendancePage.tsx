@@ -26,7 +26,7 @@ const AttendancePage = () => {
     return <Navigate to="/attendance/login" replace />;
   }
 
-  if (role === "owner" || role === "doctor" || role === "student" || role === "ta") {
+  if (role === "owner" || role === "coordinator" || role === "doctor" || role === "student" || role === "ta") {
     return <Navigate to={getAttendanceDashboardRoute(role)} replace />;
   }
 
