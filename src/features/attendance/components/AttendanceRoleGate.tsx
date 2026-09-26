@@ -6,7 +6,7 @@ import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 import { getAttendanceDashboardRoute } from "../utils/dashboardRoutes";
 
 interface AttendanceRoleGateProps {
-  allowedRole: AttendanceRole;
+  allowedRole: AttendanceRole | AttendanceRole[];
   children: ReactNode;
 }
 
@@ -25,8 +25,12 @@ export const AttendanceRoleGate = ({ allowedRole, children }: AttendanceRoleGate
     return <Navigate to="/attendance/login" replace state={{ from: location.pathname }} />;
   }
 
-  // Check if user has the required role
-  if (role !== allowedRole) {
+  // Check if user has one of the allowed roles
+  const isAllowed = Array.isArray(allowedRole)
+    ? allowedRole.includes(role)
+    : role === allowedRole;
+
+  if (!isAllowed) {
     return <Navigate to={getAttendanceDashboardRoute(role)} replace />;
   }
 

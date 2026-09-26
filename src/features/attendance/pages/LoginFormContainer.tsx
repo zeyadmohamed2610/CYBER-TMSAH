@@ -13,8 +13,10 @@ import { ForgotPasswordModal } from "@/features/auth/components/ForgotPasswordMo
 import { playCyberSuccessChime } from "@/features/auth/utils/cyberAudio";
 import { recordAuditLog } from "@/features/auth/services/auditService";
 
+import { DEPARTMENTS, ACADEMIC_YEARS } from "../types";
+
 type Tab = "login" | "join";
-type JoinRole = "student" | "doctor" | "ta";
+type JoinRole = "coordinator" | "doctor" | "ta" | "student";
 
 const STORAGE_KEY = "attendance_login_attempts";
 const REMEMBER_KEY = "cyber_remember_user";
@@ -84,6 +86,23 @@ const Icon = {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
       <path d="M12 2H6a2 2 0 00-2 2v6l8 8 8-8-8-8z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
       <circle cx="8.5" cy="9.5" r="1.5" fill="currentColor"/>
+    </svg>
+  ),
+  Mail: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.6"/>
+      <path d="M3 7l9 6 9-6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  Dept: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  Year: () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+      <path d="M22 10v6M2 10l10-5 10 5-10 5z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M6 12v5c0 2 3 3 6 3s6-1 6-3v-5" stroke="currentColor" strokeWidth="1.6"/>
     </svg>
   ),
   LogIn: () => (
@@ -202,12 +221,15 @@ const LoginPage = () => {
 
   const [joinRole, setJoinRole]             = useState<JoinRole>("student");
   const [fullName, setFullName]             = useState("");
+  const [joinEmail, setJoinEmail]           = useState("");
   const [joinUsername, setJoinUsername]     = useState("");
   const [joinPassword, setJoinPassword]     = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showJoinPass, setShowJoinPass]     = useState(false);
-  const [seatNumber, setSeatNumber]         = useState("");
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [department, setDepartment]         = useState<string>("cybersecurity");
+  const [academicYear, setAcademicYear]     = useState<string>("1");
   const [sectionNumber, setSectionNumber]   = useState("");
-  const [rankInList, setRankInList]         = useState("");
   const [joinLoading, setJoinLoading]       = useState(false);
   const [joinSuccess, setJoinSuccess]       = useState(false);
 
@@ -282,18 +304,122 @@ const LoginPage = () => {
 
   // ── Join handler ───────────────────────────────────────────────────────────
   const handleJoin = async (e: React.FormEvent) => {
-    e.preventDefault(); setJoinLoading(true);
-    const { error } = await supabase.from("join_requests").insert({
-      full_name: fullName.trim(), username: joinUsername.trim(), role: joinRole,
-      seat_number: seatNumber.trim() || null,
-      section_number: sectionNumber ? parseInt(sectionNumber) : null,
-      rank_in_list: rankInList ? parseInt(rankInList) : null,
-    });
-    if (error) {
-      toast.error(lang === "ar" ? "فشل إرسال الطلب." : "Failed to submit.");
-      setJoinLoading(false); return;
+    e.preventDefault();
+    setJoinLoading(true);
+
+    // 1. Full name validation: English 3-part name
+    const trimmedName = fullName.trim();
+    const nameParts = trimmedName.split(/\s+/).filter(Boolean);
+    const isEnglishOnly = /^[A-Za-z\s]+$/.test(trimmedName);
+    if (!isEnglishOnly || nameParts.length < 3) {
+      toast.error(
+        lang === "ar"
+          ? "يجب كتابة الاسم ثلاثي باللغة الإنجليزية (مثال: Ahmed Mohamed Ali)"
+          : "Full name must be at least 3 parts in English (e.g. John David Smith)"
+      );
+      setJoinLoading(false);
+      return;
     }
-    await recordAuditLog({ action: "join_request", identifier: joinUsername.trim(), role: joinRole });
+
+    // 2. Email validation
+    const trimmedEmail = joinEmail.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      toast.error(lang === "ar" ? "يرجى كتابة بريد إلكتروني صالح" : "Please enter a valid email address");
+      setJoinLoading(false);
+      return;
+    }
+
+    // 3. Username validation: unique, English alphanumeric
+    const trimmedUsername = joinUsername.trim().toLowerCase();
+    const userRegex = /^[a-zA-Z0-9_]{3,30}$/;
+    if (!userRegex.test(trimmedUsername)) {
+      toast.error(
+        lang === "ar"
+          ? "اسم المستخدم يجب أن يتكون من 3-30 حرفاً إنجليزياً أو رقماً بدون مسافات"
+          : "Username must be 3-30 English alphanumeric characters with no spaces"
+      );
+      setJoinLoading(false);
+      return;
+    }
+
+    // Check if username already exists in users
+    try {
+      const { data: existingUser } = await supabase
+        .from("users")
+        .select("id")
+        .eq("username", trimmedUsername)
+        .maybeSingle();
+
+      if (existingUser) {
+        toast.error(
+          lang === "ar"
+            ? "اسم المستخدم هذا مسجل بالفعل، يرجى اختيار اسم مستخدم آخر."
+            : "This username is already taken. Please choose another."
+        );
+        setJoinLoading(false);
+        return;
+      }
+    } catch {
+      // Continue if table doesn't have username check or network error
+    }
+
+    // 4. Password validation
+    if (!joinPassword || joinPassword.length < 6) {
+      toast.error(lang === "ar" ? "كلمة المرور يجب ألا تقل عن 6 أحرف" : "Password must be at least 6 characters");
+      setJoinLoading(false);
+      return;
+    }
+    if (joinPassword !== confirmPassword) {
+      toast.error(lang === "ar" ? "كلمتا المرور غير متطابقتين" : "Passwords do not match");
+      setJoinLoading(false);
+      return;
+    }
+
+    // 5. Department validation
+    if (!department) {
+      toast.error(lang === "ar" ? "يرجى اختيار القسم" : "Please select your department");
+      setJoinLoading(false);
+      return;
+    }
+
+    // 6. Student specific validation
+    if (joinRole === "student") {
+      if (!academicYear) {
+        toast.error(lang === "ar" ? "يرجى اختيار الفرقة الدراسية" : "Please select your academic year");
+        setJoinLoading(false);
+        return;
+      }
+      if (!sectionNumber || isNaN(parseInt(sectionNumber))) {
+        toast.error(lang === "ar" ? "يرجى إدخال رقم السكشن" : "Please enter section number");
+        setJoinLoading(false);
+        return;
+      }
+    }
+
+    const { error } = await supabase.from("join_requests").insert({
+      full_name: trimmedName,
+      email: trimmedEmail,
+      username: trimmedUsername,
+      password: joinPassword,
+      role: joinRole,
+      department: department,
+      academic_year: joinRole === "student" ? academicYear : null,
+      section_number: joinRole === "student" && sectionNumber ? parseInt(sectionNumber) : null,
+    });
+
+    if (error) {
+      toast.error(lang === "ar" ? `فشل إرسال الطلب: ${error.message}` : "Failed to submit request.");
+      setJoinLoading(false);
+      return;
+    }
+
+    await recordAuditLog({
+      action: "join_request",
+      identifier: `${trimmedUsername} | ${trimmedEmail}`,
+      role: joinRole,
+    });
+
     setJoinSuccess(true);
     toast.success(t.auth.requestSent);
     setJoinLoading(false);
@@ -614,33 +740,101 @@ const LoginPage = () => {
                 </div>
               ) : (
                 <form onSubmit={handleJoin} className="space-y-3.5">
-                  <Field id="j-name" label={t.auth.fullName} value={fullName} onChange={setFullName}
-                    placeholder={t.auth.fullNamePlaceholder} required dir={isRTL ? "rtl" : "ltr"} icon={<Icon.User/>}/>
+                  {/* English 3-part Full Name */}
+                  <Field
+                    id="j-name"
+                    label={lang === "ar" ? "الاسم ثلاثي بالإنجليزية" : "Full Name (English - 3 parts)"}
+                    value={fullName}
+                    onChange={setFullName}
+                    placeholder={lang === "ar" ? "مثال: Ahmed Mohamed Ali" : "e.g. John David Smith"}
+                    required
+                    dir="ltr"
+                    icon={<Icon.User/>}
+                  />
 
-                  <Field id="j-user" label={t.auth.username} value={joinUsername} onChange={setJoinUsername}
-                    placeholder={t.auth.usernamePlaceholder} required autoComplete="username" icon={<Icon.User/>}/>
+                  {/* Real Email */}
+                  <Field
+                    id="j-email"
+                    type="email"
+                    label={lang === "ar" ? "البريد الإلكتروني" : "Email Address"}
+                    value={joinEmail}
+                    onChange={setJoinEmail}
+                    placeholder="name@gmail.com"
+                    required
+                    dir="ltr"
+                    icon={<Icon.Mail/>}
+                  />
 
-                  <div>
-                    <Field id="j-pass" label={t.auth.password} type={showJoinPass ? "text" : "password"}
-                      value={joinPassword} onChange={setJoinPassword}
-                      placeholder={t.auth.passwordPlaceholder} required autoComplete="new-password"
-                      icon={<Icon.Lock/>}
-                      suffix={
-                        <button type="button" onClick={() => setShowJoinPass(v => !v)}
-                          className="flex items-center justify-center w-8 h-8 rounded-md cursor-pointer transition-colors text-slate-400 hover:text-white">
-                          <Icon.Eye off={showJoinPass}/>
-                        </button>
-                      }/>
-                    <PasswordStrengthMeter password={joinPassword} lang={lang}/>
+                  {/* Unique Username */}
+                  <Field
+                    id="j-user"
+                    label={lang === "ar" ? "اسم المستخدم (فريد)" : "Unique Username"}
+                    value={joinUsername}
+                    onChange={setJoinUsername}
+                    placeholder={lang === "ar" ? "مثال: ahmed_ali" : "e.g. ahmed_ali"}
+                    required
+                    dir="ltr"
+                    autoComplete="username"
+                    icon={<Icon.User/>}
+                  />
+
+                  {/* Password & Confirm Password */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <Field
+                        id="j-pass"
+                        label={t.auth.password}
+                        type={showJoinPass ? "text" : "password"}
+                        value={joinPassword}
+                        onChange={setJoinPassword}
+                        placeholder="••••••••"
+                        required
+                        dir="ltr"
+                        autoComplete="new-password"
+                        icon={<Icon.Lock/>}
+                        suffix={
+                          <button type="button" onClick={() => setShowJoinPass(v => !v)}
+                            className="flex items-center justify-center w-8 h-8 rounded-md cursor-pointer transition-colors text-slate-400 hover:text-white">
+                            <Icon.Eye off={showJoinPass}/>
+                          </button>
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Field
+                        id="j-confirm-pass"
+                        label={lang === "ar" ? "تأكيد كلمة المرور" : "Confirm Password"}
+                        type={showConfirmPass ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={setConfirmPassword}
+                        placeholder="••••••••"
+                        required
+                        dir="ltr"
+                        autoComplete="new-password"
+                        icon={<Icon.Lock/>}
+                        suffix={
+                          <button type="button" onClick={() => setShowConfirmPass(v => !v)}
+                            className="flex items-center justify-center w-8 h-8 rounded-md cursor-pointer transition-colors text-slate-400 hover:text-white">
+                            <Icon.Eye off={showConfirmPass}/>
+                          </button>
+                        }
+                      />
+                    </div>
                   </div>
+                  <PasswordStrengthMeter password={joinPassword} lang={lang}/>
 
+                  {/* Choose Role */}
                   <CustomRoleSelect
-                    id="j-role" label={t.auth.chooseRole} value={joinRole}
-                    onChange={v => setJoinRole(v as JoinRole)} icon={<Icon.Tag/>}
+                    id="j-role"
+                    label={t.auth.chooseRole}
+                    value={joinRole}
+                    onChange={v => setJoinRole(v as JoinRole)}
+                    icon={<Icon.Tag/>}
                     options={[
-                      { value: "student", label: t.auth.student },
-                      { value: "doctor",  label: t.auth.doctor  },
-                      { value: "ta",      label: t.auth.ta      },
+                      { value: "coordinator", label: lang === "ar" ? "منسق البرنامج (رئيس قسم)" : "Program Coordinator / Dept Head" },
+                      { value: "doctor",      label: lang === "ar" ? "دكتور مادة" : "Doctor / Professor" },
+                      { value: "ta",          label: lang === "ar" ? "معيد" : "Teaching Assistant (TA)" },
+                      { value: "student",     label: lang === "ar" ? "طالب" : "Student" },
                     ]}
                     labelColor="#CBD5E1"
                     fieldBg="rgba(255,255,255,0.045)"
@@ -649,20 +843,64 @@ const LoginPage = () => {
                     fieldGlow="0 0 0 3px rgba(99,102,241,0.2)"
                     textColor="#FFFFFF"
                     faintColor="#94A3B8"
-                    isRTL={isRTL}/>
+                    isRTL={isRTL}
+                  />
 
+                  {/* Department (The 7 departments for all roles) */}
+                  <CustomRoleSelect
+                    id="j-dept"
+                    label={lang === "ar" ? "القسم التابع له (7 أقسام)" : "Department (7 Disciplines)"}
+                    value={department}
+                    onChange={setDepartment}
+                    icon={<Icon.Dept/>}
+                    options={DEPARTMENTS.map(d => ({
+                      value: d.id,
+                      label: lang === "ar" ? d.nameAr : d.nameEn,
+                    }))}
+                    labelColor="#CBD5E1"
+                    fieldBg="rgba(255,255,255,0.045)"
+                    fieldBorder="rgba(255,255,255,0.12)"
+                    fieldFocus="rgba(99,102,241,0.08)"
+                    fieldGlow="0 0 0 3px rgba(99,102,241,0.2)"
+                    textColor="#FFFFFF"
+                    faintColor="#94A3B8"
+                    isRTL={isRTL}
+                  />
+
+                  {/* Student Specific Fields: Academic Year & Section Number */}
                   {isStudent && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <Field id="j-seat" label={t.auth.seatNumber} value={seatNumber} onChange={setSeatNumber}
-                        placeholder={t.auth.seatNumberPlaceholder} icon={<Icon.Hash/>}/>
-                      <Field id="j-sec" label={t.auth.sectionNumber} type="number" value={sectionNumber}
-                        onChange={setSectionNumber} placeholder={t.auth.sectionPlaceholder} icon={<Icon.Hash/>}/>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <CustomRoleSelect
+                        id="j-year"
+                        label={lang === "ar" ? "الفرقة الدراسية" : "Academic Year"}
+                        value={academicYear}
+                        onChange={setAcademicYear}
+                        icon={<Icon.Year/>}
+                        options={ACADEMIC_YEARS.map(y => ({
+                          value: y.id,
+                          label: lang === "ar" ? y.nameAr : y.nameEn,
+                        }))}
+                        labelColor="#CBD5E1"
+                        fieldBg="rgba(255,255,255,0.045)"
+                        fieldBorder="rgba(255,255,255,0.12)"
+                        fieldFocus="rgba(99,102,241,0.08)"
+                        fieldGlow="0 0 0 3px rgba(99,102,241,0.2)"
+                        textColor="#FFFFFF"
+                        faintColor="#94A3B8"
+                        isRTL={isRTL}
+                      />
+
+                      <Field
+                        id="j-sec"
+                        label={lang === "ar" ? "رقم السكشن" : "Section Number"}
+                        type="number"
+                        value={sectionNumber}
+                        onChange={setSectionNumber}
+                        placeholder={lang === "ar" ? "مثال: 1" : "e.g. 1"}
+                        required
+                        icon={<Icon.Hash/>}
+                      />
                     </div>
-                  )}
-
-                  {isStudent && (
-                    <Field id="j-rank" label={t.auth.rankInList} type="number" value={rankInList}
-                      onChange={setRankInList} placeholder={t.auth.rankPlaceholder} icon={<Icon.Hash/>}/>
                   )}
 
                   <div className="pt-1.5">

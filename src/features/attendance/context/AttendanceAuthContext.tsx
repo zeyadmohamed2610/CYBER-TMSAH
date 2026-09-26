@@ -16,7 +16,7 @@ interface AttendanceAuthContextValue {
 const AttendanceAuthContext = createContext<AttendanceAuthContextValue | undefined>(undefined);
 
 const isAttendanceRole = (value: unknown): value is AttendanceRole => {
-  return value === "owner" || value === "doctor" || value === "student" || value === "ta";
+  return value === "owner" || value === "coordinator" || value === "doctor" || value === "student" || value === "ta";
 };
 
 /** Fetch role from database */

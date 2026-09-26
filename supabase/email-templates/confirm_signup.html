@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تأكيد إنشاء الحساب | CYBER TMSAH</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #050811;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, -apple-system, BlinkMacSystemFont;
+      color: #e2e8f0;
+      -webkit-font-smoothing: antialiased;
+    }
+    .email-wrapper {
+      width: 100%;
+      background-color: #050811;
+      padding: 40px 15px;
+    }
+    .email-container {
+      max-width: 580px;
+      margin: 0 auto;
+      background: linear-gradient(180deg, #0e1526 0%, #080c16 100%);
+      border: 1px solid rgba(168, 85, 247, 0.25);
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(147, 51, 234, 0.15);
+    }
+    .header {
+      padding: 36px 30px 24px;
+      text-align: center;
+      background: radial-gradient(circle at top, rgba(147, 51, 234, 0.2) 0%, transparent 70%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .logo-badge {
+      display: inline-block;
+      padding: 8px 18px;
+      background: rgba(147, 51, 234, 0.15);
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      border-radius: 9999px;
+      color: #c084fc;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .title {
+      color: #ffffff;
+      font-size: 24px;
+      font-weight: 800;
+      margin: 0 0 8px;
+      letter-spacing: -0.5px;
+    }
+    .subtitle {
+      color: #94a3b8;
+      font-size: 14px;
+      margin: 0;
+    }
+    .content {
+      padding: 32px 30px;
+      text-align: right;
+      line-height: 1.8;
+      font-size: 15px;
+      color: #cbd5e1;
+    }
+    .card-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(147, 51, 234, 0.2);
+      border-radius: 16px;
+      padding: 20px;
+      margin: 24px 0;
+      text-align: center;
+    }
+    .btn-action {
+      display: inline-block;
+      background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+      color: #ffffff !important;
+      text-decoration: none;
+      padding: 15px 36px;
+      font-size: 16px;
+      font-weight: 700;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(147, 51, 234, 0.4);
+      margin: 10px 0;
+    }
+    .url-fallback {
+      font-size: 12px;
+      color: #64748b;
+      word-break: break-all;
+      margin-top: 15px;
+      direction: ltr;
+      text-align: left;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 10px;
+      border-radius: 8px;
+    }
+    .security-notice {
+      background: rgba(147, 51, 234, 0.08);
+      border: 1px solid rgba(147, 51, 234, 0.25);
+      border-radius: 12px;
+      padding: 14px 18px;
+      color: #d8b4fe;
+      font-size: 13px;
+      margin-top: 24px;
+    }
+    .footer {
+      padding: 24px 30px;
+      text-align: center;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 12px;
+      color: #64748b;
+      background-color: rgba(0, 0, 0, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="email-container">
+      
+      <!-- Header -->
+      <div class="header">
+        <div class="logo-badge">CYBER TMSAH SYSTEM</div>
+        <h1 class="title">تأكيد الحساب الأكاديمي</h1>
+        <p class="subtitle">Confirm your account registration</p>
+      </div>
+
+      <!-- Main Content -->
+      <div class="content">
+        <p>مرحباً بك،</p>
+        <p>
+          شكراً لتسجيلك في منظومة <strong>CYBER TMSAH</strong> لإدارة الحضور والتحقق الأمني.
+          يرجى تأكيد بريدك الإلكتروني لتفعيل حسابك بشكل كامل عبر الضغط على الزر أدناه:
+        </p>
+
+        <!-- CTA Box -->
+        <div class="card-box">
+          <a href="{{ .ConfirmationURL }}" class="btn-action" target="_blank">
+            تأكيد البريد الإلكتروني الآن
+          </a>
+          <div class="url-fallback">
+            إذا تعذر النقر على الزر، يمكنك نسخ الرابط المباشر التالي:<br>
+            <a href="{{ .ConfirmationURL }}" style="color: #c084fc; text-decoration: underline;">{{ .ConfirmationURL }}</a>
+          </div>
+        </div>
+
+        <div class="security-notice">
+          🛡️ <strong>حماية وأمان:</strong> إذا لم تقم بإنشاء هذا الحساب بنفسك، يمكنك تجاهل هذا البريد ولن يتم تفعيل الحساب.
+        </div>
+
+        <p style="margin-top: 24px; font-size: 14px; color: #94a3b8;">
+          لأي استفسار، تواصل مع المشرف عبر واتساب: 
+          <strong style="color: #a855f7; direction: ltr; display: inline-block;">01553450232</strong>.
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <p style="margin: 0 0 6px;">منظومة CYBER TMSAH &bull; جميع الحقوق محفوظة &copy; 2026</p>
+        <p style="margin: 0;">جامعة حلوان التكنولوجية الدولية</p>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

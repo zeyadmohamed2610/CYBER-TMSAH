@@ -11,11 +11,12 @@ import { useLang } from "@/i18n";
 interface JoinRequest {
   id: string;
   full_name: string;
+  email?: string | null;
   username: string;
-  role: "student" | "doctor" | "ta";
-  seat_number: string | null;
-  section_number: number | null;
-  rank_in_list: number | null;
+  role: "coordinator" | "doctor" | "ta" | "student";
+  department?: string | null;
+  academic_year?: string | null;
+  section_number?: number | null;
   status: "pending" | "approved" | "rejected";
   created_at: string;
   rejection_note: string | null;
@@ -32,15 +33,17 @@ interface PasswordResetRequest {
 }
 
 const ROLE_LABELS: Record<string, string> = {
-  student: "طالب",
+  coordinator: "منسق البرنامج (رئيس قسم)",
   doctor: "دكتور",
   ta: "معيد",
+  student: "طالب",
 };
 
 const ROLE_LABELS_EN: Record<string, string> = {
-  student: "Student",
+  coordinator: "Program Coordinator",
   doctor: "Doctor",
   ta: "Teaching Assistant",
+  student: "Student",
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -374,10 +377,11 @@ export function JoinRequestsPanel() {
                       </div>
 
                       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
-                        <span>{lang === "ar" ? ROLE_LABELS[req.role] : ROLE_LABELS_EN[req.role]}</span>
+                        <span className="text-purple-400 font-semibold">{lang === "ar" ? ROLE_LABELS[req.role] : ROLE_LABELS_EN[req.role]}</span>
+                        {req.email && <span className="text-cyan-400">{req.email}</span>}
+                        {req.department && <span className="text-indigo-300">{lang === "ar" ? `القسم: ${req.department}` : `Dept: ${req.department}`}</span>}
+                        {req.academic_year && <span>{lang === "ar" ? `الفرقة ${req.academic_year}` : `Year ${req.academic_year}`}</span>}
                         {req.section_number && <span>{lang === "ar" ? `سكشن ${req.section_number}` : `Section ${req.section_number}`}</span>}
-                        {req.seat_number && <span>{lang === "ar" ? `رقم الجلوس: ${req.seat_number}` : `Seat: ${req.seat_number}`}</span>}
-                        {req.rank_in_list && <span>{lang === "ar" ? `الترتيب: ${req.rank_in_list}` : `Rank: ${req.rank_in_list}`}</span>}
                         <span className="text-xs opacity-60">
                           {new Date(req.created_at).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US")}
                         </span>
