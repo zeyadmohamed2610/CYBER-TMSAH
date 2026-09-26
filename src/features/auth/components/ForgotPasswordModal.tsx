@@ -1,6 +1,6 @@
 // src/features/auth/components/ForgotPasswordModal.tsx
 import { useState } from "react";
-import { X, KeyRound, Mail, Send, CheckCircle2, MessageCircle, Copy, Loader2, ExternalLink } from "lucide-react";
+import { X, KeyRound, Mail, Phone, Send, CheckCircle2, MessageCircle, Copy, Loader2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabaseClient";
 import { recordAuditLog } from "../services/auditService";
@@ -17,6 +17,7 @@ const WHATSAPP_LINK = "https://wa.me/201553450232";
 
 export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPasswordModalProps) {
   const [emailInput, setEmailInput] = useState("");
+  const [phoneInput, setPhoneInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [sentSuccess, setSentSuccess] = useState(false);
 
@@ -24,11 +25,12 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
 
   const handleResetRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmed = emailInput.trim().toLowerCase();
+    const trimmedEmail = emailInput.trim().toLowerCase();
+    const trimmedPhone = phoneInput.trim();
 
-    // Strict validation: must be a valid Gmail address ending in @gmail.com
+    // 1. Strict validation: must be a valid Gmail address ending in @gmail.com
     const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
-    if (!gmailRegex.test(trimmed)) {
+    if (!gmailRegex.test(trimmedEmail)) {
       toast.error(
         lang === "ar"
           ? "شرط الاستعادة: يجب كتابة بريد Gmail صالح ينتهي بـ @gmail.com"
@@ -37,19 +39,30 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
       return;
     }
 
+    // 2. Phone validation (WhatsApp)
+    if (!trimmedPhone || trimmedPhone.length < 8) {
+      toast.error(
+        lang === "ar"
+          ? "يرجى كتابة رقم الواتساب الخاص بك لاستلام البيانات الجديدة"
+          : "Please enter your WhatsApp phone number to receive your new credentials."
+      );
+      return;
+    }
+
     setSubmitting(true);
     try {
-      // 1. Insert into password_reset_requests so admin receives it in the dashboard
+      // 1. Insert into password_reset_requests with both email and phone
       const { error: dbError } = await supabase.from("password_reset_requests").insert({
-        email: trimmed,
+        email: trimmedEmail,
+        phone: trimmedPhone,
         status: "pending",
       });
 
       if (dbError) throw dbError;
 
-      // 2. Trigger Supabase auth reset email if user exists in auth
+      // 2. Trigger Supabase auth reset email if user exists in auth (Option B self-service)
       try {
-        await supabase.auth.resetPasswordForEmail(trimmed, {
+        await supabase.auth.resetPasswordForEmail(trimmedEmail, {
           redirectTo: `${window.location.origin}/reset-password`,
         });
       } catch {
@@ -59,7 +72,7 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
       // 3. Record audit log
       await recordAuditLog({
         action: "password_reset_request",
-        identifier: trimmed,
+        identifier: `${trimmedEmail} | ${trimmedPhone}`,
       });
 
       setSentSuccess(true);
@@ -113,8 +126,8 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
               {lang === "ar"
-                ? "أدخل بريدك الـ Gmail المسجل لإرسال طلب الاستعادة"
-                : "Enter your registered Gmail to request password reset"}
+                ? "أدخل بريدك الـ Gmail ورقم واتسابك لاستلام بيانات الدخول الجديدة"
+                : "Enter your Gmail and WhatsApp number to receive recovery details"}
             </p>
           </div>
         </div>
@@ -127,8 +140,8 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
             </h4>
             <p className="text-xs text-slate-300 leading-relaxed">
               {lang === "ar"
-                ? "تم تسجيل طلبك ووصل إلى لوحة المشرفين في قسم طلبات استعادة كلمة المرور للمراجعة والتفعيل."
-                : "Your request has been logged and sent to administrators in the reset requests tab."}
+                ? "وصل طلبك إلى المشرف متضمناً بريدك ورقم واتسابك. سيقوم المشرف بتعيين كلمة مرور جديدة وإرسالها لك مباشرة على الواتساب."
+                : "Your request with email and WhatsApp number reached the administrator. You will receive your credentials shortly."}
             </p>
 
             {/* Quick WhatsApp followup */}
@@ -140,7 +153,7 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
                 className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-emerald-500/20 text-emerald-300 text-xs font-bold hover:bg-emerald-500/30 transition-all cursor-pointer border border-emerald-500/30"
               >
                 <MessageCircle className="w-4 h-4 text-emerald-400" />
-                <span>{lang === "ar" ? "متابعة فورية عبر واتساب" : "Follow up via WhatsApp"}</span>
+                <span>{lang === "ar" ? "متابعة فورية مع الإدارة عبر واتساب" : "Follow up via WhatsApp"}</span>
                 <ExternalLink className="w-3 h-3 opacity-70" />
               </a>
             </div>
@@ -154,7 +167,8 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
             </button>
           </div>
         ) : (
-          <form onSubmit={handleResetRequest} className="space-y-4">
+          <form onSubmit={handleResetRequest} className="space-y-3.5">
+            {/* Gmail Input */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-[11.5px] font-semibold text-slate-300 tracking-wide">
@@ -178,10 +192,34 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
               </div>
             </div>
 
+            {/* WhatsApp Phone Input */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-[11.5px] font-semibold text-slate-300 tracking-wide">
+                  {lang === "ar" ? "رقم الواتساب (لاستلام كلمة المرور الجديدة)" : "WhatsApp Number (To receive credentials)"}
+                </label>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                  WhatsApp
+                </span>
+              </div>
+              <div className="relative">
+                <Phone className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="tel"
+                  required
+                  value={phoneInput}
+                  onChange={(e) => setPhoneInput(e.target.value)}
+                  placeholder={lang === "ar" ? "01xxxxxxxxx" : "WhatsApp Number"}
+                  dir="ltr"
+                  className="w-full h-11 ps-10 pe-3.5 rounded-xl text-sm font-medium bg-white/[0.045] border border-white/12 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/25 transition-all"
+                />
+              </div>
+            </div>
+
             <button
               type="submit"
               disabled={submitting}
-              className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 text-white active:scale-[0.985] transition-all disabled:opacity-50 cursor-pointer shadow-[0_4px_20px_rgba(79,70,229,0.45)]"
+              className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 text-white active:scale-[0.985] transition-all disabled:opacity-50 cursor-pointer shadow-[0_4px_20px_rgba(79,70,229,0.45)] mt-1"
               style={{
                 background: "linear-gradient(180deg, #6366F1 0%, #4F46E5 100%)",
                 border: "1px solid rgba(255,255,255,0.12)",
@@ -198,17 +236,17 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
             </button>
 
             {/* Support Box with WhatsApp */}
-            <div className="p-3.5 rounded-2xl bg-white/[0.035] border border-white/10 space-y-2.5">
+            <div className="p-3.5 rounded-2xl bg-white/[0.035] border border-white/10 space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold text-slate-200">
                 <MessageCircle className="w-4 h-4 text-emerald-400" />
                 <span>{lang === "ar" ? "هل تحتاج لمساعدة فورية؟" : "Need Instant Help?"}</span>
               </div>
               <p className="text-[11.5px] text-slate-400 leading-relaxed">
                 {lang === "ar"
-                  ? "يمكنك التواصل مباشرة مع الدعم الفني عبر واتساب لمتابعة حسابك واستعادة كلمة المرور فوراً:"
-                  : "You can reach out directly to technical support via WhatsApp for immediate recovery:"}
+                  ? "يمكنك أيضاً التواصل مباشرة مع الدعم الفني عبر واتساب لمتابعة حسابك:"
+                  : "You can reach out directly to technical support via WhatsApp:"}
               </p>
-              <div className="flex items-center gap-2 pt-1">
+              <div className="flex items-center gap-2 pt-0.5">
                 <a
                   href={WHATSAPP_LINK}
                   target="_blank"

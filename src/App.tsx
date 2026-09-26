@@ -24,6 +24,7 @@ const HealthCheck  = lazy(() => import("./pages/HealthCheck"));
 
 // ── Auth / Dashboard pages ─────────────────────────────────────────────────────
 const LoginPage           = lazy(() => import("./features/auth/pages/LoginPage"));
+const ResetPasswordPage   = lazy(() => import("./features/auth/pages/ResetPasswordPage"));
 const AttendancePage      = lazy(() => import("./features/attendance/pages/AttendancePage"));
 const AttendanceOwnerPage = lazy(() => import("./features/attendance/pages/AttendanceOwnerPage"));
 const AttendanceDoctorPage = lazy(() => import("./features/attendance/pages/AttendanceDoctorPage"));
@@ -65,6 +66,7 @@ const App = () => (
                           {/* ── Public: Login is now the root ─────────────────── */}
                           <Route path="/" element={<LoginPage />} />
                           <Route path="/login" element={<LoginPage />} />
+                          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
                           {/* ── Legacy public routes (still accessible) ─────── */}
                           <Route path="/schedule" element={<Schedule />} />

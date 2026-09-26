@@ -4,6 +4,7 @@
 CREATE TABLE IF NOT EXISTS public.password_reset_requests (
   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   email        text NOT NULL,
+  phone        text,
   status       text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'resolved', 'dismissed')),
   notes        text,
   created_at   timestamptz DEFAULT now(),

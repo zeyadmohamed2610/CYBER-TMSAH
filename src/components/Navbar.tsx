@@ -127,14 +127,14 @@ export const Navbar = () => {
               dir="ltr"
             >
               {/* Cyber Shield Icon */}
-              <div className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 text-primary shadow-[0_0_20px_hsl(187_92%_45%/0.2)] transition-all duration-300 group-hover:border-primary group-hover:shadow-[0_0_28px_hsl(187_92%_45%/0.4)]">
+              <div className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 text-primary shadow-[0_0_20px_hsl(var(--primary)/0.25)] transition-all duration-300 group-hover:border-primary group-hover:shadow-[0_0_28px_hsl(var(--primary)/0.4)]">
                 <Shield className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
                 <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary animate-ping" />
               </div>
 
               {/* Title */}
               <span className="font-black text-xl tracking-wider select-none">
-                <span className="bg-gradient-to-r from-cyan-400 via-primary to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_0_12px_hsl(187_92%_45%/0.3)]">
+                <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-indigo-300 bg-clip-text text-transparent drop-shadow-[0_0_12px_hsl(var(--primary)/0.3)]">
                   CYBER
                 </span>
                 <span className="text-foreground transition-colors group-hover:text-primary ml-1.5">
@@ -176,14 +176,14 @@ export const Navbar = () => {
                   onClick={() => setUserDropdownOpen((v) => !v)}
                   className={`flex items-center gap-2.5 h-10 px-3.5 rounded-2xl border transition-all duration-200 select-none shadow-sm ${
                     userDropdownOpen
-                      ? "border-primary bg-primary/10 shadow-[0_0_20px_hsl(187_92%_45%/0.2)]"
+                      ? "border-primary bg-primary/10 shadow-[0_0_20px_hsl(var(--primary)/0.25)]"
                       : "border-border/80 bg-card/70 hover:bg-card hover:border-primary/50"
                   }`}
                   aria-expanded={userDropdownOpen}
                   aria-haspopup="true"
                 >
                   {/* Avatar Circle */}
-                  <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-primary to-cyan-400 flex items-center justify-center text-primary-foreground font-black text-xs shadow-inner">
+                  <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-primary to-violet-400 flex items-center justify-center text-primary-foreground font-black text-xs shadow-inner">
                     {userInitial}
                   </div>
 
@@ -237,7 +237,7 @@ export const Navbar = () => {
             ) : (
               <Link
                 to="/"
-                className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-primary text-primary-foreground font-bold text-xs shadow-[0_4px_16px_hsl(187_92%_45%/0.3)] hover:opacity-90 transition-all"
+                className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-primary text-primary-foreground font-bold text-xs shadow-[0_4px_16px_hsl(var(--primary)/0.35)] hover:opacity-90 transition-all"
               >
                 <span>{lang === "ar" ? "تسجيل الدخول" : "Sign In"}</span>
               </Link>
@@ -326,7 +326,7 @@ export const Navbar = () => {
 
             {/* Profile Info Header */}
             <div className="flex items-center gap-3.5 sm:gap-4">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-primary to-cyan-300 flex items-center justify-center text-primary-foreground font-black text-xl sm:text-2xl shadow-[0_0_24px_hsl(187_92%_45%/0.3)] shrink-0">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-primary to-violet-400 flex items-center justify-center text-primary-foreground font-black text-xl sm:text-2xl shadow-[0_0_24px_hsl(var(--primary)/0.35)] shrink-0">
                 {userInitial}
               </div>
               <div className="min-w-0 flex-1">
@@ -381,7 +381,7 @@ export const Navbar = () => {
                   onClick={() => setTheme("dark")}
                   className={`flex items-center justify-center gap-2 h-10 sm:h-11 rounded-xl text-xs font-bold border transition-all ${
                     isDark
-                      ? "border-primary bg-primary/15 text-primary shadow-[0_0_15px_hsl(187_92%_45%/0.2)]"
+                      ? "border-primary bg-primary/15 text-primary shadow-[0_0_15px_hsl(var(--primary)/0.25)]"
                       : "border-border/70 bg-card/60 text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -392,7 +392,7 @@ export const Navbar = () => {
                   onClick={() => setTheme("light")}
                   className={`flex items-center justify-center gap-2 h-10 sm:h-11 rounded-xl text-xs font-bold border transition-all ${
                     !isDark
-                      ? "border-primary bg-primary/15 text-primary shadow-[0_0_15px_hsl(187_92%_45%/0.2)]"
+                      ? "border-primary bg-primary/15 text-primary shadow-[0_0_15px_hsl(var(--primary)/0.25)]"
                       : "border-border/70 bg-card/60 text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -407,7 +407,7 @@ export const Navbar = () => {
                   onClick={() => setLang("ar")}
                   className={`flex items-center justify-center gap-2 h-10 sm:h-11 rounded-xl text-xs font-bold border transition-all ${
                     lang === "ar"
-                      ? "border-primary bg-primary/15 text-primary shadow-[0_0_15px_hsl(187_92%_45%/0.2)]"
+                      ? "border-primary bg-primary/15 text-primary shadow-[0_0_15px_hsl(var(--primary)/0.25)]"
                       : "border-border/70 bg-card/60 text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -417,7 +417,7 @@ export const Navbar = () => {
                   onClick={() => setLang("en")}
                   className={`flex items-center justify-center gap-2 h-10 sm:h-11 rounded-xl text-xs font-bold border transition-all ${
                     lang === "en"
-                      ? "border-primary bg-primary/15 text-primary shadow-[0_0_15px_hsl(187_92%_45%/0.2)]"
+                      ? "border-primary bg-primary/15 text-primary shadow-[0_0_15px_hsl(var(--primary)/0.25)]"
                       : "border-border/70 bg-card/60 text-muted-foreground hover:text-foreground"
                   }`}
                 >

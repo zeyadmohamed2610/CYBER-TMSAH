@@ -21,9 +21,9 @@ const Footer = () => {
             <Link to="/" className="group flex items-center" dir="ltr">
               <span className="text-2xl font-black tracking-widest">
                 <span
-                  className="bg-gradient-to-r from-cyan-400 via-primary to-cyan-300 bg-clip-text text-transparent"
+                  className="bg-gradient-to-r from-indigo-400 via-violet-400 to-indigo-300 bg-clip-text text-transparent"
                   style={{
-                    textShadow: "0 0 20px hsl(174 72% 50% / 0.5)",
+                    textShadow: "0 0 20px hsl(var(--primary) / 0.5)",
                   }}
                 >
                   CYBER

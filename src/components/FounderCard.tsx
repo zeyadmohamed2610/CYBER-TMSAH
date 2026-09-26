@@ -40,12 +40,12 @@ const FounderCard = () => {
             {/* Avatar Section */}
             <div className="relative flex-shrink-0">
               {/* Outer Glow Ring */}
-              <div className="absolute inset-0 bg-gradient-to-br from-primary via-cyan-400 to-primary rounded-3xl blur-xl opacity-40 scale-110" />
+              <div className="absolute inset-0 bg-gradient-to-br from-primary via-violet-400 to-indigo-600 rounded-3xl blur-xl opacity-40 scale-110" />
               
               {/* Image Container */}
               <div className="relative">
                 {/* Decorative Border */}
-                <div className="absolute -inset-1 bg-gradient-to-br from-primary via-cyan-400 to-primary rounded-3xl opacity-70" />
+                <div className="absolute -inset-1 bg-gradient-to-br from-primary via-violet-400 to-indigo-600 rounded-3xl opacity-70" />
                 
                 <img
                   src="/founder.jpeg"
@@ -57,7 +57,7 @@ const FounderCard = () => {
                 />
                 
                 {/* Status Badge */}
-                <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-primary to-cyan-400 rounded-xl px-3 py-1.5 shadow-lg">
+                <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-primary to-violet-500 rounded-xl px-3 py-1.5 shadow-lg">
                   <div className="flex items-center gap-1.5">
                     <Shield className="h-3.5 w-3.5 text-primary-foreground" />
                     <span className="text-xs font-bold text-primary-foreground">Cyber</span>

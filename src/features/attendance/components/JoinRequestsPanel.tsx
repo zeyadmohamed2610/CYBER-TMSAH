@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   CheckCircle2, Clock, Loader2, UserX, XCircle, RefreshCw,
-  Users, KeyRound, Mail, Send, Copy, Ban, Check
+  Users, KeyRound, Mail, Send, Copy, Ban, Check, Phone, ExternalLink, MessageCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabaseClient";
@@ -24,6 +24,7 @@ interface JoinRequest {
 interface PasswordResetRequest {
   id: string;
   email: string;
+  phone: string | null;
   status: "pending" | "resolved" | "dismissed";
   notes: string | null;
   created_at: string;
@@ -490,6 +491,21 @@ export function JoinRequestsPanel() {
             </div>
           </div>
 
+          {/* Guide Banner for Admin Workflow */}
+          <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-start gap-3 text-xs text-indigo-200">
+            <div className="w-6 h-6 rounded-lg bg-indigo-500/20 flex items-center justify-center shrink-0 text-indigo-300 font-bold mt-0.5">
+              💡
+            </div>
+            <div className="leading-relaxed">
+              <span className="font-bold text-white block mb-0.5">
+                {lang === "ar" ? "خطوات استعادة وتعيين كلمة المرور للمستخدمين:" : "Password Recovery Workflow:"}
+              </span>
+              {lang === "ar"
+                ? "١. توجه لتبويب 'إدارة المستخدمين' أو 'الطلاب/المعيدين/الدكاترة' وعدّل كلمة مرور الحساب بالباسوورد الجديد وانسخه. ٢. اضغط زر 'مراسلة واتساب' بالأسفل لإرسال البيانات الجديدة للشخص فوراً. ٣. أو اضغط 'إرسال الرابط' إذا كان المستخدم يفضل التعيين الذاتي عبر البريد."
+                : "1. Go to the Users list, set a new password, copy it. 2. Click 'WhatsApp' below to send credentials directly. 3. Or click 'Send Link' for automated reset."}
+            </div>
+          </div>
+
           {/* Reset List */}
           {loadingReset ? (
             <div className="flex items-center justify-center py-12">
@@ -502,102 +518,155 @@ export function JoinRequestsPanel() {
             </div>
           ) : (
             <div className="space-y-3">
-              {resetRequests.map(req => (
-                <div
-                  key={req.id}
-                  className="rounded-xl border border-white/8 bg-white/[0.02] p-4 hover:bg-white/[0.04] transition-colors"
-                >
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
-                    {/* User info */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-full bg-indigo-500/15 flex items-center justify-center shrink-0 text-indigo-400">
-                        <Mail className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-sm text-white select-all" dir="ltr">
-                            {req.email}
-                          </span>
-                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${STATUS_COLORS[req.status]}`}>
-                            {req.status === "pending"
-                              ? (lang === "ar" ? "قيد الانتظار" : "Pending")
-                              : req.status === "resolved"
-                                ? (lang === "ar" ? "تم الحل" : "Resolved")
-                                : (lang === "ar" ? "تم التجاهل" : "Dismissed")
-                            }
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                          <span>{new Date(req.created_at).toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}</span>
-                          {req.notes && (
-                            <span className="text-indigo-300">({req.notes})</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+              {resetRequests.map(req => {
+                const rawDigits = (req.phone || "").replace(/\D/g, "");
+                const waDigits = rawDigits.startsWith("01")
+                  ? "2" + rawDigits
+                  : rawDigits.startsWith("20")
+                  ? rawDigits
+                  : rawDigits.length > 0
+                  ? "20" + rawDigits
+                  : "";
+                const waMessage = encodeURIComponent(
+                  `مرحباً بك في منصة CYBER TMSAH 🐊\nبخصوص طلبك لاستعادة الحساب:\nالبريد: ${req.email}\nكلمة المرور الجديدة المؤقتة: \n\n(يرجى تسجيل الدخول وتغييرها من ملفك الشخصي فوراً)`
+                );
+                const waUrl = waDigits ? `https://wa.me/${waDigits}?text=${waMessage}` : null;
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      {/* Copy email */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(req.email);
-                          toast.success(lang === "ar" ? "تم نسخ البريد" : "Email copied");
-                        }}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
-                        title={lang === "ar" ? "نسخ الإيميل" : "Copy email"}
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">{lang === "ar" ? "نسخ" : "Copy"}</span>
-                      </button>
-
-                      {req.status === "pending" && (
-                        <>
-                          {/* Send Reset Email directly */}
-                          <button
-                            type="button"
-                            disabled={processingResetId === req.id}
-                            onClick={() => handleSendResetEmail(req.id, req.email)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 font-semibold transition-all shadow-[0_2px_8px_rgba(79,70,229,0.3)] cursor-pointer disabled:opacity-50"
-                            title={lang === "ar" ? "إرسال رابط استعادة إلى البريد تلقائياً" : "Dispatch reset link"}
-                          >
-                            {processingResetId === req.id ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            ) : (
-                              <Send className="w-3.5 h-3.5" />
+                return (
+                  <div
+                    key={req.id}
+                    className="rounded-xl border border-white/8 bg-white/[0.02] p-4 hover:bg-white/[0.04] transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      {/* User info */}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-indigo-500/15 flex items-center justify-center shrink-0 text-indigo-400">
+                          <Mail className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-sm text-white select-all" dir="ltr">
+                              {req.email}
+                            </span>
+                            {req.phone && (
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30" dir="ltr">
+                                <Phone className="w-3 h-3 text-emerald-400" />
+                                {req.phone}
+                              </span>
                             )}
-                            <span>{lang === "ar" ? "إرسال الرابط" : "Send Link"}</span>
-                          </button>
+                            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${STATUS_COLORS[req.status]}`}>
+                              {req.status === "pending"
+                                ? (lang === "ar" ? "قيد الانتظار" : "Pending")
+                                : req.status === "resolved"
+                                  ? (lang === "ar" ? "تم الحل" : "Resolved")
+                                  : (lang === "ar" ? "تم التجاهل" : "Dismissed")
+                              }
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                            <span>{new Date(req.created_at).toLocaleString(lang === "ar" ? "ar-EG" : "en-US")}</span>
+                            {req.notes && (
+                              <span className="text-indigo-300">({req.notes})</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
 
-                          {/* Mark Resolved */}
+                      {/* Actions */}
+                      <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                        {/* 1-Click WhatsApp Direct Chat */}
+                        {waUrl && (
+                          <a
+                            href={waUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 font-bold transition-all shadow-[0_2px_10px_rgba(16,185,129,0.3)] cursor-pointer"
+                            title={lang === "ar" ? "مراسلة المستخدم عبر واتساب بالبيانات الجديدة" : "Message user on WhatsApp"}
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            <span>{lang === "ar" ? "مراسلة واتساب" : "WhatsApp"}</span>
+                            <ExternalLink className="w-3 h-3 opacity-70" />
+                          </a>
+                        )}
+
+                        {/* Copy email */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(req.email);
+                            toast.success(lang === "ar" ? "تم نسخ البريد" : "Email copied");
+                          }}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
+                          title={lang === "ar" ? "نسخ الإيميل" : "Copy email"}
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">{lang === "ar" ? "نسخ البريد" : "Copy Email"}</span>
+                        </button>
+
+                        {/* Copy phone if exists */}
+                        {req.phone && (
                           <button
                             type="button"
-                            disabled={processingResetId === req.id}
-                            onClick={() => handleResolveReset(req.id)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/25 font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                            onClick={() => {
+                              navigator.clipboard.writeText(req.phone || "");
+                              toast.success(lang === "ar" ? "تم نسخ رقم الهاتف" : "Phone copied");
+                            }}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
+                            title={lang === "ar" ? "نسخ رقم الواتساب" : "Copy phone"}
                           >
-                            <Check className="w-3.5 h-3.5" />
-                            <span>{lang === "ar" ? "تم الحل" : "Resolved"}</span>
+                            <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                            <span className="hidden sm:inline">{lang === "ar" ? "نسخ الهاتف" : "Copy Phone"}</span>
                           </button>
+                        )}
 
-                          {/* Dismiss */}
-                          <button
-                            type="button"
-                            disabled={processingResetId === req.id}
-                            onClick={() => handleDismissReset(req.id)}
-                            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg bg-white/5 text-slate-400 border border-white/10 hover:bg-red-500/15 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50"
-                            title={lang === "ar" ? "تجاهل الطلب" : "Dismiss"}
-                          >
-                            <Ban className="w-3.5 h-3.5" />
-                            <span>{lang === "ar" ? "تجاهل" : "Dismiss"}</span>
-                          </button>
-                        </>
-                      )}
+                        {req.status === "pending" && (
+                          <>
+                            {/* Send Reset Email directly (Option 2) */}
+                            <button
+                              type="button"
+                              disabled={processingResetId === req.id}
+                              onClick={() => handleSendResetEmail(req.id, req.email)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 font-semibold transition-all shadow-[0_2px_8px_rgba(79,70,229,0.3)] cursor-pointer disabled:opacity-50"
+                              title={lang === "ar" ? "إرسال رابط استعادة إلى البريد تلقائياً" : "Dispatch reset link"}
+                            >
+                              {processingResetId === req.id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Send className="w-3.5 h-3.5" />
+                              )}
+                              <span>{lang === "ar" ? "إرسال الرابط" : "Send Link"}</span>
+                            </button>
+
+                            {/* Mark Resolved */}
+                            <button
+                              type="button"
+                              disabled={processingResetId === req.id}
+                              onClick={() => handleResolveReset(req.id)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/25 font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                              title={lang === "ar" ? "تحديد كـ تم الحل بعد مراسلة المستخدم" : "Mark resolved"}
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>{lang === "ar" ? "تم الحل" : "Resolved"}</span>
+                            </button>
+
+                            {/* Dismiss */}
+                            <button
+                              type="button"
+                              disabled={processingResetId === req.id}
+                              onClick={() => handleDismissReset(req.id)}
+                              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg bg-white/5 text-slate-400 border border-white/10 hover:bg-red-500/15 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50"
+                              title={lang === "ar" ? "تجاهل الطلب" : "Dismiss"}
+                            >
+                              <Ban className="w-3.5 h-3.5" />
+                              <span>{lang === "ar" ? "تجاهل" : "Dismiss"}</span>
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -15,7 +15,6 @@ export function GlobalCursorGlow() {
   const mousePos = useRef({ x: -500, y: -500 });
   const glowPos = useRef({ x: -500, y: -500 });
   const glowRef = useRef<HTMLDivElement>(null);
-  const coreRef = useRef<HTMLDivElement>(null);
   const animFrameId = useRef<number | null>(null);
 
   useEffect(() => {
@@ -58,16 +57,12 @@ export function GlobalCursorGlow() {
     const lerp = (start: number, end: number, factor: number) => start + (end - start) * factor;
 
     const render = () => {
-      // 0.16 lerp factor gives a buttery-smooth fluid follower
-      glowPos.current.x = lerp(glowPos.current.x, mousePos.current.x, 0.16);
-      glowPos.current.y = lerp(glowPos.current.y, mousePos.current.y, 0.16);
+      // 0.10 lerp factor gives a buttery-smooth, relaxed ambient float
+      glowPos.current.x = lerp(glowPos.current.x, mousePos.current.x, 0.1);
+      glowPos.current.y = lerp(glowPos.current.y, mousePos.current.y, 0.1);
 
       if (glowRef.current) {
         glowRef.current.style.transform = `translate3d(${glowPos.current.x}px, ${glowPos.current.y}px, 0) translate(-50%, -50%)`;
-      }
-      if (coreRef.current) {
-        // Direct snappy follower for the core nucleus
-        coreRef.current.style.transform = `translate3d(${mousePos.current.x}px, ${mousePos.current.y}px, 0) translate(-50%, -50%)`;
       }
 
       animFrameId.current = requestAnimationFrame(render);
@@ -89,36 +84,18 @@ export function GlobalCursorGlow() {
       className="fixed inset-0 pointer-events-none select-none overflow-hidden z-[9999]"
       aria-hidden="true"
     >
-      {/* ── Wide Ambient Spotlight (Follows with gentle fluid inertia) ── */}
+      {/* ── Soft Luxury Ambient Glow (Ultra-diffused, gentle, non-distracting) ── */}
       <div
         ref={glowRef}
-        className="absolute top-0 left-0 rounded-full transition-[width,height,opacity] duration-300 ease-out will-change-transform"
+        className="absolute top-0 left-0 rounded-full transition-[width,height,opacity] duration-500 ease-out will-change-transform"
         style={{
-          width: hovering ? 480 : 380,
-          height: hovering ? 480 : 380,
+          width: hovering ? 420 : 340,
+          height: hovering ? 420 : 340,
           background: hovering
-            ? "radial-gradient(circle, rgba(129, 140, 248, 0.22) 0%, rgba(99, 102, 241, 0.12) 35%, rgba(79, 70, 229, 0.04) 65%, transparent 80%)"
-            : "radial-gradient(circle, rgba(99, 102, 241, 0.16) 0%, rgba(79, 70, 229, 0.08) 40%, transparent 75%)",
-          filter: "blur(32px)",
-          opacity: 0.95,
-        }}
-      />
-
-      {/* ── Snappy Interactive Core Nucleus (Locks directly to cursor tip) ── */}
-      <div
-        ref={coreRef}
-        className="absolute top-0 left-0 rounded-full transition-all duration-200 ease-out will-change-transform"
-        style={{
-          width: hovering ? 52 : 24,
-          height: hovering ? 52 : 24,
-          background: hovering
-            ? "radial-gradient(circle, rgba(199, 210, 254, 0.45) 0%, rgba(129, 140, 248, 0.25) 50%, transparent 80%)"
-            : "radial-gradient(circle, rgba(165, 180, 252, 0.35) 0%, rgba(99, 102, 241, 0.15) 60%, transparent 90%)",
-          boxShadow: hovering
-            ? "0 0 24px rgba(129, 140, 248, 0.5), inset 0 0 12px rgba(255, 255, 255, 0.3)"
-            : "0 0 12px rgba(99, 102, 241, 0.3)",
-          filter: "blur(4px)",
-          border: hovering ? "1px solid rgba(199, 210, 254, 0.4)" : "none",
+            ? "radial-gradient(circle, rgba(129, 140, 248, 0.12) 0%, rgba(99, 102, 241, 0.06) 45%, rgba(79, 70, 229, 0.015) 70%, transparent 85%)"
+            : "radial-gradient(circle, rgba(99, 102, 241, 0.08) 0%, rgba(79, 70, 229, 0.035) 45%, transparent 75%)",
+          filter: "blur(64px)",
+          opacity: hovering ? 0.85 : 0.65,
         }}
       />
     </div>
