@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Moon,
   Sun,
+  User,
 } from "lucide-react";
 import { useAttendanceAuth } from "@/features/attendance/context/AttendanceAuthContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -204,6 +205,16 @@ export const Navbar = () => {
                     dir="rtl"
                   >
                     <div className="space-y-1">
+                      {/* Button 0: Profile Page */}
+                      <Link
+                        to="/profile"
+                        onClick={() => setUserDropdownOpen(false)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-200 hover:bg-purple-600/15 hover:text-purple-300 transition-all text-start"
+                      >
+                        <User className="w-4 h-4 text-purple-400" />
+                        <span>الملف الشخصي</span>
+                      </Link>
+
                       {/* Button 1: Settings */}
                       <button
                         onClick={() => {
@@ -259,6 +270,15 @@ export const Navbar = () => {
           <div className="md:hidden border-t border-white/10 bg-[#060813]/95 backdrop-blur-2xl px-4 py-4 space-y-2 animate-fade-up">
             {user ? (
               <>
+                <Link
+                  to="/profile"
+                  onClick={() => setOpen(false)}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl border border-white/10 bg-[#0A0F1D]/70 text-sm font-bold text-slate-100 text-start hover:border-purple-500/40"
+                >
+                  <User className="w-4 h-4 text-purple-400" />
+                  <span>الملف الشخصي</span>
+                </Link>
+
                 <button
                   onClick={() => {
                     setOpen(false);

@@ -20,6 +20,9 @@ import {
   UserCheck,
   Shield,
   Layers,
+  Copy,
+  Check,
+  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,6 +78,19 @@ export function UserList({ role, title }: { role: string; title: string }) {
   const [showPassword, setShowPassword] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+  const [selectedUserForDetails, setSelectedUserForDetails] = useState<UserRecord | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const handleCopyText = (text: string, fieldName: string) => {
+    try {
+      navigator.clipboard.writeText(text);
+      setCopiedField(fieldName);
+      toast.success(`تم نسخ ${fieldName}`);
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch {
+      toast.error("فشل النسخ إلى الحافظة");
+    }
+  };
 
   // Departments list with customized names
   const [deptList, setDeptList] = useState<DepartmentInfo[]>(() => {
@@ -776,7 +792,17 @@ export function UserList({ role, title }: { role: string; title: string }) {
 
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-white text-sm">{user.full_name}</span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedUserForDetails(user)}
+                          className="font-bold text-white text-sm hover:text-purple-300 hover:underline transition-colors text-start cursor-pointer inline-flex items-center gap-1.5 group"
+                          title="عرض الملف والتفاصيل الكاملة لهذا الحساب"
+                        >
+                          <span>{user.full_name}</span>
+                          <span className="text-[10px] text-purple-400/80 group-hover:text-purple-300 font-normal">
+                            (عرض الملف)
+                          </span>
+                        </button>
 
                         {/* Role Badge */}
                         <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center gap-1">
@@ -897,6 +923,153 @@ export function UserList({ role, title }: { role: string; title: string }) {
           )}
         </div>
       </CardContent>
+
+      {/* User Details Modal */}
+      {selectedUserForDetails && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-up overflow-y-auto"
+          dir="rtl"
+        >
+          <div className="relative w-full max-w-md my-auto rounded-3xl border border-purple-500/30 bg-[#0A0E1F]/95 backdrop-blur-2xl p-6 shadow-[0_25px_70px_rgba(0,0,0,0.8)] space-y-5">
+            {/* Top Close Button */}
+            <button
+              onClick={() => setSelectedUserForDetails(null)}
+              className="absolute top-4 start-4 w-8 h-8 rounded-full border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+              aria-label="إغلاق"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Header / Avatar */}
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-purple-400 flex items-center justify-center text-white font-black text-2xl shadow-[0_0_25px_rgba(168,85,247,0.4)] shrink-0">
+                {selectedUserForDetails.full_name.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-lg font-black text-white truncate">
+                  {selectedUserForDetails.full_name}
+                </h3>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                    {getRoleLabel()}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/25">
+                    {getDepartmentLabel(selectedUserForDetails.department)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="h-px bg-white/10" />
+
+            {/* Info Grid */}
+            <div className="space-y-2.5 text-xs">
+              {/* Username */}
+              {selectedUserForDetails.username && (
+                <div className="p-3 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
+                  <div>
+                    <span className="text-slate-400 block text-[10px] mb-0.5">اسم المستخدم</span>
+                    <span className="font-mono font-bold text-purple-300 text-xs" dir="ltr">
+                      @{selectedUserForDetails.username}
+                    </span>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleCopyText(`@${selectedUserForDetails.username}`, "اسم المستخدم")}
+                    className="h-8 px-2 text-slate-400 hover:text-white"
+                  >
+                    {copiedField === "اسم المستخدم" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  </Button>
+                </div>
+              )}
+
+              {/* Email */}
+              {selectedUserForDetails.email && (
+                <div className="p-3 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <span className="text-slate-400 block text-[10px] mb-0.5">البريد الإلكتروني</span>
+                    <span className="font-mono text-slate-200 text-xs truncate block" dir="ltr">
+                      {selectedUserForDetails.email}
+                    </span>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleCopyText(selectedUserForDetails.email!, "البريد الإلكتروني")}
+                    className="h-8 px-2 text-slate-400 hover:text-white"
+                  >
+                    {copiedField === "البريد الإلكتروني" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  </Button>
+                </div>
+              )}
+
+              {/* Academic info if student */}
+              {role === "student" && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-3 rounded-2xl bg-black/40 border border-white/5">
+                    <span className="text-slate-400 block text-[10px] mb-0.5">الفرقة الدراسية</span>
+                    <span className="font-bold text-white">
+                      الفرقة {selectedUserForDetails.academic_year || "1"}
+                    </span>
+                  </div>
+                  <div className="p-3 rounded-2xl bg-black/40 border border-white/5">
+                    <span className="text-slate-400 block text-[10px] mb-0.5">رقم السكشن</span>
+                    <span className="font-bold text-purple-300">
+                      سكشن {selectedUserForDetails.section_number || "1"}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Subject if Doctor / TA */}
+              {(role === "doctor" || role === "ta") && (
+                <div className="p-3 rounded-2xl bg-black/40 border border-white/5">
+                  <span className="text-slate-400 block text-[10px] mb-0.5">المادة المسندة</span>
+                  <span className="font-bold text-purple-200">
+                    {subjects.find((s) => s.id === selectedUserForDetails.subject_id)?.name || "غير محدد"}
+                  </span>
+                </div>
+              )}
+
+              {/* Created At */}
+              {selectedUserForDetails.created_at && (
+                <div className="p-3 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
+                  <span className="text-slate-400 text-[11px] flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                    <span>تاريخ التسجيل:</span>
+                  </span>
+                  <span className="text-slate-300 font-mono text-[11px]" dir="ltr">
+                    {new Date(selectedUserForDetails.created_at).toLocaleDateString("ar-EG")}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="pt-2 flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setSelectedUserForDetails(null)}
+                className="flex-1 border-white/10 hover:bg-white/10 text-slate-200 text-xs font-bold rounded-xl h-10"
+              >
+                إغلاق
+              </Button>
+              <Button
+                onClick={() => {
+                  const target = selectedUserForDetails;
+                  setSelectedUserForDetails(null);
+                  startEdit(target);
+                }}
+                className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl h-10 px-4 gap-1.5"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+                <span>تعديل هذا الحساب</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

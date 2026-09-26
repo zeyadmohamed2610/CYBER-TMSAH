@@ -40,7 +40,7 @@ const Footer = () => {
             </Link>
 
             <div className="text-center lg:text-right">
-              <span className="text-sm font-medium text-foreground block">Helwan International Technological University</span>
+              <span className="text-sm font-bold text-foreground block">CYBER TMSAH - نظام الحضور والغياب</span>
               <span className="text-xs text-muted-foreground">جامعة حلوان التكنولوجية الدولية</span>
             </div>
           </div>
@@ -48,26 +48,17 @@ const Footer = () => {
           <div className="flex flex-col items-center gap-3 order-1 lg:order-2">
             <span className="text-xs font-bold text-primary uppercase tracking-wider">روابط سريعة</span>
             <div className="flex flex-wrap items-center justify-center gap-4">
-              <Link to="/materials" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                المواد الدراسية
+              <Link to="/attendance" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                لوحة الحضور
               </Link>
               <span className="w-1 h-1 rounded-full bg-primary/50" />
               <Link to="/schedule" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                 الجدول الدراسي
               </Link>
               <span className="w-1 h-1 rounded-full bg-primary/50" />
-              <Link to="/attendance" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                الحضور
+              <Link to="/profile" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                الملف الشخصي
               </Link>
-              <span className="w-1 h-1 rounded-full bg-primary/50" />
-              <a
-                href="https://cyber-tmsah.blogspot.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-muted-foreground hover:text-primary transition-colors"
-              >
-                المدونة
-              </a>
             </div>
           </div>
 

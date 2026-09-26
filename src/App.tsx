@@ -33,6 +33,7 @@ const AttendanceOwnerPage = lazy(() => import("./features/attendance/pages/Atten
 const AttendanceDoctorPage = lazy(() => import("./features/attendance/pages/AttendanceDoctorPage"));
 const AttendanceStudentPage = lazy(() => import("./features/attendance/pages/AttendanceStudentPage"));
 const AttendanceTAPage    = lazy(() => import("./features/attendance/pages/AttendanceTAPage"));
+const ProfilePage         = lazy(() => import("./pages/ProfilePage"));
 
 const AppWrapper = ({ children }: { children: React.ReactNode }) => {
   usePerformanceMonitoring();
@@ -112,6 +113,16 @@ const App = () => (
                             element={
                               <AttendanceRoleGate allowedRole="ta">
                                 <AttendanceTAPage />
+                              </AttendanceRoleGate>
+                            }
+                          />
+
+                          {/* ── User Profile & Account Settings ────────────── */}
+                          <Route
+                            path="/profile"
+                            element={
+                              <AttendanceRoleGate allowedRole={["owner", "coordinator", "doctor", "ta", "student"]}>
+                                <ProfilePage />
                               </AttendanceRoleGate>
                             }
                           />
