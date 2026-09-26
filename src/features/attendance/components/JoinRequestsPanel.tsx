@@ -259,9 +259,9 @@ export function JoinRequestsPanel() {
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" dir="rtl">
       {/* ── Top Level Section Tabs (Join vs Password Reset) ──────────────── */}
-      <div className="flex items-center gap-3 border-b border-white/10 pb-3 flex-wrap">
+      <div className="flex items-center gap-3 border-b border-white/10 pb-3 flex-wrap justify-start" dir="rtl">
         <button
           type="button"
           onClick={() => setActiveTab("join")}

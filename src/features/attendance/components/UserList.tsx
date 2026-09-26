@@ -1,5 +1,6 @@
 // src/features/attendance/components/UserList.tsx
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useDebounce } from "@/hooks/useDebounce";
 import {
   Plus,
@@ -1039,21 +1040,27 @@ export function UserList({ role, title }: { role: string; title: string }) {
         </div>
       </CardContent>
 
-      {/* User Details Modal */}
-      {selectedUserForDetails && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-up overflow-y-auto"
-          dir="rtl"
-        >
-          <div className="relative w-full max-w-md my-auto rounded-3xl border border-purple-500/30 bg-[#0A0E1F]/95 backdrop-blur-2xl p-6 shadow-[0_25px_70px_rgba(0,0,0,0.8)] space-y-5">
-            {/* Top Close Button */}
-            <button
-              onClick={() => setSelectedUserForDetails(null)}
-              className="absolute top-4 start-4 w-8 h-8 rounded-full border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
-              aria-label="إغلاق"
-            >
-              <X className="w-4 h-4" />
-            </button>
+      {/* User Details Modal (rendered via Portal to avoid backdrop-blur/overflow-hidden clipping) */}
+      {selectedUserForDetails && typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md overflow-y-auto animate-fade-up"
+            dir="rtl"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setSelectedUserForDetails(null);
+            }}
+          >
+            <div className="relative w-full max-w-md my-auto max-h-[88vh] flex flex-col rounded-3xl border border-purple-500/30 bg-[#0A0E1F]/98 shadow-[0_25px_70px_rgba(0,0,0,0.9)] overflow-hidden">
+              {/* Top Close Button */}
+              <button
+                onClick={() => setSelectedUserForDetails(null)}
+                className="absolute top-4 start-4 z-10 w-8 h-8 rounded-full border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                aria-label="إغلاق"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar flex-1">
 
             {/* Header / Avatar */}
             <div className="flex items-center gap-4">
@@ -1189,9 +1196,11 @@ export function UserList({ role, title }: { role: string; title: string }) {
                 <Edit2 className="w-3.5 h-3.5" />
                 <span>تعديل هذا الحساب</span>
               </Button>
+              </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </Card>
   );

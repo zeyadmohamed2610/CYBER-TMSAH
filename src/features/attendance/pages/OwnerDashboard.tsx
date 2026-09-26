@@ -188,8 +188,8 @@ export const OwnerDashboard = () => {
         )}
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
+      <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl" className="w-full">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar justify-start" dir="rtl">
           {CATEGORIES.map((cat) => {
             const isSelected = activeCategory === cat.id;
             return (
@@ -214,7 +214,7 @@ export const OwnerDashboard = () => {
           })}
         </div>
 
-        <div className="md:hidden my-3">
+        <div className="md:hidden my-3" dir="rtl">
           <div className="relative">
             <select
               id="dashboard-tab-select"
@@ -222,7 +222,7 @@ export const OwnerDashboard = () => {
               value={activeTab}
               onChange={(e) => setActiveTab(e.target.value)}
               className="w-full appearance-none rounded-xl border border-white/10 bg-card/80 px-4 py-3 text-sm font-bold text-white outline-none pr-10 cursor-pointer"
-              aria-label={"\u0627\u062e\u062a\u0631 \u0627\u0644\u0642\u0633\u0645"}
+              aria-label={"اختر القسم"}
             >
               {ALL_TABS.map((tab) => (
                 <option key={tab.value} value={tab.value} className="bg-[#120d1c] text-white">
@@ -234,8 +234,8 @@ export const OwnerDashboard = () => {
           </div>
         </div>
 
-        <div className="hidden md:block w-full overflow-x-auto pb-2 custom-scrollbar my-3 border-b border-white/10">
-          <TabsList className="flex h-auto w-max min-w-full justify-start gap-2 bg-transparent p-0">
+        <div className="hidden md:block w-full overflow-x-auto pb-2 custom-scrollbar my-3 border-b border-white/10" dir="rtl">
+          <TabsList className="flex h-auto w-max min-w-full justify-start gap-2 bg-transparent p-0" dir="rtl">
             {visibleTabs.map((tab) => (
               <TabsTrigger
                 key={tab.value}

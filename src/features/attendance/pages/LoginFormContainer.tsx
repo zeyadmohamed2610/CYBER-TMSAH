@@ -301,7 +301,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
     if (lockRemaining > 0) return;
     setLoginLoading(true); setLoginError(null);
 
-    const raw = username.trim();
+    const raw = username.trim().replace(/^@+/, "");
     let email = raw;
 
     if (!email.includes("@")) {
