@@ -340,7 +340,7 @@ const LoginPage = () => {
 
   return (
     <div
-      className="min-h-[100dvh] w-full flex flex-col items-center justify-center relative overflow-hidden px-4 py-10"
+      className="min-h-[100dvh] w-full flex flex-col items-center justify-center relative overflow-x-hidden overflow-y-auto px-4 py-10"
       dir={isRTL ? "rtl" : "ltr"}
       style={{ background: "#02060F" }}>
 
@@ -462,7 +462,7 @@ const LoginPage = () => {
 
         {/* ── Card ─────────────────────────────────────────────────────── */}
         <div
-          className="w-full overflow-hidden"
+          className="w-full relative"
           style={{
             maxWidth: 460,
             borderRadius: 22,
@@ -482,6 +482,8 @@ const LoginPage = () => {
           <div style={{
             height: 1,
             background: "linear-gradient(90deg, transparent 0%, rgba(99,102,241,0.7) 50%, transparent 100%)",
+            borderTopLeftRadius: 22,
+            borderTopRightRadius: 22,
           }}/>
 
           <div className="px-8 pt-7 pb-8">

@@ -43,6 +43,7 @@ export function CustomRoleSelect({
   isRTL = true,
 }: CustomRoleSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [openUp, setOpenUp] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -53,6 +54,15 @@ export function CustomRoleSelect({
     };
     if (isOpen) document.addEventListener("mousedown", handleOutside);
     return () => document.removeEventListener("mousedown", handleOutside);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      // If space below is less than 170px, open upwards to avoid clipping
+      setOpenUp(spaceBelow < 170 && rect.top > 170);
+    }
   }, [isOpen]);
 
   const selected = options.find((o) => o.value === value) || options[0];
@@ -102,7 +112,9 @@ export function CustomRoleSelect({
       {/* Floating Glass Dropdown Menu */}
       {isOpen && (
         <div
-          className="absolute z-50 start-0 end-0 mt-2 p-1.5 rounded-2xl backdrop-blur-2xl border shadow-2xl overflow-hidden"
+          className={`absolute z-50 start-0 end-0 p-1.5 rounded-2xl backdrop-blur-2xl border shadow-2xl transition-all duration-150 ${
+            openUp ? "bottom-full mb-2" : "top-full mt-2"
+          }`}
           style={{
             background: "rgba(10, 15, 29, 0.98)",
             borderColor: "rgba(99, 102, 241, 0.35)",
