@@ -1,7 +1,16 @@
+// src/features/attendance/pages/StudentDashboard.tsx
+// Updated: Modern tabbed dashboard for Student role
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, AlertCircle, AlertTriangle, ClipboardCheck, CloudOff, TrendingUp, CheckCircle2 } from "lucide-react";
+import {
+  Activity, AlertCircle, AlertTriangle, ClipboardCheck, CloudOff,
+  TrendingUp, CheckCircle2, QrCode, History, BarChart3, ShieldCheck,
+  RefreshCw, Smartphone, Sparkles, BookOpen
+} from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable, type DataTableColumn } from "../components/DataTable";
 import { ActiveSessionsBar } from "../components/ActiveSessionsBar";
 import { AttendanceSubmissionForm } from "../components/AttendanceSubmissionForm";
@@ -14,19 +23,25 @@ import type { AttendanceRecord } from "../types";
 import { formatDateTime } from "../utils/rotatingSession";
 import { offlineAttendanceService } from "../services/offlineAttendanceService";
 
-
 export const StudentDashboard = () => {
   const { fullName, user } = useAttendanceAuth();
   const { loading, error, metrics, records, sessions, subjectMetrics, refetch } =
     useAttendanceDashboardData("student");
-  const { isDeviceLocked, lockLabel, locking, lockDevice } = useDeviceLock(user?.id);
+  const { isDeviceLocked, lockLabel } = useDeviceLock(user?.id);
 
+  const [activeTab, setActiveTab] = useState("checkin");
   const [pendingCount, setPendingCount] = useState(0);
+  const [syncing, setSyncing] = useState(false);
 
   const syncAndRefresh = useCallback(async () => {
-    await offlineAttendanceService.syncPending();
-    setPendingCount(offlineAttendanceService.getPendingCount());
-    refetch();
+    setSyncing(true);
+    try {
+      await offlineAttendanceService.syncPending();
+      setPendingCount(offlineAttendanceService.getPendingCount());
+      refetch();
+    } finally {
+      setSyncing(false);
+    }
   }, [refetch]);
 
   useEffect(() => {
@@ -39,121 +54,331 @@ export const StudentDashboard = () => {
     return () => window.removeEventListener("online", handleOnline);
   }, [syncAndRefresh]);
 
-  const absenceRate = 100 - metrics.attendanceRate;
+  const absenceRate = Math.max(0, 100 - metrics.attendanceRate);
   const topSubjects = useMemo(() =>
     [...subjectMetrics].sort((a, b) => b.attendanceRate - a.attendanceRate).slice(0, 3),
   [subjectMetrics]);
-  const isCriticalAttendance = metrics.attendanceRate < 50;
-  const isWarningAttendance = metrics.attendanceRate >= 50 && metrics.attendanceRate < 70;
+  const isCriticalAttendance = metrics.attendanceRate < 50 && (metrics.totalSessions ?? 0) > 0;
+  const isWarningAttendance = metrics.attendanceRate >= 50 && metrics.attendanceRate < 70 && (metrics.totalSessions ?? 0) > 0;
   const isLowAttendance = isCriticalAttendance || isWarningAttendance;
 
   const columns = useMemo<DataTableColumn<AttendanceRecord>[]>(() => [
-    { id: "subject", header: "المادة", cell: (row) => row.subjectName || "—" },
-    { id: "submitted-at", header: "وقت التسجيل", cell: (row) => formatDateTime(row.submittedAt) },
-    { id: "session", header: "معرف الجلسة", cell: (row) => `${row.sessionId.slice(0, 8)}…` },
+    {
+      id: "subject",
+      header: "المادة الدراسية",
+      cell: (row) => (
+        <div className="flex items-center gap-2">
+          <BookOpen className="h-4 w-4 text-primary shrink-0" />
+          <span className="font-semibold text-foreground">{row.subjectName || "—"}</span>
+        </div>
+      )
+    },
+    {
+      id: "submitted-at",
+      header: "وقت التسجيل",
+      cell: (row) => (
+        <span className="text-sm text-muted-foreground" dir="ltr">
+          {formatDateTime(row.submittedAt)}
+        </span>
+      )
+    },
+    {
+      id: "status",
+      header: "الحالة",
+      cell: () => (
+        <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-400 gap-1">
+          <CheckCircle2 className="h-3 w-3" />
+          حاضر
+        </Badge>
+      )
+    },
+    {
+      id: "session",
+      header: "معرف الجلسة",
+      cell: (row) => (
+        <span className="text-xs font-mono text-muted-foreground bg-muted/40 px-2 py-1 rounded">
+          {row.sessionId.slice(0, 8)}…
+        </span>
+      )
+    },
   ], []);
 
   return (
-    <div className="space-y-6">
-      {fullName && (
-        <p className="text-lg font-bold truncate">
-          مرحباً يا <span className="text-primary">{fullName}</span>
-        </p>
-      )}
+    <div className="space-y-6" dir="rtl">
+      {/* ── Welcome & Status Top Bar ──────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl glass-card border border-white/10">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
+              أهلاً بك، <span className="text-primary">{fullName || "عزيزي الطالب"}</span>
+            </h2>
+          </div>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            تابع حضورك وسجل في الجلسات الأكاديمية النشطة بكل موثوقية وأمان.
+          </p>
+        </div>
 
-      {pendingCount > 0 && (
-        <Badge variant="outline" className="gap-1.5 border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
-          <CloudOff className="h-3.5 w-3.5" />
-          {pendingCount} تسجيل في انتظار المزامنة
-        </Badge>
-      )}
+        <div className="flex items-center gap-2 flex-wrap">
+          {pendingCount > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={syncAndRefresh}
+              disabled={syncing}
+              className="gap-1.5 border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 text-xs h-8"
+            >
+              <CloudOff className="h-3.5 w-3.5" />
+              {pendingCount} معلق (مزامنة)
+            </Button>
+          )}
 
-      {isDeviceLocked ? (
-        <Badge variant="outline" className="gap-1.5 border-green-500 bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400">
-          <CheckCircle2 className="h-3.5 w-3.5" />
-          جهازك مغلق ({lockLabel})
-        </Badge>
-      ) : null}
+          {isDeviceLocked ? (
+            <Badge variant="outline" className="gap-1.5 border-emerald-500/40 bg-emerald-500/10 text-emerald-400 py-1 px-3">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+              جهاز موثق ({lockLabel || "هذا الجهاز"})
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="gap-1.5 border-amber-500/40 bg-amber-500/10 text-amber-400 py-1 px-3">
+              <Smartphone className="h-3.5 w-3.5" />
+              غير مقفول
+            </Badge>
+          )}
+        </div>
+      </div>
 
-      {error ? (
+      {/* ── Error Alert ───────────────────────────────────────────────────── */}
+      {error && (
         <Alert variant="destructive" role="alert" aria-live="assertive">
           <AlertTitle>خطأ في الاتصال بقاعدة البيانات</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-      ) : null}
+      )}
 
+      {/* ── Attendance Warning ────────────────────────────────────────────── */}
       {isLowAttendance && (
         <Alert
           variant="default"
           className={
             isCriticalAttendance
-              ? "border-red-500 bg-red-50 dark:bg-red-950/30 dark:border-red-500/70 animate-pulse"
-              : "border-orange-400 bg-orange-50 dark:bg-orange-950/30 dark:border-orange-400/70"
+              ? "border-red-500 bg-red-950/30 border-red-500/70 animate-pulse text-red-200"
+              : "border-amber-500 bg-amber-950/30 border-amber-500/70 text-amber-200"
           }
         >
           {isCriticalAttendance ? (
-            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+            <AlertCircle className="h-5 w-5 text-red-400" />
           ) : (
-            <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+            <AlertTriangle className="h-5 w-5 text-amber-400" />
           )}
-          <AlertTitle className={isCriticalAttendance ? "text-red-700 dark:text-red-300 text-base font-bold" : "text-orange-700 dark:text-orange-300 text-base font-bold"}>
-            {isCriticalAttendance ? "تحذير: معدل حضور منخفض جداً!" : "تنبيه معدل الحضور"}
+          <AlertTitle className="text-base font-bold">
+            {isCriticalAttendance ? "تحذير أمني وأكاديمي: معدل الحضور منخفض للغاية!" : "تنبيه انخفاض نسبة الحضور"}
           </AlertTitle>
-          <AlertDescription className={isCriticalAttendance ? "text-red-600 dark:text-red-400" : "text-orange-600 dark:text-orange-400"}>
+          <AlertDescription className="text-sm mt-1 leading-relaxed">
             معدل حضورك الحالي <strong>{metrics.attendanceRate.toFixed(1)}%</strong>.
-            {isCriticalAttendance ? " هذا المعدل خطير ويجب عليك حضور المزيد من الجلسات فوراً لتجنب رسوبك." : " يُنصح بحضور المزيد من الجلسات لتحسين أدائك."}
+            {isCriticalAttendance
+              ? " تجاوزت نسبة الغياب المسموح بها ويجب مراجعة إدارة الكلية لحضور الجلسات القادمة لتجنب الحرمان."
+              : " يُرجى الحرص على حضور الجلسات القادمة لتحسين تقييمك التراكمي."}
           </AlertDescription>
         </Alert>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <StatCard title="معدل الحضور" value={`${metrics.attendanceRate.toFixed(1)}%`} description="نسبة حضوري" icon={Activity} className={metrics.attendanceRate >= 70 ? "border-green-500/50" : "border-yellow-500/50"} />
-        <StatCard title="معدل الغياب" value={`${absenceRate.toFixed(1)}%`} description="نسبة الغياب" icon={ClipboardCheck} className={absenceRate > 30 ? "border-red-500/50" : ""} />
-      </div>
+      {/* ── Navigation Tabs ───────────────────────────────────────────────── */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl" className="w-full space-y-6">
+        <TabsList className="flex h-auto w-full justify-start gap-2 bg-black/40 border border-white/10 p-1.5 rounded-xl flex-wrap">
+          <TabsTrigger
+            value="checkin"
+            className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border-primary/40 border border-transparent px-4 py-2 rounded-lg font-bold text-sm gap-2 transition-all"
+          >
+            <QrCode className="h-4 w-4" />
+            تسجيل الحضور
+          </TabsTrigger>
 
-      <div className="rounded-3xl glass-card p-4 sm:p-6 animate-fade-up-delay-1">
-        <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Activity className="h-5 w-5 text-primary"/> الجلسات النشطة الآن</h3>
-        <ActiveSessionsBar />
-      </div>
+          <TabsTrigger
+            value="records"
+            className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border-primary/40 border border-transparent px-4 py-2 rounded-lg font-bold text-sm gap-2 transition-all"
+          >
+            <History className="h-4 w-4" />
+            سجل حضوري ({records.length})
+          </TabsTrigger>
 
-      <AttendanceSubmissionForm sessions={sessions} onSubmitSuccess={refetch} />
+          <TabsTrigger
+            value="analytics"
+            className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border-primary/40 border border-transparent px-4 py-2 rounded-lg font-bold text-sm gap-2 transition-all"
+          >
+            <BarChart3 className="h-4 w-4" />
+            النسب والمقررات
+          </TabsTrigger>
 
-      {topSubjects.length > 0 && (
-        <div className="rounded-2xl glass-card p-4 sm:p-6 shadow-sm">
-          <h3 className="mb-4 flex items-center gap-2 text-base font-bold">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            أفضل المواد في الحضور
-          </h3>
-          <div className="flex flex-wrap gap-2 sm:gap-3">
-            {topSubjects.map((subject) => (
-              <div key={subject.subjectName} className="flex items-center gap-2 rounded-xl bg-background/50 border border-white/5 px-4 py-2 text-sm shadow-inner transition hover:bg-background/80">
-                <span className="font-semibold">{subject.subjectName}</span>
-                <span className="text-primary font-bold bg-primary/10 px-2 py-0.5 rounded-md">{subject.attendanceRate.toFixed(0)}%</span>
+          <TabsTrigger
+            value="device"
+            className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border-primary/40 border border-transparent px-4 py-2 rounded-lg font-bold text-sm gap-2 transition-all"
+          >
+            <ShieldCheck className="h-4 w-4" />
+            أمان الجهاز
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ── TAB 1: Check-in ─────────────────────────────────────────────── */}
+        <TabsContent value="checkin" className="space-y-6 focus-visible:outline-none">
+          {/* Active Sessions Panel */}
+          <div className="rounded-3xl glass-card p-5 sm:p-6 border border-white/10 shadow-lg">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                <Activity className="h-5 w-5 text-primary animate-pulse" />
+                الجلسات النشطة الآن
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => refetch()}
+                className="h-8 px-2 text-xs text-muted-foreground hover:text-white gap-1"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                تحديث
+              </Button>
+            </div>
+            <ActiveSessionsBar />
+          </div>
+
+          {/* Submission Form */}
+          <AttendanceSubmissionForm sessions={sessions} onSubmitSuccess={refetch} />
+        </TabsContent>
+
+        {/* ── TAB 2: Attendance Records ───────────────────────────────────── */}
+        <TabsContent value="records" className="space-y-4 focus-visible:outline-none">
+          <DataTable
+            title="سجل الحضور الأكاديمي"
+            caption={loading ? "جارٍ التحميل..." : "يعرض هذا الجدول جميع المحاضرات والسكاشن التي تم إثبات حضورك فيها."}
+            columns={columns}
+            rows={records}
+            getRowId={(row) => row.id}
+            emptyMessage="لا توجد سجلات حضور مسجلة حتى الآن."
+          />
+        </TabsContent>
+
+        {/* ── TAB 3: Analytics & Progress ─────────────────────────────────── */}
+        <TabsContent value="analytics" className="space-y-6 focus-visible:outline-none">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <StatCard
+              title="معدل الحضور العام"
+              value={`${metrics.attendanceRate.toFixed(1)}%`}
+              description="نسبة التزامك الكلية"
+              icon={Activity}
+              className={metrics.attendanceRate >= 70 ? "border-emerald-500/50" : "border-amber-500/50"}
+            />
+            <StatCard
+              title="معدل الغياب"
+              value={`${absenceRate.toFixed(1)}%`}
+              description="نسبة الغياب عن المحاضرات"
+              icon={ClipboardCheck}
+              className={absenceRate > 30 ? "border-red-500/50" : "border-white/10"}
+            />
+          </div>
+
+          {topSubjects.length > 0 && (
+            <Card className="bg-card/70 border-white/10">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  أعلى المواد التزاماً بالحضور
+                </CardTitle>
+                <CardDescription>المواد التي حققت فيها أعلى معدلات تواجد</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2.5">
+                  {topSubjects.map((subject) => (
+                    <div
+                      key={subject.subjectName}
+                      className="flex items-center gap-2 rounded-xl bg-background/60 border border-white/10 px-4 py-2.5 text-sm shadow-inner transition hover:border-primary/40"
+                    >
+                      <span className="font-semibold text-white">{subject.subjectName}</span>
+                      <span className="text-primary font-bold bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-lg text-xs">
+                        {subject.attendanceRate.toFixed(0)}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {subjectMetrics.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-primary" />
+                تفاصيل المواد الدراسية والغياب
+              </h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {subjectMetrics.map((subject) => (
+                  <SubjectProgressCard key={subject.subjectName} metric={subject} />
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            </div>
+          )}
+        </TabsContent>
 
-      {subjectMetrics.length > 0 && (
-        <div className="rounded-2xl glass-card p-4 sm:p-6 animate-fade-up-delay-2">
-          <h3 className="mb-4 text-lg font-bold">التفاصيل الفردية للمواد</h3>
-          <div className="space-y-3">
-            {subjectMetrics.map((subject) => (
-              <SubjectProgressCard key={subject.subjectName} metric={subject} />
-            ))}
-          </div>
-        </div>
-      )}
+        {/* ── TAB 4: Device & Security ────────────────────────────────────── */}
+        <TabsContent value="device" className="space-y-4 focus-visible:outline-none">
+          <Card className="bg-card/70 border-white/10">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Smartphone className="h-5 w-5 text-primary" />
+                حالة قفل وتوثيق الجهاز
+              </CardTitle>
+              <CardDescription>
+                نظام الحماية يمنع تسجيل الحضور إلا من الجهاز المعتمد والمربوط بحسابك الأكاديمي.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="rounded-xl border border-white/10 bg-background/50 p-4 space-y-1">
+                  <p className="text-xs text-muted-foreground">حالة الجهاز الحالي</p>
+                  <div className="flex items-center gap-2">
+                    {isDeviceLocked ? (
+                      <span className="font-bold text-emerald-400 flex items-center gap-1.5">
+                        <CheckCircle2 className="h-4 w-4" />
+                        موثق ومقترن بنجاح
+                      </span>
+                    ) : (
+                      <span className="font-bold text-amber-400">غير مقترن بعد</span>
+                    )}
+                  </div>
+                </div>
 
-      <DataTable
-        title="سجل حضوري"
-        caption={loading ? "جارٍ التحميل..." : "يمكنك فقط مشاهدة سجلك الخاص."}
-        columns={columns}
-        rows={records}
-        getRowId={(row) => row.id}
-        emptyMessage="لا توجد سجلات حضور."
-      />
+                <div className="rounded-xl border border-white/10 bg-background/50 p-4 space-y-1">
+                  <p className="text-xs text-muted-foreground">معرف الجهاز المقترن</p>
+                  <p className="font-mono text-sm text-foreground">{lockLabel || "هذا الجهاز"}</p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-xs text-muted-foreground leading-relaxed space-y-2">
+                <p className="font-bold text-primary text-sm flex items-center gap-1.5">
+                  <ShieldCheck className="h-4 w-4" />
+                  سياسة الأمان ومنع التلاعب:
+                </p>
+                <ul className="list-disc list-inside space-y-1 marker:text-primary">
+                  <li>يتم استخدام بصمة التشفير الرقمية وإحداثيات GPS للتحقق من وجود الطالب الفعلي داخل القاعة.</li>
+                  <li>في حال تغيير هاتفك أو فرمتته، يرجى تقديم طلب للمشرف الأكاديمي أو منسق البرنامج لإعادة تعيين قفل الجهاز.</li>
+                  <li>التسجيلات غير المتصلة بالإنترنت يتم تخزينها بأمان وتتم مزامنتها تلقائياً عند عودة الاتصال.</li>
+                </ul>
+              </div>
+
+              <div className="pt-2 flex justify-start">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={syncAndRefresh}
+                  disabled={syncing}
+                  className="gap-2 border-white/15 hover:bg-white/5"
+                >
+                  <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+                  {syncing ? "جارٍ المزامنة والتحديث..." : "مزامنة البيانات فورياً"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
