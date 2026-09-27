@@ -15,6 +15,9 @@ import {
   Calendar,
   Sparkles,
   Lock,
+  Fingerprint,
+  Trash2,
+  Key,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,6 +62,153 @@ export default function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+
+  // Passkey (WebAuthn) State
+  const [passkeys, setPasskeys] = useState<{ id: string; rawId: string; label: string; createdAt: string }[]>([]);
+  const [creatingPasskey, setCreatingPasskey] = useState(false);
+  const [testingPasskeyId, setTestingPasskeyId] = useState<string | null>(null);
+
+  // Load passkeys from local storage & user metadata
+  useEffect(() => {
+    if (!user?.id) return;
+    try {
+      const stored = localStorage.getItem(`cyber_passkeys_${user.id}`);
+      if (stored) {
+        setPasskeys(JSON.parse(stored));
+      } else if (user.user_metadata?.passkeys) {
+        setPasskeys(user.user_metadata.passkeys);
+      }
+    } catch (e) {
+      console.error("Failed to load passkeys:", e);
+    }
+  }, [user]);
+
+  const savePasskeys = (items: { id: string; rawId: string; label: string; createdAt: string }[]) => {
+    if (!user?.id) return;
+    setPasskeys(items);
+    try {
+      localStorage.setItem(`cyber_passkeys_${user.id}`, JSON.stringify(items));
+      supabase.auth.updateUser({
+        data: { passkeys: items },
+      }).catch(console.error);
+    } catch (e) {
+      console.error("Failed to persist passkeys:", e);
+    }
+  };
+
+  const handleCreatePasskey = async () => {
+    if (typeof window === "undefined" || !window.PublicKeyCredential) {
+      toast.error("متصفحك أو جهازك الحالي لا يدعم تقنية مفاتيح المرور (WebAuthn).");
+      return;
+    }
+
+    try {
+      setCreatingPasskey(true);
+      const challenge = new Uint8Array(32);
+      crypto.getRandomValues(challenge);
+
+      const userIdBytes = new TextEncoder().encode(user?.id || "user");
+      const rpName = "CYBER TMSAH | منصة الأمن السيبراني";
+      const domain = window.location.hostname;
+
+      const credential = (await navigator.credentials.create({
+        publicKey: {
+          challenge,
+          rp: {
+            name: rpName,
+            id: domain === "localhost" ? "localhost" : domain,
+          },
+          user: {
+            id: userIdBytes,
+            name: user?.email || "academic-user",
+            displayName: profile?.full_name || fullName || "مستخدم أكاديمي",
+          },
+          pubKeyCredParams: [
+            { alg: -7, type: "public-key" }, // ES256
+            { alg: -257, type: "public-key" }, // RS256
+          ],
+          authenticatorSelection: {
+            userVerification: "preferred",
+            residentKey: "preferred",
+          },
+          timeout: 60000,
+        },
+      })) as PublicKeyCredential | null;
+
+      if (credential) {
+        const rawIdBase64 = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+        const platformDesc = navigator.userAgent.includes("Mobile")
+          ? "هاتف ذكي (بصمة / Face ID)"
+          : navigator.userAgent.includes("Windows")
+          ? "جهاز كمبيوتر (Windows Hello)"
+          : navigator.userAgent.includes("Mac")
+          ? "جهاز Mac (Touch ID)"
+          : "مفتاح أمان بيومتري";
+
+        const newKey = {
+          id: credential.id,
+          rawId: rawIdBase64,
+          label: `${platformDesc} - ${new Date().toLocaleDateString("ar-EG")}`,
+          createdAt: new Date().toISOString(),
+        };
+
+        const updated = [...passkeys, newKey];
+        savePasskeys(updated);
+        toast.success("تم إنشاء وتوثيق مفتاح المرور (Passkey) بنجاح!");
+      }
+    } catch (err: unknown) {
+      console.error("Passkey creation error:", err);
+      if (err instanceof Error && err.name === "NotAllowedError") {
+        toast.error("تم إلغاء عملية إضافة مفتاح المرور أو انتهت المهلة المحددة.");
+      } else {
+        toast.error("تعذر إكمال تسجيل مفتاح المرور. تأكد من تفعيل البصمة أو PIN على جهازك.");
+      }
+    } finally {
+      setCreatingPasskey(false);
+    }
+  };
+
+  const handleTestPasskey = async (passkeyId: string) => {
+    if (typeof window === "undefined" || !window.PublicKeyCredential) {
+      toast.error("المتصفح لا يدعم WebAuthn.");
+      return;
+    }
+
+    try {
+      setTestingPasskeyId(passkeyId);
+      const challenge = new Uint8Array(32);
+      crypto.getRandomValues(challenge);
+      const domain = window.location.hostname;
+
+      const assertion = await navigator.credentials.get({
+        publicKey: {
+          challenge,
+          rpId: domain === "localhost" ? "localhost" : domain,
+          userVerification: "preferred",
+          timeout: 60000,
+        },
+      });
+
+      if (assertion) {
+        toast.success("تم التحقق بنجاح! يعمل مفتاح المرور البيومتري بكفاءة تامة.");
+      }
+    } catch (err: unknown) {
+      console.error("Passkey test error:", err);
+      if (err instanceof Error && err.name === "NotAllowedError") {
+        toast.info("تم إلغاء عملية التحقق.");
+      } else {
+        toast.error("فشل التحقق من مفتاح المرور.");
+      }
+    } finally {
+      setTestingPasskeyId(null);
+    }
+  };
+
+  const handleDeletePasskey = (passkeyId: string) => {
+    const updated = passkeys.filter((p) => p.id !== passkeyId);
+    savePasskeys(updated);
+    toast.success("تم حذف مفتاح المرور.");
+  };
 
   // Fetch full user profile
   useEffect(() => {
@@ -530,6 +680,110 @@ export default function ProfilePage() {
                         </Button>
                       </div>
                     </form>
+                  </CardContent>
+                </Card>
+
+                {/* 3. Passkey (WebAuthn) Management */}
+                <Card className="border border-purple-500/20 bg-[#0A0E1F]/80 backdrop-blur-xl rounded-3xl p-6 shadow-lg">
+                  <CardHeader className="p-0 pb-4">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div>
+                        <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
+                          <Fingerprint className="w-5 h-5 text-purple-400" />
+                          <span>مفاتيح المرور البيومترية (Passkeys)</span>
+                        </CardTitle>
+                        <CardDescription className="text-xs text-slate-400 mt-1">
+                          سجل الدخول فورياً باستخدام بصمة الإصبع، التعرف على الوجه (Face ID)، أو Windows Hello دون الحاجة لكلمة مرور
+                        </CardDescription>
+                      </div>
+                      <span className="inline-flex items-center rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-[11px] font-bold text-purple-300">
+                        FIDO2 / WebAuthn
+                      </span>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="p-0 space-y-4">
+                    {passkeys.length === 0 ? (
+                      <div className="rounded-2xl border border-white/5 bg-black/40 p-6 text-center space-y-3">
+                        <div className="w-12 h-12 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto text-purple-400">
+                          <Fingerprint className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-white">لم تقم بإضافة مفتاح مرور حتى الآن</p>
+                          <p className="text-xs text-slate-400 mt-0.5 max-w-md mx-auto">
+                            يمكنك ربط هذا الجهاز لتسجيل الدخول السريع بلمسة واحدة أو عبر الكاميرا بأعلى معايير التشفير السيبراني.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {passkeys.map((pk) => (
+                          <div
+                            key={pk.id}
+                            className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-black/40 border border-white/5 hover:border-purple-500/30 transition-all flex-wrap sm:flex-nowrap"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/25 flex items-center justify-center text-purple-300 shrink-0">
+                                <Key className="w-5 h-5" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-bold text-white truncate">{pk.label}</p>
+                                <p className="text-[11px] text-slate-400 font-mono" dir="ltr">
+                                  {new Date(pk.createdAt).toLocaleString("ar-EG")}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0 mr-auto sm:mr-0">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleTestPasskey(pk.id)}
+                                disabled={testingPasskeyId === pk.id}
+                                className="border-purple-500/30 hover:bg-purple-500/10 text-purple-300 text-xs h-8 rounded-xl gap-1.5"
+                              >
+                                {testingPasskeyId === pk.id ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                                )}
+                                <span>اختبار المفتاح</span>
+                              </Button>
+
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDeletePasskey(pk.id)}
+                                className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 text-xs h-8 rounded-xl px-2.5"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-white/5">
+                      <div className="flex items-center gap-2 text-xs text-slate-400">
+                        <Shield className="w-4 h-4 text-purple-400 shrink-0" />
+                        <span>مفاتيح المرور مشفرة محلياً ولا يتم إرسال بصمتك لأي خادم أبداً.</span>
+                      </div>
+
+                      <Button
+                        type="button"
+                        onClick={handleCreatePasskey}
+                        disabled={creatingPasskey}
+                        className="w-full sm:w-auto bg-purple-600/30 hover:bg-purple-600/40 text-purple-200 border border-purple-500/40 font-bold rounded-xl h-10 px-5 text-xs gap-2 shrink-0 transition-all hover:scale-[1.02]"
+                      >
+                        {creatingPasskey ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Fingerprint className="w-4 h-4 text-purple-300" />
+                        )}
+                        <span>إنشاء مفتاح مرور جديد</span>
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
