@@ -1327,6 +1327,18 @@ export default function ProfilePage() {
 
                       <CardContent className="p-0 pt-6">
                         <form onSubmit={handleChangePassword} className="space-y-5">
+                          {/* Hidden username input for browser accessibility and password manager compliance */}
+                          <input
+                            type="text"
+                            name="username"
+                            autoComplete="username"
+                            value={user?.email || profile?.username || ""}
+                            readOnly
+                            className="sr-only"
+                            aria-hidden="true"
+                            tabIndex={-1}
+                          />
+
                           {/* New Password */}
                           <div className="space-y-2">
                             <Label className="text-xs font-bold text-slate-300">كلمة المرور الجديدة*</Label>
@@ -1614,6 +1626,18 @@ export default function ProfilePage() {
           </DialogHeader>
 
           <form onSubmit={handleVerifyPasswordAndCreatePasskey} className="space-y-4 pt-2">
+            {/* Hidden username input for browser accessibility and password manager compliance */}
+            <input
+              type="text"
+              name="username"
+              autoComplete="username"
+              value={user?.email || profile?.username || ""}
+              readOnly
+              className="sr-only"
+              aria-hidden="true"
+              tabIndex={-1}
+            />
+
             <div className="space-y-2">
               <Label htmlFor="passkey-reauth-pass" className="text-xs text-slate-300 font-medium">
                 كلمة مرور حسابك الحالية
