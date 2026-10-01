@@ -1,6 +1,12 @@
-// src/features/auth/components/ForgotPasswordModal.tsx
 import { useState } from "react";
 import { X, KeyRound, Mail, Phone, Send, CheckCircle2, MessageCircle, Copy, Loader2, ExternalLink } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabaseClient";
 import { recordAuditLog } from "../services/auditService";
@@ -107,42 +113,41 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-up"
-      dir={isRTL ? "rtl" : "ltr"}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        className="relative w-full max-w-md rounded-3xl border border-purple-500/30 bg-[#0A0F1D]/95 backdrop-blur-2xl p-6 sm:p-7 space-y-5 shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_35px_rgba(147,51,234,0.2)]"
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        className="max-w-md bg-[#0A0F1D]/98 border border-purple-500/30 text-white rounded-3xl p-6 sm:p-7 shadow-[0_25px_70px_rgba(0,0,0,0.95)] max-h-[90vh] overflow-y-auto [&>button:last-child]:hidden"
+        dir={isRTL ? "rtl" : "ltr"}
       >
-        {/* Close Button */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-4 end-4 w-8 h-8 rounded-full border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
-          aria-label="Close"
-        >
-          <X className="w-4 h-4" />
-        </button>
-
         {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shadow-[0_0_15px_rgba(147,51,234,0.25)]">
-            <KeyRound className="w-5 h-5" />
+        <DialogHeader className="text-start pb-2 border-b border-white/10 shrink-0">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shadow-[0_0_15px_rgba(147,51,234,0.25)] shrink-0">
+                <KeyRound className="w-5 h-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-base font-black text-white">
+                  {lang === "ar" ? "استعادة كلمة المرور" : "Reset Password"}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-400 mt-0.5">
+                  {lang === "ar"
+                    ? "أدخل بريدك الإلكتروني ورقم هاتفك وسيقوم الدعم الفني بمساعدتك فوراً"
+                    : "Enter your email and phone number, support will assist you immediately"}
+                </DialogDescription>
+              </div>
+            </div>
+
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 rounded-xl bg-white/5 hover:bg-rose-500/20 border border-white/10 hover:border-rose-500/40 flex items-center justify-center text-slate-400 hover:text-rose-400 transition-all cursor-pointer shrink-0"
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          <div>
-            <h3 className="text-base font-black text-white">
-              {lang === "ar" ? "استعادة كلمة المرور" : "Reset Password"}
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {lang === "ar"
-                ? "أدخل بريدك الـ Gmail ورقم واتسابك لاستلام بيانات الدخول الجديدة"
-                : "Enter your Gmail and WhatsApp number to receive recovery details"}
-            </p>
-          </div>
-        </div>
+        </DialogHeader>
 
         {sentSuccess ? (
           <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 space-y-3 text-center animate-fade-up">
@@ -282,7 +287,7 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
             </div>
           </form>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

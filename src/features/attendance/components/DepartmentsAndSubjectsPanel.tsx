@@ -14,6 +14,13 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
 import { DEPARTMENTS, type DepartmentInfo } from "../types";
@@ -303,40 +310,54 @@ export const DepartmentsAndSubjectsPanel = () => {
         })}
       </div>
 
-      {/* ── Modal / Drawer: Subjects of the Selected Department ── */}
-      {selectedDept && (
-        <div
-          className="fixed inset-0 z-[90] flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md animate-fade-up overflow-y-auto"
+      {/* ── Dialog: Subjects of the Selected Department ── */}
+      <Dialog
+        open={Boolean(selectedDept)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedDept(null);
+            setShowAddSubject(false);
+            setEditingSubjectId(null);
+          }
+        }}
+      >
+        <DialogContent
+          className="max-w-2xl bg-[#0A0F1D]/98 border border-purple-500/30 text-white rounded-3xl p-5 sm:p-7 shadow-[0_25px_70px_rgba(0,0,0,0.85)] backdrop-blur-2xl max-h-[88vh] flex flex-col overflow-hidden [&>button:last-child]:hidden"
           dir="rtl"
         >
-          <div className="relative w-full max-w-2xl my-auto rounded-3xl border border-purple-500/30 bg-[#0A0F1D]/95 backdrop-blur-2xl p-5 sm:p-7 shadow-[0_25px_70px_rgba(0,0,0,0.85)] space-y-5">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+          {/* Modal Header */}
+          <DialogHeader className="text-start pb-4 border-b border-white/10 shrink-0">
+            <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-purple-600/20 border border-purple-500/40 flex items-center justify-center text-purple-400">
+                <div className="w-10 h-10 rounded-2xl bg-purple-600/20 border border-purple-500/40 flex items-center justify-center text-purple-400 shrink-0">
                   <BookOpen className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-white">
-                    مواد {selectedDept.nameAr}
-                  </h3>
-                  <p className="text-xs text-slate-400">
+                  <DialogTitle className="text-lg font-black text-white">
+                    مواد {selectedDept?.nameAr}
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-slate-400 mt-0.5">
                     قائمة المقررات المسجلة وإمكانية إضافة وتعديل وحذف المقررات
-                  </p>
+                  </DialogDescription>
                 </div>
               </div>
 
               <button
+                type="button"
                 onClick={() => {
                   setSelectedDept(null);
                   setShowAddSubject(false);
                 }}
-                className="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+                className="w-8 h-8 rounded-xl bg-white/5 hover:bg-rose-500/20 border border-white/10 hover:border-rose-500/40 flex items-center justify-center text-slate-400 hover:text-rose-400 transition-all cursor-pointer shrink-0"
+                aria-label="إغلاق"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
+          </DialogHeader>
 
+          {/* Modal Scrollable Body */}
+          <div className="space-y-4 py-2 overflow-y-auto custom-scrollbar flex-1 pr-1">
             {/* Actions Bar */}
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="relative flex-1 min-w-[200px]">
@@ -350,6 +371,7 @@ export const DepartmentsAndSubjectsPanel = () => {
               </div>
 
               <Button
+                type="button"
                 onClick={() => setShowAddSubject((v) => !v)}
                 className="h-10 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-[0_0_20px_rgba(147,51,234,0.3)] flex items-center gap-2"
               >
@@ -362,7 +384,7 @@ export const DepartmentsAndSubjectsPanel = () => {
             {showAddSubject && (
               <form
                 onSubmit={handleAddSubject}
-                className="rounded-2xl border border-purple-500/40 bg-purple-950/20 p-4 space-y-3 animate-fade-up"
+                className="rounded-2xl border border-purple-500/40 bg-purple-950/20 p-4 space-y-3"
               >
                 <h4 className="text-xs font-bold text-purple-300">إضافة مقرر دراسي جديد</h4>
                 <div className="flex items-center gap-2">
@@ -385,7 +407,7 @@ export const DepartmentsAndSubjectsPanel = () => {
             )}
 
             {/* Subjects List */}
-            <div className="max-h-[360px] overflow-y-auto custom-scrollbar space-y-2.5 pr-1">
+            <div className="space-y-2.5">
               {loadingSubjects ? (
                 <div className="py-8 text-center text-xs text-slate-400">
                   جارٍ تحميل المواد الدراسية...
@@ -445,18 +467,20 @@ export const DepartmentsAndSubjectsPanel = () => {
                       {!isEditingThis && (
                         <div className="flex items-center gap-1.5 shrink-0">
                           <button
+                            type="button"
                             onClick={() => {
                               setEditingSubjectId(subject.id);
                               setEditSubjectName(subject.name);
                             }}
-                            className="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+                            className="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
                             title="تعديل اسم المادة"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button
+                            type="button"
                             onClick={() => handleDeleteSubject(subject.id, subject.name)}
-                            className="w-8 h-8 rounded-lg border border-rose-500/20 flex items-center justify-center text-rose-400 hover:bg-rose-500/15 transition-all"
+                            className="w-8 h-8 rounded-lg border border-rose-500/20 flex items-center justify-center text-rose-400 hover:bg-rose-500/15 transition-all cursor-pointer"
                             title="حذف المادة"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -468,20 +492,21 @@ export const DepartmentsAndSubjectsPanel = () => {
                 })
               )}
             </div>
-
-            {/* Modal Footer */}
-            <div className="pt-2 border-t border-white/10 flex justify-end">
-              <Button
-                variant="ghost"
-                onClick={() => setSelectedDept(null)}
-                className="text-xs text-slate-300 hover:text-white hover:bg-white/5"
-              >
-                إغلاق النافذة
-              </Button>
-            </div>
           </div>
-        </div>
-      )}
+
+          {/* Modal Footer */}
+          <div className="pt-3 border-t border-white/10 flex justify-end shrink-0">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setSelectedDept(null)}
+              className="text-xs text-slate-300 hover:text-white hover:bg-white/5 rounded-xl h-9 px-4"
+            >
+              إغلاق النافذة
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

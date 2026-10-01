@@ -1,5 +1,5 @@
-// src/components/ErrorModal.tsx
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { AlertCircle, CheckCircle2, Send, RefreshCw, X, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,8 +47,10 @@ export function ErrorModal() {
     window.location.reload();
   };
 
-  return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in" dir="rtl">
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md" dir="rtl">
       <div className="relative w-full max-w-md rounded-2xl bg-[#0d0914] border border-purple-500/30 p-6 shadow-[0_0_50px_rgba(168,85,247,0.25)] text-right">
         {/* Glow ambient decoration */}
         <div className="absolute -top-12 -right-12 w-32 h-32 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
@@ -138,6 +140,7 @@ export function ErrorModal() {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
