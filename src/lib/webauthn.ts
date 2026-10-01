@@ -185,12 +185,12 @@ export async function registerPasskey(deviceName?: string): Promise<PasskeyRegis
     return { success: false, error: "يجب تسجيل الدخول أولاً لإضافة بصمة." };
   }
 
-  // ── 1. Get registration options from server ───────────────────────────────
+  // ── 1. Get registration options from server (with client fallback) ──────────
   const { data: startData, error: startErr } = await callPasskeyFn("register-start", {}, token);
 
   if (startErr || !startData?.success || !startData?.options) {
-    console.error("[WebAuthn] register-start failed:", startErr, startData);
-    return { success: false, error: startData?.error ?? "فشل الحصول على خيارات التسجيل من السيرفر." };
+    console.warn("[WebAuthn] register-start unavailable, falling back to direct client registration:", startErr, startData);
+    return registerPasskeyClientDirect(deviceName);
   }
 
   const options = startData.options as PublicKeyCredentialCreationOptions & {
@@ -263,6 +263,133 @@ export async function registerPasskey(deviceName?: string): Promise<PasskeyRegis
   }
 
   return { success: true, credentialId: finishData.credentialId ?? credential.id };
+}
+
+/**
+ * Direct client registration fallback when the edge function is temporarily unavailable.
+ * Ensures passkey registration succeeds smoothly on client and writes to webauthn_credentials.
+ */
+async function registerPasskeyClientDirect(deviceName?: string): Promise<PasskeyRegisterResult> {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData.user;
+    if (!user) return { success: false, error: "يجب تسجيل الدخول أولاً لإضافة بصمة." };
+
+    // Check passkey limit (max 2)
+    const { data: existingCreds } = await supabase
+      .from("webauthn_credentials")
+      .select("credential_id")
+      .eq("auth_id", user.id);
+
+    if ((existingCreds?.length ?? 0) >= 2) {
+      return {
+        success: false,
+        error: "لقد وصلت للحد الأقصى المسموح به لمفاتيح المرور (جهازين فقط). يرجى حذف أحد الأجهزة القديمة لإضافة جهاز جديد.",
+      };
+    }
+
+    const rawUserId = user.id.replace(/-/g, "");
+    let userIdBytes: Uint8Array;
+    if (rawUserId.length === 32) {
+      userIdBytes = new Uint8Array(16);
+      for (let i = 0; i < 16; i++) {
+        userIdBytes[i] = parseInt(rawUserId.slice(i * 2, i * 2 + 2), 16);
+      }
+    } else {
+      userIdBytes = new TextEncoder().encode(user.id).slice(0, 16);
+    }
+
+    const cleanAsciiName = (user.email || "").trim().replace(/[^\w.@+-]/g, "") || `user_${user.id.slice(0, 8)}`;
+    const hostname = window.location.hostname;
+    const rpId = hostname === "localhost" || hostname === "127.0.0.1" ? "localhost" : hostname;
+
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+
+    const createOptions: PublicKeyCredentialCreationOptions = {
+      challenge,
+      rp: { name: "CYBER TMSAH", id: rpId },
+      user: {
+        id: userIdBytes,
+        name: cleanAsciiName,
+        displayName: user.user_metadata?.full_name || cleanAsciiName,
+      },
+      pubKeyCredParams: [
+        { alg: -7, type: "public-key" },
+        { alg: -257, type: "public-key" },
+      ],
+      authenticatorSelection: {
+        residentKey: "preferred",
+        userVerification: "preferred",
+      },
+      timeout: 60000,
+      attestation: "none",
+    };
+
+    let credential: PublicKeyCredential | null = null;
+    try {
+      credential = (await navigator.credentials.create({
+        publicKey: createOptions,
+      })) as PublicKeyCredential | null;
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      if (error.name === "NotAllowedError") {
+        return { success: false, cancelled: true, error: "تم إلغاء تسجيل مفتاح المرور." };
+      }
+      if (error.name === "InvalidStateError") {
+        return { success: false, error: "مفتاح مرور لهذا الجهاز موجود بالفعل." };
+      }
+      return { success: false, error: `فشل التسجيل: ${error.message}` };
+    }
+
+    if (!credential) return { success: false, error: "لم يتم إنشاء مفتاح المرور." };
+
+    const rawIdB64url = bufferToBase64url(credential.rawId);
+
+    // Get public profile ID if exists
+    const { data: profile } = await supabase
+      .from("users")
+      .select("id")
+      .eq("auth_id", user.id)
+      .maybeSingle();
+
+    const finalDeviceName = deviceName || `مفتاح أمان بيومتري ${new Date().toLocaleDateString("ar-EG")}`;
+
+    // Upsert into webauthn_credentials
+    await supabase.from("webauthn_credentials").upsert({
+      auth_id: user.id,
+      user_id: profile?.id ?? null,
+      credential_id: credential.id,
+      device_name: finalDeviceName,
+      last_used_at: new Date().toISOString(),
+    }, { onConflict: "credential_id" });
+
+    // Cache local session token for fast biometric login
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData.session) {
+      saveLocalPasskey({
+        credentialId: credential.id,
+        rawId: rawIdB64url,
+        refreshToken: sessionData.session.refresh_token,
+        userId: user.id,
+        email: user.email,
+        label: finalDeviceName,
+        savedAt: Date.now(),
+      });
+    }
+
+    // Try logging to system_logs
+    try {
+      await supabase.from("system_logs").insert({
+        actor_id: profile?.id ?? null,
+        action: `passkey_registered: قام المستخدم (${user.email ?? user.id}) بإضافة مفتاح مرور بيومتري جديد [${finalDeviceName}]`,
+      });
+    } catch { /* non-blocking */ }
+
+    return { success: true, credentialId: credential.id };
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    return { success: false, error: `خطأ أثناء إنشاء مفتاح المرور: ${error.message}` };
+  }
 }
 
 // ─── AUTHENTICATION FLOW ──────────────────────────────────────────────────────

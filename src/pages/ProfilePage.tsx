@@ -112,6 +112,15 @@ export default function ProfilePage() {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
+  const formatDisplayUsername = (raw?: string | null, fallbackEmail?: string | null): string => {
+    if (!raw && !fallbackEmail) return "—";
+    let name = (raw || fallbackEmail || "").trim();
+    if (name.includes("@")) {
+      name = name.split("@")[0];
+    }
+    return `@${name.replace(/^@+/, "")}`;
+  };
+
   // Load passkeys from database & local storage
   useEffect(() => {
     if (!user?.id) return;
@@ -728,16 +737,17 @@ export default function ProfilePage() {
                     </div>
 
                     {/* Name & Username */}
+                    {/* Name & Username */}
                     <div>
                       <h2 className="text-xl font-black text-white truncate">
                         {profile?.full_name || fullName || "مستخدم مسجل"}
                       </h2>
 
-                      {profile?.username && (
-                        <p className="text-xs font-mono text-purple-300 mt-1" dir="ltr">
-                          @{profile.username}
-                        </p>
-                      )}
+                      <div className="mt-1 flex justify-center">
+                        <span className="text-xs font-mono text-purple-300/90 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20" dir="ltr">
+                          {formatDisplayUsername(profile?.username, profile?.email || user?.email)}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Role Tag */}
@@ -761,19 +771,19 @@ export default function ProfilePage() {
                     {/* Identity Details list */}
                     <div className="pt-4 border-t border-white/10 space-y-3 text-start text-xs">
                       {/* Email */}
-                      <div className="flex items-center justify-between text-slate-300">
-                        <span className="text-slate-400 flex items-center gap-1.5">
+                      <div className="flex items-center justify-between text-slate-300 gap-2">
+                        <span className="text-slate-400 flex items-center gap-1.5 shrink-0">
                           <Mail className="w-3.5 h-3.5 text-slate-500" />
                           <span>البريد:</span>
                         </span>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-slate-200 truncate max-w-[130px]" dir="ltr">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="font-mono text-slate-200 truncate text-[11px]" dir="ltr" title={profile?.email || user?.email || ""}>
                             {profile?.email || user?.email || "—"}
                           </span>
                           {(profile?.email || user?.email) && (
                             <button
                               onClick={() => copyToClipboard(profile?.email || user?.email || "", "البريد الإلكتروني")}
-                              className="text-slate-400 hover:text-white transition-colors"
+                              className="text-slate-400 hover:text-white transition-colors shrink-0"
                               title="نسخ البريد"
                             >
                               {copiedField === "البريد الإلكتروني" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
@@ -782,41 +792,67 @@ export default function ProfilePage() {
                         </div>
                       </div>
 
-                      {/* Department */}
-                      <div className="flex items-center justify-between text-slate-300">
-                        <span className="text-slate-400 flex items-center gap-1.5">
-                          <Building2 className="w-3.5 h-3.5 text-slate-500" />
-                          <span>القسم:</span>
-                        </span>
-                        <span className="text-white font-medium">
-                          {getDepartmentLabel(profile?.department)}
-                        </span>
-                      </div>
+                      {/* Role-Aware Info: Owner / Coordinator vs Student */}
+                      {role === "owner" || role === "coordinator" ? (
+                        <>
+                          <div className="flex items-center justify-between text-slate-300">
+                            <span className="text-slate-400 flex items-center gap-1.5">
+                              <Shield className="w-3.5 h-3.5 text-purple-400" />
+                              <span>الصلاحيات:</span>
+                            </span>
+                            <span className="text-purple-300 font-bold text-[11px]">تحكم مركزي شامل</span>
+                          </div>
+                          <div className="flex items-center justify-between text-slate-300">
+                            <span className="text-slate-400 flex items-center gap-1.5">
+                              <Fingerprint className="w-3.5 h-3.5 text-cyan-400" />
+                              <span>أجهزة Passkey:</span>
+                            </span>
+                            <span className="px-2 py-0.5 rounded-lg bg-purple-500/20 text-purple-300 text-[11px] font-bold">
+                              {passkeys.length} من 2 مسجل
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          {/* Department */}
+                          {profile?.department && (
+                            <div className="flex items-center justify-between text-slate-300">
+                              <span className="text-slate-400 flex items-center gap-1.5">
+                                <Building2 className="w-3.5 h-3.5 text-slate-500" />
+                                <span>القسم:</span>
+                              </span>
+                              <span className="text-white font-medium text-[11px]">
+                                {getDepartmentLabel(profile.department)}
+                              </span>
+                            </div>
+                          )}
 
-                      {/* Academic Year */}
-                      {profile?.academic_year && (
-                        <div className="flex items-center justify-between text-slate-300">
-                          <span className="text-slate-400 flex items-center gap-1.5">
-                            <GraduationCap className="w-3.5 h-3.5 text-slate-500" />
-                            <span>الفرقة:</span>
-                          </span>
-                          <span className="text-purple-300 font-bold">
-                            {getAcademicYearLabel(profile.academic_year)}
-                          </span>
-                        </div>
-                      )}
+                          {/* Academic Year */}
+                          {profile?.academic_year && (
+                            <div className="flex items-center justify-between text-slate-300">
+                              <span className="text-slate-400 flex items-center gap-1.5">
+                                <GraduationCap className="w-3.5 h-3.5 text-slate-500" />
+                                <span>الفرقة:</span>
+                              </span>
+                              <span className="text-purple-300 font-bold text-[11px]">
+                                {getAcademicYearLabel(profile.academic_year)}
+                              </span>
+                            </div>
+                          )}
 
-                      {/* Section */}
-                      {profile?.section_number && (
-                        <div className="flex items-center justify-between text-slate-300">
-                          <span className="text-slate-400 flex items-center gap-1.5">
-                            <Shield className="w-3.5 h-3.5 text-slate-500" />
-                            <span>السكشن:</span>
-                          </span>
-                          <span className="px-2.5 py-0.5 rounded-lg bg-white/10 text-white font-bold">
-                            سكشن {profile.section_number}
-                          </span>
-                        </div>
+                          {/* Section */}
+                          {profile?.section_number && (
+                            <div className="flex items-center justify-between text-slate-300">
+                              <span className="text-slate-400 flex items-center gap-1.5">
+                                <Shield className="w-3.5 h-3.5 text-slate-500" />
+                                <span>السكشن:</span>
+                              </span>
+                              <span className="px-2.5 py-0.5 rounded-lg bg-white/10 text-white font-bold text-[11px]">
+                                سكشن {profile.section_number}
+                              </span>
+                            </div>
+                          )}
+                        </>
                       )}
 
                       {/* Subject */}
@@ -975,7 +1011,7 @@ export default function ProfilePage() {
                             <div className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-1">
                               <span className="text-[11px] text-slate-400 block">اسم المستخدم (@username)</span>
                               <span className="text-sm font-mono font-bold text-purple-300 block" dir="ltr">
-                                {profile?.username ? `@${profile.username}` : "—"}
+                                {formatDisplayUsername(profile?.username, profile?.email || user?.email)}
                               </span>
                             </div>
 
@@ -1017,60 +1053,118 @@ export default function ProfilePage() {
                       </CardContent>
                     </Card>
 
-                    {/* 2. Academic Identity Card */}
-                    <Card className="border border-white/10 bg-[#090D21]/80 backdrop-blur-xl rounded-3xl p-6 sm:p-7 shadow-lg">
-                      <CardHeader className="p-0 pb-5 border-b border-white/5">
-                        <CardTitle className="text-lg font-black text-white flex items-center gap-2.5">
-                          <GraduationCap className="w-5 h-5 text-cyan-400" />
-                          <span>الهوية الأكاديمية والمقررات</span>
-                        </CardTitle>
-                        <CardDescription className="text-xs text-slate-400 mt-1">
-                          القسم الأكاديمي، الفرقة، ومجموعات السكاشن المرتبطة بالحساب
-                        </CardDescription>
-                      </CardHeader>
+                    {/* 2. Academic / Cyber Clearance Identity Card */}
+                    {role === "owner" || role === "coordinator" || role === "doctor" ? (
+                      <Card className="border border-purple-500/25 bg-[#090D21]/80 backdrop-blur-xl rounded-3xl p-6 sm:p-7 shadow-lg relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
+                        <CardHeader className="p-0 pb-5 border-b border-white/5 relative z-10">
+                          <CardTitle className="text-lg font-black text-white flex items-center gap-2.5">
+                            <Shield className="w-5 h-5 text-purple-400" />
+                            <span>المستوى الإداري والصلاحيات السيبرانية</span>
+                          </CardTitle>
+                          <CardDescription className="text-xs text-slate-400 mt-1">
+                            مستوى الوصول الإداري، تدقيق الأمان المباشر، وتوثيق FIDO2 في منظومة CYBER TMSAH
+                          </CardDescription>
+                        </CardHeader>
 
-                      <CardContent className="p-0 pt-5">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                          <div className="p-4 rounded-2xl bg-gradient-to-b from-purple-950/20 to-black/40 border border-purple-500/20">
-                            <span className="text-[11px] text-purple-300/80 block mb-1">القسم الجامعي</span>
-                            <span className="text-sm font-bold text-white block">
-                              {getDepartmentLabel(profile?.department)}
-                            </span>
-                          </div>
-
-                          <div className="p-4 rounded-2xl bg-gradient-to-b from-indigo-950/20 to-black/40 border border-indigo-500/20">
-                            <span className="text-[11px] text-indigo-300/80 block mb-1">الفرقة الدراسية</span>
-                            <span className="text-sm font-bold text-white block">
-                              {getAcademicYearLabel(profile?.academic_year)}
-                            </span>
-                          </div>
-
-                          <div className="p-4 rounded-2xl bg-gradient-to-b from-cyan-950/20 to-black/40 border border-cyan-500/20">
-                            <span className="text-[11px] text-cyan-300/80 block mb-1">رقم السكشن</span>
-                            <span className="text-sm font-bold text-white block">
-                              {profile?.section_number ? `سكشن ${profile.section_number}` : "غير محدد"}
-                            </span>
-                          </div>
-                        </div>
-
-                        {profile?.subject_name && (
-                          <div className="mt-4 p-4 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-300">
-                                <Sparkles className="w-5 h-5" />
-                              </div>
-                              <div>
-                                <span className="text-[11px] text-slate-400 block">المادة الموكلة</span>
-                                <span className="text-sm font-bold text-white">{profile.subject_name}</span>
-                              </div>
+                        <CardContent className="p-0 pt-5 relative z-10">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="p-4 rounded-2xl bg-gradient-to-b from-purple-950/20 to-black/40 border border-purple-500/20 space-y-1">
+                              <span className="text-[11px] text-purple-300/80 block">مستوى الصلاحية (Clearance)</span>
+                              <span className="text-sm font-bold text-white block">
+                                {role === "owner" ? "صلاحيات المالك الكاملة (Root)" : role === "coordinator" ? "منسق عام المنظومة" : "دكتور محاضر معتمد"}
+                              </span>
                             </div>
-                            <span className="px-3 py-1 rounded-xl text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                              مادة أساسية
-                            </span>
+
+                            <div className="p-4 rounded-2xl bg-gradient-to-b from-indigo-950/20 to-black/40 border border-indigo-500/20 space-y-1">
+                              <span className="text-[11px] text-indigo-300/80 block">تدقيق العمليات (Audit Log)</span>
+                              <span className="text-sm font-bold text-emerald-400 flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                <span>مفعل ومراقب سيبرانياً</span>
+                              </span>
+                            </div>
+
+                            <div className="p-4 rounded-2xl bg-gradient-to-b from-cyan-950/20 to-black/40 border border-cyan-500/20 space-y-1">
+                              <span className="text-[11px] text-cyan-300/80 block">توثيق FIDO2 / Passkey</span>
+                              <span className="text-sm font-bold text-cyan-300 block">
+                                {passkeys.length > 0 ? `${passkeys.length} مفتاح نشط ومحمي` : "غير مسجل (يوصى بالتفعيل)"}
+                              </span>
+                            </div>
                           </div>
-                        )}
-                      </CardContent>
-                    </Card>
+
+                          {profile?.department && (
+                            <div className="mt-4 p-4 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-300">
+                                  <Building2 className="w-5 h-5" />
+                                </div>
+                                <div>
+                                  <span className="text-[11px] text-slate-400 block">القسم الأكاديمي المشرف</span>
+                                  <span className="text-sm font-bold text-white">{getDepartmentLabel(profile.department)}</span>
+                                </div>
+                              </div>
+                              <span className="px-3 py-1 rounded-xl text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                معتمد
+                              </span>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <Card className="border border-white/10 bg-[#090D21]/80 backdrop-blur-xl rounded-3xl p-6 sm:p-7 shadow-lg">
+                        <CardHeader className="p-0 pb-5 border-b border-white/5">
+                          <CardTitle className="text-lg font-black text-white flex items-center gap-2.5">
+                            <GraduationCap className="w-5 h-5 text-cyan-400" />
+                            <span>الهوية الأكاديمية والمقررات</span>
+                          </CardTitle>
+                          <CardDescription className="text-xs text-slate-400 mt-1">
+                            القسم الأكاديمي، الفرقة، ومجموعات السكاشن المرتبطة بالحساب
+                          </CardDescription>
+                        </CardHeader>
+
+                        <CardContent className="p-0 pt-5">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="p-4 rounded-2xl bg-gradient-to-b from-purple-950/20 to-black/40 border border-purple-500/20">
+                              <span className="text-[11px] text-purple-300/80 block mb-1">القسم الجامعي</span>
+                              <span className="text-sm font-bold text-white block">
+                                {getDepartmentLabel(profile?.department)}
+                              </span>
+                            </div>
+
+                            <div className="p-4 rounded-2xl bg-gradient-to-b from-indigo-950/20 to-black/40 border border-indigo-500/20">
+                              <span className="text-[11px] text-indigo-300/80 block mb-1">الفرقة الدراسية</span>
+                              <span className="text-sm font-bold text-white block">
+                                {getAcademicYearLabel(profile?.academic_year)}
+                              </span>
+                            </div>
+
+                            <div className="p-4 rounded-2xl bg-gradient-to-b from-cyan-950/20 to-black/40 border border-cyan-500/20">
+                              <span className="text-[11px] text-cyan-300/80 block mb-1">رقم السكشن</span>
+                              <span className="text-sm font-bold text-white block">
+                                {profile?.section_number ? `سكشن ${profile.section_number}` : "غير محدد"}
+                              </span>
+                            </div>
+                          </div>
+
+                          {profile?.subject_name && (
+                            <div className="mt-4 p-4 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-300">
+                                  <Sparkles className="w-5 h-5" />
+                                </div>
+                                <div>
+                                  <span className="text-[11px] text-slate-400 block">المادة الموكلة</span>
+                                  <span className="text-sm font-bold text-white">{profile.subject_name}</span>
+                                </div>
+                              </div>
+                              <span className="px-3 py-1 rounded-xl text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                مادة أساسية
+                              </span>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
                   </TabsContent>
 
                   {/* TAB 2: AVATAR & APPEARANCE */}
@@ -1186,6 +1280,7 @@ export default function ProfilePage() {
                             <div className="relative">
                               <Input
                                 type={showPassword ? "text" : "password"}
+                                autoComplete="new-password"
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
                                 placeholder="أدخل كلمة مرور قوية (6 أحرف على الأقل)"
@@ -1226,6 +1321,7 @@ export default function ProfilePage() {
                             <div className="relative">
                               <Input
                                 type={showConfirmPassword ? "text" : "password"}
+                                autoComplete="new-password"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 placeholder="أعد إدخال كلمة المرور للتأكيد"
@@ -1454,6 +1550,7 @@ export default function ProfilePage() {
                 <Input
                   id="passkey-reauth-pass"
                   type={showPasskeyAuthPassword ? "text" : "password"}
+                  autoComplete="current-password"
                   value={passkeyAuthPassword}
                   onChange={(e) => setPasskeyAuthPassword(e.target.value)}
                   placeholder="••••••••"
