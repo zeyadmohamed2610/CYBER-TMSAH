@@ -202,15 +202,23 @@ export async function authenticateWithPasskey(identifier?: string): Promise<Pass
   let assertion: PublicKeyCredential | null = null;
   let lastErr: Error | null = null;
 
-  // Attempt 1: Direct platform biometric authenticator ("This Device") with client-device hint
+  // Mobile detection — hints: ['client-device'] causes immediate NotAllowedError on Android Chrome < 128
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
+
+  // Attempt 1: Platform biometric authenticator
   const challenge = crypto.getRandomValues(new Uint8Array(32));
   const reqOptions: Record<string, unknown> = {
     challenge,
     timeout: 60000,
     rpId,
     userVerification: "preferred",
-    hints: ["client-device"],
   };
+
+  // Only add hints on desktop — mobile browsers reject this with NotAllowedError
+  if (!isMobile) {
+    reqOptions["hints"] = ["client-device"];
+  }
 
   if (allowedDescriptors.length > 0) {
     reqOptions.allowCredentials = allowedDescriptors;
@@ -233,7 +241,7 @@ export async function authenticateWithPasskey(identifier?: string): Promise<Pass
       };
     }
 
-    // Attempt 2: Fallback without allowCredentials restriction for maximum Android/OEM compatibility
+    // Attempt 2: Fallback without allowCredentials restriction — max Android/OEM compatibility
     try {
       const challenge2 = crypto.getRandomValues(new Uint8Array(32));
       const fallbackReq: Record<string, unknown> = {
@@ -241,7 +249,7 @@ export async function authenticateWithPasskey(identifier?: string): Promise<Pass
         timeout: 60000,
         rpId,
         userVerification: "preferred",
-        hints: ["client-device"],
+        // No hints, no allowCredentials — broadest possible Android compatibility
       };
       assertion = (await navigator.credentials.get({
         publicKey: fallbackReq as unknown as PublicKeyCredentialRequestOptions,

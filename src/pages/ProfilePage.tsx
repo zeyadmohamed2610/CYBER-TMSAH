@@ -163,73 +163,115 @@ export default function ProfilePage() {
     try {
       setCreatingPasskey(true);
 
-      // 1. SHA-256 hash of userId — W3C standard, prevents Android Credential Manager rejections
-      const encoder = new TextEncoder();
-      const userIdHash = await crypto.subtle.digest("SHA-256", encoder.encode(user?.id || "user"));
+      // ── Mobile Detection ──
+      const ua = navigator.userAgent;
+      const isAndroid = /Android/i.test(ua);
+      const isIOS = /iPhone|iPad|iPod/i.test(ua);
+      const isMobile = isAndroid || isIOS;
+
+      // 1. user.id must be exactly 16 bytes (UUID bytes) — Android Credential Manager
+      //    rejects non-standard sizes; SHA-256 (32 bytes) causes silent failures on many OEMs.
+      //    We encode the UUID as UTF-8 and take the first 16 bytes, OR parse the UUID hex.
+      const rawUserId = (user?.id || "").replace(/-/g, "");
+      let userIdBytes: Uint8Array;
+      if (rawUserId.length === 32) {
+        // Parse UUID hex → 16 bytes
+        userIdBytes = new Uint8Array(16);
+        for (let i = 0; i < 16; i++) {
+          userIdBytes[i] = parseInt(rawUserId.slice(i * 2, i * 2 + 2), 16);
+        }
+      } else {
+        // Fallback: UTF-8 encode & zero-pad/truncate to 16 bytes
+        const enc = new TextEncoder();
+        const raw = enc.encode(user?.id || "user");
+        userIdBytes = new Uint8Array(16);
+        userIdBytes.set(raw.slice(0, 16));
+      }
 
       // 2. Clean ASCII user.name — Android rejects Arabic/Unicode in user.name field
       const rawEmail = user?.email || "";
       const cleanAsciiName = rawEmail.trim().replace(/[^\w.@+-]/g, "") || `user_${(user?.id || "").slice(0, 8)}`;
-
-      const userDisplayName = profile?.full_name || fullName || "مستخدم أكاديمي";
+      const userDisplayName = profile?.full_name || fullName || "Cyber TMSAH User";
 
       // 3. RP configuration
       const rpId = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
         ? "localhost"
         : window.location.hostname;
 
-      // 4. Universally supported algorithms
+      // 4. Only ES256 + RS256 — most universally supported (especially Android)
       const pubKeyCredParams: PublicKeyCredentialParameters[] = [
-        { alg: -7,   type: "public-key" }, // ES256 (P-256) — 100% Android, iOS, Windows
+        { alg: -7,   type: "public-key" }, // ES256 — Android, iOS, Windows
         { alg: -257, type: "public-key" }, // RS256 — Windows Hello & legacy TPM
-        { alg: -8,   type: "public-key" }, // Ed25519 (EdDSA)
-        { alg: -37,  type: "public-key" }, // PS256
       ];
 
-      // 5. Tiered strategies — ALWAYS platform with client-device hint for immediate biometric
-      const strategies: AuthenticatorSelectionCriteria[] = [
-        { authenticatorAttachment: "platform", userVerification: "preferred", residentKey: "preferred" },
-        { authenticatorAttachment: "platform", userVerification: "discouraged", residentKey: "preferred" },
-        { authenticatorAttachment: "platform", userVerification: "required", residentKey: "preferred" },
-        { authenticatorAttachment: "platform" },
-      ];
+      // 5. Strategy cascade:
+      //    - NO `hints` on mobile — causes immediate NotAllowedError on Android Chrome < 128
+      //    - Start with simplest options and escalate
+      //    - `authenticatorAttachment: 'platform'` is the key for native biometrics
+      const strategies: Array<{
+        selection: AuthenticatorSelectionCriteria;
+        useHints: boolean;
+      }> = isMobile
+        ? [
+            // Mobile: no hints, platform only, simplest first
+            { selection: { authenticatorAttachment: "platform", userVerification: "preferred", residentKey: "required" }, useHints: false },
+            { selection: { authenticatorAttachment: "platform", userVerification: "preferred", residentKey: "preferred" }, useHints: false },
+            { selection: { authenticatorAttachment: "platform", userVerification: "preferred" }, useHints: false },
+            { selection: { authenticatorAttachment: "platform", userVerification: "discouraged" }, useHints: false },
+            { selection: { authenticatorAttachment: "platform" }, useHints: false },
+          ]
+        : [
+            // Desktop: can use hints safely
+            { selection: { authenticatorAttachment: "platform", userVerification: "preferred", residentKey: "preferred" }, useHints: true },
+            { selection: { authenticatorAttachment: "platform", userVerification: "preferred" }, useHints: true },
+            { selection: { authenticatorAttachment: "platform" }, useHints: false },
+          ];
 
       let credential: PublicKeyCredential | null = null;
       let lastErr: Error | null = null;
 
       for (let i = 0; i < strategies.length; i++) {
-        const strategy = strategies[i];
+        const { selection, useHints } = strategies[i];
         const attemptStart = Date.now();
         try {
           const challenge = crypto.getRandomValues(new Uint8Array(32));
           const createOptions: Record<string, unknown> = {
             challenge,
-            rp: { name: "CYBER TMSAH | منصة الأمن السيبراني", id: rpId },
+            rp: { name: "CYBER TMSAH", id: rpId },
             user: {
-              id: new Uint8Array(userIdHash),
+              id: userIdBytes,
               name: cleanAsciiName,
               displayName: userDisplayName,
             },
             pubKeyCredParams,
-            authenticatorSelection: strategy,
+            authenticatorSelection: selection,
             timeout: 60000,
             attestation: "none",
-            hints: ["client-device"],
           };
+
+          // Only add hints on desktop where supported
+          if (useHints) {
+            createOptions["hints"] = ["client-device"];
+          }
 
           credential = (await navigator.credentials.create({
             publicKey: createOptions as unknown as PublicKeyCredentialCreationOptions,
           })) as PublicKeyCredential | null;
 
-          if (credential) break; // Success!
+          if (credential) break;
         } catch (err: unknown) {
           lastErr = err instanceof Error ? err : new Error(String(err));
           const elapsed = Date.now() - attemptStart;
-          console.warn(`[Passkey] Strategy #${i + 1} failed after ${elapsed}ms:`, lastErr);
+          console.warn(`[Passkey] Strategy #${i + 1} failed after ${elapsed}ms:`, lastErr.name, lastErr.message);
 
-          // If user actively dismissed (elapsed ≥ 1s → UI was shown), stop immediately
-          if (lastErr.name === "NotAllowedError" && elapsed >= 1000) {
+          // User explicitly dismissed the native UI (dialog was shown then cancelled)
+          if (lastErr.name === "NotAllowedError" && elapsed >= 800) {
             toast.error("تم إلغاء إنشاء مفتاح المرور.");
+            return;
+          }
+          // Android: InvalidStateError = passkey already registered on this device
+          if (lastErr.name === "InvalidStateError") {
+            toast.error("مفتاح مرور لهذا الجهاز موجود بالفعل. يمكنك استخدام البصمة مباشرة للدخول.");
             return;
           }
         }
@@ -250,7 +292,6 @@ export default function ProfilePage() {
 
       // Save credential
       const rawIdBase64 = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-      const ua = navigator.userAgent;
       const deviceLabel = /iPhone/i.test(ua) ? "هاتف iPhone (Face ID / Touch ID)"
         : /iPad/i.test(ua) ? "جهاز iPad"
         : /Samsung/i.test(ua) ? "هاتف Samsung Galaxy"

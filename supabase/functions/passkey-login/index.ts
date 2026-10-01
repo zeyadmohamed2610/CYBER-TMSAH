@@ -110,7 +110,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 3. Check via userHandle (SHA-256 of user.id)
+    // 3. Check via userHandle
+    //    Supports TWO formats for backward compatibility:
+    //    a) UUID bytes (16 bytes, new format) — UUID hex without dashes, parsed as 16 bytes
+    //    b) SHA-256 of user.id (32 bytes, legacy format)
     if (!authId && userHandle) {
       const targetHex = base64ToHex(userHandle);
       if (targetHex) {
@@ -121,13 +124,21 @@ Deno.serve(async (req) => {
 
         if (authUsers?.users) {
           for (const u of authUsers.users) {
+            // Format A: UUID hex bytes (new, 16 bytes → 32 hex chars)
+            const uuidHex = u.id.replace(/-/g, "").toLowerCase();
+            if (uuidHex === targetHex) {
+              authId = u.id;
+              deviceName = "جهاز محمول (بصمة)";
+              break;
+            }
+
+            // Format B: SHA-256 of user.id (legacy, 32 bytes → 64 hex chars)
             const encoder = new TextEncoder();
             const hashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(u.id));
             const uHex = bufferToHex(hashBuffer);
-
             if (uHex === targetHex) {
               authId = u.id;
-              deviceName = "هاتف أندرويد (بصمة)";
+              deviceName = "جهاز محمول (بصمة)";
               break;
             }
           }
