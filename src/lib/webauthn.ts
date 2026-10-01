@@ -233,25 +233,22 @@ export async function authenticateWithPasskey(identifier?: string): Promise<Pass
       };
     }
 
-    // Attempt 2: Fallback without transport restrictions for OEM compatibility
-    if (allowedDescriptors.length > 0) {
-      try {
-        const challenge2 = crypto.getRandomValues(new Uint8Array(32));
-        const fallbackReq: Record<string, unknown> = {
-          challenge: challenge2,
-          timeout: 60000,
-          rpId,
-          userVerification: "preferred",
-          hints: ["client-device"],
-          allowCredentials: allowedDescriptors.map((d) => ({ id: d.id, type: d.type })),
-        };
-        assertion = (await navigator.credentials.get({
-          publicKey: fallbackReq as unknown as PublicKeyCredentialRequestOptions,
-        })) as PublicKeyCredential | null;
-      } catch (err2: unknown) {
-        lastErr = err2 instanceof Error ? err2 : new Error(String(err2));
-        console.warn("[WebAuthn] Biometric assertion (Attempt 2) notice:", lastErr);
-      }
+    // Attempt 2: Fallback without allowCredentials restriction for maximum Android/OEM compatibility
+    try {
+      const challenge2 = crypto.getRandomValues(new Uint8Array(32));
+      const fallbackReq: Record<string, unknown> = {
+        challenge: challenge2,
+        timeout: 60000,
+        rpId,
+        userVerification: "preferred",
+        hints: ["client-device"],
+      };
+      assertion = (await navigator.credentials.get({
+        publicKey: fallbackReq as unknown as PublicKeyCredentialRequestOptions,
+      })) as PublicKeyCredential | null;
+    } catch (err2: unknown) {
+      lastErr = err2 instanceof Error ? err2 : new Error(String(err2));
+      console.warn("[WebAuthn] Biometric assertion (Attempt 2) notice:", lastErr);
     }
   }
 
@@ -274,6 +271,13 @@ export async function authenticateWithPasskey(identifier?: string): Promise<Pass
     const credId = assertion.id;
     const rawIdBase64 = bufferToBase64(assertion.rawId);
     const rawIdBase64url = bufferToBase64url(assertion.rawId);
+
+    // Extract userHandle if provided by the authenticator (discoverable credential)
+    let userHandleBase64: string | undefined = undefined;
+    const assertionResp = assertion.response as AuthenticatorAssertionResponse | undefined;
+    if (assertionResp?.userHandle && assertionResp.userHandle.byteLength > 0) {
+      userHandleBase64 = bufferToBase64(assertionResp.userHandle);
+    }
 
     // 1. Fast local session restoration if this browser has an active cached refresh token
     const localMatch =
@@ -333,6 +337,7 @@ export async function authenticateWithPasskey(identifier?: string): Promise<Pass
         body: {
           credentialId: credId,
           rawId: rawIdBase64,
+          userHandle: userHandleBase64,
         },
       });
 
@@ -367,6 +372,10 @@ export async function authenticateWithPasskey(identifier?: string): Promise<Pass
 
         if (verifyErr) {
           console.error("[WebAuthn] verifyOtp failed:", verifyErr);
+          return {
+            success: false,
+            error: verifyErr.message || "فشل التحقق من رمز الجلسة.",
+          };
         }
       }
 
@@ -375,6 +384,17 @@ export async function authenticateWithPasskey(identifier?: string): Promise<Pass
           success: false,
           error: fnData.error,
         };
+      }
+
+      if (fnErr) {
+        console.warn("[WebAuthn] Edge function login invocation notice:", fnErr);
+        const errMsg = (fnErr as any)?.message || String(fnErr);
+        if (errMsg && !errMsg.includes("non-2xx")) {
+          return {
+            success: false,
+            error: errMsg,
+          };
+        }
       }
     } catch (edgeErr) {
       console.warn("[WebAuthn] Edge function login invocation notice:", edgeErr);
