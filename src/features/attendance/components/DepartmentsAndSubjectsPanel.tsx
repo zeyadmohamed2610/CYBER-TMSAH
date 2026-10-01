@@ -11,16 +11,10 @@ import {
   Search,
   CheckCircle2,
   Sparkles,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
 import { DEPARTMENTS, type DepartmentInfo } from "../types";
@@ -210,6 +204,178 @@ export const DepartmentsAndSubjectsPanel = () => {
     s.name.toLowerCase().includes(searchSubject.trim().toLowerCase())
   );
 
+  // ── If a department is selected, show its subjects management view inline ──
+  if (selectedDept) {
+    return (
+      <div className="space-y-6 animate-fade-up" dir="rtl">
+        {/* Header Banner with Back Navigation */}
+        <div className="rounded-2xl border border-purple-500/25 bg-gradient-to-r from-purple-950/40 via-[#0B0F1D]/80 to-indigo-950/30 p-5 backdrop-blur-xl shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedDept(null);
+                setShowAddSubject(false);
+                setEditingSubjectId(null);
+              }}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/30 text-purple-300 text-xs font-bold mb-3 transition-colors cursor-pointer"
+            >
+              <ArrowRight className="w-3.5 h-3.5" />
+              <span>العودة لجميع الأقسام</span>
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-purple-600/20 border border-purple-500/40 flex items-center justify-center text-purple-400 shrink-0">
+                <BookOpen className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-white">
+                  مواد قسم {selectedDept.nameAr}
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  قائمة المقررات المسجلة وإمكانية إضافة وتعديل وحذف المقررات ({selectedDept.nameEn})
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            onClick={() => setShowAddSubject((v) => !v)}
+            className="h-10 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-[0_0_20px_rgba(147,51,234,0.3)] flex items-center gap-2 shrink-0 self-start sm:self-auto"
+          >
+            <Plus className="w-4 h-4" />
+            <span>إضافة مادة جديدة</span>
+          </Button>
+        </div>
+
+        {/* Add Subject Inline Form */}
+        {showAddSubject && (
+          <form
+            onSubmit={handleAddSubject}
+            className="rounded-2xl border border-purple-500/40 bg-purple-950/20 p-4 space-y-3"
+          >
+            <h4 className="text-xs font-bold text-purple-300">إضافة مقرر دراسي جديد</h4>
+            <div className="flex items-center gap-2">
+              <Input
+                value={newSubjectName}
+                onChange={(e) => setNewSubjectName(e.target.value)}
+                placeholder="اسم المادة (مثال: أمن شبكات، نظم تشغيل...)"
+                className="h-10 text-xs bg-black/40 border-white/15 text-white focus:border-purple-500"
+                autoFocus
+              />
+              <Button
+                type="submit"
+                disabled={addingSubject}
+                className="h-10 px-5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shrink-0"
+              >
+                {addingSubject ? "جارٍ الإضافة..." : "حفظ المادة"}
+              </Button>
+            </div>
+          </form>
+        )}
+
+        {/* Search Bar */}
+        <div className="relative w-full">
+          <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
+          <Input
+            value={searchSubject}
+            onChange={(e) => setSearchSubject(e.target.value)}
+            placeholder="ابحث عن مادة في هذا القسم..."
+            className="pr-10 h-11 rounded-xl bg-black/40 border-white/10 text-xs text-white placeholder:text-slate-500 focus:border-purple-500"
+          />
+        </div>
+
+        {/* Subjects List */}
+        <div className="space-y-2.5">
+          {loadingSubjects ? (
+            <div className="py-12 text-center text-xs text-slate-400 rounded-2xl border border-white/5 bg-white/[0.01]">
+              جارٍ تحميل المواد الدراسية...
+            </div>
+          ) : filteredSubjects.length === 0 ? (
+            <div className="py-12 text-center rounded-2xl border border-dashed border-white/10 p-6 text-xs text-slate-400 bg-white/[0.01]">
+              لا توجد مواد مسجلة لهذا القسم حالياً. يمكنك إضافة مادة جديدة من الزر أعلاه.
+            </div>
+          ) : (
+            filteredSubjects.map((subject) => {
+              const isEditingThis = editingSubjectId === subject.id;
+
+              return (
+                <div
+                  key={subject.id}
+                  className="rounded-2xl border border-white/10 bg-[#0A0F1D]/80 p-4 flex items-center justify-between gap-3 hover:border-purple-500/30 transition-all shadow-sm"
+                >
+                  {isEditingThis ? (
+                    <div className="flex-1 flex items-center gap-2">
+                      <Input
+                        value={editSubjectName}
+                        onChange={(e) => setEditSubjectName(e.target.value)}
+                        className="h-9 text-xs bg-black/60 border-purple-500 text-white"
+                        autoFocus
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => handleUpdateSubject(subject.id)}
+                        className="h-9 px-3 bg-purple-600 text-white text-xs"
+                      >
+                        حفظ
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setEditingSubjectId(null)}
+                        className="h-9 px-2 text-slate-400 text-xs"
+                      >
+                        إلغاء
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-white truncate">
+                          {subject.name}
+                        </span>
+                        {subject.doctor_name && subject.doctor_name !== "غير محدد" && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-semibold shrink-0">
+                            د. {subject.doctor_name}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {!isEditingThis && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingSubjectId(subject.id);
+                          setEditSubjectName(subject.name);
+                        }}
+                        className="w-8 h-8 rounded-xl border border-white/10 hover:border-purple-500/40 bg-white/5 flex items-center justify-center text-slate-400 hover:text-white transition-all cursor-pointer"
+                        title="تعديل اسم المادة"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSubject(subject.id, subject.name)}
+                        className="w-8 h-8 rounded-xl border border-rose-500/20 hover:border-rose-500/40 bg-rose-500/10 flex items-center justify-center text-rose-400 hover:bg-rose-500/20 transition-all cursor-pointer"
+                        title="حذف المادة"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Default view: 7 Academic Departments Grid ──
   return (
     <div className="space-y-6 animate-fade-up">
       {/* Header Banner */}
@@ -309,204 +475,6 @@ export const DepartmentsAndSubjectsPanel = () => {
           );
         })}
       </div>
-
-      {/* ── Dialog: Subjects of the Selected Department ── */}
-      <Dialog
-        open={Boolean(selectedDept)}
-        onOpenChange={(open) => {
-          if (!open) {
-            setSelectedDept(null);
-            setShowAddSubject(false);
-            setEditingSubjectId(null);
-          }
-        }}
-      >
-        <DialogContent
-          className="max-w-2xl bg-[#0A0F1D]/98 border border-purple-500/30 text-white rounded-3xl p-5 sm:p-7 shadow-[0_25px_70px_rgba(0,0,0,0.85)] backdrop-blur-2xl max-h-[88vh] flex flex-col overflow-hidden [&>button:last-child]:hidden"
-          dir="rtl"
-        >
-          {/* Modal Header */}
-          <DialogHeader className="text-start pb-4 border-b border-white/10 shrink-0">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-purple-600/20 border border-purple-500/40 flex items-center justify-center text-purple-400 shrink-0">
-                  <BookOpen className="w-5 h-5" />
-                </div>
-                <div>
-                  <DialogTitle className="text-lg font-black text-white">
-                    مواد {selectedDept?.nameAr}
-                  </DialogTitle>
-                  <DialogDescription className="text-xs text-slate-400 mt-0.5">
-                    قائمة المقررات المسجلة وإمكانية إضافة وتعديل وحذف المقررات
-                  </DialogDescription>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedDept(null);
-                  setShowAddSubject(false);
-                }}
-                className="w-8 h-8 rounded-xl bg-white/5 hover:bg-rose-500/20 border border-white/10 hover:border-rose-500/40 flex items-center justify-center text-slate-400 hover:text-rose-400 transition-all cursor-pointer shrink-0"
-                aria-label="إغلاق"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </DialogHeader>
-
-          {/* Modal Scrollable Body */}
-          <div className="space-y-4 py-2 overflow-y-auto custom-scrollbar flex-1 pr-1">
-            {/* Actions Bar */}
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
-                <Input
-                  value={searchSubject}
-                  onChange={(e) => setSearchSubject(e.target.value)}
-                  placeholder="ابحث عن مادة..."
-                  className="pr-9 h-10 rounded-xl bg-black/40 border-white/10 text-xs text-white placeholder:text-slate-500 focus:border-purple-500"
-                />
-              </div>
-
-              <Button
-                type="button"
-                onClick={() => setShowAddSubject((v) => !v)}
-                className="h-10 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-[0_0_20px_rgba(147,51,234,0.3)] flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span>إضافة مادة جديدة</span>
-              </Button>
-            </div>
-
-            {/* Add Subject Inline Form */}
-            {showAddSubject && (
-              <form
-                onSubmit={handleAddSubject}
-                className="rounded-2xl border border-purple-500/40 bg-purple-950/20 p-4 space-y-3"
-              >
-                <h4 className="text-xs font-bold text-purple-300">إضافة مقرر دراسي جديد</h4>
-                <div className="flex items-center gap-2">
-                  <Input
-                    value={newSubjectName}
-                    onChange={(e) => setNewSubjectName(e.target.value)}
-                    placeholder="اسم المادة (مثال: أمن شبكات، نظم تشغيل...)"
-                    className="h-10 text-xs bg-black/40 border-white/15 text-white focus:border-purple-500"
-                    autoFocus
-                  />
-                  <Button
-                    type="submit"
-                    disabled={addingSubject}
-                    className="h-10 px-5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shrink-0"
-                  >
-                    {addingSubject ? "جارٍ الإضافة..." : "حفظ المادة"}
-                  </Button>
-                </div>
-              </form>
-            )}
-
-            {/* Subjects List */}
-            <div className="space-y-2.5">
-              {loadingSubjects ? (
-                <div className="py-8 text-center text-xs text-slate-400">
-                  جارٍ تحميل المواد الدراسية...
-                </div>
-              ) : filteredSubjects.length === 0 ? (
-                <div className="py-8 text-center rounded-2xl border border-dashed border-white/10 p-6 text-xs text-slate-400">
-                  لا توجد مواد مسجلة لهذا القسم حالياً. يمكنك إضافة مادة جديدة من الزر أعلاه.
-                </div>
-              ) : (
-                filteredSubjects.map((subject) => {
-                  const isEditingThis = editingSubjectId === subject.id;
-
-                  return (
-                    <div
-                      key={subject.id}
-                      className="rounded-xl border border-white/10 bg-black/40 p-3.5 flex items-center justify-between gap-3 hover:border-purple-500/30 transition-all"
-                    >
-                      {isEditingThis ? (
-                        <div className="flex-1 flex items-center gap-2">
-                          <Input
-                            value={editSubjectName}
-                            onChange={(e) => setEditSubjectName(e.target.value)}
-                            className="h-8 text-xs bg-black/60 border-purple-500 text-white"
-                            autoFocus
-                          />
-                          <Button
-                            size="sm"
-                            onClick={() => handleUpdateSubject(subject.id)}
-                            className="h-8 px-3 bg-purple-600 text-white text-xs"
-                          >
-                            حفظ
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setEditingSubjectId(null)}
-                            className="h-8 px-2 text-slate-400 text-xs"
-                          >
-                            إلغاء
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-white truncate">
-                              {subject.name}
-                            </span>
-                            {subject.doctor_name && subject.doctor_name !== "غير محدد" && (
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-semibold shrink-0">
-                                د. {subject.doctor_name}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {!isEditingThis && (
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingSubjectId(subject.id);
-                              setEditSubjectName(subject.name);
-                            }}
-                            className="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
-                            title="تعديل اسم المادة"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteSubject(subject.id, subject.name)}
-                            className="w-8 h-8 rounded-lg border border-rose-500/20 flex items-center justify-center text-rose-400 hover:bg-rose-500/15 transition-all cursor-pointer"
-                            title="حذف المادة"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          {/* Modal Footer */}
-          <div className="pt-3 border-t border-white/10 flex justify-end shrink-0">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setSelectedDept(null)}
-              className="text-xs text-slate-300 hover:text-white hover:bg-white/5 rounded-xl h-9 px-4"
-            >
-              إغلاق النافذة
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

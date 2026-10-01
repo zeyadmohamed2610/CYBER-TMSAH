@@ -70,7 +70,7 @@ export function ConfirmAction({
       {open && typeof document !== "undefined" &&
         createPortal(
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={title}>
-            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-all duration-300" onClick={() => setOpen(false)} aria-hidden="true" />
+            <div className="fixed inset-0 bg-black/25 backdrop-blur-[2px] transition-all duration-300" onClick={() => setOpen(false)} aria-hidden="true" />
             <div className={`relative z-10 w-full max-w-md rounded-2xl border-2 ${detailed ? "border-destructive/30" : "border-border"} bg-card p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200 ${detailed ? styles.bgColor : ""}`}>
               <div className="flex items-start gap-4">
                 <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${styles.icon}`}>
