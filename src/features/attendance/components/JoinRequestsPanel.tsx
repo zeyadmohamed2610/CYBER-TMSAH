@@ -17,6 +17,7 @@ interface JoinRequest {
   department?: string | null;
   academic_year?: string | null;
   section_number?: number | null;
+  national_id?: string | null;
   status: "pending" | "approved" | "rejected";
   created_at: string;
   rejection_note: string | null;
@@ -82,7 +83,7 @@ export function JoinRequestsPanel() {
     setLoadingJoin(true);
     const query = supabase
       .from("join_requests")
-      .select("id, full_name, email, username, role, department, academic_year, section_number, status, created_at, rejection_note")
+      .select("id, full_name, email, username, role, department, academic_year, section_number, national_id, status, created_at, rejection_note")
       .order("created_at", { ascending: false });
 
     let finalJoinQuery = query;
@@ -383,6 +384,11 @@ export function JoinRequestsPanel() {
                       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
                         <span className="text-purple-400 font-semibold">{lang === "ar" ? ROLE_LABELS[req.role] : ROLE_LABELS_EN[req.role]}</span>
                         {req.email && <span className="text-cyan-400">{req.email}</span>}
+                        {req.national_id && (
+                          <span className="font-mono text-amber-300 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20">
+                            {lang === "ar" ? `الرقم القومي: ${req.national_id}` : `NID: ${req.national_id}`}
+                          </span>
+                        )}
                         {req.department && <span className="text-indigo-300">{lang === "ar" ? `القسم: ${req.department}` : `Dept: ${req.department}`}</span>}
                         {req.academic_year && <span>{lang === "ar" ? `الفرقة ${req.academic_year}` : `Year ${req.academic_year}`}</span>}
                         {req.section_number && <span>{lang === "ar" ? `سكشن ${req.section_number}` : `Section ${req.section_number}`}</span>}

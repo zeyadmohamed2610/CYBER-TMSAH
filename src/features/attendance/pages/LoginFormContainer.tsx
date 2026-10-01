@@ -236,6 +236,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
   const [department, setDepartment]         = useState<string>("cybersecurity");
   const [academicYear, setAcademicYear]     = useState<string>("1");
   const [sectionNumber, setSectionNumber]   = useState("");
+  const [joinNationalId, setJoinNationalId] = useState("");
   const [joinLoading, setJoinLoading]       = useState(false);
   const [joinSuccess, setJoinSuccess]       = useState(false);
 
@@ -452,8 +453,55 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
       return;
     }
 
-    // 6. Student specific validation
+    // 6. Student specific validation: National ID, Academic Year & Section Number
+    let trimmedNID: string | null = null;
     if (joinRole === "student") {
+      trimmedNID = joinNationalId.trim();
+      if (!trimmedNID || !/^\d{14}$/.test(trimmedNID)) {
+        toast.error(
+          lang === "ar"
+            ? "الرقم القومي إلزامي للطالب ويجب أن يتكون من 14 رقماً بالضبط"
+            : "National ID is required for students and must be exactly 14 digits"
+        );
+        setJoinLoading(false);
+        return;
+      }
+
+      // Check if National ID is already registered in users table
+      const { data: existingUser } = await supabase
+        .from("users")
+        .select("id")
+        .eq("national_id", trimmedNID)
+        .maybeSingle();
+
+      if (existingUser) {
+        toast.error(
+          lang === "ar"
+            ? "هذا الرقم القومي مسجل بالفعل في النظام"
+            : "This National ID is already registered"
+        );
+        setJoinLoading(false);
+        return;
+      }
+
+      // Check if a pending join request with this national ID already exists
+      const { data: existingReq } = await supabase
+        .from("join_requests")
+        .select("id")
+        .eq("national_id", trimmedNID)
+        .eq("status", "pending")
+        .maybeSingle();
+
+      if (existingReq) {
+        toast.error(
+          lang === "ar"
+            ? "يوجد طلب انضمام معلق بالفعل بهذا الرقم القومي"
+            : "A pending join request with this National ID already exists"
+        );
+        setJoinLoading(false);
+        return;
+      }
+
       if (!academicYear) {
         toast.error(lang === "ar" ? "يرجى اختيار الفرقة الدراسية" : "Please select your academic year");
         setJoinLoading(false);
@@ -475,6 +523,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
       department: department,
       academic_year: joinRole === "student" ? academicYear : null,
       section_number: joinRole === "student" && sectionNumber ? parseInt(sectionNumber) : null,
+      national_id: joinRole === "student" ? trimmedNID : null,
     });
 
     if (error) {
@@ -500,11 +549,13 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
   const getBadge = () => {
     const v = username.trim();
     if (!v) return null;
-    const [bg, color, border, label] = /^[0-9]+$/.test(v)
-      ? ["rgba(99,102,241,0.1)", "#818CF8", "rgba(99,102,241,0.25)", lang === "ar" ? "رقم" : "ID"]
+    const [bg, color, border, label] = (/^\d{14}$/.test(v))
+      ? ["rgba(99,102,241,0.12)", "#818CF8", "rgba(99,102,241,0.3)", lang === "ar" ? "رقم قومي" : "National ID"]
+      : (/^\d+$/.test(v))
+      ? ["rgba(245,158,11,0.1)", "#F59E0B", "rgba(245,158,11,0.25)", lang === "ar" ? "رقم" : "ID"]
       : v.includes("@")
       ? ["rgba(16,185,129,0.08)", "#34D399", "rgba(16,185,129,0.2)", lang === "ar" ? "بريد" : "Email"]
-      : ["rgba(255,255,255,0.06)", "#64748B", "rgba(255,255,255,0.1)", lang === "ar" ? "مستخدم" : "User"];
+      : ["rgba(255,255,255,0.06)", "#94A3B8", "rgba(255,255,255,0.12)", lang === "ar" ? "اسم مستخدم" : "Username"];
     return (
       <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md"
         style={{ background: bg, color, border: `1px solid ${border}` }}>
@@ -738,11 +789,27 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
                 )}
 
                 <Field
-                  id="l-user" name="nationalId" label={t.auth.username} value={username} onChange={setUsername}
-                  placeholder={t.auth.usernamePlaceholder} required autoComplete="username"
+                  id="l-user"
+                  name="identifier"
+                  label={
+                    lang === "ar"
+                      ? "اسم المستخدم / البريد الإلكتروني / الرقم القومي"
+                      : "Username / Email / National ID"
+                  }
+                  value={username}
+                  onChange={setUsername}
+                  placeholder={
+                    lang === "ar"
+                      ? "أدخل اسم المستخدم، البريد، أو الرقم القومي (14 رقم)"
+                      : "Enter username, email, or 14-digit National ID"
+                  }
+                  required
+                  autoComplete="username"
                   autoFocus={typeof window !== "undefined" && window.innerWidth >= 768}
                   onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); passRef.current?.focus(); } }}
-                  badge={getBadge()} icon={<Icon.User/>}/>
+                  badge={getBadge()}
+                  icon={<Icon.User/>}
+                />
 
                 <div className="relative">
                   <Field
@@ -961,39 +1028,70 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
                     isRTL={isRTL}
                   />
 
-                  {/* Student Specific Fields: Academic Year & Section Number */}
+                  {/* Student Specific Fields: National ID, Academic Year & Section Number */}
                   {isStudent && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <CustomRoleSelect
-                        id="j-year"
-                        label={lang === "ar" ? "الفرقة الدراسية" : "Academic Year"}
-                        value={academicYear}
-                        onChange={setAcademicYear}
-                        icon={<Icon.Year/>}
-                        options={ACADEMIC_YEARS.map(y => ({
-                          value: y.id,
-                          label: lang === "ar" ? y.nameAr : y.nameEn,
-                        }))}
-                        labelColor="#CBD5E1"
-                        fieldBg="rgba(255,255,255,0.045)"
-                        fieldBorder="rgba(255,255,255,0.12)"
-                        fieldFocus="rgba(147,51,234,0.08)"
-                        fieldGlow="0 0 0 3px rgba(147,51,234,0.22)"
-                        textColor="#FFFFFF"
-                        faintColor="#94A3B8"
-                        isRTL={isRTL}
+                    <div className="space-y-3">
+                      <Field
+                        id="j-national-id"
+                        name="national_id"
+                        label={lang === "ar" ? "الرقم القومي للطالب (14 رقماً)" : "Student National ID (14 digits)"}
+                        value={joinNationalId}
+                        onChange={v => {
+                          const clean = v.replace(/\D/g, "").slice(0, 14);
+                          setJoinNationalId(clean);
+                        }}
+                        placeholder="2990101XXXXXXXXX"
+                        required
+                        dir="ltr"
+                        autoComplete="off"
+                        icon={<Icon.User/>}
+                        badge={
+                          joinNationalId.length > 0 ? (
+                            <span
+                              className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded"
+                              style={{
+                                background: joinNationalId.length === 14 ? "rgba(16,185,129,0.15)" : "rgba(245,158,11,0.15)",
+                                color: joinNationalId.length === 14 ? "#34D399" : "#FBBF24",
+                              }}
+                            >
+                              {joinNationalId.length}/14
+                            </span>
+                          ) : null
+                        }
                       />
 
-                      <Field
-                        id="j-sec"
-                        label={lang === "ar" ? "رقم السكشن" : "Section Number"}
-                        type="number"
-                        value={sectionNumber}
-                        onChange={setSectionNumber}
-                        placeholder={lang === "ar" ? "مثال: 1" : "e.g. 1"}
-                        required
-                        icon={<Icon.Hash/>}
-                      />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <CustomRoleSelect
+                          id="j-year"
+                          label={lang === "ar" ? "الفرقة الدراسية" : "Academic Year"}
+                          value={academicYear}
+                          onChange={setAcademicYear}
+                          icon={<Icon.Year/>}
+                          options={ACADEMIC_YEARS.map(y => ({
+                            value: y.id,
+                            label: lang === "ar" ? y.nameAr : y.nameEn,
+                          }))}
+                          labelColor="#CBD5E1"
+                          fieldBg="rgba(255,255,255,0.045)"
+                          fieldBorder="rgba(255,255,255,0.12)"
+                          fieldFocus="rgba(147,51,234,0.08)"
+                          fieldGlow="0 0 0 3px rgba(147,51,234,0.22)"
+                          textColor="#FFFFFF"
+                          faintColor="#94A3B8"
+                          isRTL={isRTL}
+                        />
+
+                        <Field
+                          id="j-sec"
+                          label={lang === "ar" ? "رقم السكشن" : "Section Number"}
+                          type="number"
+                          value={sectionNumber}
+                          onChange={setSectionNumber}
+                          placeholder={lang === "ar" ? "مثال: 1" : "e.g. 1"}
+                          required
+                          icon={<Icon.Hash/>}
+                        />
+                      </div>
                     </div>
                   )}
 
