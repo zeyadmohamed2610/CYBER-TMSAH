@@ -15,6 +15,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
+import { Buffer } from "node:buffer";
 import {
   generateRegistrationOptions,
   verifyRegistrationResponse,
@@ -23,6 +24,15 @@ import {
   type VerifiedRegistrationResponse,
   type VerifiedAuthenticationResponse,
 } from "npm:@simplewebauthn/server@10";
+
+function uint8ArrayToBase64Url(bytes: Uint8Array): string {
+  let binary = "";
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -240,8 +250,13 @@ Deno.serve(async (req) => {
       const { credential: regCredential, credentialDeviceType, credentialBackedUp } = verification.registrationInfo;
       const { id: credId, publicKey, counter, transports } = regCredential;
 
-      // Encode publicKey as base64url for storage
-      const pubKeyB64 = Buffer.from(publicKey).toString("base64url");
+      // Encode publicKey as base64url for storage (safe without Buffer dependency)
+      let pubKeyB64: string;
+      try {
+        pubKeyB64 = uint8ArrayToBase64Url(publicKey);
+      } catch {
+        pubKeyB64 = Buffer.from(publicKey).toString("base64url");
+      }
 
       // Get user's public.users record
       const { data: publicUser } = await admin
@@ -250,21 +265,22 @@ Deno.serve(async (req) => {
         .eq("auth_id", user.id)
         .maybeSingle();
 
-      // Store credential
+      // Store credential (force internal transport for platform biometrics)
+      const validTransports = (transports && transports.length > 0) ? transports : ["internal"];
       const { error: upsertErr } = await admin.from("webauthn_credentials").upsert({
         auth_id: user.id,
         user_id: publicUser?.id ?? null,
         credential_id: credId,
         public_key: pubKeyB64,
         sign_count: counter,
-        transports: transports ?? [],
+        transports: validTransports,
         device_name: deviceName ?? `جهاز بيومتري ${new Date().toLocaleDateString("ar-EG")}`,
         last_used_at: new Date().toISOString(),
       }, { onConflict: "credential_id" });
 
       if (upsertErr) {
         console.error("[passkey-login] credential upsert failed:", upsertErr);
-        return json({ success: false, error: "Failed to save credential" });
+        return json({ success: false, error: `فشل حفظ البصمة في قاعدة البيانات: ${upsertErr.message}` });
       }
 
       // Record security audit log entry visible to Owner
@@ -560,6 +576,6 @@ Deno.serve(async (req) => {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[passkey-login] Unexpected error:", message);
-    return json({ success: false, error: "حدث خطأ داخلي. حاول مجدداً." });
+    return json({ success: false, error: `حدث خطأ داخلي: ${message}` });
   }
 });
