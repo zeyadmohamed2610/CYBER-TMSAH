@@ -307,13 +307,25 @@ Deno.serve(async (req) => {
             .select("credential_id, transports")
             .eq("auth_id", authId);
 
-          allowCredentials = (creds ?? []).map((c) => ({
+          if (!creds || creds.length === 0) {
+            return json({
+              success: false,
+              error: "لا توجد بصمة مسجلة لهذا الحساب. يرجى تسجيل الدخول بكلمة المرور أولاً وإضافة البصمة من الملف الشخصي.",
+            });
+          }
+
+          allowCredentials = creds.map((c) => ({
             id: c.credential_id as string,
             type: "public-key" as const,
             // CRITICAL: Always force "internal" transport to prevent Chrome from showing
             // USB/NFC/another-device picker. "internal" = platform authenticator only (fingerprint/face/PIN)
             transports: ["internal"] as string[],
           }));
+        } else {
+          return json({
+            success: false,
+            error: "الحساب غير موجود. يرجى التحقق من اسم المستخدم أو البريد الإلكتروني.",
+          });
         }
       }
 

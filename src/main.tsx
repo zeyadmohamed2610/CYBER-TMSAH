@@ -27,8 +27,8 @@ if (dsn) {
       const error = hint.originalException;
       if (error instanceof Error) {
         const message = error.message;
-        // Skip chunk load errors (handled by PWA update)
-        if (message.includes("Failed to fetch dynamically imported module")) {
+        // Skip chunk load errors (handled by auto-reload)
+        if (message.includes("Failed to fetch dynamically imported module") || message.includes("error loading dynamically imported module")) {
           return null;
         }
         // Skip network errors from user's offline mode
@@ -38,6 +38,31 @@ if (dsn) {
       }
       return event;
     },
+  });
+}
+
+// ── Auto-reload on dynamic import failure (e.g. after a new release) ────────
+if (typeof window !== "undefined") {
+  const handleChunkError = () => {
+    const lastReload = sessionStorage.getItem("vite_chunk_reload");
+    const now = Date.now();
+    // Prevent reload loops - only reload once every 10 seconds
+    if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
+      sessionStorage.setItem("vite_chunk_reload", now.toString());
+      window.location.reload();
+    }
+  };
+
+  window.addEventListener("vite:preloadError", handleChunkError);
+
+  window.addEventListener("unhandledrejection", (event) => {
+    const msg = event?.reason?.message || "";
+    if (
+      msg.includes("Failed to fetch dynamically imported module") ||
+      msg.includes("error loading dynamically imported module")
+    ) {
+      handleChunkError();
+    }
   });
 }
 
