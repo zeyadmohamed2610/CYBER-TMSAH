@@ -82,7 +82,7 @@ export function JoinRequestsPanel() {
     setLoadingJoin(true);
     const query = supabase
       .from("join_requests")
-      .select("*")
+      .select("id, full_name, email, username, role, department, academic_year, section_number, status, created_at, rejection_note")
       .order("created_at", { ascending: false });
 
     let finalJoinQuery = query;

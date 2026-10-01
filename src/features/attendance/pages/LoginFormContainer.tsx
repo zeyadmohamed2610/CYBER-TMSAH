@@ -328,7 +328,13 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
       setLoginLoading(false); return;
     }
 
-    try { rememberMe ? localStorage.setItem(REMEMBER_KEY, raw) : localStorage.removeItem(REMEMBER_KEY); } catch { /**/ }
+    try {
+      if (rememberMe) {
+        localStorage.setItem(REMEMBER_KEY, raw);
+      } else {
+        localStorage.removeItem(REMEMBER_KEY);
+      }
+    } catch { /**/ }
     playCyberSuccessChime();
     await recordAuditLog({ action: "login_success", identifier: raw });
     recordAttempt(true);
