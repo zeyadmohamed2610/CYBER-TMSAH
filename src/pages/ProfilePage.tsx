@@ -253,7 +253,7 @@ export default function ProfilePage() {
       try {
         setLoading(true);
         // Fetch from users table
-        let { data, error } = await supabase
+        const { data: rawData, error: rawError } = await supabase
           .from("users")
           .select(`
             id,
@@ -271,8 +271,16 @@ export default function ProfilePage() {
           .eq("auth_id", user.id)
           .maybeSingle();
 
-        if (error) {
-          console.warn("Full profile query failed, attempting standard columns fallback:", error);
+        type UserProfile = {
+          id: string; auth_id: string; full_name: string | null; username: string | null;
+          email: string | null; role: string | null; department: string | null;
+          academic_year: string | null; section_number: number | null;
+          subject_id: string | null; created_at: string;
+        };
+        let data: UserProfile | null = rawData as UserProfile | null;
+
+        if (rawError) {
+          console.warn("Full profile query failed, attempting standard columns fallback:", rawError);
           const fallback = await supabase
             .from("users")
             .select("id, auth_id, full_name, role, subject_id, created_at")
@@ -281,13 +289,13 @@ export default function ProfilePage() {
 
           if (fallback.data) {
             data = {
-              ...fallback.data,
+              ...(fallback.data as Partial<UserProfile>),
               username: null,
               email: user.email || null,
               department: null,
               academic_year: null,
               section_number: null,
-            } as any;
+            } as UserProfile;
           }
         }
 

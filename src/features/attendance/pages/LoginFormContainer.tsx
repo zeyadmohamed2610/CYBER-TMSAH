@@ -350,8 +350,19 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
       }
     } catch { /**/ }
     playCyberSuccessChime();
-    await recordAuditLog({ action: "login_success", identifier: raw });
+    // Fire audit log in background — don't block navigation
+    void recordAuditLog({ action: "login_success", identifier: raw });
     recordAttempt(true);
+
+    // ── CRITICAL: Wait for the JWT to propagate into the Supabase client ──
+    // signInWithPassword fires onAuthStateChange synchronously, but the
+    // session token is not yet in the client headers at that instant.
+    // Dashboard components mount immediately after navigate() and start
+    // firing REST queries — which all return 400 because the Authorization
+    // header hasn't been updated yet. getSession() forces a round-trip that
+    // ensures the client internal state is fully up to date before we hand
+    // control to the router.
+    await supabase.auth.getSession();
 
     if (authData?.user) {
       try {
@@ -362,9 +373,14 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
           .maybeSingle();
 
         if (profile?.role) {
-          navigate(getAttendanceDashboardRoute(profile.role as any), { replace: true });
-          setLoginLoading(false);
-          return;
+          const validRoles = ["owner", "coordinator", "doctor", "student", "ta"] as const;
+          type ValidRole = typeof validRoles[number];
+          const safeRole = validRoles.includes(profile.role as ValidRole) ? (profile.role as ValidRole) : null;
+          if (safeRole) {
+            navigate(getAttendanceDashboardRoute(safeRole), { replace: true });
+            setLoginLoading(false);
+            return;
+          }
         }
       } catch {
         // fallback to /attendance

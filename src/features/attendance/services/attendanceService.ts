@@ -313,15 +313,24 @@ export const attendanceService = {
           supabase.from("attendance").select("id", { count: "exact" }),
         ]);
         if (sessionsResult.error) throw sessionsResult.error;
-        if (studentsResult.error) throw studentsResult.error;
         if (attendanceResult.error) throw attendanceResult.error;
+
+        let totalStudents = 0;
+        if (!studentsResult.error && studentsResult.data !== null && studentsResult.data !== undefined) {
+          totalStudents = Number(studentsResult.data);
+        } else {
+          const fallbackStudents = await supabase
+            .from("users")
+            .select("id", { count: "exact", head: true })
+            .eq("role", "student");
+          totalStudents = fallbackStudents.count ?? 0;
+        }
 
         const sessions = sessionsResult.data ?? [];
         const totalSessions = sessions.length;
         const activeSessions = sessions.filter(
           (s) => s.expires_at && new Date(s.expires_at as string).getTime() > Date.now(),
         ).length;
-        const totalStudents = Number(studentsResult.data ?? 0);
         const attendanceCount = attendanceResult.count ?? 0;
 
         // Attendance rate = actual records / possible records (1 per student per session)

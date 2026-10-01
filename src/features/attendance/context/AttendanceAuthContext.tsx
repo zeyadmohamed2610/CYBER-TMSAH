@@ -53,7 +53,8 @@ const fetchUserProfile = async (authId: string): Promise<{ role: AttendanceRole;
 
   if (error) throw error;
   if (!isAttendanceRole(data?.role)) throw new Error("Unable to resolve user role.");
-  return { role: data.role, fullName: data.full_name ?? null, department: (data as any)?.department ?? null };
+  const typedData = data as { role: AttendanceRole; full_name: string | null; department?: string | null };
+  return { role: typedData.role, fullName: typedData.full_name ?? null, department: typedData.department ?? null };
 };
 
 /** Wrap a promise with a timeout */

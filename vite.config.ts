@@ -1,8 +1,12 @@
 import { defineConfig } from "vite";
+import type { ViteDevServer, PreviewServer } from "vite";
+import type { ServerResponse, IncomingMessage } from "http";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 import compression from "vite-plugin-compression";
+
+type NextFn = () => void;
 
 let sentryVitePlugin: import("@sentry/vite-plugin").SentryVitePlugin | null = null;
 try {
@@ -11,8 +15,9 @@ try {
 } catch {
   sentryVitePlugin = null;
 }
+
 function e2eSupportPlugin() {
-  const setHeaders = (res: any) => {
+  const setHeaders = (res: ServerResponse) => {
     res.setHeader("Content-Security-Policy", "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https: wss:; frame-ancestors 'self';");
     res.setHeader("X-Frame-Options", "SAMEORIGIN");
     res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -20,8 +25,8 @@ function e2eSupportPlugin() {
 
   return {
     name: "vite-plugin-e2e-support",
-    configureServer(server: any) {
-      server.middlewares.use((req: any, res: any, next: any) => {
+    configureServer(server: ViteDevServer) {
+      server.middlewares.use((req: IncomingMessage, res: ServerResponse, next: NextFn) => {
         setHeaders(res);
         if (req.url === "/api/health" || req.url?.startsWith("/api/health?")) {
           res.setHeader("Content-Type", "application/json");
@@ -36,8 +41,8 @@ function e2eSupportPlugin() {
         next();
       });
     },
-    configurePreviewServer(server: any) {
-      server.middlewares.use((req: any, res: any, next: any) => {
+    configurePreviewServer(server: PreviewServer) {
+      server.middlewares.use((req: IncomingMessage, res: ServerResponse, next: NextFn) => {
         setHeaders(res);
         if (req.url === "/api/health" || req.url?.startsWith("/api/health?")) {
           res.setHeader("Content-Type", "application/json");

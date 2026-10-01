@@ -217,16 +217,16 @@ export const TADashboard = () => {
   const { metrics, error } = useAttendanceDashboardData("ta", taSections);
 
   useEffect(() => {
-    if (!user) return;
-    supabase.from("users").select("subject_id, sections").eq("auth_id", user.id).maybeSingle()
+    if (!user?.id) return;
+    supabase.from("users").select("subject_id, section_number").eq("auth_id", user.id).maybeSingle()
       .then(({ data }) => {
         if (data?.subject_id) {
           setTaSubjectId(data.subject_id);
           supabase.from("subjects").select("name").eq("id", data.subject_id).maybeSingle()
             .then(({ data: subj }) => { if (subj?.name) setTaSubjectName(subj.name); });
         }
-        if (Array.isArray(data?.sections) && data.sections.length > 0) {
-          setTaSections(data.sections.map((s: string | number) => String(s)));
+        if (data?.section_number !== null && data?.section_number !== undefined) {
+          setTaSections([String(data.section_number)]);
         }
       });
   }, [user]);

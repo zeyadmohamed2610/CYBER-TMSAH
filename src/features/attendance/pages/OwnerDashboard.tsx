@@ -53,6 +53,10 @@ export const OwnerDashboard = () => {
   const [facultyCount, setFacultyCount] = useState<number>(0);
 
   useEffect(() => {
+    // Don't fetch until role is confirmed — prevents 400 errors from premature
+    // queries before the JWT is fully propagated in the Supabase client headers.
+    if (!role) return;
+
     let isMounted = true;
     async function loadAuxCounts() {
       try {
@@ -74,7 +78,7 @@ export const OwnerDashboard = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [role]);
 
   const setActiveTab = (tab: string) => {
     try {
