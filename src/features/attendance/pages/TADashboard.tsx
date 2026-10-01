@@ -268,31 +268,70 @@ export const TADashboard = () => {
       )}
 
       {/* Stats */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-        <StatCard title="إجمالي السكاشن" value={String(metrics.totalSessions)} description="منذ البداية" icon={BookOpenCheck} />
-        <StatCard title="سكاشن نشطة" value={String(metrics.activeSessions)} description="الآن" icon={Clock3} />
-        <StatCard title="نسبة الحضور" value={Math.round(metrics.attendanceRate) + "%"} description="الإجمالي" icon={Users} />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4">
+        <StatCard
+          title="إجمالي السكاشن"
+          value={String(metrics.totalSessions)}
+          description="منذ بداية الفصل"
+          icon={BookOpenCheck}
+          colorScheme="cyan"
+        />
+        <StatCard
+          title="سكاشن نشطة الآن"
+          value={String(metrics.activeSessions)}
+          description="متاحة لتسجيل الطلاب"
+          icon={Clock3}
+          colorScheme="emerald"
+        />
+        <StatCard
+          title="نسبة الحضور"
+          value={Math.round(metrics.attendanceRate) + "%"}
+          description="متوسط حضور السكاشن"
+          icon={Users}
+          colorScheme="purple"
+        />
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl" className="w-full">
-        <TabsList className="flex h-auto w-full justify-start gap-2 bg-black/30 border border-white/10 p-1.5 rounded-xl flex-wrap" dir="rtl">
-          <TabsTrigger value="lectures" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:border-cyan-500/40 border border-transparent px-4 py-2 rounded-lg font-bold text-sm gap-2">
-            <BookOpenCheck className="h-4 w-4" /> السكاشن
-          </TabsTrigger>
-          <TabsTrigger value="records" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:border-cyan-500/40 border border-transparent px-4 py-2 rounded-lg font-bold text-sm gap-2">
-            <ListChecks className="h-4 w-4" /> سجلات الحضور
-          </TabsTrigger>
-          <TabsTrigger value="schedule" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:border-cyan-500/40 border border-transparent px-4 py-2 rounded-lg font-bold text-sm gap-2">
-            <CalendarDays className="h-4 w-4" /> الجدول الدراسي
-          </TabsTrigger>
-          <TabsTrigger value="stats" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:border-cyan-500/40 border border-transparent px-4 py-2 rounded-lg font-bold text-sm gap-2">
-            <BarChart2 className="h-4 w-4" /> الإحصائيات
-          </TabsTrigger>
-          <TabsTrigger value="profile" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 data-[state=active]:border-cyan-500/40 border border-transparent px-4 py-2 rounded-lg font-bold text-sm gap-2">
-            <Info className="h-4 w-4" /> بياناتي
-          </TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl" className="w-full space-y-4">
+        <div
+          className="w-full overflow-x-auto pb-1"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          dir="rtl"
+        >
+          <TabsList className="flex h-auto w-max min-w-full justify-start gap-1.5 bg-white/[0.02] border border-white/10 p-1.5 rounded-2xl backdrop-blur-md" dir="rtl">
+            <TabsTrigger
+              value="lectures"
+              className="data-[state=active]:bg-cyan-500/25 data-[state=active]:text-cyan-200 data-[state=active]:border-cyan-500/50 border border-transparent px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm gap-2 whitespace-nowrap transition-all"
+            >
+              <BookOpenCheck className="h-4 w-4" /> السكاشن
+            </TabsTrigger>
+            <TabsTrigger
+              value="records"
+              className="data-[state=active]:bg-cyan-500/25 data-[state=active]:text-cyan-200 data-[state=active]:border-cyan-500/50 border border-transparent px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm gap-2 whitespace-nowrap transition-all"
+            >
+              <ListChecks className="h-4 w-4" /> سجلات الحضور
+            </TabsTrigger>
+            <TabsTrigger
+              value="schedule"
+              className="data-[state=active]:bg-cyan-500/25 data-[state=active]:text-cyan-200 data-[state=active]:border-cyan-500/50 border border-transparent px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm gap-2 whitespace-nowrap transition-all"
+            >
+              <CalendarDays className="h-4 w-4" /> الجدول الدراسي
+            </TabsTrigger>
+            <TabsTrigger
+              value="stats"
+              className="data-[state=active]:bg-cyan-500/25 data-[state=active]:text-cyan-200 data-[state=active]:border-cyan-500/50 border border-transparent px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm gap-2 whitespace-nowrap transition-all"
+            >
+              <BarChart2 className="h-4 w-4" /> الإحصائيات
+            </TabsTrigger>
+            <TabsTrigger
+              value="profile"
+              className="data-[state=active]:bg-cyan-500/25 data-[state=active]:text-cyan-200 data-[state=active]:border-cyan-500/50 border border-transparent px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm gap-2 whitespace-nowrap transition-all"
+            >
+              <Info className="h-4 w-4" /> بياناتي
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="lectures" className="mt-4">
           <LectureManagementPanel fixedSubjectId={taSubjectId} onSelectLecture={setSelectedLecture} />
