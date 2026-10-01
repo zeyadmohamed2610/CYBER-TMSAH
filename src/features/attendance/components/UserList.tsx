@@ -148,6 +148,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
       username: "",
       email: "",
       password: "",
+      nationalId: "",
       department: "cybersecurity",
       academicYear: "1",
       sectionNumber: "1",
@@ -176,6 +177,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
       username: "",
       email: "",
       password: "",
+      nationalId: "",
       department: "cybersecurity",
       academicYear: "1",
       sectionNumber: "1",
@@ -186,6 +188,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
   // Edit Data
   const [editData, setEditData] = useState({
     name: "",
+    nationalId: "",
     department: "",
     academicYear: "",
     sectionNumber: "",
@@ -234,7 +237,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
 
       if (debouncedSearch) {
         query = query.or(
-          `full_name.ilike.%${debouncedSearch}%,username.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%`
+          `full_name.ilike.%${debouncedSearch}%,username.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%,national_id.ilike.%${debouncedSearch}%`
         );
       }
 
@@ -258,6 +261,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
       setLoading(false);
     }
   }, [role, debouncedSearch, loadUserSubjects]);
+
 
   useEffect(() => {
     void loadUsers();
@@ -303,7 +307,18 @@ export function UserList({ role, title }: { role: string; title: string }) {
       return;
     }
 
+    // Validate National ID for students
+    if (role === "student") {
+      const trimmedNID = formData.nationalId.trim();
+      if (!trimmedNID || !/^\d{14}$/.test(trimmedNID)) {
+        toast.error("الرقم القومي إلزامي للطالب ويجب أن يتكون من 14 رقماً بالضبط");
+        return;
+      }
+    }
+
     setSubmitting(true);
+
+    const trimmedNID = role === "student" ? formData.nationalId.trim() : null;
 
     try {
       // 1. Try Direct RPC admin_create_user
@@ -344,6 +359,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
             department: formData.department,
             academic_year: role === "student" ? formData.academicYear : null,
             section_number: role === "student" ? parseInt(formData.sectionNumber) : null,
+            national_id: trimmedNID,
             status: "pending",
           })
           .select("id")
@@ -382,6 +398,10 @@ export function UserList({ role, title }: { role: string; title: string }) {
         if (newUserId && (role === "doctor" || role === "ta" || role === "coordinator") && formData.subjectIds.length > 0) {
           await assignSubjectsAfterCreate(newUserId as string);
         }
+        // Set national_id for student via update (admin_create_user doesn't accept it yet)
+        if (newUserId && role === "student" && trimmedNID) {
+          await supabase.from("users").update({ national_id: trimmedNID }).eq("id", newUserId as string);
+        }
         toast.success(`تمت إضافة الحساب بنجاح لـ ${trimmedName} ✓`);
         resetFormAndDraft();
         void loadUsers();
@@ -409,6 +429,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
     setEditingId(user.id);
     setEditData({
       name: user.full_name,
+      nationalId: user.national_id || "",
       department: user.department || "cybersecurity",
       academicYear: user.academic_year || "1",
       sectionNumber: user.section_number ? String(user.section_number) : "1",
@@ -427,6 +448,13 @@ export function UserList({ role, title }: { role: string; title: string }) {
     }
     setSubmitting(true);
 
+    // Validate national_id if student
+    if (role === "student" && editData.nationalId.trim() && !/^\d{14}$/.test(editData.nationalId.trim())) {
+      toast.error("الرقم القومي يجب أن يتكون من 14 رقماً بالضبط");
+      setSubmitting(false);
+      return;
+    }
+
     const updatePayload: Record<string, unknown> = {
       full_name: editData.name.trim(),
       department: editData.department,
@@ -435,6 +463,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
     if (role === "student") {
       updatePayload.academic_year = editData.academicYear;
       updatePayload.section_number = parseInt(editData.sectionNumber) || 1;
+      if (editData.nationalId.trim()) updatePayload.national_id = editData.nationalId.trim();
     }
 
     // Update basic user record
@@ -640,26 +669,48 @@ export function UserList({ role, title }: { role: string; title: string }) {
                     </Select>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-slate-300">رقم السكشن (1 - 10)*</Label>
-                    <Select
-                      value={formData.sectionNumber}
-                      onValueChange={(val) => setFormData({ ...formData, sectionNumber: val })}
-                      disabled={submitting}
-                    >
-                      <SelectTrigger className="bg-black/50 border-white/10 text-white h-10 rounded-xl">
-                        <SelectValue placeholder="اختر السكشن" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#120d1c] border-purple-500/30 text-white">
-                        {Array.from({ length: 10 }, (_, i) => String(i + 1)).map((sec) => (
-                          <SelectItem key={sec} value={sec}>
-                            سكشن {sec}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-slate-300">رقم السكشن (1 - 10)*</Label>
+                      <Select
+                        value={formData.sectionNumber}
+                        onValueChange={(val) => setFormData({ ...formData, sectionNumber: val })}
+                        disabled={submitting}
+                      >
+                        <SelectTrigger className="bg-black/50 border-white/10 text-white h-10 rounded-xl">
+                          <SelectValue placeholder="اختر السكشن" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#120d1c] border-purple-500/30 text-white">
+                          {Array.from({ length: 10 }, (_, i) => String(i + 1)).map((sec) => (
+                            <SelectItem key={sec} value={sec}>
+                              سكشن {sec}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* National ID - required for students */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-slate-300">الرقم القومي (14 رقم)*</Label>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={14}
+                        placeholder="مثال: 30110199901234"
+                        value={formData.nationalId}
+                        onChange={(e) => setFormData({ ...formData, nationalId: e.target.value.replace(/\D/g, "") })}
+                        disabled={submitting}
+                        className="bg-black/50 border-white/10 text-white h-10 rounded-xl dir-ltr text-left font-mono tracking-wider"
+                        required
+                      />
+                      {formData.nationalId.length > 0 && formData.nationalId.length !== 14 && (
+                        <p className="text-[11px] text-red-400">{formData.nationalId.length}/14 رقم</p>
+                      )}
+                      {formData.nationalId.length === 14 && (
+                        <p className="text-[11px] text-emerald-400">✓ الرقم صحيح</p>
+                      )}
+                    </div>
+                  </>
               )}
 
               {/* Doctor / TA / Coordinator specific: Subject (multi-select filtered by department) */}
@@ -847,6 +898,19 @@ export function UserList({ role, title }: { role: string; title: string }) {
                               </SelectContent>
                             </Select>
                           </div>
+
+                          <div>
+                            <Label className="text-xs text-slate-400">الرقم القومي (14 رقم):</Label>
+                            <Input
+                              type="text"
+                              inputMode="numeric"
+                              maxLength={14}
+                              placeholder="14 رقماً"
+                              value={editData.nationalId}
+                              onChange={(e) => setEditData({ ...editData, nationalId: e.target.value.replace(/\D/g, "") })}
+                              className="bg-black/60 border-white/10 text-white h-9 text-xs rounded-lg font-mono dir-ltr text-left"
+                            />
+                          </div>
                         </>
                       )}
 
@@ -954,6 +1018,11 @@ export function UserList({ role, title }: { role: string; title: string }) {
                         {role === "student" && user.section_number && (
                           <span className="px-1.5 py-0.5 rounded bg-white/5 text-[11px] text-slate-300">
                             سكشن {user.section_number}
+                          </span>
+                        )}
+                        {role === "student" && (
+                          <span className="px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300 font-mono" dir="ltr">
+                            {user.national_id || "غير مسجل"}
                           </span>
                         )}
                         {(role === "doctor" || role === "ta" || role === "coordinator") && (
@@ -1157,6 +1226,31 @@ export function UserList({ role, title }: { role: string; title: string }) {
                       </div>
                     </div>
                   )}
+
+                  {/* National ID if student */}
+                  {role === "student" && (
+                    <div className="p-3 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
+                      <div>
+                        <span className="text-slate-400 block text-[10px] mb-0.5">الرقم القومي</span>
+                        <span className="font-mono font-bold text-amber-300 text-xs" dir="ltr">
+                          {selectedUserForDetails.national_id || "غير مسجل"}
+                        </span>
+                      </div>
+                      {selectedUserForDetails.national_id && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleCopyText(selectedUserForDetails.national_id!, "الرقم القومي")}
+                          className="h-8 px-2 text-slate-400 hover:text-white"
+                        >
+                          {copiedField === "الرقم القومي" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        </Button>
+                      )}
+                    </div>
+                  )}
+
+
 
                   {/* Subject if Doctor / TA / Coordinator */}
                   {(role === "doctor" || role === "ta" || role === "coordinator") && (
