@@ -19,6 +19,7 @@ import {
   Smartphone,
   Users,
   Wrench,
+  X,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -276,17 +277,29 @@ export const OwnerDashboard = () => {
         {/* ── MOBILE MODAL: Vertical Section Picker ── */}
         <Dialog open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen}>
           <DialogContent
-            className="max-w-md bg-[#0a0d1e]/98 border border-purple-500/40 text-white rounded-3xl p-5 shadow-2xl backdrop-blur-2xl max-h-[85vh] overflow-y-auto"
+            className="max-w-md bg-[#0a0d1e]/98 border border-purple-500/40 text-white rounded-3xl p-5 shadow-2xl backdrop-blur-2xl max-h-[85vh] overflow-y-auto [&>button:last-child]:hidden"
             dir="rtl"
           >
             <DialogHeader className="text-start pb-3 border-b border-white/10">
-              <DialogTitle className="text-base font-black text-white flex items-center gap-2">
-                <Layers className="w-5 h-5 text-purple-400" />
-                <span>اختر القسم المطلوب</span>
-              </DialogTitle>
-              <DialogDescription className="text-xs text-slate-400">
-                تصفح أقسام لوحة الإدارة الأكاديمية بنقرة واحدة
-              </DialogDescription>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <DialogTitle className="text-base font-black text-white flex items-center gap-2">
+                    <Layers className="w-5 h-5 text-purple-400" />
+                    <span>اختر القسم المطلوب</span>
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-slate-400 mt-0.5">
+                    تصفح أقسام لوحة الإدارة الأكاديمية بنقرة واحدة
+                  </DialogDescription>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileNavOpen(false)}
+                  className="shrink-0 w-8 h-8 rounded-xl bg-white/5 hover:bg-rose-500/20 border border-white/10 hover:border-rose-500/40 flex items-center justify-center text-slate-400 hover:text-rose-400 transition-all duration-200 cursor-pointer"
+                  aria-label="إغلاق القائمة"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </DialogHeader>
 
             <div className="space-y-4 py-2">
