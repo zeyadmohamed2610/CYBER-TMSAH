@@ -467,39 +467,23 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
         return;
       }
 
-      // Check if National ID is already registered in users table
-      const { data: existingUser } = await supabase
-        .from("users")
-        .select("id")
-        .eq("national_id", trimmedNID)
-        .maybeSingle();
+      // Check if National ID is already registered in users table or has a pending request
+      try {
+        const { data: nidExists } = await supabase.rpc("check_national_id_exists", {
+          p_national_id: trimmedNID,
+        });
 
-      if (existingUser) {
-        toast.error(
-          lang === "ar"
-            ? "هذا الرقم القومي مسجل بالفعل في النظام"
-            : "This National ID is already registered"
-        );
-        setJoinLoading(false);
-        return;
-      }
-
-      // Check if a pending join request with this national ID already exists
-      const { data: existingReq } = await supabase
-        .from("join_requests")
-        .select("id")
-        .eq("national_id", trimmedNID)
-        .eq("status", "pending")
-        .maybeSingle();
-
-      if (existingReq) {
-        toast.error(
-          lang === "ar"
-            ? "يوجد طلب انضمام معلق بالفعل بهذا الرقم القومي"
-            : "A pending join request with this National ID already exists"
-        );
-        setJoinLoading(false);
-        return;
+        if (nidExists) {
+          toast.error(
+            lang === "ar"
+              ? "الرقم القومي هذا مسجل بالفعل أو لديه طلب انضمام معلق"
+              : "This National ID is already registered or has a pending request"
+          );
+          setJoinLoading(false);
+          return;
+        }
+      } catch {
+        // Non-blocking fallback
       }
 
       if (!academicYear) {
