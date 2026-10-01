@@ -11,6 +11,7 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
+  ArrowLeft,
   Loader2,
   Calendar,
   Sparkles,
@@ -26,6 +27,10 @@ import {
   Smartphone,
   Laptop,
   IdCard,
+  Database,
+  Cpu,
+  Activity,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -648,25 +653,28 @@ export default function ProfilePage() {
                 <Button
                   onClick={() => navigate(dashboardPath)}
                   variant="outline"
-                  className="border-purple-500/30 bg-purple-950/20 hover:bg-purple-600/20 text-white rounded-2xl text-xs sm:text-sm font-bold gap-2.5 h-11 px-5 shadow-[0_0_20px_rgba(168,85,247,0.15)] transition-all hover:scale-[1.02]"
+                  className="border-purple-500/30 bg-purple-950/20 hover:bg-purple-600/20 text-white rounded-2xl text-xs sm:text-sm font-bold gap-2.5 h-11 px-5 shadow-[0_0_20px_rgba(168,85,247,0.15)] transition-all hover:scale-[1.02] flex items-center"
                 >
                   <span>العودة للوحة التحكم</span>
-                  <ArrowRight className="w-4 h-4 text-purple-400" />
+                  <ArrowLeft className="w-4 h-4 text-purple-400" />
                 </Button>
 
-                <div className="flex items-center gap-3 bg-black/40 border border-white/10 px-3.5 py-1.5 rounded-2xl">
-                  <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                    <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                <div className="flex items-center gap-3 bg-gradient-to-r from-emerald-950/30 via-black/50 to-black/60 border border-emerald-500/30 hover:border-emerald-500/50 px-4 py-2 rounded-2xl shadow-[0_0_20px_rgba(16,185,129,0.15)] backdrop-blur-md transition-all">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400 animate-pulse" />
                     <span>معدل الأمان:</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-20 h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-24 h-2.5 bg-black/60 border border-white/10 rounded-full overflow-hidden p-[1px]">
                       <div
-                        className="h-full bg-gradient-to-r from-cyan-400 to-emerald-400 rounded-full transition-all duration-500"
+                        className="h-full bg-gradient-to-r from-cyan-400 via-emerald-400 to-teal-300 rounded-full shadow-[0_0_12px_rgba(52,211,153,0.8)] transition-all duration-700"
                         style={{ width: `${securityScore}%` }}
                       />
                     </div>
-                    <span className="text-xs font-mono font-bold text-emerald-400">{securityScore}%</span>
+                    <span className="text-xs font-mono font-black text-emerald-300">{securityScore}%</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      {securityScore === 100 ? "حماية قصوى" : "مستوى جيد"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -737,22 +745,22 @@ export default function ProfilePage() {
                     </div>
 
                     {/* Name & Username */}
-                    {/* Name & Username */}
-                    <div>
+                    <div className="space-y-1">
                       <h2 className="text-xl font-black text-white truncate">
                         {profile?.full_name || fullName || "مستخدم مسجل"}
                       </h2>
 
-                      <div className="mt-1 flex justify-center">
-                        <span className="text-xs font-mono text-purple-300/90 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20" dir="ltr">
-                          {formatDisplayUsername(profile?.username, profile?.email || user?.email)}
+                      <div className="flex justify-center">
+                        <span className="text-xs font-mono font-bold text-purple-300 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/15 border border-purple-500/25 shadow-sm" dir="ltr">
+                          <Sparkles className="w-3 h-3 text-cyan-400" />
+                          <span>{formatDisplayUsername(profile?.username, profile?.email || user?.email)}</span>
                         </span>
                       </div>
                     </div>
 
                     {/* Role Tag */}
                     <div className="flex justify-center">
-                      <span className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border ${roleInfo.bg} ${roleInfo.glow}`}>
+                      <span className={`px-4 py-1.5 rounded-xl text-xs font-bold border ${roleInfo.bg} ${roleInfo.glow}`}>
                         {roleInfo.label}
                       </span>
                     </div>
@@ -769,55 +777,53 @@ export default function ProfilePage() {
                     </Button>
 
                     {/* Identity Details list */}
-                    <div className="pt-4 border-t border-white/10 space-y-3 text-start text-xs">
-                      {/* Email */}
-                      <div className="flex items-center justify-between text-slate-300 gap-2">
-                        <span className="text-slate-400 flex items-center gap-1.5 shrink-0">
-                          <Mail className="w-3.5 h-3.5 text-slate-500" />
-                          <span>البريد:</span>
-                        </span>
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="font-mono text-slate-200 truncate text-[11px]" dir="ltr" title={profile?.email || user?.email || ""}>
-                            {profile?.email || user?.email || "—"}
+                    <div className="pt-3 border-t border-white/10 space-y-2.5 text-start text-xs">
+                      {/* Email Card Badge (No Truncation) */}
+                      <div className="p-3 rounded-2xl bg-black/50 border border-white/10 hover:border-purple-500/30 transition-all space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400 flex items-center gap-1.5 text-[11px] font-medium">
+                            <Mail className="w-3.5 h-3.5 text-purple-400" />
+                            <span>البريد الإلكتروني الأساسي:</span>
                           </span>
                           {(profile?.email || user?.email) && (
                             <button
                               onClick={() => copyToClipboard(profile?.email || user?.email || "", "البريد الإلكتروني")}
-                              className="text-slate-400 hover:text-white transition-colors shrink-0"
+                              className="text-slate-400 hover:text-white transition-colors p-1 rounded-md hover:bg-white/10"
                               title="نسخ البريد"
                             >
-                              {copiedField === "البريد الإلكتروني" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                              {copiedField === "البريد الإلكتروني" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                             </button>
                           )}
                         </div>
+                        <span className="font-mono text-slate-200 text-xs break-all block text-start font-bold" dir="ltr">
+                          {profile?.email || user?.email || "—"}
+                        </span>
                       </div>
 
-                      {/* Role-Aware Info: Owner / Coordinator vs Student */}
+                      {/* Quick Stats for Owner / Coordinator */}
                       {role === "owner" || role === "coordinator" ? (
-                        <>
-                          <div className="flex items-center justify-between text-slate-300">
-                            <span className="text-slate-400 flex items-center gap-1.5">
-                              <Shield className="w-3.5 h-3.5 text-purple-400" />
-                              <span>الصلاحيات:</span>
-                            </span>
-                            <span className="text-purple-300 font-bold text-[11px]">تحكم مركزي شامل</span>
-                          </div>
-                          <div className="flex items-center justify-between text-slate-300">
-                            <span className="text-slate-400 flex items-center gap-1.5">
+                        <div className="grid grid-cols-2 gap-2 pt-0.5">
+                          <div className="p-2.5 rounded-2xl bg-purple-950/20 border border-purple-500/25 space-y-1 text-center">
+                            <span className="text-[10px] text-purple-300 block">الأجهزة الموثقة</span>
+                            <span className="text-xs font-mono font-bold text-white flex items-center justify-center gap-1">
                               <Fingerprint className="w-3.5 h-3.5 text-cyan-400" />
-                              <span>أجهزة Passkey:</span>
-                            </span>
-                            <span className="px-2 py-0.5 rounded-lg bg-purple-500/20 text-purple-300 text-[11px] font-bold">
-                              {passkeys.length} من 2 مسجل
+                              <span>{passkeys.length}/2 مفاتيح أمان</span>
                             </span>
                           </div>
-                        </>
+                          <div className="p-2.5 rounded-2xl bg-emerald-950/20 border border-emerald-500/25 space-y-1 text-center">
+                            <span className="text-[10px] text-emerald-300 block">حالة الحساب</span>
+                            <span className="text-[11px] font-bold text-emerald-400 flex items-center justify-center gap-1">
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>درع FIDO2 نشط</span>
+                            </span>
+                          </div>
+                        </div>
                       ) : (
                         <>
                           {/* Department */}
                           {profile?.department && (
-                            <div className="flex items-center justify-between text-slate-300">
-                              <span className="text-slate-400 flex items-center gap-1.5">
+                            <div className="flex items-center justify-between text-slate-300 p-2 rounded-xl bg-black/30 border border-white/5">
+                              <span className="text-slate-400 flex items-center gap-1.5 text-[11px]">
                                 <Building2 className="w-3.5 h-3.5 text-slate-500" />
                                 <span>القسم:</span>
                               </span>
@@ -829,8 +835,8 @@ export default function ProfilePage() {
 
                           {/* Academic Year */}
                           {profile?.academic_year && (
-                            <div className="flex items-center justify-between text-slate-300">
-                              <span className="text-slate-400 flex items-center gap-1.5">
+                            <div className="flex items-center justify-between text-slate-300 p-2 rounded-xl bg-black/30 border border-white/5">
+                              <span className="text-slate-400 flex items-center gap-1.5 text-[11px]">
                                 <GraduationCap className="w-3.5 h-3.5 text-slate-500" />
                                 <span>الفرقة:</span>
                               </span>
@@ -842,12 +848,12 @@ export default function ProfilePage() {
 
                           {/* Section */}
                           {profile?.section_number && (
-                            <div className="flex items-center justify-between text-slate-300">
-                              <span className="text-slate-400 flex items-center gap-1.5">
+                            <div className="flex items-center justify-between text-slate-300 p-2 rounded-xl bg-black/30 border border-white/5">
+                              <span className="text-slate-400 flex items-center gap-1.5 text-[11px]">
                                 <Shield className="w-3.5 h-3.5 text-slate-500" />
                                 <span>السكشن:</span>
                               </span>
-                              <span className="px-2.5 py-0.5 rounded-lg bg-white/10 text-white font-bold text-[11px]">
+                              <span className="px-2 py-0.5 rounded-lg bg-white/10 text-white font-bold text-[11px]">
                                 سكشن {profile.section_number}
                               </span>
                             </div>
@@ -1001,52 +1007,78 @@ export default function ProfilePage() {
                           </form>
                         ) : (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-1">
-                              <span className="text-[11px] text-slate-400 block">الاسم المعتمد</span>
+                            {/* Full Name Card */}
+                            <div className="p-4 rounded-2xl bg-gradient-to-b from-white/[0.04] to-black/50 border border-white/10 hover:border-purple-500/40 transition-all duration-300 shadow-sm space-y-2 group">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] text-purple-300/90 font-medium flex items-center gap-1.5">
+                                  <User className="w-3.5 h-3.5 text-purple-400" />
+                                  <span>الاسم المعتمد</span>
+                                </span>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/25">
+                                  معتمد
+                                </span>
+                              </div>
                               <span className="text-base font-bold text-white block truncate">
                                 {profile?.full_name || fullName || "—"}
                               </span>
                             </div>
 
-                            <div className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-1">
-                              <span className="text-[11px] text-slate-400 block">اسم المستخدم (@username)</span>
-                              <span className="text-sm font-mono font-bold text-purple-300 block" dir="ltr">
+                            {/* Username Card */}
+                            <div className="p-4 rounded-2xl bg-gradient-to-b from-white/[0.04] to-black/50 border border-white/10 hover:border-cyan-500/40 transition-all duration-300 shadow-sm space-y-2 group">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] text-cyan-300/90 font-medium flex items-center gap-1.5">
+                                  <IdCard className="w-3.5 h-3.5 text-cyan-400" />
+                                  <span>اسم المستخدم الموحد</span>
+                                </span>
+                                <span className="text-[10px] font-mono text-cyan-400">@Handle</span>
+                              </div>
+                              <span className="text-sm font-mono font-bold text-cyan-200 block truncate" dir="ltr">
                                 {formatDisplayUsername(profile?.username, profile?.email || user?.email)}
                               </span>
                             </div>
 
-                            <div className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-1">
-                              <span className="text-[11px] text-slate-400 block">البريد الإلكتروني الأساسي</span>
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-sm font-mono font-bold text-slate-200 truncate" dir="ltr">
-                                  {profile?.email || user?.email || "—"}
+                            {/* Email Card (Full address & copy) */}
+                            <div className="p-4 rounded-2xl bg-gradient-to-b from-white/[0.04] to-black/50 border border-white/10 hover:border-emerald-500/40 transition-all duration-300 shadow-sm space-y-2 group">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] text-emerald-300/90 font-medium flex items-center gap-1.5">
+                                  <Mail className="w-3.5 h-3.5 text-emerald-400" />
+                                  <span>البريد الإلكتروني الأساسي</span>
                                 </span>
                                 {(profile?.email || user?.email) && (
                                   <button
                                     onClick={() => copyToClipboard(profile?.email || user?.email || "", "البريد الإلكتروني")}
-                                    className="text-slate-400 hover:text-white"
+                                    className="text-slate-400 hover:text-white transition-colors p-1 rounded-md hover:bg-white/10"
+                                    title="نسخ البريد"
                                   >
                                     {copiedField === "البريد الإلكتروني" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                                   </button>
                                 )}
                               </div>
+                              <span className="text-xs font-mono font-bold text-slate-200 block truncate" dir="ltr" title={profile?.email || user?.email || ""}>
+                                {profile?.email || user?.email || "—"}
+                              </span>
                             </div>
 
-                            <div className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-1">
-                              <span className="text-[11px] text-slate-400 block">معرّف الحساب (User ID)</span>
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-xs font-mono text-slate-400 truncate" dir="ltr">
-                                  {user?.id ? `${user.id.slice(0, 16)}...` : "—"}
+                            {/* User ID Card */}
+                            <div className="p-4 rounded-2xl bg-gradient-to-b from-white/[0.04] to-black/50 border border-white/10 hover:border-indigo-500/40 transition-all duration-300 shadow-sm space-y-2 group">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] text-indigo-300/90 font-medium flex items-center gap-1.5">
+                                  <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+                                  <span>معرّف الحساب السيبراني (UUID)</span>
                                 </span>
                                 {user?.id && (
                                   <button
                                     onClick={() => copyToClipboard(user.id, "معرّف الحساب")}
-                                    className="text-slate-400 hover:text-white"
+                                    className="text-slate-400 hover:text-white transition-colors p-1 rounded-md hover:bg-white/10"
+                                    title="نسخ المعرف"
                                   >
                                     {copiedField === "معرّف الحساب" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                                   </button>
                                 )}
                               </div>
+                              <span className="text-xs font-mono text-slate-400 block truncate" dir="ltr">
+                                {user?.id ? user.id : "—"}
+                              </span>
                             </div>
                           </div>
                         )}
@@ -1055,45 +1087,65 @@ export default function ProfilePage() {
 
                     {/* 2. Academic / Cyber Clearance Identity Card */}
                     {role === "owner" || role === "coordinator" || role === "doctor" ? (
-                      <Card className="border border-purple-500/25 bg-[#090D21]/80 backdrop-blur-xl rounded-3xl p-6 sm:p-7 shadow-lg relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
-                        <CardHeader className="p-0 pb-5 border-b border-white/5 relative z-10">
-                          <CardTitle className="text-lg font-black text-white flex items-center gap-2.5">
-                            <Shield className="w-5 h-5 text-purple-400" />
-                            <span>المستوى الإداري والصلاحيات السيبرانية</span>
-                          </CardTitle>
-                          <CardDescription className="text-xs text-slate-400 mt-1">
-                            مستوى الوصول الإداري، تدقيق الأمان المباشر، وتوثيق FIDO2 في منظومة CYBER TMSAH
-                          </CardDescription>
+                      <Card className="border border-purple-500/30 bg-[#090D21]/90 backdrop-blur-2xl rounded-3xl p-6 sm:p-7 shadow-xl hover:border-purple-500/50 transition-all duration-300 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-44 h-44 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute bottom-0 right-0 w-44 h-44 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+
+                        <CardHeader className="p-0 pb-5 border-b border-white/10 relative z-10">
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <div>
+                              <CardTitle className="text-lg font-black text-white flex items-center gap-2.5">
+                                <Shield className="w-5 h-5 text-purple-400" />
+                                <span>صلاحيات ومستوى الوصول السيبراني</span>
+                              </CardTitle>
+                              <CardDescription className="text-xs text-slate-400 mt-1">
+                                مستوى التحكم الإداري، تدقيق العمليات المباشر، وتوثيق أجهزة FIDO2 في المنظومة
+                              </CardDescription>
+                            </div>
+                            <span className="px-3.5 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
+                              {role === "owner" ? "صلاحيات المالك (Root Admin)" : role === "coordinator" ? "منسق المنظومة" : "دكتور محاضر"}
+                            </span>
+                          </div>
                         </CardHeader>
 
-                        <CardContent className="p-0 pt-5 relative z-10">
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <div className="p-4 rounded-2xl bg-gradient-to-b from-purple-950/20 to-black/40 border border-purple-500/20 space-y-1">
-                              <span className="text-[11px] text-purple-300/80 block">مستوى الصلاحية (Clearance)</span>
-                              <span className="text-sm font-bold text-white block">
-                                {role === "owner" ? "صلاحيات المالك الكاملة (Root)" : role === "coordinator" ? "منسق عام المنظومة" : "دكتور محاضر معتمد"}
-                              </span>
+                        <CardContent className="p-0 pt-5 relative z-10 space-y-4">
+                          {/* 4 Cyber Permissions Badges */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                            <div className="p-3.5 rounded-2xl bg-purple-950/20 border border-purple-500/25 hover:border-purple-500/40 transition-all space-y-1">
+                              <div className="flex items-center gap-2 text-purple-300">
+                                <Database className="w-4 h-4 text-purple-400" />
+                                <span className="text-xs font-bold">قاعدة البيانات</span>
+                              </div>
+                              <span className="text-[11px] text-slate-300 block">وصول كامل للقواعد</span>
                             </div>
 
-                            <div className="p-4 rounded-2xl bg-gradient-to-b from-indigo-950/20 to-black/40 border border-indigo-500/20 space-y-1">
-                              <span className="text-[11px] text-indigo-300/80 block">تدقيق العمليات (Audit Log)</span>
-                              <span className="text-sm font-bold text-emerald-400 flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                <span>مفعل ومراقب سيبرانياً</span>
-                              </span>
+                            <div className="p-3.5 rounded-2xl bg-cyan-950/20 border border-cyan-500/25 hover:border-cyan-500/40 transition-all space-y-1">
+                              <div className="flex items-center gap-2 text-cyan-300">
+                                <KeyRound className="w-4 h-4 text-cyan-400" />
+                                <span className="text-xs font-bold">مفاتيح التشفير</span>
+                              </div>
+                              <span className="text-[11px] text-slate-300 block">إدارة مفاتيح FIDO2</span>
                             </div>
 
-                            <div className="p-4 rounded-2xl bg-gradient-to-b from-cyan-950/20 to-black/40 border border-cyan-500/20 space-y-1">
-                              <span className="text-[11px] text-cyan-300/80 block">توثيق FIDO2 / Passkey</span>
-                              <span className="text-sm font-bold text-cyan-300 block">
-                                {passkeys.length > 0 ? `${passkeys.length} مفتاح نشط ومحمي` : "غير مسجل (يوصى بالتفعيل)"}
-                              </span>
+                            <div className="p-3.5 rounded-2xl bg-indigo-950/20 border border-indigo-500/25 hover:border-indigo-500/40 transition-all space-y-1">
+                              <div className="flex items-center gap-2 text-indigo-300">
+                                <Smartphone className="w-4 h-4 text-indigo-400" />
+                                <span className="text-xs font-bold">أجهزة الحضور</span>
+                              </div>
+                              <span className="text-[11px] text-slate-300 block">تحكم بالبوابات والسكاشن</span>
+                            </div>
+
+                            <div className="p-3.5 rounded-2xl bg-emerald-950/20 border border-emerald-500/25 hover:border-emerald-500/40 transition-all space-y-1">
+                              <div className="flex items-center gap-2 text-emerald-300">
+                                <Activity className="w-4 h-4 text-emerald-400 animate-pulse" />
+                                <span className="text-xs font-bold">سجلات الأمان</span>
+                              </div>
+                              <span className="text-[11px] text-emerald-300 block">إشراف وتدقيق 24/7</span>
                             </div>
                           </div>
 
                           {profile?.department && (
-                            <div className="mt-4 p-4 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
+                            <div className="p-4 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
                               <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-300">
                                   <Building2 className="w-5 h-5" />
