@@ -202,62 +202,38 @@ export async function authenticateWithPasskey(identifier?: string): Promise<Pass
   let assertion: PublicKeyCredential | null = null;
   let lastErr: Error | null = null;
 
-  // Mobile detection — hints: ['client-device'] causes immediate NotAllowedError on Android Chrome < 128
+  // Browser/OS detection — hints and allowCredentials should only be used on Desktop Chromium
   const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
   const isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
+  const isChromium = /Chrome|Chromium|CriOS/i.test(ua) && !/Firefox|OPR|Opera/i.test(ua);
 
-  // Attempt 1: Platform biometric authenticator
+  // ONE single call — looping breaks user gesture token on non-Chrome browsers
   const challenge = crypto.getRandomValues(new Uint8Array(32));
-  const reqOptions: Record<string, unknown> = {
+  const reqOptions: PublicKeyCredentialRequestOptions = {
     challenge,
     timeout: 60000,
     rpId,
     userVerification: "preferred",
   };
 
-  // Only add hints on desktop — mobile browsers reject this with NotAllowedError
-  if (!isMobile) {
-    reqOptions["hints"] = ["client-device"];
+  // hints: ['client-device'] supported only on Chromium desktop
+  if (!isMobile && isChromium) {
+    (reqOptions as Record<string, unknown>)["hints"] = ["client-device"];
   }
 
-  if (allowedDescriptors.length > 0) {
-    reqOptions.allowCredentials = allowedDescriptors;
+  // Don't restrict to specific credentials on mobile — let the platform show all available passkeys
+  // On desktop with known credentials, allowCredentials speeds up the flow
+  if (allowedDescriptors.length > 0 && !isMobile && isChromium) {
+    (reqOptions as Record<string, unknown>).allowCredentials = allowedDescriptors;
   }
 
   try {
     assertion = (await navigator.credentials.get({
-      publicKey: reqOptions as unknown as PublicKeyCredentialRequestOptions,
+      publicKey: reqOptions,
     })) as PublicKeyCredential | null;
   } catch (err: unknown) {
     lastErr = err instanceof Error ? err : new Error(String(err));
-    console.warn("[WebAuthn] Biometric assertion (Attempt 1) notice:", lastErr);
-
-    // If user actively canceled the prompt, abort gracefully
-    if (lastErr.name === "NotAllowedError") {
-      return {
-        success: false,
-        cancelled: true,
-        error: "تم إلغاء عملية التحقق بالبصمة.",
-      };
-    }
-
-    // Attempt 2: Fallback without allowCredentials restriction — max Android/OEM compatibility
-    try {
-      const challenge2 = crypto.getRandomValues(new Uint8Array(32));
-      const fallbackReq: Record<string, unknown> = {
-        challenge: challenge2,
-        timeout: 60000,
-        rpId,
-        userVerification: "preferred",
-        // No hints, no allowCredentials — broadest possible Android compatibility
-      };
-      assertion = (await navigator.credentials.get({
-        publicKey: fallbackReq as unknown as PublicKeyCredentialRequestOptions,
-      })) as PublicKeyCredential | null;
-    } catch (err2: unknown) {
-      lastErr = err2 instanceof Error ? err2 : new Error(String(err2));
-      console.warn("[WebAuthn] Biometric assertion (Attempt 2) notice:", lastErr);
-    }
+    console.warn("[WebAuthn] Biometric assertion failed:", lastErr.name, lastErr.message);
   }
 
   if (!assertion) {
