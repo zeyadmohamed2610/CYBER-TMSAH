@@ -127,78 +127,128 @@ export default function ProfilePage() {
   };
 
   const handleCreatePasskey = async () => {
-    if (typeof window === "undefined" || !window.PublicKeyCredential) {
+    if (typeof window === "undefined" || !window.PublicKeyCredential || !navigator?.credentials) {
       toast.error("متصفحك أو جهازك الحالي لا يدعم تقنية مفاتيح المرور (WebAuthn).");
       return;
     }
 
     try {
       setCreatingPasskey(true);
-      const challenge = new Uint8Array(32);
-      crypto.getRandomValues(challenge);
 
-      const userIdBytes = new TextEncoder().encode(user?.id || "user");
-      const rpName = "CYBER TMSAH | منصة الأمن السيبراني";
-      const domain = window.location.hostname;
+      // 1. SHA-256 hash of userId — W3C standard, prevents Android Credential Manager rejections
+      const encoder = new TextEncoder();
+      const userIdHash = await crypto.subtle.digest("SHA-256", encoder.encode(user?.id || "user"));
 
-      const credential = (await navigator.credentials.create({
-        publicKey: {
-          challenge,
-          rp: {
-            name: rpName,
-            id: domain === "localhost" ? "localhost" : domain,
-          },
-          user: {
-            id: userIdBytes,
-            name: user?.email || "academic-user",
-            displayName: profile?.full_name || fullName || "مستخدم أكاديمي",
-          },
-          pubKeyCredParams: [
-            { alg: -7, type: "public-key" }, // ES256
-            { alg: -257, type: "public-key" }, // RS256
-          ],
-          authenticatorSelection: {
-            authenticatorAttachment: "platform",   // ← يفتح البصمة/FaceID/Windows Hello مباشرة
-            userVerification: "required",
-            residentKey: "required",
-            requireResidentKey: true,
-          },
-          timeout: 60000,
-        },
-      })) as PublicKeyCredential | null;
+      // 2. Clean ASCII user.name — Android rejects Arabic/Unicode in user.name field
+      const rawEmail = user?.email || "";
+      const cleanAsciiName = rawEmail.trim().replace(/[^\w.@+-]/g, "") || `user_${(user?.id || "").slice(0, 8)}`;
 
-      if (credential) {
-        const rawIdBase64 = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-        const platformDesc = navigator.userAgent.includes("Mobile")
-          ? "هاتف ذكي (بصمة / Face ID)"
-          : navigator.userAgent.includes("Windows")
-          ? "جهاز كمبيوتر (Windows Hello)"
-          : navigator.userAgent.includes("Mac")
-          ? "جهاز Mac (Touch ID)"
-          : "مفتاح أمان بيومتري";
+      const userDisplayName = profile?.full_name || fullName || "مستخدم أكاديمي";
 
-        const newKey = {
-          id: credential.id,
-          rawId: rawIdBase64,
-          label: `${platformDesc} - ${new Date().toLocaleDateString("ar-EG")}`,
-          createdAt: new Date().toISOString(),
-        };
+      // 3. RP configuration
+      const rpId = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+        ? "localhost"
+        : window.location.hostname;
 
-        const updated = [...passkeys, newKey];
-        savePasskeys(updated);
-        toast.success("تم إنشاء وتوثيق مفتاح المرور (Passkey) بنجاح!");
+      // 4. All universally supported algorithms
+      const pubKeyCredParams: PublicKeyCredentialParameters[] = [
+        { alg: -7,   type: "public-key" }, // ES256 (P-256) — 100% Android, iOS, Windows
+        { alg: -257, type: "public-key" }, // RS256 — Windows Hello & legacy TPM
+        { alg: -8,   type: "public-key" }, // Ed25519 (EdDSA)
+        { alg: -37,  type: "public-key" }, // PS256
+      ];
+
+      // 5. Tiered strategies — ALWAYS platform, vary userVerification
+      // NEVER omit authenticatorAttachment:'platform' or Android shows USB/NFC/external device dialog
+      const strategies: AuthenticatorSelectionCriteria[] = [
+        { authenticatorAttachment: "platform", userVerification: "preferred" },   // Most compatible
+        { authenticatorAttachment: "platform", userVerification: "discouraged" }, // Very permissive
+        { authenticatorAttachment: "platform", userVerification: "required" },    // Strict biometric
+        { authenticatorAttachment: "platform" },                                   // Bare minimum
+      ];
+
+      let credential: PublicKeyCredential | null = null;
+      let lastErr: Error | null = null;
+
+      for (let i = 0; i < strategies.length; i++) {
+        const strategy = strategies[i];
+        const attemptStart = Date.now();
+        try {
+          const challenge = crypto.getRandomValues(new Uint8Array(32));
+          credential = (await navigator.credentials.create({
+            publicKey: {
+              challenge,
+              rp: { name: "CYBER TMSAH | منصة الأمن السيبراني", id: rpId },
+              user: {
+                id: new Uint8Array(userIdHash),
+                name: cleanAsciiName,
+                displayName: userDisplayName,
+              },
+              pubKeyCredParams,
+              authenticatorSelection: strategy,
+              timeout: 60000,
+              attestation: "none",
+            } as PublicKeyCredentialCreationOptions,
+          })) as PublicKeyCredential | null;
+
+          if (credential) break; // Success!
+        } catch (err: unknown) {
+          lastErr = err instanceof Error ? err : new Error(String(err));
+          const elapsed = Date.now() - attemptStart;
+          console.warn(`[Passkey] Strategy #${i + 1} failed after ${elapsed}ms:`, lastErr);
+
+          // If user actively dismissed (elapsed ≥ 1s → UI was shown), stop immediately
+          if (lastErr.name === "NotAllowedError" && elapsed >= 1000) {
+            toast.error("تم إلغاء إنشاء مفتاح المرور.");
+            return;
+          }
+          // Otherwise OS rejected before showing UI — try next strategy
+        }
       }
+
+      if (!credential) {
+        if (lastErr?.name === "InvalidStateError") {
+          toast.error("مفتاح مرور لهذا الجهاز موجود بالفعل. احذف القديم ثم أنشئ جديداً.");
+        } else if (lastErr?.name === "NotSupportedError") {
+          toast.error("جهازك لا يدعم مفاتيح المرور. تأكد من تفعيل قفل الشاشة بالبصمة أو PIN.");
+        } else if (lastErr?.name === "NotAllowedError") {
+          toast.error("تم إلغاء عملية إضافة مفتاح المرور أو انتهت المهلة.");
+        } else {
+          toast.error("تعذر إكمال تسجيل مفتاح المرور. تأكد من تفعيل البصمة أو PIN على جهازك.");
+        }
+        return;
+      }
+
+      // Save credential
+      const rawIdBase64 = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+      const ua = navigator.userAgent;
+      const deviceLabel = /iPhone/i.test(ua) ? "هاتف iPhone (Face ID / Touch ID)"
+        : /iPad/i.test(ua) ? "جهاز iPad"
+        : /Samsung/i.test(ua) ? "هاتف Samsung Galaxy"
+        : /Xiaomi|Redmi|POCO/i.test(ua) ? "هاتف Xiaomi / Redmi"
+        : /Android/i.test(ua) ? "هاتف أندرويد (بصمة)"
+        : /Windows/i.test(ua) ? "جهاز كمبيوتر (Windows Hello)"
+        : /Mac/i.test(ua) ? "جهاز Mac (Touch ID)"
+        : "مفتاح أمان بيومتري";
+
+      const newKey = {
+        id: credential.id,
+        rawId: rawIdBase64,
+        label: `${deviceLabel} - ${new Date().toLocaleDateString("ar-EG")}`,
+        createdAt: new Date().toISOString(),
+      };
+
+      savePasskeys([...passkeys, newKey]);
+      toast.success("✅ تم إنشاء وتوثيق مفتاح المرور (Passkey) بنجاح!");
     } catch (err: unknown) {
-      console.error("Passkey creation error:", err);
-      if (err instanceof Error && err.name === "NotAllowedError") {
-        toast.error("تم إلغاء عملية إضافة مفتاح المرور أو انتهت المهلة المحددة.");
-      } else {
-        toast.error("تعذر إكمال تسجيل مفتاح المرور. تأكد من تفعيل البصمة أو PIN على جهازك.");
-      }
+      console.error("Passkey creation unexpected error:", err);
+      toast.error("خطأ غير متوقع. الرجاء المحاولة مرة أخرى.");
     } finally {
       setCreatingPasskey(false);
     }
   };
+
+
 
   const handleTestPasskey = async (passkeyId: string) => {
     if (typeof window === "undefined" || !window.PublicKeyCredential) {
