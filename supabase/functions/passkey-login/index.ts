@@ -95,13 +95,10 @@ function getRpId(req?: Request): string {
       if (u.hostname === "localhost" || u.hostname === "127.0.0.1") {
         return "localhost";
       }
-      if (u.hostname === "cyber-tmsah.site" || u.hostname.endsWith(".cyber-tmsah.site")) {
-        return "cyber-tmsah.site";
-      }
       return u.hostname;
     } catch { /* ignore */ }
   }
-  return "cyber-tmsah.site";
+  return "www.cyber-tmsah.site";
 }
 
 function getExpectedRpIds(req?: Request): string[] {

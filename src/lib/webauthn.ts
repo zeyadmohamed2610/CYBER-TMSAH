@@ -480,7 +480,9 @@ export async function authenticateWithPasskey(identifier?: string): Promise<Pass
   const allowCredentials = (serverOptions.allowCredentials ?? []).map((c) => ({
     id: base64urlToUint8Array(c.id),
     type: "public-key" as PublicKeyCredentialType,
-    transports: ["internal"] as AuthenticatorTransport[],
+    transports: (c.transports && c.transports.length > 0)
+      ? (c.transports as AuthenticatorTransport[])
+      : (["internal"] as AuthenticatorTransport[]),
   }));
 
   const reqOptions: PublicKeyCredentialRequestOptions = {
