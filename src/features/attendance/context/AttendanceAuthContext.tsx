@@ -111,6 +111,11 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
 
   const initializedRef = useRef(false);
   const currentUserRef = useRef<User | null>(null);
+  const roleRef = useRef<AttendanceRole | null>(role);
+
+  useEffect(() => {
+    roleRef.current = role;
+  }, [role]);
 
   useEffect(() => {
     let active = true;
@@ -120,6 +125,11 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
       if (!active) return;
 
       if (!sessionUser) {
+        // If we were already authenticated, do NOT wipe user state on transient background events
+        if (initializedRef.current && currentUserRef.current) {
+          return;
+        }
+
         setUser(null);
         setRole(null);
         setFullName(null);
@@ -143,8 +153,16 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
         return;
       }
 
-      // If user is already loaded and same id, NEVER show loading spinner!
+      // FAST PATH: If user is already loaded and same id, and role is already known,
+      // NEVER show loading spinner and NEVER re-fetch profile from database on app switch!
       const isSameUser = currentUserRef.current?.id === sessionUser.id;
+      if (isSameUser && roleRef.current) {
+        currentUserRef.current = sessionUser;
+        setLoading(false);
+        initializedRef.current = true;
+        return;
+      }
+
       if (!silent && !isSameUser && !initializedRef.current) {
         setLoading(true);
       }
@@ -191,12 +209,17 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
         if (!active) return;
         console.warn("Could not refresh role in background, keeping current cached role:", err);
         // CRITICAL: DO NOT set role to null if a background query fails while app is in use!
-        // Fallback to user_metadata or app_metadata if no role is currently resolved
-        const metaRole = sessionUser.app_metadata?.role || sessionUser.user_metadata?.role;
-        if (!role && isAttendanceRole(metaRole)) {
-          setRole(metaRole);
-          const metaName = sessionUser.user_metadata?.full_name || sessionUser.user_metadata?.name;
-          if (metaName) setFullName(metaName);
+        // Fallback to cached role or metadata
+        const cachedRole = sessionStorage.getItem(ROLE_STORAGE_KEY) || localStorage.getItem(ROLE_STORAGE_KEY);
+        if (!roleRef.current && isAttendanceRole(cachedRole)) {
+          setRole(cachedRole);
+        } else {
+          const metaRole = sessionUser.app_metadata?.role || sessionUser.user_metadata?.role;
+          if (!roleRef.current && isAttendanceRole(metaRole)) {
+            setRole(metaRole);
+            const metaName = sessionUser.user_metadata?.full_name || sessionUser.user_metadata?.name;
+            if (metaName) setFullName(metaName);
+          }
         }
       } finally {
         if (active) {
@@ -215,6 +238,7 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
         if (!active) return;
         console.warn("Session check fallback:", err);
         setLoading(false);
+        initializedRef.current = true;
       }
     };
 
@@ -230,15 +254,21 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
         setUser(null);
         setRole(null);
         setFullName(null);
+        setDepartment(null);
+        setAvatarUrl(null);
         setLoading(false);
         initializedRef.current = false;
         currentUserRef.current = null;
         try {
           sessionStorage.removeItem(ROLE_STORAGE_KEY);
           sessionStorage.removeItem(NAME_STORAGE_KEY);
+          sessionStorage.removeItem(DEPT_STORAGE_KEY);
           sessionStorage.removeItem(USERID_STORAGE_KEY);
+          sessionStorage.removeItem(AVATAR_STORAGE_KEY);
           localStorage.removeItem(ROLE_STORAGE_KEY);
           localStorage.removeItem(NAME_STORAGE_KEY);
+          localStorage.removeItem(DEPT_STORAGE_KEY);
+          localStorage.removeItem(AVATAR_STORAGE_KEY);
         } catch {
           // ignore
         }
@@ -251,7 +281,11 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
       // This prevents the page from unmounting or reloading when the user switches to WhatsApp and returns.
       const isSilent = initializedRef.current || (session?.user && currentUserRef.current?.id === session.user.id);
 
-      void applySession(session?.user ?? null, Boolean(isSilent));
+      if (session?.user) {
+        void applySession(session.user, Boolean(isSilent));
+      } else if (event === "INITIAL_SESSION") {
+        void applySession(null, false);
+      }
     });
 
     return () => {

@@ -19,8 +19,8 @@ export const AttendanceRoleGate = ({ allowedRole, children }: AttendanceRoleGate
     return <LoadingScreen />;
   }
 
-  // Redirect to login only when loading is complete and user/role is definitely absent
-  if (!loading && (!user || role === null)) {
+  // Redirect to login only when loading is complete and both user and role are definitely absent
+  if (!loading && !user && !role) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 

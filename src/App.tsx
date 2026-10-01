@@ -27,6 +27,7 @@ const AttendanceOwnerPage = lazy(() => import("./features/attendance/pages/Atten
 const AttendanceDoctorPage = lazy(() => import("./features/attendance/pages/AttendanceDoctorPage"));
 const AttendanceStudentPage = lazy(() => import("./features/attendance/pages/AttendanceStudentPage"));
 const AttendanceTAPage    = lazy(() => import("./features/attendance/pages/AttendanceTAPage"));
+const AttendancePage      = lazy(() => import("./features/attendance/pages/AttendancePage"));
 const ProfilePage         = lazy(() => import("./pages/ProfilePage"));
 const NotFound            = lazy(() => import("./pages/NotFound"));
 
@@ -124,7 +125,7 @@ const App = () => (
 
 
                           {/* ── Backward Compatibility Redirects ───────────── */}
-                          <Route path="/attendance" element={<Navigate to="/login" replace />} />
+                          <Route path="/attendance" element={<AttendancePage />} />
                           <Route path="/attendance/login" element={<Navigate to="/login" replace />} />
                           <Route path="/attendance/owner-dashboard" element={<Navigate to="/owner-dashboard" replace />} />
                           <Route path="/attendance/doctor-dashboard" element={<Navigate to="/doctor-dashboard" replace />} />

@@ -331,7 +331,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
       }
     }
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       recordAttempt(false); setLockRemaining(getLockoutRemaining());
       const isPass = error.message?.toLowerCase().includes("invalid") || error.message?.toLowerCase().includes("password");
@@ -352,6 +352,25 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
     playCyberSuccessChime();
     await recordAuditLog({ action: "login_success", identifier: raw });
     recordAttempt(true);
+
+    if (authData?.user) {
+      try {
+        const { data: profile } = await supabase
+          .from("users")
+          .select("role")
+          .eq("auth_id", authData.user.id)
+          .maybeSingle();
+
+        if (profile?.role) {
+          navigate(getAttendanceDashboardRoute(profile.role as any), { replace: true });
+          setLoginLoading(false);
+          return;
+        }
+      } catch {
+        // fallback to /attendance
+      }
+    }
+
     navigate("/attendance", { replace: true });
     setLoginLoading(false);
   };
