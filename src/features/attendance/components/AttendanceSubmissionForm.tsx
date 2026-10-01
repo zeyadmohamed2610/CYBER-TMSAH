@@ -34,11 +34,10 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
   const [scanning, setScanning] = useState(false);
   const [gpsStatus, setGpsStatus] = useState<string>("");
   const [verifiedCredentialId, setVerifiedCredentialId] = useState<string | null>(null);
-  const [biometricBypassed, setBiometricBypassed] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const activeSessions = sessions.filter((s) => s.isActive);
-  const isBiometricReady = verifiedCredentialId !== null || biometricBypassed;
+  const isBiometricReady = verifiedCredentialId !== null;
 
   const handleQrCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -138,7 +137,6 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
       setGpsStatus("");
       // Reset biometric gate after successful submission (require re-verify for next session)
       setVerifiedCredentialId(null);
-      setBiometricBypassed(false);
       onSubmitSuccess?.();
     } else {
       toast({ variant: "destructive", title: "فشل تسجيل الحضور", description: result.error ?? "حدث خطأ." });
@@ -178,7 +176,6 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
         {!isBiometricReady ? (
           <AttendanceBiometricGate
             onVerified={(credId) => setVerifiedCredentialId(credId)}
-            onBypass={() => setBiometricBypassed(true)}
           />
         ) : (
           <>
@@ -186,9 +183,7 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
             <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5">
               <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0" />
               <span className="text-sm text-emerald-400 font-medium">
-                {biometricBypassed
-                  ? "التحقق البيومتري مؤقت — يرجى تسجيل بصمة من الملف الشخصي"
-                  : "تم التحقق البيومتري بنجاح — البصمة مؤكدة لهذه الجلسة"}
+                تم التحقق البيومتري بنجاح — البصمة مؤكدة لهذه الجلسة
               </span>
             </div>
 

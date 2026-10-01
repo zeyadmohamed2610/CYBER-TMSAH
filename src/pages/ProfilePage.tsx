@@ -42,6 +42,15 @@ import { checkPwnedPassword } from "@/lib/pwnedPassword";
 import Footer from "@/components/Footer";
 import AvatarStudioDialog from "@/components/AvatarStudioDialog";
 import { saveUserAvatar, deleteUserAvatar } from "@/lib/avatarUtils";
+import { registerPasskey, isWebAuthnSupported } from "@/lib/webauthn";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface UserProfileDetails {
   id: string;
@@ -86,6 +95,12 @@ export default function ProfilePage() {
   const [passkeys, setPasskeys] = useState<{ id: string; rawId: string; label: string; createdAt: string }[]>([]);
   const [creatingPasskey, setCreatingPasskey] = useState(false);
   const [testingPasskeyId, setTestingPasskeyId] = useState<string | null>(null);
+
+  // Passkey Re-authentication State (Security enhancement)
+  const [isPasskeyAuthModalOpen, setIsPasskeyAuthModalOpen] = useState(false);
+  const [passkeyAuthPassword, setPasskeyAuthPassword] = useState("");
+  const [showPasskeyAuthPassword, setShowPasskeyAuthPassword] = useState(false);
+  const [verifyingPasskeyPassword, setVerifyingPasskeyPassword] = useState(false);
 
   // Copy state
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -154,213 +169,127 @@ export default function ProfilePage() {
     }
   };
 
-  const handleCreatePasskey = async () => {
-    if (typeof window === "undefined" || !window.PublicKeyCredential || !navigator?.credentials) {
+  const handleInitiatePasskeyCreation = () => {
+    if (!isWebAuthnSupported()) {
       toast.error("متصفحك أو جهازك الحالي لا يدعم تقنية مفاتيح المرور (WebAuthn).");
+      return;
+    }
+
+    // Enforce 2-passkeys limit per user
+    if (passkeys.length >= 2) {
+      toast.error("لقد وصلت للحد الأقصى المسموح به لمفاتيح المرور (جهازين فقط). يرجى حذف أحد الأجهزة القديمة لإضافة جهاز جديد.");
+      return;
+    }
+
+    // Open security re-authentication modal
+    setPasskeyAuthPassword("");
+    setShowPasskeyAuthPassword(false);
+    setIsPasskeyAuthModalOpen(true);
+  };
+
+  const handleVerifyPasswordAndCreatePasskey = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!passkeyAuthPassword.trim()) {
+      toast.error("يرجى إدخال كلمة مرور حسابك للمتابعة.");
+      return;
+    }
+
+    if (!user?.email) {
+      toast.error("تعذر التعرف على البريد الإلكتروني للحساب.");
+      return;
+    }
+
+    try {
+      setVerifyingPasskeyPassword(true);
+      // Re-authenticate user credentials with Supabase
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: passkeyAuthPassword,
+      });
+
+      if (signInErr) {
+        toast.error("كلمة المرور غير صحيحة. تم رفض طلب إضافة البصمة لأسباب أمنية.");
+        return;
+      }
+
+      // Password verified! Close dialog and trigger WebAuthn ceremony
+      setIsPasskeyAuthModalOpen(false);
+      setPasskeyAuthPassword("");
+      await executePasskeyCreation();
+    } catch (err: unknown) {
+      console.error("Passkey re-auth verification failed:", err);
+      toast.error("حدث خطأ أثناء التحقق من كلمة المرور.");
+    } finally {
+      setVerifyingPasskeyPassword(false);
+    }
+  };
+
+  const executePasskeyCreation = async () => {
+    if (passkeys.length >= 2) {
+      toast.error("لقد وصلت للحد الأقصى المسموح به لمفاتيح المرور (جهازين فقط).");
       return;
     }
 
     try {
       setCreatingPasskey(true);
 
-      // ── Browser & Platform Detection ──
       const ua = navigator.userAgent;
-      const isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
-      const isDesktop = !isMobile;
-      const isChromium = /Chrome|Chromium|CriOS/i.test(ua) && !/Firefox|OPR|Opera/i.test(ua);
+      const deviceLabel = /iPhone/i.test(ua)
+        ? "هاتف iPhone (Face ID / Touch ID)"
+        : /iPad/i.test(ua)
+        ? "جهاز iPad"
+        : /Samsung/i.test(ua)
+        ? "هاتف Samsung Galaxy"
+        : /Xiaomi|Redmi|POCO/i.test(ua)
+        ? "هاتف Xiaomi / Redmi"
+        : /Android/i.test(ua)
+        ? "هاتف أندرويد (بصمة)"
+        : /Windows/i.test(ua)
+        ? "جهاز كمبيوتر (Windows Hello)"
+        : /Mac/i.test(ua)
+        ? "جهاز Mac (Touch ID)"
+        : "مفتاح أمان بيومتري";
 
-      // Check if platform authenticator (fingerprint, Face ID, Windows Hello) is available
-      let hasPlatformAuth = false;
-      try {
-        if (typeof PublicKeyCredential?.isUserVerifyingPlatformAuthenticatorAvailable === "function") {
-          hasPlatformAuth = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-        }
-      } catch {
-        hasPlatformAuth = false;
-      }
+      const formattedLabel = `${deviceLabel} - ${new Date().toLocaleDateString("ar-EG")}`;
+      const result = await registerPasskey(formattedLabel);
 
-      // 1. user.id = raw UUID bytes (16 bytes) — most universally compatible size
-      //    SHA-256 (32 bytes) causes silent rejections on Android Credential Manager
-      const rawUserId = (user?.id || "").replace(/-/g, "");
-      let userIdBytes: Uint8Array;
-      if (rawUserId.length === 32) {
-        userIdBytes = new Uint8Array(16);
-        for (let i = 0; i < 16; i++) {
-          userIdBytes[i] = parseInt(rawUserId.slice(i * 2, i * 2 + 2), 16);
-        }
-      } else {
-        const enc = new TextEncoder();
-        const raw = enc.encode(user?.id || "user");
-        userIdBytes = new Uint8Array(16);
-        userIdBytes.set(raw.slice(0, 16));
-      }
-
-      // 2. ASCII-only user.name — non-ASCII causes Android/mobile rejection
-      const rawEmail = user?.email || "";
-      const cleanAsciiName = rawEmail.trim().replace(/[^\w.@+-]/g, "") || `user_${(user?.id || "").slice(0, 8)}`;
-      const userDisplayName = profile?.full_name || fullName || "Cyber TMSAH User";
-
-      // 3. RP — use registrable domain only
-      const hostname = window.location.hostname;
-      const rpId = hostname === "localhost" || hostname === "127.0.0.1"
-        ? "localhost"
-        : hostname;
-
-      // 4. ES256 & RS256 — universally supported algorithms
-      const pubKeyCredParams: PublicKeyCredentialParameters[] = [
-        { alg: -7,   type: "public-key" }, // ES256 (P-256) — universal
-        { alg: -257, type: "public-key" }, // RS256 — Windows Hello & legacy TPM
-      ];
-
-      // 5. Universal authenticator selection:
-      //    - On Mobile: DO NOT force authenticatorAttachment: "platform".
-      //      Omitting attachment allows Android Chrome, Samsung Internet, iOS Safari, Firefox,
-      //      Brave, Kiwi to use any available biometric/credential provider without failing constraint checks.
-      //    - On Desktop: specify 'platform' ONLY when platform authenticator is confirmed available
-      //      to trigger Windows Hello / Touch ID directly.
-      const authenticatorSelection: AuthenticatorSelectionCriteria = isDesktop && hasPlatformAuth
-        ? {
-            authenticatorAttachment: "platform",
-            userVerification: "preferred",
-            residentKey: "preferred",
-          }
-        : {
-            userVerification: "preferred",
-            residentKey: "preferred",
-          };
-
-      const challenge = crypto.getRandomValues(new Uint8Array(32));
-
-      // Build the most compatible options object
-      const createOptions: PublicKeyCredentialCreationOptions = {
-        challenge,
-        rp: { name: "CYBER TMSAH", id: rpId },
-        user: {
-          id: userIdBytes,
-          name: cleanAsciiName,
-          displayName: userDisplayName,
-        },
-        pubKeyCredParams,
-        authenticatorSelection,
-        timeout: 60000,
-        attestation: "none",
-      };
-
-      // Only add hints on Desktop Chromium (causes NotAllowedError on mobile)
-      if (isDesktop && isChromium) {
-        (createOptions as Record<string, unknown>)["hints"] = ["client-device"];
-      }
-
-      let credential: PublicKeyCredential | null = null;
-      let lastErr: Error | null = null;
-
-      const attemptStart = Date.now();
-      try {
-        credential = (await navigator.credentials.create({
-          publicKey: createOptions,
-        })) as PublicKeyCredential | null;
-      } catch (err: unknown) {
-        lastErr = err instanceof Error ? err : new Error(String(err));
-        const elapsed = Date.now() - attemptStart;
-        console.warn(`[Passkey] Create failed after ${elapsed}ms:`, lastErr.name, lastErr.message);
-
-        // User dismissed the native biometric/passkey UI or system rejected
-        if (lastErr.name === "NotAllowedError") {
-          if (elapsed >= 1000) {
-            toast.error("تم إلغاء إنشاء مفتاح المرور.");
-          } else {
-            // Fast rejection (< 1s) = browser doesn't have system credential integration, or no lock screen
-            toast.error(
-              "تعذر على هذا المتصفح استدعاء واجهة البصمة / مفتاح المرور. " +
-              "يرجى التأكد من تفعيل قفل الشاشة (بصمة أو PIN) في إعدادات الهاتف، " +
-              "واستخدام متصفح يدعم خدمات الأمان لنظام التشغيل (مثل Chrome، Samsung Internet، أو Edge)."
-            );
-          }
-          return;
-        }
-
-        // Already registered on this device
-        if (lastErr.name === "InvalidStateError") {
-          toast.error("مفتاح مرور لهذا الجهاز موجود بالفعل. يمكنك استخدام البصمة مباشرة للدخول.");
-          return;
-        }
-
-        // Browser/OS doesn't support WebAuthn
-        if (lastErr.name === "NotSupportedError") {
-          toast.error("جهازك أو متصفحك لا يدعم مفاتيح المرور. تأكد من تفعيل قفل الشاشة.");
-          return;
-        }
-      }
-
-      if (!credential) {
-        if (lastErr?.name === "InvalidStateError") {
-          toast.error("مفتاح مرور لهذا الجهاز موجود بالفعل. يمكنك استخدام البصمة مباشرة.");
-        } else if (lastErr?.name === "NotSupportedError") {
-          toast.error("جهازك لا يدعم مفاتيح المرور. تأكد من تفعيل قفل الشاشة بالبصمة أو PIN.");
-        } else if (lastErr?.name === "NotAllowedError") {
-          toast.error("تم إلغاء عملية إضافة مفتاح المرور أو انتهت المهلة.");
-        } else {
-          toast.error("تعذر إكمال تسجيل مفتاح المرور. تأكد من تفعيل البصمة أو PIN على جهازك.");
-        }
+      if (result.cancelled) {
+        toast.info("تم إلغاء عملية إضافة مفتاح المرور.");
         return;
       }
 
-      // Save credential
-      const rawIdBase64 = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-      const deviceLabel = /iPhone/i.test(ua) ? "هاتف iPhone (Face ID / Touch ID)"
-        : /iPad/i.test(ua) ? "جهاز iPad"
-        : /Samsung/i.test(ua) ? "هاتف Samsung Galaxy"
-        : /Xiaomi|Redmi|POCO/i.test(ua) ? "هاتف Xiaomi / Redmi"
-        : /Android/i.test(ua) ? "هاتف أندرويد (بصمة)"
-        : /Windows/i.test(ua) ? "جهاز كمبيوتر (Windows Hello)"
-        : /Mac/i.test(ua) ? "جهاز Mac (Touch ID)"
-        : "مفتاح أمان بيومتري";
+      if (!result.success || !result.credentialId) {
+        toast.error(result.error || "فشل تسجيل مفتاح المرور. تأكد من تفعيل البصمة أو PIN على جهازك.");
+        return;
+      }
 
-      const newKey = {
-        id: credential.id,
-        rawId: rawIdBase64,
-        label: `${deviceLabel} - ${new Date().toLocaleDateString("ar-EG")}`,
-        createdAt: new Date().toISOString(),
-      };
-
-      // 1. Sync to Supabase public.webauthn_credentials
+      // Refresh passkeys list from database (server-verified credentials)
       if (user?.id) {
-        try {
-          await supabase.from("webauthn_credentials").upsert({
-            auth_id: user.id,
-            user_id: profile?.id || null,
-            credential_id: credential.id,
-            device_name: deviceLabel,
-          }, { onConflict: "credential_id" });
-        } catch (dbErr) {
-          console.warn("Failed to insert into webauthn_credentials:", dbErr);
+        const { data: dbData } = await supabase
+          .from("webauthn_credentials")
+          .select("id, credential_id, device_name, created_at")
+          .eq("auth_id", user.id);
+
+        if (dbData && dbData.length > 0) {
+          const mapped = dbData.map((item) => ({
+            id: item.credential_id,
+            rawId: item.credential_id,
+            label: item.device_name || deviceLabel,
+            createdAt: item.created_at || new Date().toISOString(),
+          }));
+          savePasskeys(mapped);
+        } else {
+          const newKey = {
+            id: result.credentialId,
+            rawId: result.credentialId,
+            label: formattedLabel,
+            createdAt: new Date().toISOString(),
+          };
+          savePasskeys([...passkeys, newKey]);
         }
       }
 
-      // 2. Cache device session token for fast local biometric login
-      try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (sessionData.session) {
-          localStorage.setItem(
-            `cyber_device_passkey_${credential.id}`,
-            JSON.stringify({
-              credentialId: credential.id,
-              rawId: rawIdBase64,
-              refreshToken: sessionData.session.refresh_token,
-              userId: user?.id,
-              email: user?.email,
-              label: deviceLabel,
-              savedAt: Date.now(),
-            })
-          );
-          localStorage.setItem("cyber_latest_passkey", credential.id);
-        }
-      } catch (sessErr) {
-        console.warn("Could not cache session for passkey:", sessErr);
-      }
-
-      savePasskeys([...passkeys, newKey]);
-      toast.success("✅ تم إنشاء وتوثيق مفتاح المرور (Passkey) بنجاح!");
+      toast.success("✅ تم توثيق وتسجيل مفتاح المرور البيومتري بنجاح!");
     } catch (err: unknown) {
       console.error("Passkey creation unexpected error:", err);
       toast.error("خطأ غير متوقع. الرجاء المحاولة مرة أخرى.");
@@ -1363,9 +1292,18 @@ export default function ProfilePage() {
                               سجل الدخول فورياً باستخدام بصمة الإصبع، التعرف على الوجه، أو Windows Hello دون كلمات مرور
                             </CardDescription>
                           </div>
-                          <span className="inline-flex items-center rounded-full border border-purple-500/40 bg-purple-500/15 px-3 py-1 text-[11px] font-bold text-purple-300">
-                            معيار FIDO2 / WebAuthn
-                          </span>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="inline-flex items-center rounded-full border border-purple-500/40 bg-purple-500/15 px-3 py-1 text-[11px] font-bold text-purple-300">
+                              معيار FIDO2 / WebAuthn
+                            </span>
+                            <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-bold ${
+                              passkeys.length >= 2
+                                ? "border-amber-500/40 bg-amber-500/15 text-amber-300"
+                                : "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
+                            }`}>
+                              {passkeys.length} من 2 أجهزة مسجلة
+                            </span>
+                          </div>
                         </div>
                       </CardHeader>
 
@@ -1435,19 +1373,28 @@ export default function ProfilePage() {
                         <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-white/5">
                           <div className="flex items-center gap-2 text-xs text-slate-400">
                             <Shield className="w-4 h-4 text-purple-400 shrink-0" />
-                            <span>مفاتيح المرور مشفرة محلياً ولا ترسل بصمتك الحيوية لأي خادم أبداً.</span>
+                            <span>مفاتيح المرور مشفرة محلياً (الحد الأقصى: جهازين لكل طالب).</span>
                           </div>
 
                           <Button
                             type="button"
-                            onClick={handleCreatePasskey}
-                            disabled={creatingPasskey}
-                            className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-2xl h-11 px-6 text-xs gap-2 shadow-[0_4px_20px_rgba(124,58,237,0.35)] shrink-0 transition-all hover:scale-[1.02]"
+                            onClick={handleInitiatePasskeyCreation}
+                            disabled={creatingPasskey || passkeys.length >= 2}
+                            className={`w-full sm:w-auto text-white font-bold rounded-2xl h-11 px-6 text-xs gap-2 shrink-0 transition-all ${
+                              passkeys.length >= 2
+                                ? "bg-slate-800 text-slate-400 border border-white/10 cursor-not-allowed"
+                                : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-[0_4px_20px_rgba(124,58,237,0.35)] hover:scale-[1.02]"
+                            }`}
                           >
                             {creatingPasskey ? (
                               <>
                                 <Loader2 className="w-4 h-4 animate-spin" />
                                 <span>جاري إنشاء المفتاح...</span>
+                              </>
+                            ) : passkeys.length >= 2 ? (
+                              <>
+                                <Lock className="w-4 h-4" />
+                                <span>الحد الأقصى مكتمل (2/2)</span>
                               </>
                             ) : (
                               <>
@@ -1480,6 +1427,82 @@ export default function ProfilePage() {
           }}
         />
       )}
+
+      {/* Passkey Re-authentication Security Modal */}
+      <Dialog open={isPasskeyAuthModalOpen} onOpenChange={setIsPasskeyAuthModalOpen}>
+        <DialogContent className="sm:max-w-md bg-[#0D122B] border border-purple-500/30 text-white rounded-3xl p-6" dir="rtl">
+          <DialogHeader className="space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 mx-auto sm:mx-0 shadow-[0_0_20px_rgba(168,85,247,0.2)]">
+              <Shield className="w-6 h-6" />
+            </div>
+            <div>
+              <DialogTitle className="text-lg font-bold text-white flex items-center gap-2">
+                تأكيد أمني مطلوب لإضافة بصمة
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate-300 mt-1 leading-relaxed">
+                لحماية حسابك ومنع أي شخص متطفل من إضافة بصمته لجهازك، يرجى تأكيد كلمة مرور حسابك أولاً:
+              </DialogDescription>
+            </div>
+          </DialogHeader>
+
+          <form onSubmit={handleVerifyPasswordAndCreatePasskey} className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="passkey-reauth-pass" className="text-xs text-slate-300 font-medium">
+                كلمة مرور حسابك الحالية
+              </Label>
+              <div className="relative">
+                <Input
+                  id="passkey-reauth-pass"
+                  type={showPasskeyAuthPassword ? "text" : "password"}
+                  value={passkeyAuthPassword}
+                  onChange={(e) => setPasskeyAuthPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="bg-black/50 border-white/10 focus:border-purple-500 text-white text-sm rounded-xl h-11 pr-3 pl-10"
+                  autoFocus
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPasskeyAuthPassword(!showPasskeyAuthPassword)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                  aria-label={showPasskeyAuthPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+                >
+                  {showPasskeyAuthPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <DialogFooter className="flex-col sm:flex-row-reverse gap-2 sm:gap-0 pt-2">
+              <Button
+                type="submit"
+                disabled={verifyingPasskeyPassword || !passkeyAuthPassword.trim()}
+                className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl h-10 px-5 text-xs gap-2 shadow-lg"
+              >
+                {verifyingPasskeyPassword ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>جاري التحقق...</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-4 h-4" />
+                    <span>تأكيد ومتابعة البصمة</span>
+                  </>
+                )}
+              </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setIsPasskeyAuthModalOpen(false)}
+                className="w-full sm:w-auto text-slate-400 hover:text-white hover:bg-white/5 rounded-xl h-10 text-xs"
+              >
+                إلغاء
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>
