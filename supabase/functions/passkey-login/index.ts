@@ -95,10 +95,24 @@ function getRpId(req?: Request): string {
       if (u.hostname === "localhost" || u.hostname === "127.0.0.1") {
         return "localhost";
       }
+      if (u.hostname === "cyber-tmsah.site" || u.hostname.endsWith(".cyber-tmsah.site")) {
+        return "cyber-tmsah.site";
+      }
       return u.hostname;
     } catch { /* ignore */ }
   }
-  return "cyber-tmsah.vercel.app";
+  return "cyber-tmsah.site";
+}
+
+function getExpectedRpIds(req?: Request): string[] {
+  const current = getRpId(req);
+  return Array.from(new Set([
+    current,
+    "cyber-tmsah.site",
+    "www.cyber-tmsah.site",
+    "cyber-tmsah.vercel.app",
+    "localhost",
+  ]));
 }
 
 function getRpName(): string {
@@ -235,7 +249,7 @@ Deno.serve(async (req) => {
           response: credential as Parameters<typeof verifyRegistrationResponse>[0]["response"],
           expectedChallenge: challenge,
           expectedOrigin: getOrigin(req),
-          expectedRPID: getRpId(req),
+          expectedRPID: getExpectedRpIds(req),
           requireUserVerification: false,
         });
       } catch (err) {
@@ -437,13 +451,13 @@ Deno.serve(async (req) => {
           response: credential as Parameters<typeof verifyAuthenticationResponse>[0]["response"],
           expectedChallenge: challenge,
           expectedOrigin: getOrigin(req),
-          expectedRPID: getRpId(req),
+          expectedRPID: getExpectedRpIds(req),
           requireUserVerification: false,
-          credential: {
-            id: storedCred.credential_id as string,
-            publicKey: publicKeyBuffer,
+          authenticator: {
+            credentialID: storedCred.credential_id as string,
+            credentialPublicKey: publicKeyBuffer,
             counter: Number(storedCred.sign_count ?? 0),
-            transports: (storedCred.transports as AuthenticatorTransport[]) ?? ["internal"],
+            transports: (storedCred.transports as any) ?? ["internal"],
           },
         });
       } catch (err) {
