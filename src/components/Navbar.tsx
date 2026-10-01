@@ -18,7 +18,7 @@ export const Navbar = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  const { user, role, fullName, signOut } = useAttendanceAuth();
+  const { user, role, fullName, signOut, avatarUrl } = useAttendanceAuth();
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -171,9 +171,17 @@ export const Navbar = () => {
                   aria-haspopup="true"
                 >
                   {/* Avatar Circle */}
-                  <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-white font-black text-xs shadow-inner">
-                    {userInitial}
-                  </div>
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={displayName}
+                      className="w-6 h-6 rounded-lg object-cover border border-purple-400/40 shadow-inner shrink-0"
+                    />
+                  ) : (
+                    <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-white font-black text-xs shadow-inner shrink-0">
+                      {userInitial}
+                    </div>
+                  )}
 
                   {/* Name */}
                   <span className="max-w-[140px] truncate text-xs font-bold text-slate-100">
@@ -249,6 +257,24 @@ export const Navbar = () => {
           <div className="md:hidden border-t border-white/10 bg-[#060813]/95 backdrop-blur-2xl px-4 py-4 space-y-2 animate-fade-up">
             {user ? (
               <>
+                <div className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-purple-950/40 to-indigo-950/30 border border-purple-500/20 mb-2">
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={displayName}
+                      className="w-10 h-10 rounded-xl object-cover border border-purple-400/40 shrink-0"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-white font-black text-base shrink-0">
+                      {userInitial}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-white truncate">{displayName}</p>
+                    <p className="text-[11px] text-purple-300/80 truncate font-mono" dir="ltr">{user.email}</p>
+                  </div>
+                </div>
+
                 <Link
                   to="/profile"
                   onClick={() => setOpen(false)}

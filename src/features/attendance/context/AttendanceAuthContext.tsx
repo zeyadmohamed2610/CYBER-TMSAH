@@ -9,8 +9,10 @@ interface AttendanceAuthContextValue {
   role: AttendanceRole | null;
   fullName: string | null;
   department: string | null;
+  avatarUrl: string | null;
   loading: boolean;
   refreshRole: () => Promise<void>;
+  updateAvatarUrl: (url: string | null) => Promise<void>;
   signOut: () => Promise<{ error: string | null }>;
 }
 
@@ -20,6 +22,7 @@ const ROLE_STORAGE_KEY = "cyber_cached_role";
 const NAME_STORAGE_KEY = "cyber_cached_fullname";
 const DEPT_STORAGE_KEY = "cyber_cached_department";
 const USERID_STORAGE_KEY = "cyber_cached_userid";
+const AVATAR_STORAGE_KEY = "cyber_cached_avatar";
 
 const isAttendanceRole = (value: unknown): value is AttendanceRole => {
   return value === "owner" || value === "coordinator" || value === "doctor" || value === "student" || value === "ta";
@@ -73,6 +76,13 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
       return null;
     }
   });
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
+    try {
+      return sessionStorage.getItem(AVATAR_STORAGE_KEY) || localStorage.getItem(AVATAR_STORAGE_KEY) || null;
+    } catch {
+      return null;
+    }
+  });
 
   // If we already have a cached role in storage, start with loading=false so the view doesn't flash or unmount
   const [loading, setLoading] = useState<boolean>(() => {
@@ -99,6 +109,7 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
         setRole(null);
         setFullName(null);
         setDepartment(null);
+        setAvatarUrl(null);
         setLoading(false);
         currentUserRef.current = null;
         try {
@@ -106,9 +117,11 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
           sessionStorage.removeItem(NAME_STORAGE_KEY);
           sessionStorage.removeItem(DEPT_STORAGE_KEY);
           sessionStorage.removeItem(USERID_STORAGE_KEY);
+          sessionStorage.removeItem(AVATAR_STORAGE_KEY);
           localStorage.removeItem(ROLE_STORAGE_KEY);
           localStorage.removeItem(NAME_STORAGE_KEY);
           localStorage.removeItem(DEPT_STORAGE_KEY);
+          localStorage.removeItem(AVATAR_STORAGE_KEY);
         } catch {
           // ignore
         }
@@ -123,6 +136,21 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
 
       setUser(sessionUser);
       currentUserRef.current = sessionUser;
+
+      const userAvatar =
+        (sessionUser.user_metadata?.avatar_url as string | undefined) ||
+        localStorage.getItem(`cyber_avatar_${sessionUser.id}`) ||
+        localStorage.getItem(AVATAR_STORAGE_KEY) ||
+        null;
+      setAvatarUrl(userAvatar);
+      if (userAvatar) {
+        try {
+          sessionStorage.setItem(AVATAR_STORAGE_KEY, userAvatar);
+          localStorage.setItem(AVATAR_STORAGE_KEY, userAvatar);
+        } catch {
+          // ignore
+        }
+      }
 
       try {
         const profile = await withTimeout(fetchUserProfile(sessionUser.id), 8_000, "fetchUserProfile");
@@ -236,24 +264,52 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
     setRole(null);
     setFullName(null);
     setDepartment(null);
+    setAvatarUrl(null);
     currentUserRef.current = null;
     try {
       sessionStorage.removeItem(ROLE_STORAGE_KEY);
       sessionStorage.removeItem(NAME_STORAGE_KEY);
       sessionStorage.removeItem(DEPT_STORAGE_KEY);
       sessionStorage.removeItem(USERID_STORAGE_KEY);
+      sessionStorage.removeItem(AVATAR_STORAGE_KEY);
       localStorage.removeItem(ROLE_STORAGE_KEY);
       localStorage.removeItem(NAME_STORAGE_KEY);
       localStorage.removeItem(DEPT_STORAGE_KEY);
+      localStorage.removeItem(AVATAR_STORAGE_KEY);
     } catch {
       // ignore
     }
     return { error: error ? error.message : null };
   }, []);
 
+  const updateAvatarUrl = useCallback(async (newUrl: string | null): Promise<void> => {
+    setAvatarUrl(newUrl);
+    try {
+      if (newUrl) {
+        sessionStorage.setItem(AVATAR_STORAGE_KEY, newUrl);
+        localStorage.setItem(AVATAR_STORAGE_KEY, newUrl);
+      } else {
+        sessionStorage.removeItem(AVATAR_STORAGE_KEY);
+        localStorage.removeItem(AVATAR_STORAGE_KEY);
+      }
+      if (user?.id) {
+        if (newUrl) {
+          localStorage.setItem(`cyber_avatar_${user.id}`, newUrl);
+        } else {
+          localStorage.removeItem(`cyber_avatar_${user.id}`);
+        }
+      }
+      await supabase.auth.updateUser({
+        data: { avatar_url: newUrl },
+      });
+    } catch (err) {
+      console.warn("Failed to persist avatar_url to auth metadata:", err);
+    }
+  }, [user]);
+
   const value = useMemo<AttendanceAuthContextValue>(
-    () => ({ user, role, fullName, department, loading, refreshRole, signOut }),
-    [loading, role, fullName, department, user, refreshRole, signOut],
+    () => ({ user, role, fullName, department, avatarUrl, loading, refreshRole, updateAvatarUrl, signOut }),
+    [loading, role, fullName, department, avatarUrl, user, refreshRole, updateAvatarUrl, signOut],
   );
 
   return <AttendanceAuthContext.Provider value={value}>{children}</AttendanceAuthContext.Provider>;
