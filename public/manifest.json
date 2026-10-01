@@ -1,11 +1,11 @@
 {
-  "name": "CYBER TMSAH - منصة الأمن السيبراني",
+  "name": "CYBER TMSAH - منظومة الحضور والتحقق الأكاديمي",
   "short_name": "CYBER TMSAH",
-  "description": "منصة CYBER TMSAH (سايبر تمساح) - منصة أكاديمية متكاملة لطلاب الأمن السيبراني. مواد دراسية، جداول محاضرات، ومراجعات شاملة في مكان واحد.",
-  "start_url": "/",
+  "description": "منظومة CYBER TMSAH المتطورة للتحقق الذكي وإدارة الحضور والغياب الأكاديمي لطلاب الأمن السيبراني بجامعة حلوان التكنولوجية الدولية.",
+  "start_url": "/login",
   "display": "standalone",
-  "background_color": "#0a0a0f",
-  "theme_color": "#0a0a0f",
+  "background_color": "#0a0f1d",
+  "theme_color": "#0a0f1d",
   "orientation": "portrait",
   "scope": "/",
   "lang": "ar",
@@ -15,9 +15,9 @@
     {
       "src": "/og-image.png",
       "sizes": "1200x630",
-      "type": "image/jpeg",
+      "type": "image/png",
       "form_factor": "wide",
-      "label": "CYBER TMSAH - منصة الأمن السيبراني"
+      "label": "CYBER TMSAH - Academic Attendance & Verification System"
     },
     {
       "src": "/favicon.png",
@@ -81,17 +81,24 @@
   "prefer_related_applications": false,
   "shortcuts": [
     {
-      "name": "المواد الدراسية",
-      "short_name": "المواد",
-      "description": "عرض جميع المواد الدراسية",
-      "url": "/materials",
+      "name": "تسجيل الدخول",
+      "short_name": "الدخول",
+      "description": "تسجيل الدخول لمنظومة الحضور والتحقق",
+      "url": "/login",
       "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
     },
     {
-      "name": "الجدول الدراسي",
-      "short_name": "الجدول",
-      "description": "عرض الجدول الأسبوعي",
-      "url": "/schedule",
+      "name": "طلب الانضمام",
+      "short_name": "الانضمام",
+      "description": "طلب اعتماد حساب جديد في المنظومة",
+      "url": "/join",
+      "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "الملف الشخصي",
+      "short_name": "حسابي",
+      "description": "إدارة الحساب ومفاتيح المرور البيومترية",
+      "url": "/profile",
       "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
     }
   ]
