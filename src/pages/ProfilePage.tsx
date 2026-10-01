@@ -158,8 +158,10 @@ export default function ProfilePage() {
             { alg: -257, type: "public-key" }, // RS256
           ],
           authenticatorSelection: {
-            userVerification: "preferred",
-            residentKey: "preferred",
+            authenticatorAttachment: "platform",   // ← يفتح البصمة/FaceID/Windows Hello مباشرة
+            userVerification: "required",
+            residentKey: "required",
+            requireResidentKey: true,
           },
           timeout: 60000,
         },
