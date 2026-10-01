@@ -354,12 +354,19 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
         } else {
           localStorage.removeItem(`cyber_avatar_${user.id}`);
         }
+        const isHttpUrl = Boolean(newUrl && (newUrl.startsWith("http://") || newUrl.startsWith("https://")));
+        // NEVER store base64 data URLs in user_metadata because they bloat the JWT
+        // beyond Envoy/Kong's max header buffer limit (8KB), causing 400 Bad Request on all REST endpoints!
+        try {
+          await supabase.auth.updateUser({
+            data: { avatar_url: isHttpUrl ? newUrl : null },
+          });
+        } catch (authErr) {
+          console.warn("Failed to persist avatar_url to auth metadata:", authErr);
+        }
       }
-      await supabase.auth.updateUser({
-        data: { avatar_url: newUrl },
-      });
     } catch (err) {
-      console.warn("Failed to persist avatar_url to auth metadata:", err);
+      console.warn("Failed to update avatar URL in storage:", err);
     }
   }, [user]);
 

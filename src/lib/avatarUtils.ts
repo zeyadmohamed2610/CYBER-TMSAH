@@ -146,19 +146,28 @@ async function persistAvatarMetadata(userId: string, avatarUrl: string | null) {
     localStorage.removeItem(`cyber_avatar_${userId}`);
   }
 
-  // Update Supabase Auth user_metadata
-  await supabase.auth.updateUser({
-    data: { avatar_url: avatarUrl },
-  });
+  // ⚠️ CRITICAL: Supabase Auth stores user_metadata directly inside the JWT access token.
+  // Base64 data URLs (data:image/...) are 20-50KB, which causes the JWT to exceed
+  // the Envoy / Kong API gateway HTTP header limit (8KB - 16KB).
+  // This causes EVERY subsequent REST request to fail with HTTP 400 Bad Request!
+  // Therefore, only HTTP/HTTPS URLs are allowed in user_metadata.
+  const isHttpUrl = Boolean(avatarUrl && (avatarUrl.startsWith("http://") || avatarUrl.startsWith("https://")));
+  try {
+    await supabase.auth.updateUser({
+      data: { avatar_url: isHttpUrl ? avatarUrl : null },
+    });
+  } catch (authErr) {
+    console.warn("Failed to persist avatar_url to auth metadata:", authErr);
+  }
 
   // Try updating public.users table if avatar_url column happens to exist
   try {
     await supabase
       .from("users")
-      .update({ avatar_url: avatarUrl } as Record<string, unknown>)
+      .update({ avatar_url: isHttpUrl ? avatarUrl : null } as Record<string, unknown>)
       .eq("auth_id", userId);
   } catch {
-    // Column might not exist in users table; safely ignored since user_metadata is source of truth
+    // Column might not exist in users table; safely ignored
   }
 }
 
