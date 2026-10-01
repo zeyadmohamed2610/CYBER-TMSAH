@@ -14,6 +14,36 @@ export interface StoredPasskeyDevice {
 const STORAGE_PREFIX = "cyber_device_passkey_";
 const LATEST_KEY = "cyber_latest_passkey";
 
+/** Safe RFC 4648 Base64URL to Uint8Array converter */
+function base64urlToUint8Array(str: string): Uint8Array {
+  const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+/** Binary buffer to standard base64 */
+function bufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+/** Binary buffer to base64url (no padding, url-safe) */
+function bufferToBase64url(buffer: ArrayBuffer): string {
+  return bufferToBase64(buffer)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
 /** Check if WebAuthn / Passkeys are supported by the browser and device */
 export function isWebAuthnSupported(): boolean {
   return (
@@ -115,7 +145,6 @@ export async function authenticateWithPasskey(identifier?: string): Promise<Pass
   if (identifier && identifier.trim()) {
     try {
       const cleanIdent = identifier.trim().toLowerCase();
-      // Try resolving identifier to user_id or auth_id
       const { data: uRow } = await supabase
         .from("users")
         .select("id, auth_id, email, role")
@@ -154,21 +183,11 @@ export async function authenticateWithPasskey(identifier?: string): Promise<Pass
   for (const item of localList) {
     try {
       let buffer: ArrayBuffer | null = null;
-      // Try base64 decode if it's base64, otherwise use TextEncoder
-      if (/^[A-Za-z0-9+/=_-]+$/.test(item.credentialId)) {
-        try {
-          const binaryStr = atob(item.rawId || item.credentialId);
-          const bytes = new Uint8Array(binaryStr.length);
-          for (let i = 0; i < binaryStr.length; i++) {
-            bytes[i] = binaryStr.charCodeAt(i);
-          }
-          buffer = bytes.buffer;
-        } catch {
-          // fallback
-          buffer = new TextEncoder().encode(item.credentialId).buffer;
-        }
+      const targetStr = item.rawId || item.credentialId;
+      if (targetStr && /^[A-Za-z0-9+/=_-]+$/.test(targetStr)) {
+        buffer = base64urlToUint8Array(targetStr).buffer;
       }
-      if (buffer) {
+      if (buffer && buffer.byteLength > 0) {
         allowedDescriptors.push({
           id: buffer,
           type: "public-key",
@@ -214,7 +233,7 @@ export async function authenticateWithPasskey(identifier?: string): Promise<Pass
       };
     }
 
-    // Attempt 2: Fallback without transport restrictions for Android OEM compatibility (MIUI, ColorOS, etc.)
+    // Attempt 2: Fallback without transport restrictions for OEM compatibility
     if (allowedDescriptors.length > 0) {
       try {
         const challenge2 = crypto.getRandomValues(new Uint8Array(32));
@@ -246,92 +265,141 @@ export async function authenticateWithPasskey(identifier?: string): Promise<Pass
     }
     return {
       success: false,
-      error: "تعذر التحقق من البصمة. تأكد من تفعيل البصمة أو رمز المرور على هاتفك وإضافتها من صفحة الملف الشخصي أولاً.",
+      error: "تعذر التحقق من البصمة. تأكد من تفعيل البصمة أو رمز المرور على جهازك وإضافتها من صفحة الملف الشخصي أولاً.",
     };
   }
 
-  // ── Verification & Session Restoration ──
+  // ── Verification & Full Session Establishment ──
   try {
-    const rawIdBase64 = btoa(String.fromCharCode(...new Uint8Array(assertion.rawId)));
     const credId = assertion.id;
+    const rawIdBase64 = bufferToBase64(assertion.rawId);
+    const rawIdBase64url = bufferToBase64url(assertion.rawId);
 
-    // 1. Check local cached device passkey
+    // 1. Fast local session restoration if this browser has an active cached refresh token
     const localMatch =
-      localList.find((l) => l.credentialId === credId || l.credentialId === rawIdBase64 || l.rawId === rawIdBase64) ||
+      localList.find(
+        (l) =>
+          l.credentialId === credId ||
+          l.credentialId === rawIdBase64 ||
+          l.credentialId === rawIdBase64url ||
+          l.rawId === rawIdBase64 ||
+          l.rawId === rawIdBase64url
+      ) ||
       (localStorage.getItem(`${STORAGE_PREFIX}${credId}`)
         ? JSON.parse(localStorage.getItem(`${STORAGE_PREFIX}${credId}`)!)
         : null);
 
     if (localMatch?.refreshToken) {
-      // Restore official Supabase Auth session via refresh token!
-      const { data: sessionData, error: sessionErr } = await supabase.auth.setSession({
-        refresh_token: localMatch.refreshToken,
-        access_token: "",
-      });
-
-      if (!sessionErr && sessionData.session) {
-        // Update cached refresh token
-        saveLocalPasskey({
-          ...localMatch,
-          refreshToken: sessionData.session.refresh_token,
-          savedAt: Date.now(),
+      try {
+        const { data: sessionData, error: sessionErr } = await supabase.auth.setSession({
+          refresh_token: localMatch.refreshToken,
+          access_token: "",
         });
 
-        // Ensure JWT propagation
-        await supabase.auth.getSession();
+        if (!sessionErr && sessionData.session) {
+          saveLocalPasskey({
+            ...localMatch,
+            refreshToken: sessionData.session.refresh_token,
+            savedAt: Date.now(),
+          });
 
-        // Retrieve role
-        let userRole = localMatch.role || null;
-        if (!userRole) {
-          const { data: userProfile } = await supabase
-            .from("users")
-            .select("role")
-            .eq("auth_id", sessionData.user?.id)
-            .maybeSingle();
-          userRole = userProfile?.role || null;
+          await supabase.auth.getSession();
+
+          let userRole = localMatch.role || null;
+          if (!userRole) {
+            const { data: userProfile } = await supabase
+              .from("users")
+              .select("role")
+              .eq("auth_id", sessionData.user?.id)
+              .maybeSingle();
+            userRole = userProfile?.role || null;
+          }
+
+          return {
+            success: true,
+            user: sessionData.user,
+            role: userRole,
+          };
         }
-
-        return {
-          success: true,
-          user: sessionData.user,
-          role: userRole,
-        };
+      } catch (localErr) {
+        console.warn("[WebAuthn] Local session setSession notice (will use Edge Function):", localErr);
       }
     }
 
-    // 2. Check Supabase database if local session token was expired or missing
-    const { data: dbCred, error: dbError } = await supabase
-      .from("webauthn_credentials")
-      .select("auth_id, user_id, device_name")
-      .or(`credential_id.eq.${credId},credential_id.eq.${rawIdBase64}`)
-      .maybeSingle();
+    // 2. Primary Cross-Device Auth: Authenticate via passkey-login Edge Function
+    // This issues an official Supabase Auth session token via verified passkey
+    try {
+      const { data: fnData, error: fnErr } = await supabase.functions.invoke("passkey-login", {
+        body: {
+          credentialId: credId,
+          rawId: rawIdBase64,
+        },
+      });
 
-    if (!dbError && dbCred?.auth_id) {
-      // Passkey verified! Look up user
-      const { data: uRow } = await supabase
-        .from("users")
-        .select("id, auth_id, email, full_name, role")
-        .eq("auth_id", dbCred.auth_id)
-        .maybeSingle();
+      if (!fnErr && fnData?.success && fnData.hashed_token) {
+        // Exchange OTP token hash for full authenticated Supabase session
+        const { data: verifyData, error: verifyErr } = await supabase.auth.verifyOtp({
+          token_hash: fnData.hashed_token,
+          type: "magiclink",
+        });
 
-      if (uRow) {
-        // If we also have a cached session or current session for this user, restore it
-        const { data: curSession } = await supabase.auth.getSession();
-        if (curSession?.session && curSession.session.user.id === dbCred.auth_id) {
+        if (!verifyErr && verifyData?.session && verifyData?.user) {
+          // Cache fresh refresh token for instant subsequent platform biometric unlocks
+          saveLocalPasskey({
+            credentialId: credId,
+            rawId: rawIdBase64,
+            refreshToken: verifyData.session.refresh_token,
+            userId: verifyData.user.id,
+            email: verifyData.user.email,
+            role: fnData.role,
+            label: fnData.device_name || "مفتاح أمان بيومتري",
+            savedAt: Date.now(),
+          });
+
+          await supabase.auth.getSession();
+
           return {
             success: true,
-            user: curSession.session.user,
-            role: uRow.role,
+            user: verifyData.user,
+            role: fnData.role || null,
           };
         }
 
-        // Return matched user info so login form can proceed
+        if (verifyErr) {
+          console.error("[WebAuthn] verifyOtp failed:", verifyErr);
+        }
+      }
+
+      if (fnData?.error) {
         return {
-          success: true,
-          user: { id: dbCred.auth_id, email: uRow.email },
-          role: uRow.role,
+          success: false,
+          error: fnData.error,
         };
       }
+    } catch (edgeErr) {
+      console.warn("[WebAuthn] Edge function login invocation notice:", edgeErr);
+    }
+
+    // 3. Fallback: Lookup via secure RPC passkey_lookup_user
+    try {
+      const { data: rpcUser } = await supabase.rpc("passkey_lookup_user", {
+        p_credential_id: credId,
+        p_raw_id: rawIdBase64,
+      });
+
+      if (rpcUser && rpcUser.length > 0 && rpcUser[0].auth_id) {
+        const u = rpcUser[0];
+        const { data: curSession } = await supabase.auth.getSession();
+        if (curSession?.session && curSession.session.user.id === u.auth_id) {
+          return {
+            success: true,
+            user: curSession.session.user,
+            role: u.role,
+          };
+        }
+      }
+    } catch (rpcErr) {
+      console.warn("[WebAuthn] RPC lookup notice:", rpcErr);
     }
 
     return {
