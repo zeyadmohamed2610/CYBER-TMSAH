@@ -160,14 +160,14 @@ async function persistAvatarMetadata(userId: string, avatarUrl: string | null) {
     console.warn("Failed to persist avatar_url to auth metadata:", authErr);
   }
 
-  // Try updating public.users table if avatar_url column happens to exist
+  // Update public.users table so it syncs to all devices (phones, computers)
   try {
     await supabase
       .from("users")
-      .update({ avatar_url: isHttpUrl ? avatarUrl : null } as Record<string, unknown>)
+      .update({ avatar_url: avatarUrl } as Record<string, unknown>)
       .eq("auth_id", userId);
-  } catch {
-    // Column might not exist in users table; safely ignored
+  } catch (dbErr) {
+    console.warn("Failed to persist avatar_url to users table:", dbErr);
   }
 }
 

@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 import { getAttendanceDashboardRoute } from "../utils/dashboardRoutes";
 import { useLang } from "@/i18n";
+import { authenticateWithPasskey, isWebAuthnSupported, saveLocalPasskey } from "@/lib/webauthn";
 
 import { PasswordStrengthMeter } from "@/features/auth/components/PasswordStrengthMeter";
 import { CustomRoleSelect } from "@/features/auth/components/CustomRoleSelect";
@@ -137,6 +138,19 @@ const Icon = {
       <path d="M8 12l3 3 5-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   ),
+  Fingerprint: () => (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/>
+      <path d="M14 13.12c0 2.38 0 6.38-1 8.88"/>
+      <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/>
+      <path d="M2 12a10 10 0 0 1 18-6"/>
+      <path d="M2 16h.01"/>
+      <path d="M21.8 16c.2-2 .131-5.354 0-6"/>
+      <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/>
+      <path d="M8.65 22c.21-.66.45-1.32.57-2"/>
+      <path d="M9 6.8a6 6 0 0 1 9 5.2v2"/>
+    </svg>
+  ),
 };
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -224,6 +238,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [loginError, setLoginError]         = useState<string | null>(null);
   const [loginLoading, setLoginLoading]     = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [isCapsLockOn, setIsCapsLockOn]     = useState(false);
 
   const [joinRole, setJoinRole]             = useState<JoinRole>("student");
@@ -364,6 +379,25 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
     // control to the router.
     await supabase.auth.getSession();
 
+    // Cache session token for device passkey if this device has a passkey registered
+    if (authData?.session && authData?.user) {
+      try {
+        const latestKey = localStorage.getItem("cyber_latest_passkey");
+        if (latestKey) {
+          saveLocalPasskey({
+            credentialId: latestKey,
+            rawId: latestKey,
+            refreshToken: authData.session.refresh_token,
+            userId: authData.user.id,
+            email: authData.user.email,
+            savedAt: Date.now(),
+          });
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     if (authData?.user) {
       try {
         const { data: profile } = await supabase
@@ -389,6 +423,62 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
 
     navigate("/attendance", { replace: true });
     setLoginLoading(false);
+  };
+
+  // ── Biometric / Passkey Login Handler ──────────────────────────────────────
+  const handlePasskeyLogin = async () => {
+    if (lockRemaining > 0) return;
+    setPasskeyLoading(true);
+    setLoginError(null);
+
+    try {
+      const result = await authenticateWithPasskey(username.trim());
+
+      if (result.cancelled) {
+        setPasskeyLoading(false);
+        return;
+      }
+
+      if (!result.success || !result.user) {
+        setLoginError(
+          result.error ||
+            (lang === "ar"
+              ? "تعذر التحقق من البصمة. تأكد من تفعيل البصمة في حسابك أولاً."
+              : "Biometric authentication failed. Ensure a passkey is registered in your profile.")
+        );
+        setPasskeyLoading(false);
+        return;
+      }
+
+      playCyberSuccessChime();
+      toast.success(
+        lang === "ar"
+          ? "✅ تم التحقق من البصمة البيومترية بنجاح!"
+          : "✅ Biometric verified successfully!"
+      );
+      recordAttempt(true);
+
+      // Ensure JWT session is refreshed in Supabase client
+      await supabase.auth.getSession();
+
+      if (result.role) {
+        const validRoles = ["owner", "coordinator", "doctor", "student", "ta"] as const;
+        type ValidRole = typeof validRoles[number];
+        const safeRole = validRoles.includes(result.role as ValidRole) ? (result.role as ValidRole) : null;
+        if (safeRole) {
+          navigate(getAttendanceDashboardRoute(safeRole), { replace: true });
+          setPasskeyLoading(false);
+          return;
+        }
+      }
+
+      navigate("/attendance", { replace: true });
+    } catch (err: unknown) {
+      console.error("Passkey login unexpected error:", err);
+      setLoginError(lang === "ar" ? "حدث خطأ غير متوقع أثناء فحص البصمة." : "Biometric error occurred.");
+    } finally {
+      setPasskeyLoading(false);
+    }
   };
 
   // ── Join handler ───────────────────────────────────────────────────────────
@@ -899,6 +989,37 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
                     <Icon.LogIn/><span>{t.auth.signIn}</span>
                   </PrimaryBtn>
                 </div>
+
+                {/* Or Divider */}
+                <div className="relative flex items-center justify-center my-3">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-white/10" />
+                  </div>
+                  <span className="relative px-3 text-[11px] font-semibold text-slate-400 bg-[#090D21] uppercase tracking-wider">
+                    {lang === "ar" ? "أو الدخول السريع" : "Or quick sign in"}
+                  </span>
+                </div>
+
+                {/* Biometric / Passkey Login Button */}
+                <button
+                  type="button"
+                  onClick={handlePasskeyLogin}
+                  disabled={passkeyLoading || lockRemaining > 0}
+                  className="w-full h-11 sm:h-12 rounded-2xl flex items-center justify-center gap-2.5 text-xs sm:text-sm font-bold text-white transition-all cursor-pointer relative overflow-hidden group border border-purple-500/40 hover:border-cyan-400 bg-gradient-to-r from-purple-950/40 via-[#0B0E28] to-cyan-950/40 hover:shadow-[0_0_20px_rgba(6,182,212,0.35)] active:scale-[0.98]"
+                >
+                  {passkeyLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+                  ) : (
+                    <span className="text-cyan-400 group-hover:scale-110 transition-transform">
+                      <Icon.Fingerprint />
+                    </span>
+                  )}
+                  <span className="bg-gradient-to-r from-purple-200 via-white to-cyan-200 bg-clip-text text-transparent group-hover:to-cyan-300">
+                    {passkeyLoading
+                      ? (lang === "ar" ? "جاري فحص البصمة..." : "Verifying biometric...")
+                      : (lang === "ar" ? "تسجيل الدخول بالبصمة / Passkey" : "Sign in with Biometric / Passkey")}
+                  </span>
+                </button>
 
                 <p className="text-center text-[12.5px] pt-1.5 text-slate-400">
                   {lang === "ar" ? "ليس لديك حساب؟" : "No account?"}{" "}

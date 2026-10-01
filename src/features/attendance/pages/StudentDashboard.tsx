@@ -184,42 +184,38 @@ export const StudentDashboard = () => {
 
       {/* ── Navigation Tabs ───────────────────────────────────────────────── */}
       <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl" className="w-full space-y-4">
-        <div
-          className="w-full overflow-x-auto pb-1"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-          dir="rtl"
-        >
-          <TabsList className="flex h-auto w-max min-w-full justify-start gap-1.5 bg-white/[0.02] border border-white/10 p-1.5 rounded-2xl backdrop-blur-md">
+        <div className="w-full" dir="rtl">
+          <TabsList className="grid grid-cols-2 sm:flex sm:flex-wrap h-auto w-full justify-start gap-1.5 bg-white/[0.02] border border-white/10 p-1.5 rounded-2xl backdrop-blur-md">
             <TabsTrigger
               value="checkin"
-              className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary data-[state=active]:border-primary/50 border border-transparent px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm gap-2 whitespace-nowrap transition-all"
+              className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary data-[state=active]:border-primary/50 border border-transparent px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm gap-2 transition-all justify-center sm:justify-start"
             >
-              <QrCode className="h-4 w-4" />
-              تسجيل الحضور
+              <QrCode className="h-4 w-4 shrink-0" />
+              <span>تسجيل الحضور</span>
             </TabsTrigger>
 
             <TabsTrigger
               value="records"
-              className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary data-[state=active]:border-primary/50 border border-transparent px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm gap-2 whitespace-nowrap transition-all"
+              className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary data-[state=active]:border-primary/50 border border-transparent px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm gap-2 transition-all justify-center sm:justify-start"
             >
-              <History className="h-4 w-4" />
-              سجل حضوري ({records.length})
+              <History className="h-4 w-4 shrink-0" />
+              <span>سجل حضوري ({records.length})</span>
             </TabsTrigger>
 
             <TabsTrigger
               value="analytics"
-              className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary data-[state=active]:border-primary/50 border border-transparent px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm gap-2 whitespace-nowrap transition-all"
+              className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary data-[state=active]:border-primary/50 border border-transparent px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm gap-2 transition-all justify-center sm:justify-start"
             >
-              <BarChart3 className="h-4 w-4" />
-              النسب والمقررات
+              <BarChart3 className="h-4 w-4 shrink-0" />
+              <span>النسب والمقررات</span>
             </TabsTrigger>
 
             <TabsTrigger
               value="device"
-              className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary data-[state=active]:border-primary/50 border border-transparent px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm gap-2 whitespace-nowrap transition-all"
+              className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary data-[state=active]:border-primary/50 border border-transparent px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm gap-2 transition-all justify-center sm:justify-start"
             >
-              <ShieldCheck className="h-4 w-4" />
-              أمان الجهاز
+              <ShieldCheck className="h-4 w-4 shrink-0" />
+              <span>أمان الجهاز</span>
             </TabsTrigger>
           </TabsList>
         </div>

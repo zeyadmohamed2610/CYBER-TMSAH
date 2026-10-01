@@ -41,7 +41,6 @@ import Navbar from "@/components/Navbar";
 import { checkPwnedPassword } from "@/lib/pwnedPassword";
 import Footer from "@/components/Footer";
 import AvatarStudioDialog from "@/components/AvatarStudioDialog";
-import { AVATAR_PRESETS } from "@/lib/avatarPresets";
 import { saveUserAvatar, deleteUserAvatar } from "@/lib/avatarUtils";
 
 interface UserProfileDetails {
@@ -98,19 +97,48 @@ export default function ProfilePage() {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  // Load passkeys from local storage & user metadata
+  // Load passkeys from database & local storage
   useEffect(() => {
     if (!user?.id) return;
-    try {
-      const stored = localStorage.getItem(`cyber_passkeys_${user.id}`);
-      if (stored) {
-        setPasskeys(JSON.parse(stored));
-      } else if (user.user_metadata?.passkeys) {
-        setPasskeys(user.user_metadata.passkeys);
+    let isMounted = true;
+    async function loadUserPasskeys() {
+      try {
+        const { data, error } = await supabase
+          .from("webauthn_credentials")
+          .select("id, credential_id, device_name, created_at")
+          .eq("auth_id", user?.id);
+
+        if (!error && data && data.length > 0 && isMounted) {
+          const mapped = data.map((item) => ({
+            id: item.credential_id,
+            rawId: item.credential_id,
+            label: item.device_name || "مفتاح أمان بيومتري",
+            createdAt: item.created_at || new Date().toISOString(),
+          }));
+          setPasskeys(mapped);
+          localStorage.setItem(`cyber_passkeys_${user?.id}`, JSON.stringify(mapped));
+          return;
+        }
+      } catch (err) {
+        console.warn("Failed to load passkeys from database:", err);
       }
-    } catch (e) {
-      console.error("Failed to load passkeys:", e);
+
+      try {
+        const stored = localStorage.getItem(`cyber_passkeys_${user?.id}`);
+        if (stored && isMounted) {
+          setPasskeys(JSON.parse(stored));
+        } else if (user?.user_metadata?.passkeys && isMounted) {
+          setPasskeys(user.user_metadata.passkeys);
+        }
+      } catch (e) {
+        console.error("Failed to load passkeys:", e);
+      }
     }
+
+    loadUserPasskeys();
+    return () => {
+      isMounted = false;
+    };
   }, [user]);
 
   const savePasskeys = (items: { id: string; rawId: string; label: string; createdAt: string }[]) => {
@@ -150,7 +178,7 @@ export default function ProfilePage() {
         ? "localhost"
         : window.location.hostname;
 
-      // 4. All universally supported algorithms
+      // 4. Universally supported algorithms
       const pubKeyCredParams: PublicKeyCredentialParameters[] = [
         { alg: -7,   type: "public-key" }, // ES256 (P-256) — 100% Android, iOS, Windows
         { alg: -257, type: "public-key" }, // RS256 — Windows Hello & legacy TPM
@@ -158,13 +186,12 @@ export default function ProfilePage() {
         { alg: -37,  type: "public-key" }, // PS256
       ];
 
-      // 5. Tiered strategies — ALWAYS platform, vary userVerification
-      // NEVER omit authenticatorAttachment:'platform' or Android shows USB/NFC/external device dialog
+      // 5. Tiered strategies — ALWAYS platform with client-device hint for immediate biometric
       const strategies: AuthenticatorSelectionCriteria[] = [
-        { authenticatorAttachment: "platform", userVerification: "preferred" },   // Most compatible
-        { authenticatorAttachment: "platform", userVerification: "discouraged" }, // Very permissive
-        { authenticatorAttachment: "platform", userVerification: "required" },    // Strict biometric
-        { authenticatorAttachment: "platform" },                                   // Bare minimum
+        { authenticatorAttachment: "platform", userVerification: "preferred", residentKey: "preferred" },
+        { authenticatorAttachment: "platform", userVerification: "discouraged", residentKey: "preferred" },
+        { authenticatorAttachment: "platform", userVerification: "required", residentKey: "preferred" },
+        { authenticatorAttachment: "platform" },
       ];
 
       let credential: PublicKeyCredential | null = null;
@@ -175,20 +202,23 @@ export default function ProfilePage() {
         const attemptStart = Date.now();
         try {
           const challenge = crypto.getRandomValues(new Uint8Array(32));
+          const createOptions: Record<string, unknown> = {
+            challenge,
+            rp: { name: "CYBER TMSAH | منصة الأمن السيبراني", id: rpId },
+            user: {
+              id: new Uint8Array(userIdHash),
+              name: cleanAsciiName,
+              displayName: userDisplayName,
+            },
+            pubKeyCredParams,
+            authenticatorSelection: strategy,
+            timeout: 60000,
+            attestation: "none",
+            hints: ["client-device"],
+          };
+
           credential = (await navigator.credentials.create({
-            publicKey: {
-              challenge,
-              rp: { name: "CYBER TMSAH | منصة الأمن السيبراني", id: rpId },
-              user: {
-                id: new Uint8Array(userIdHash),
-                name: cleanAsciiName,
-                displayName: userDisplayName,
-              },
-              pubKeyCredParams,
-              authenticatorSelection: strategy,
-              timeout: 60000,
-              attestation: "none",
-            } as PublicKeyCredentialCreationOptions,
+            publicKey: createOptions as unknown as PublicKeyCredentialCreationOptions,
           })) as PublicKeyCredential | null;
 
           if (credential) break; // Success!
@@ -202,13 +232,12 @@ export default function ProfilePage() {
             toast.error("تم إلغاء إنشاء مفتاح المرور.");
             return;
           }
-          // Otherwise OS rejected before showing UI — try next strategy
         }
       }
 
       if (!credential) {
         if (lastErr?.name === "InvalidStateError") {
-          toast.error("مفتاح مرور لهذا الجهاز موجود بالفعل. احذف القديم ثم أنشئ جديداً.");
+          toast.error("مفتاح مرور لهذا الجهاز موجود بالفعل. يمكنك استخدام البصمة مباشرة.");
         } else if (lastErr?.name === "NotSupportedError") {
           toast.error("جهازك لا يدعم مفاتيح المرور. تأكد من تفعيل قفل الشاشة بالبصمة أو PIN.");
         } else if (lastErr?.name === "NotAllowedError") {
@@ -237,6 +266,42 @@ export default function ProfilePage() {
         label: `${deviceLabel} - ${new Date().toLocaleDateString("ar-EG")}`,
         createdAt: new Date().toISOString(),
       };
+
+      // 1. Sync to Supabase public.webauthn_credentials
+      if (user?.id) {
+        try {
+          await supabase.from("webauthn_credentials").upsert({
+            auth_id: user.id,
+            user_id: profile?.id || null,
+            credential_id: credential.id,
+            device_name: deviceLabel,
+          }, { onConflict: "credential_id" });
+        } catch (dbErr) {
+          console.warn("Failed to insert into webauthn_credentials:", dbErr);
+        }
+      }
+
+      // 2. Cache device session token for fast local biometric login
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData.session) {
+          localStorage.setItem(
+            `cyber_device_passkey_${credential.id}`,
+            JSON.stringify({
+              credentialId: credential.id,
+              rawId: rawIdBase64,
+              refreshToken: sessionData.session.refresh_token,
+              userId: user?.id,
+              email: user?.email,
+              label: deviceLabel,
+              savedAt: Date.now(),
+            })
+          );
+          localStorage.setItem("cyber_latest_passkey", credential.id);
+        }
+      } catch (sessErr) {
+        console.warn("Could not cache session for passkey:", sessErr);
+      }
 
       savePasskeys([...passkeys, newKey]);
       toast.success("✅ تم إنشاء وتوثيق مفتاح المرور (Passkey) بنجاح!");
@@ -268,7 +333,8 @@ export default function ProfilePage() {
           rpId: domain === "localhost" ? "localhost" : domain,
           userVerification: "preferred",
           timeout: 60000,
-        },
+          hints: ["client-device"],
+        } as unknown as PublicKeyCredentialRequestOptions,
       });
 
       if (assertion) {
@@ -286,9 +352,20 @@ export default function ProfilePage() {
     }
   };
 
-  const handleDeletePasskey = (passkeyId: string) => {
+  const handleDeletePasskey = async (passkeyId: string) => {
     const updated = passkeys.filter((p) => p.id !== passkeyId);
     savePasskeys(updated);
+    if (user?.id) {
+      try {
+        await supabase.from("webauthn_credentials").delete().eq("credential_id", passkeyId);
+        localStorage.removeItem(`cyber_device_passkey_${passkeyId}`);
+        if (localStorage.getItem("cyber_latest_passkey") === passkeyId) {
+          localStorage.removeItem("cyber_latest_passkey");
+        }
+      } catch (err) {
+        console.warn("Failed to delete passkey from db:", err);
+      }
+    }
     toast.success("تم حذف مفتاح المرور.");
   };
 
@@ -490,18 +567,6 @@ export default function ProfilePage() {
     }
   };
 
-  // Quick Preset Selection from Studio Tab
-  const handleApplyPresetDirect = async (presetUri: string) => {
-    if (!user?.id) return;
-    try {
-      await saveUserAvatar(user.id, presetUri);
-      await updateAvatarUrl(presetUri);
-      toast.success("تم تطبيق الشخصية الرمزية بنجاح!");
-    } catch (err) {
-      console.error(err);
-      toast.error("فشل تطبيق الشخصية الرمزية");
-    }
-  };
 
   const handleRemoveAvatarDirect = async () => {
     if (!user?.id) return;
@@ -1102,52 +1167,6 @@ export default function ProfilePage() {
                           </div>
                         </div>
 
-                        {/* Quick Presets Selection Grid */}
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                              <span>اختر شخصية رمزية بنقرة واحدة (Quick Presets)</span>
-                            </span>
-                            <span className="text-[11px] text-slate-400">8 شخصيات حصرية</span>
-                          </div>
-
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            {AVATAR_PRESETS.map((preset) => {
-                              const isSelected = avatarUrl === preset.svgDataUri;
-                              return (
-                                <button
-                                  key={preset.id}
-                                  type="button"
-                                  onClick={() => handleApplyPresetDirect(preset.svgDataUri)}
-                                  className={`relative p-3 rounded-2xl border transition-all text-center flex flex-col items-center gap-2 group cursor-pointer ${
-                                    isSelected
-                                      ? "border-cyan-400 bg-cyan-600/20 shadow-[0_0_20px_rgba(6,182,212,0.35)] scale-[1.03]"
-                                      : "border-white/10 bg-black/40 hover:border-purple-500/40 hover:bg-white/5"
-                                  }`}
-                                >
-                                  <div className="w-14 h-14 rounded-2xl overflow-hidden border border-white/15 p-0.5 bg-black/50 group-hover:scale-105 transition-transform">
-                                    <img
-                                      src={preset.svgDataUri}
-                                      alt={preset.name}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  </div>
-                                  <div className="w-full">
-                                    <p className="text-xs font-bold text-white truncate">{preset.name}</p>
-                                    <p className="text-[10px] text-purple-300 font-medium">{preset.category}</p>
-                                  </div>
-
-                                  {isSelected && (
-                                    <div className="absolute top-2 left-2 w-5 h-5 rounded-full bg-cyan-500 flex items-center justify-center text-black font-bold shadow-md">
-                                      <Check className="w-3 h-3 stroke-[3]" />
-                                    </div>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
                       </CardContent>
                     </Card>
                   </TabsContent>

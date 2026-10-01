@@ -28,16 +28,16 @@ const isAttendanceRole = (value: unknown): value is AttendanceRole => {
   return value === "owner" || value === "coordinator" || value === "doctor" || value === "student" || value === "ta";
 };
 
-/** Fetch role and full_name from database */
-const fetchUserProfile = async (authId: string): Promise<{ role: AttendanceRole; fullName: string | null; department: string | null }> => {
-  // 1. Try fetching full profile with department
+/** Fetch role, full_name, department and avatar_url from database */
+const fetchUserProfile = async (authId: string): Promise<{ role: AttendanceRole; fullName: string | null; department: string | null; avatarUrl: string | null }> => {
+  // 1. Try fetching full profile with department & avatar_url
   let { data, error } = await supabase
     .from("users")
-    .select("role, full_name, department")
+    .select("role, full_name, department, avatar_url")
     .eq("auth_id", authId)
     .maybeSingle();
 
-  // 2. If 'department' column is missing or schema cache error (400 Bad Request), fallback to standard columns
+  // 2. If column error or schema cache error, fallback gracefully
   if (error) {
     const fallback = await supabase
       .from("users")
@@ -46,15 +46,20 @@ const fetchUserProfile = async (authId: string): Promise<{ role: AttendanceRole;
       .maybeSingle();
 
     if (!fallback.error && fallback.data) {
-      data = { ...fallback.data, department: null };
+      data = { ...fallback.data, department: null, avatar_url: null };
       error = null;
     }
   }
 
   if (error) throw error;
   if (!isAttendanceRole(data?.role)) throw new Error("Unable to resolve user role.");
-  const typedData = data as { role: AttendanceRole; full_name: string | null; department?: string | null };
-  return { role: typedData.role, fullName: typedData.full_name ?? null, department: typedData.department ?? null };
+  const typedData = data as { role: AttendanceRole; full_name: string | null; department?: string | null; avatar_url?: string | null };
+  return {
+    role: typedData.role,
+    fullName: typedData.full_name ?? null,
+    department: typedData.department ?? null,
+    avatarUrl: typedData.avatar_url ?? null,
+  };
 };
 
 /** Wrap a promise with a timeout */
@@ -193,6 +198,16 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
         setRole(profile.role);
         setFullName(profile.fullName);
         setDepartment(profile.department);
+        if (profile.avatarUrl) {
+          setAvatarUrl(profile.avatarUrl);
+          try {
+            sessionStorage.setItem(AVATAR_STORAGE_KEY, profile.avatarUrl);
+            localStorage.setItem(AVATAR_STORAGE_KEY, profile.avatarUrl);
+            localStorage.setItem(`cyber_avatar_${sessionUser.id}`, profile.avatarUrl);
+          } catch {
+            // ignore
+          }
+        }
 
         // Cache role, name, department
         try {
@@ -363,6 +378,15 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
           });
         } catch (authErr) {
           console.warn("Failed to persist avatar_url to auth metadata:", authErr);
+        }
+
+        try {
+          await supabase
+            .from("users")
+            .update({ avatar_url: newUrl } as Record<string, unknown>)
+            .eq("auth_id", user.id);
+        } catch (dbErr) {
+          console.warn("Failed to persist avatar_url to users table:", dbErr);
         }
       }
     } catch (err) {

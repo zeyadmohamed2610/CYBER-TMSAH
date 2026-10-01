@@ -103,7 +103,7 @@ export default defineConfig(async ({ mode }) => ({
         ]
       }
     }),
-    sentryVitePlugin && sentryVitePlugin({
+    Boolean(process.env.VITE_SENTRY_AUTH_TOKEN) && sentryVitePlugin && sentryVitePlugin({
       org: process.env.VITE_SENTRY_ORG,
       project: process.env.VITE_SENTRY_PROJECT,
       authToken: process.env.VITE_SENTRY_AUTH_TOKEN,

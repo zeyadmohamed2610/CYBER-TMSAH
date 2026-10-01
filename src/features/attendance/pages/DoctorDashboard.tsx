@@ -239,41 +239,37 @@ export const DoctorDashboard = () => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl" className="w-full space-y-4">
-        <div
-          className="w-full overflow-x-auto pb-1"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-          dir="rtl"
-        >
-          <TabsList className="flex h-auto w-max min-w-full justify-start gap-1.5 bg-white/[0.02] border border-white/10 p-1.5 rounded-2xl backdrop-blur-md" dir="rtl">
+        <div className="w-full" dir="rtl">
+          <TabsList className="grid grid-cols-2 sm:flex sm:flex-wrap h-auto w-full justify-start gap-1.5 bg-white/[0.02] border border-white/10 p-1.5 rounded-2xl backdrop-blur-md" dir="rtl">
             <TabsTrigger
               value="lectures"
-              className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary data-[state=active]:border-primary/50 border border-transparent px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm gap-2 whitespace-nowrap transition-all"
+              className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary data-[state=active]:border-primary/50 border border-transparent px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm gap-2 transition-all justify-center sm:justify-start"
             >
-              <BookOpenCheck className="h-4 w-4" /> المحاضرات
+              <BookOpenCheck className="h-4 w-4 shrink-0" /> <span>المحاضرات</span>
             </TabsTrigger>
             <TabsTrigger
               value="records"
-              className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary data-[state=active]:border-primary/50 border border-transparent px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm gap-2 whitespace-nowrap transition-all"
+              className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary data-[state=active]:border-primary/50 border border-transparent px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm gap-2 transition-all justify-center sm:justify-start"
             >
-              <ListChecks className="h-4 w-4" /> سجلات الحضور
+              <ListChecks className="h-4 w-4 shrink-0" /> <span>سجلات الحضور</span>
             </TabsTrigger>
             <TabsTrigger
               value="schedule"
-              className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary data-[state=active]:border-primary/50 border border-transparent px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm gap-2 whitespace-nowrap transition-all"
+              className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary data-[state=active]:border-primary/50 border border-transparent px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm gap-2 transition-all justify-center sm:justify-start"
             >
-              <CalendarDays className="h-4 w-4" /> الجدول الدراسي
+              <CalendarDays className="h-4 w-4 shrink-0" /> <span>الجدول الدراسي</span>
             </TabsTrigger>
             <TabsTrigger
               value="stats"
-              className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary data-[state=active]:border-primary/50 border border-transparent px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm gap-2 whitespace-nowrap transition-all"
+              className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary data-[state=active]:border-primary/50 border border-transparent px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm gap-2 transition-all justify-center sm:justify-start"
             >
-              <BarChart2 className="h-4 w-4" /> الإحصائيات
+              <BarChart2 className="h-4 w-4 shrink-0" /> <span>الإحصائيات</span>
             </TabsTrigger>
             <TabsTrigger
               value="profile"
-              className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary data-[state=active]:border-primary/50 border border-transparent px-3.5 py-2 rounded-xl font-bold text-xs sm:text-sm gap-2 whitespace-nowrap transition-all"
+              className="col-span-2 sm:col-span-1 data-[state=active]:bg-primary/25 data-[state=active]:text-primary data-[state=active]:border-primary/50 border border-transparent px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm gap-2 transition-all justify-center sm:justify-start"
             >
-              <Info className="h-4 w-4" /> بياناتي
+              <Info className="h-4 w-4 shrink-0" /> <span>بياناتي الشخصية</span>
             </TabsTrigger>
           </TabsList>
         </div>
