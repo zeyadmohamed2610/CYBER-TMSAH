@@ -247,16 +247,15 @@ Deno.serve(async (req) => {
         return json({ success: false, error: "Registration verification failed" });
       }
 
-      const { credential: regCredential, credentialDeviceType, credentialBackedUp } = verification.registrationInfo;
-      const { id: credId, publicKey, counter, transports } = regCredential;
+      const {
+        credentialID,
+        credentialPublicKey,
+        counter,
+        aaguid,
+      } = verification.registrationInfo;
 
-      // Encode publicKey as base64url for storage (safe without Buffer dependency)
-      let pubKeyB64: string;
-      try {
-        pubKeyB64 = uint8ArrayToBase64Url(publicKey);
-      } catch {
-        pubKeyB64 = Buffer.from(publicKey).toString("base64url");
-      }
+      const credId = credentialID || (credential.id as string);
+      const pubKeyB64 = uint8ArrayToBase64Url(credentialPublicKey);
 
       // Get user's public.users record
       const { data: publicUser } = await admin
@@ -265,15 +264,20 @@ Deno.serve(async (req) => {
         .eq("auth_id", user.id)
         .maybeSingle();
 
-      // Store credential (force internal transport for platform biometrics)
-      const validTransports = (transports && transports.length > 0) ? transports : ["internal"];
+      // Transports reported by browser, defaulting to "internal"
+      const clientResp = credential.response as Record<string, unknown> | undefined;
+      const clientTransports = clientResp?.transports as string[] | undefined;
+      const validTransports = (clientTransports && clientTransports.length > 0) ? clientTransports : ["internal"];
+
+      // Store credential
       const { error: upsertErr } = await admin.from("webauthn_credentials").upsert({
         auth_id: user.id,
         user_id: publicUser?.id ?? null,
         credential_id: credId,
         public_key: pubKeyB64,
-        sign_count: counter,
+        sign_count: counter ?? 0,
         transports: validTransports,
+        aaguid: aaguid ?? null,
         device_name: deviceName ?? `جهاز بيومتري ${new Date().toLocaleDateString("ar-EG")}`,
         last_used_at: new Date().toISOString(),
       }, { onConflict: "credential_id" });
