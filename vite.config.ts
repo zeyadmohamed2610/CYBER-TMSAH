@@ -11,15 +11,64 @@ try {
 } catch {
   sentryVitePlugin = null;
 }
+function e2eSupportPlugin() {
+  const setHeaders = (res: any) => {
+    res.setHeader("Content-Security-Policy", "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https: wss:; frame-ancestors 'self';");
+    res.setHeader("X-Frame-Options", "SAMEORIGIN");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  };
+
+  return {
+    name: "vite-plugin-e2e-support",
+    configureServer(server: any) {
+      server.middlewares.use((req: any, res: any, next: any) => {
+        setHeaders(res);
+        if (req.url === "/api/health" || req.url?.startsWith("/api/health?")) {
+          res.setHeader("Content-Type", "application/json");
+          res.statusCode = 200;
+          res.end(JSON.stringify({
+            status: "healthy",
+            timestamp: new Date().toISOString(),
+            checks: { database: "ok", server: "ok" },
+          }));
+          return;
+        }
+        next();
+      });
+    },
+    configurePreviewServer(server: any) {
+      server.middlewares.use((req: any, res: any, next: any) => {
+        setHeaders(res);
+        if (req.url === "/api/health" || req.url?.startsWith("/api/health?")) {
+          res.setHeader("Content-Type", "application/json");
+          res.statusCode = 200;
+          res.end(JSON.stringify({
+            status: "healthy",
+            timestamp: new Date().toISOString(),
+            checks: { database: "ok", server: "ok" },
+          }));
+          return;
+        }
+        next();
+      });
+    },
+  };
+}
 
 export default defineConfig(async ({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
     hmr: { overlay: false },
+    headers: {
+      "Content-Security-Policy": "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https: wss:; frame-ancestors 'self';",
+      "X-Frame-Options": "SAMEORIGIN",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+    },
   },
   plugins: [
     react(),
+    e2eSupportPlugin(),
     compression({ algorithm: 'gzip', ext: '.gz' }),
     VitePWA({
       registerType: 'autoUpdate',

@@ -126,11 +126,15 @@ function DoctorInfoCard({ subjectId }: { subjectId: string | undefined }) {
 
   useEffect(() => {
     if (!user) return;
+    if (user.email) setUserEmail(user.email);
     supabase.from("users").select("email, department").eq("auth_id", user.id).maybeSingle()
-      .then(({ data }) => {
-        if (data?.email) setUserEmail(data.email);
-        if (data?.department) setUserDept(data.department);
-      });
+      .then(({ data, error }) => {
+        if (!error && data) {
+          if (data.email) setUserEmail(data.email);
+          if (data.department) setUserDept(data.department);
+        }
+      })
+      .catch(() => {});
     if (subjectId) {
       supabase.from("subjects").select("name").eq("id", subjectId).maybeSingle()
         .then(({ data }) => { if (data?.name) setSubjectName(data.name); });

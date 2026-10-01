@@ -142,11 +142,11 @@ const Icon = {
 // Field Component — Premium
 // ────────────────────────────────────────────────────────────────────────────
 function Field({
-  id, label, type = "text", value, onChange, placeholder,
+  id, name, label, type = "text", value, onChange, placeholder,
   required, autoComplete, dir = "ltr",
   icon, suffix, badge, inputRef, autoFocus, onKeyDown, onKeyUp,
 }: {
-  id: string; label: string; type?: string; value: string;
+  id: string; name?: string; label: string; type?: string; value: string;
   onChange: (v: string) => void; placeholder?: string; required?: boolean;
   autoComplete?: string; dir?: "ltr" | "rtl";
   icon?: React.ReactNode; suffix?: React.ReactNode; badge?: React.ReactNode;
@@ -173,7 +173,7 @@ function Field({
           </span>
         )}
         <input
-          ref={inputRef} id={id} type={type} value={value}
+          ref={inputRef} id={id} name={name ?? id} type={type} value={value}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder} required={required}
           autoComplete={autoComplete} dir={dir}
@@ -302,6 +302,18 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
     setLoginLoading(true); setLoginError(null);
 
     const raw = username.trim().replace(/^@+/, "");
+
+    // Validate national ID format if user is entering a numeric identifier
+    if (/^\d+$/.test(raw) && raw.length !== 14) {
+      setLoginError(
+        lang === "ar"
+          ? "يجب أن يتكون الرقم القومي من 14 رقماً (National ID must be 14 digits)"
+          : "National ID must be 14 digits"
+      );
+      setLoginLoading(false);
+      return;
+    }
+
     let email = raw;
 
     if (!email.includes("@")) {
@@ -726,7 +738,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
                 )}
 
                 <Field
-                  id="l-user" label={t.auth.username} value={username} onChange={setUsername}
+                  id="l-user" name="nationalId" label={t.auth.username} value={username} onChange={setUsername}
                   placeholder={t.auth.usernamePlaceholder} required autoComplete="username"
                   autoFocus={typeof window !== "undefined" && window.innerWidth >= 768}
                   onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); passRef.current?.focus(); } }}
@@ -734,7 +746,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
 
                 <div className="relative">
                   <Field
-                    id="l-pass" label={t.auth.password} type={showPass ? "text" : "password"}
+                    id="l-pass" name="password" label={t.auth.password} type={showPass ? "text" : "password"}
                     value={password} onChange={setPassword}
                     placeholder={t.auth.passwordPlaceholder} required autoComplete="current-password"
                     inputRef={passRef} icon={<Icon.Lock/>}

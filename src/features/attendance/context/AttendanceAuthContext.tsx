@@ -30,15 +30,30 @@ const isAttendanceRole = (value: unknown): value is AttendanceRole => {
 
 /** Fetch role and full_name from database */
 const fetchUserProfile = async (authId: string): Promise<{ role: AttendanceRole; fullName: string | null; department: string | null }> => {
-  const { data, error } = await supabase
+  // 1. Try fetching full profile with department
+  let { data, error } = await supabase
     .from("users")
     .select("role, full_name, department")
     .eq("auth_id", authId)
     .maybeSingle();
 
+  // 2. If 'department' column is missing or schema cache error (400 Bad Request), fallback to standard columns
+  if (error) {
+    const fallback = await supabase
+      .from("users")
+      .select("role, full_name")
+      .eq("auth_id", authId)
+      .maybeSingle();
+
+    if (!fallback.error && fallback.data) {
+      data = { ...fallback.data, department: null };
+      error = null;
+    }
+  }
+
   if (error) throw error;
   if (!isAttendanceRole(data?.role)) throw new Error("Unable to resolve user role.");
-  return { role: data.role, fullName: data.full_name ?? null, department: data.department ?? null };
+  return { role: data.role, fullName: data.full_name ?? null, department: (data as any)?.department ?? null };
 };
 
 /** Wrap a promise with a timeout */
@@ -176,7 +191,13 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
         if (!active) return;
         console.warn("Could not refresh role in background, keeping current cached role:", err);
         // CRITICAL: DO NOT set role to null if a background query fails while app is in use!
-        // Doing so would eject the user to the login page during tab switches.
+        // Fallback to user_metadata or app_metadata if no role is currently resolved
+        const metaRole = sessionUser.app_metadata?.role || sessionUser.user_metadata?.role;
+        if (!role && isAttendanceRole(metaRole)) {
+          setRole(metaRole);
+          const metaName = sessionUser.user_metadata?.full_name || sessionUser.user_metadata?.name;
+          if (metaName) setFullName(metaName);
+        }
       } finally {
         if (active) {
           setLoading(false);
