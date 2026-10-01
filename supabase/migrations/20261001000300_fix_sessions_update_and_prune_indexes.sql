@@ -49,3 +49,7 @@ DROP INDEX IF EXISTS public.idx_logs_created_at;
 DROP INDEX IF EXISTS public.idx_audit_logs_created_at;
 DROP INDEX IF EXISTS public.idx_error_reports_created;
 DROP INDEX IF EXISTS public.idx_pw_reset_created;
+DROP INDEX IF EXISTS public.idx_lectures_subject_date;
+DROP INDEX IF EXISTS public.idx_sessions_subject_id;
+DROP INDEX IF EXISTS public.idx_attendance_session_id;
+DROP INDEX IF EXISTS public.idx_attendance_student_session;
