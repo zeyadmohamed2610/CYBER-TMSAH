@@ -310,7 +310,9 @@ Deno.serve(async (req) => {
           allowCredentials = (creds ?? []).map((c) => ({
             id: c.credential_id as string,
             type: "public-key" as const,
-            transports: (c.transports as string[]) ?? ["internal"],
+            // CRITICAL: Always force "internal" transport to prevent Chrome from showing
+            // USB/NFC/another-device picker. "internal" = platform authenticator only (fingerprint/face/PIN)
+            transports: ["internal"] as string[],
           }));
         }
       }
@@ -318,7 +320,9 @@ Deno.serve(async (req) => {
       const options = await generateAuthenticationOptions({
         rpID: getRpId(req),
         timeout: 60000,
-        userVerification: "preferred",
+        // CRITICAL: "required" forces biometric/PIN, never just presence.
+        // "preferred" can silently fall back to no-UV and confuse the browser into showing a device picker.
+        userVerification: "required",
         allowCredentials: allowCredentials.length > 0 ? allowCredentials : undefined,
       });
 

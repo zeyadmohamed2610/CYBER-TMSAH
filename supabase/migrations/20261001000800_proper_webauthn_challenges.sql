@@ -16,9 +16,15 @@
 ALTER TABLE public.webauthn_credentials
   ADD COLUMN IF NOT EXISTS public_key         TEXT    DEFAULT NULL,
   ADD COLUMN IF NOT EXISTS sign_count         BIGINT  DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS transports         TEXT[]  DEFAULT NULL,
+  -- Default to ARRAY['internal'] so platform authenticators are always preferred
+  ADD COLUMN IF NOT EXISTS transports         TEXT[]  DEFAULT ARRAY['internal'],
   ADD COLUMN IF NOT EXISTS aaguid             TEXT    DEFAULT NULL,
   ADD COLUMN IF NOT EXISTS attestation_object TEXT    DEFAULT NULL;
+
+-- Backfill existing rows that have NULL or empty transports
+UPDATE public.webauthn_credentials
+  SET transports = ARRAY['internal']
+  WHERE transports IS NULL OR transports = '{}'::TEXT[];
 
 COMMENT ON COLUMN public.webauthn_credentials.public_key IS
   'COSE public key (base64url encoded). Used for server-side assertion signature verification.';
@@ -40,9 +46,11 @@ CREATE TABLE IF NOT EXISTS public.webauthn_challenges (
 COMMENT ON TABLE public.webauthn_challenges IS
   'Short-lived server-generated WebAuthn challenges. Consumed immediately after verification.';
 
+-- Note: removed partial index (WHERE expires_at > now()) because now() is
+-- not IMMUTABLE in Postgres and causes an error. The expires_at column
+-- index below is sufficient for pruning expired challenges efficiently.
 CREATE INDEX IF NOT EXISTS idx_webauthn_challenges_lookup
-  ON public.webauthn_challenges (challenge, type)
-  WHERE expires_at > now();
+  ON public.webauthn_challenges (challenge, type);
 
 CREATE INDEX IF NOT EXISTS idx_webauthn_challenges_expires
   ON public.webauthn_challenges (expires_at);

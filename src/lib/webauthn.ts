@@ -103,6 +103,20 @@ export function hasLocalPasskey(): boolean {
   return false;
 }
 
+/** Remove ALL locally cached passkey session tokens (does NOT delete the actual passkey from the device) */
+export function clearAllLocalPasskeys(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(STORAGE_PREFIX)) toRemove.push(key);
+    }
+    toRemove.forEach((k) => localStorage.removeItem(k));
+    localStorage.removeItem(LATEST_KEY);
+  } catch { /* ignore */ }
+}
+
 export function saveLocalPasskey(data: StoredPasskeyDevice): void {
   if (typeof window === "undefined") return;
   try {
@@ -460,10 +474,13 @@ export async function authenticateWithPasskey(identifier?: string): Promise<Pass
   };
 
   // ── 3. Convert to WebAuthn format ─────────────────────────────────────────
+  // CRITICAL: Always override transports to ["internal"] regardless of what the server sends.
+  // "internal" tells the browser to ONLY use this device's platform authenticator (fingerprint/face/PIN).
+  // Any other value (or empty) can trigger Chrome's device-picker dialog showing USB/NFC options.
   const allowCredentials = (serverOptions.allowCredentials ?? []).map((c) => ({
     id: base64urlToUint8Array(c.id),
     type: "public-key" as PublicKeyCredentialType,
-    transports: (c.transports ?? []) as AuthenticatorTransport[],
+    transports: ["internal"] as AuthenticatorTransport[],
   }));
 
   const reqOptions: PublicKeyCredentialRequestOptions = {
@@ -643,7 +660,12 @@ export async function verifyPasskeyForCurrentUser(): Promise<BiometricVerifyResu
     timeout: 60000,
     rpId,
     userVerification: "required",           // MUST verify biometric, not just presence
-    allowCredentials: allowedDescriptors,   // CRITICAL: restricted to THIS user's passkeys only
+    // CRITICAL: Force transport to ["internal"] on all descriptors so Chrome shows
+    // THIS device's biometric prompt instead of the USB/NFC device-picker dialog.
+    allowCredentials: allowedDescriptors.map(d => ({
+      ...d,
+      transports: ["internal"] as AuthenticatorTransport[],
+    })),
   };
 
   // ── 4. Prompt authenticator ───────────────────────────────────────────────
