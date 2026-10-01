@@ -607,6 +607,7 @@ export const attendanceService = {
     hash: string,
     latitude?: number | null,
     longitude?: number | null,
+    biometricCredentialId?: string | null,
   ): Promise<AttendanceApiResponse<AttendanceSubmissionResult>> {
     const operation = "attendanceService.submitAttendance";
     try {
@@ -649,6 +650,7 @@ export const attendanceService = {
         p_device_fingerprint: deviceFingerprint,
         p_student_latitude: latitude ?? null,
         p_student_longitude: longitude ?? null,
+        p_biometric_credential_id: biometricCredentialId ?? null,
       });
       if (!validation.success) {
         return fail<AttendanceSubmissionResult>(operation, new Error(validation.error));
@@ -673,6 +675,7 @@ export const attendanceService = {
   /**
    * Compute trend data from already-fetched records.
    */
+
   computeTrendData(records: AttendanceRecord[]): AttendanceTrendPoint[] {
     const grouped = records.reduce<Record<string, AttendanceTrendPoint>>((acc, row) => {
       const date = row.submittedAt?.slice(0, 10);

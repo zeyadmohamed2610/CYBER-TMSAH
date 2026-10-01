@@ -7,6 +7,7 @@ interface PendingSubmission {
   deviceFingerprint: string;
   latitude: number | null;
   longitude: number | null;
+  biometricCredentialId: string | undefined;
   timestamp: string;
   retries: number;
 }
@@ -38,9 +39,15 @@ async function getFingerprint(): Promise<string> {
   return cachedFingerprint;
 }
 
-/** Find session by short_code hash and submit attendance via RPC */
-async function submitAttendanceDirect(hash: string, fingerprint: string, lat: number | null, lng: number | null): Promise<{ success: boolean; error?: string }> {
-  const result = await attendanceService.submitAttendance(hash, lat, lng);
+/** Submit attendance via RPC with device fingerprint, GPS, and biometric credential */
+async function submitAttendanceDirect(
+  hash: string,
+  fingerprint: string,
+  lat: number | null,
+  lng: number | null,
+  biometricCredentialId?: string,
+): Promise<{ success: boolean; error?: string }> {
+  const result = await attendanceService.submitAttendance(hash, lat, lng, biometricCredentialId);
   if (result.error) {
     return { success: false, error: result.error };
   }
@@ -48,8 +55,11 @@ async function submitAttendanceDirect(hash: string, fingerprint: string, lat: nu
 }
 
 export const offlineAttendanceService = {
-  async queueSubmission(hash: string): Promise<{ success: boolean; offline: boolean; error?: string }> {
-    const fingerprint = await computeFingerprint();
+  async queueSubmission(
+    hash: string,
+    biometricCredentialId?: string,
+  ): Promise<{ success: boolean; offline: boolean; error?: string }> {
+    const fingerprint = await getFingerprint();
 
     let lat: number | null = null;
     let lng: number | null = null;
@@ -63,7 +73,7 @@ export const offlineAttendanceService = {
     } catch { /* GPS unavailable */ }
 
     if (navigator.onLine) {
-      const result = await submitAttendanceDirect(hash, fingerprint, lat, lng);
+      const result = await submitAttendanceDirect(hash, fingerprint, lat, lng, biometricCredentialId);
       if (result.success) return { success: true, offline: false };
       return { success: false, offline: false, error: result.error };
     }
@@ -75,6 +85,7 @@ export const offlineAttendanceService = {
       deviceFingerprint: fingerprint,
       latitude: lat,
       longitude: lng,
+      biometricCredentialId,
       timestamp: new Date().toISOString(),
       retries: 0,
     });
@@ -88,17 +99,21 @@ export const offlineAttendanceService = {
     if (pending.length === 0) return { synced: 0, failed: 0 };
 
     let synced = 0;
-    let discarded = 0;
     const remaining: PendingSubmission[] = [];
 
     for (const item of pending) {
-      const result = await submitAttendanceDirect(item.hash, item.deviceFingerprint, item.latitude, item.longitude);
+      const result = await submitAttendanceDirect(
+        item.hash,
+        item.deviceFingerprint,
+        item.latitude,
+        item.longitude,
+        item.biometricCredentialId,
+      );
       if (result.success) {
         synced += 1;
       } else {
         item.retries += 1;
         if (item.retries < 5) remaining.push(item);
-        else discarded += 1;
       }
     }
 

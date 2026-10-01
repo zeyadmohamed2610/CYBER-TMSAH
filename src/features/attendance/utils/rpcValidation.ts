@@ -15,6 +15,7 @@ export const submitAttendanceSchema = z.object({
   p_device_fingerprint: z.string().max(128).nullable().optional(),
   p_student_latitude: z.number().min(-90).max(90).nullable().optional(),
   p_student_longitude: z.number().min(-180).max(180).nullable().optional(),
+  p_biometric_credential_id: z.string().max(512).nullable().optional(),
 });
 
 export const createUserSchema = z.object({

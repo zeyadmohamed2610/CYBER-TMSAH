@@ -125,6 +125,183 @@ export interface PasskeyAuthResult {
  * Authenticate with the device's native biometric authenticator (Fingerprint, Face ID, Windows Hello, PIN).
  * Uses hints: ['client-device'] so mobile devices skip the 3-option roaming selection and prompt immediately!
  */
+export interface BiometricVerifyResult {
+  success: boolean;
+  credentialId?: string;
+  error?: string;
+  cancelled?: boolean;
+  noPasskeyRegistered?: boolean;
+}
+
+/**
+ * Verify the currently logged-in user's biometric/passkey for attendance.
+ * SECURITY: Only allows credentials registered to the caller's own auth_id.
+ * Prevents cheating by ensuring another person's fingerprint cannot pass.
+ */
+export async function verifyPasskeyForCurrentUser(): Promise<BiometricVerifyResult> {
+  if (!isWebAuthnSupported()) {
+    return {
+      success: false,
+      error: "جهازك أو متصفحك لا يدعم التحقق البيومتري (WebAuthn). يرجى تسجيل الحضور عبر جهاز آخر.",
+    };
+  }
+
+  const rpId =
+    window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+      ? "localhost"
+      : window.location.hostname;
+
+  // ── 1. Get the current user's auth_id from the Supabase session ──────────
+  let authId: string | null = null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    authId = data.user?.id ?? null;
+  } catch {
+    // ignore
+  }
+
+  if (!authId) {
+    return {
+      success: false,
+      error: "لم يتم التعرف على المستخدم. يرجى تسجيل الدخول مجدداً.",
+    };
+  }
+
+  // ── 2. Fetch credentials registered ONLY to this user ───────────────────
+  let allowedDescriptors: PublicKeyCredentialDescriptor[] = [];
+  const credentialIds: string[] = [];
+
+  try {
+    const { data: credRows } = await supabase
+      .from("webauthn_credentials")
+      .select("credential_id")
+      .eq("auth_id", authId);
+
+    if (!credRows || credRows.length === 0) {
+      // No passkey registered → cannot use biometric gate
+      return {
+        success: false,
+        noPasskeyRegistered: true,
+        error:
+          "لم تقم بتسجيل بصمة على حسابك بعد. يرجى تفعيل البصمة من صفحة الملف الشخصي أولاً.",
+      };
+    }
+
+    for (const cr of credRows) {
+      const targetStr = cr.credential_id as string;
+      try {
+        if (targetStr && /^[A-Za-z0-9+/=_-]+$/.test(targetStr)) {
+          const buffer = base64urlToUint8Array(targetStr).buffer;
+          if (buffer.byteLength > 0) {
+            allowedDescriptors.push({
+              id: buffer,
+              type: "public-key",
+              transports: ["internal", "hybrid"] as AuthenticatorTransport[],
+            });
+            credentialIds.push(targetStr);
+          }
+        }
+      } catch {
+        // skip malformed entries
+      }
+    }
+  } catch (e) {
+    console.warn("[WebAuthn] biometric gate: failed to fetch user credentials:", e);
+    return {
+      success: false,
+      error: "تعذر تحميل بيانات التحقق البيومتري. تحقق من اتصالك بالإنترنت.",
+    };
+  }
+
+  if (allowedDescriptors.length === 0) {
+    return {
+      success: false,
+      noPasskeyRegistered: true,
+      error: "لم يتم العثور على بصمة مسجلة لهذا الحساب. يرجى تفعيل البصمة من الملف الشخصي.",
+    };
+  }
+
+  // ── 3. Challenge the device — allowCredentials restricts to this user only ─
+  const challenge = crypto.getRandomValues(new Uint8Array(32));
+  const reqOptions: PublicKeyCredentialRequestOptions = {
+    challenge,
+    timeout: 60000,
+    rpId,
+    userVerification: "required", // enforce actual biometric check, not just presence
+    allowCredentials: allowedDescriptors, // CRITICAL: only this user's passkeys
+  };
+
+  let assertion: PublicKeyCredential | null = null;
+  try {
+    assertion = (await navigator.credentials.get({
+      publicKey: reqOptions,
+    })) as PublicKeyCredential | null;
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    console.warn("[WebAuthn] biometric gate assertion failed:", error.name, error.message);
+    if (error.name === "NotAllowedError") {
+      return {
+        success: false,
+        cancelled: true,
+        error: "تم إلغاء التحقق البيومتري. يجب الموافقة على البصمة لتسجيل الحضور.",
+      };
+    }
+    if (error.name === "SecurityError") {
+      return {
+        success: false,
+        error: "خطأ أمني في التحقق البيومتري. تأكد أن الموقع محمي (HTTPS).",
+      };
+    }
+    return {
+      success: false,
+      error: `فشل التحقق البيومتري: ${error.message}`,
+    };
+  }
+
+  if (!assertion) {
+    return {
+      success: false,
+      error: "لم يتم الحصول على استجابة بيومترية. حاول مجدداً.",
+    };
+  }
+
+  // ── 4. Confirm the returned credential belongs to this user ──────────────
+  // (double-check: the allowCredentials already enforces this at the OS level,
+  //  but we verify client-side as defence-in-depth)
+  const returnedId = assertion.id;
+  const rawIdB64 = bufferToBase64(assertion.rawId);
+  const rawIdB64url = bufferToBase64url(assertion.rawId);
+
+  const isOwned = credentialIds.some(
+    (id) => id === returnedId || id === rawIdB64 || id === rawIdB64url,
+  );
+
+  if (!isOwned) {
+    return {
+      success: false,
+      error: "البصمة المستخدمة لا تنتمي لهذا الحساب. التحقق مرفوض.",
+    };
+  }
+
+  // ── 5. Update last_used_at in webauthn_credentials ───────────────────────
+  try {
+    await supabase
+      .from("webauthn_credentials")
+      .update({ last_used_at: new Date().toISOString() })
+      .eq("auth_id", authId)
+      .or(
+        `credential_id.eq.${returnedId},credential_id.eq.${rawIdB64},credential_id.eq.${rawIdB64url}`,
+      );
+  } catch {
+    // non-fatal
+  }
+
+  return {
+    success: true,
+    credentialId: returnedId,
+  };
+}
+
 export async function authenticateWithPasskey(identifier?: string): Promise<PasskeyAuthResult> {
   if (!isWebAuthnSupported()) {
     return {
