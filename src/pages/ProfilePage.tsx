@@ -47,7 +47,7 @@ import { checkPwnedPassword } from "@/lib/pwnedPassword";
 import Footer from "@/components/Footer";
 import AvatarStudioDialog from "@/components/AvatarStudioDialog";
 import { saveUserAvatar, deleteUserAvatar } from "@/lib/avatarUtils";
-import { registerPasskey, isWebAuthnSupported } from "@/lib/webauthn";
+import { registerPasskey, isWebAuthnSupported, clearAllLocalPasskeys } from "@/lib/webauthn";
 import {
   Dialog,
   DialogContent,
@@ -1524,33 +1524,52 @@ export default function ProfilePage() {
                             <span>مفاتيح المرور مشفرة محلياً (الحد الأقصى: جهازين لكل طالب).</span>
                           </div>
 
-                          <Button
-                            type="button"
-                            onClick={handleInitiatePasskeyCreation}
-                            disabled={creatingPasskey || passkeys.length >= 2}
-                            className={`w-full sm:w-auto text-white font-bold rounded-2xl h-11 px-6 text-xs gap-2 shrink-0 transition-all ${
-                              passkeys.length >= 2
-                                ? "bg-slate-800 text-slate-400 border border-white/10 cursor-not-allowed"
-                                : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-[0_4px_20px_rgba(124,58,237,0.35)] hover:scale-[1.02]"
-                            }`}
-                          >
-                            {creatingPasskey ? (
-                              <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                <span>جاري إنشاء المفتاح...</span>
-                              </>
-                            ) : passkeys.length >= 2 ? (
-                              <>
-                                <Lock className="w-4 h-4" />
-                                <span>الحد الأقصى مكتمل (2/2)</span>
-                              </>
-                            ) : (
-                              <>
-                                <Fingerprint className="w-4 h-4" />
-                                <span>إنشاء مفتاح مرور جديد</span>
-                              </>
-                            )}
-                          </Button>
+                          <div className="flex items-center gap-2 w-full sm:w-auto">
+                            {/* ── Reset local cache button (useful on mobile where DevTools is unavailable) ── */}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              title="امسح ذاكرة الجلسة المحلية (لا يحذف البصمة من الجهاز)"
+                              onClick={() => {
+                                clearAllLocalPasskeys();
+                                toast.success("✅ تم مسح ذاكرة الجلسة المحلية. أعد تسجيل الدخول بالبصمة.");
+                              }}
+                              className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 text-xs h-10 rounded-xl gap-1.5 px-3 shrink-0"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">إعادة ضبط Cache</span>
+                              <span className="sm:hidden">إعادة ضبط</span>
+                            </Button>
+
+                            <Button
+                              type="button"
+                              onClick={handleInitiatePasskeyCreation}
+                              disabled={creatingPasskey || passkeys.length >= 2}
+                              className={`flex-1 sm:flex-initial text-white font-bold rounded-2xl h-10 px-6 text-xs gap-2 shrink-0 transition-all ${
+                                passkeys.length >= 2
+                                  ? "bg-slate-800 text-slate-400 border border-white/10 cursor-not-allowed"
+                                  : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-[0_4px_20px_rgba(124,58,237,0.35)] hover:scale-[1.02]"
+                              }`}
+                            >
+                              {creatingPasskey ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  <span>جاري إنشاء المفتاح...</span>
+                                </>
+                              ) : passkeys.length >= 2 ? (
+                                <>
+                                  <Lock className="w-4 h-4" />
+                                  <span>الحد الأقصى مكتمل (2/2)</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Fingerprint className="w-4 h-4" />
+                                  <span>إنشاء مفتاح مرور جديد</span>
+                                </>
+                              )}
+                            </Button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
