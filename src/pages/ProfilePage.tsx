@@ -38,6 +38,7 @@ import { getAttendanceDashboardRoute } from "@/features/attendance/utils/dashboa
 import { DEPARTMENTS, ACADEMIC_YEARS } from "@/features/attendance/types";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
+import { checkPwnedPassword } from "@/lib/pwnedPassword";
 import Footer from "@/components/Footer";
 import AvatarStudioDialog from "@/components/AvatarStudioDialog";
 import { AVATAR_PRESETS } from "@/lib/avatarPresets";
@@ -402,6 +403,15 @@ export default function ProfilePage() {
 
     try {
       setSavingPassword(true);
+
+      // Verify if password was leaked in data breaches (HaveIBeenPwned k-Anonymity)
+      const pwned = await checkPwnedPassword(newPassword);
+      if (pwned.isPwned) {
+        toast.error(`كلمة المرور هذه غير آمنة ومسرّبة سابقاً (${pwned.count.toLocaleString()} مرة) في اختراقات قواعد بيانات عامة. يرجى اختيار كلمة مرور أخرى.`);
+        setSavingPassword(false);
+        return;
+      }
+
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });

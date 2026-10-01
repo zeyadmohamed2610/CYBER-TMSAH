@@ -13,6 +13,7 @@ import { CustomRoleSelect } from "@/features/auth/components/CustomRoleSelect";
 import { ForgotPasswordModal } from "@/features/auth/components/ForgotPasswordModal";
 import { playCyberSuccessChime } from "@/features/auth/utils/cyberAudio";
 import { recordAuditLog } from "@/features/auth/services/auditService";
+import { checkPwnedPassword } from "@/lib/pwnedPassword";
 
 import { DEPARTMENTS, ACADEMIC_YEARS } from "../types";
 
@@ -442,6 +443,18 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
     }
     if (joinPassword !== confirmPassword) {
       toast.error(lang === "ar" ? "كلمتا المرور غير متطابقتين" : "Passwords do not match");
+      setJoinLoading(false);
+      return;
+    }
+
+    // Leaked password protection (HaveIBeenPwned k-Anonymity)
+    const pwnedResult = await checkPwnedPassword(joinPassword);
+    if (pwnedResult.isPwned) {
+      toast.error(
+        lang === "ar"
+          ? `كلمة المرور هذه غير آمنة (تم تسريبها ${pwnedResult.count.toLocaleString()} مرة في اختراقات سابقة). يرجى اختيار كلمة مرور أكثر أماناً.`
+          : `This password is compromised (found ${pwnedResult.count.toLocaleString()} times in previous breaches). Please choose a safer password.`
+      );
       setJoinLoading(false);
       return;
     }
