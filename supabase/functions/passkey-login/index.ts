@@ -156,10 +156,11 @@ Deno.serve(async (req) => {
         userDisplayName,
         timeout: 60000,
         attestationType: "none",
-        excludeCredentials,
+        excludeCredentials: [], // Never exclude platform authenticator so user is never prompted for USB/NFC
         authenticatorSelection: {
+          authenticatorAttachment: "platform", // Force this device's biometric scanner
           residentKey: "preferred",
-          userVerification: "preferred",
+          userVerification: "required",        // Force fingerprint / face ID prompt
         },
         supportedAlgorithmIDs: [-7, -257], // ES256, RS256
       });

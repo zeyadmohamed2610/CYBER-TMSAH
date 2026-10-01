@@ -207,10 +207,15 @@ export async function registerPasskey(deviceName?: string): Promise<PasskeyRegis
       ...options.user,
       id: base64urlToUint8Array(options.user.id as unknown as string),
     },
-    excludeCredentials: (options.excludeCredentials ?? []).map((c) => ({
-      id: base64urlToUint8Array(c.id),
-      type: "public-key" as PublicKeyCredentialType,
-    })),
+    // CRITICAL: Force the browser to use THIS DEVICE'S internal platform authenticator (Fingerprint / Face / Screen lock)
+    // NEVER allow or fallback to USB security keys, NFC fobs, or another device!
+    authenticatorSelection: {
+      authenticatorAttachment: "platform",
+      userVerification: "required",
+      residentKey: "preferred",
+    },
+    // CRITICAL: Empty excludeCredentials so Chrome NEVER diverts to USB/NFC/Use another device!
+    excludeCredentials: [],
   };
 
   // ── 3. Prompt platform authenticator ─────────────────────────────────────
@@ -318,9 +323,11 @@ async function registerPasskeyClientDirect(deviceName?: string): Promise<Passkey
         { alg: -257, type: "public-key" },
       ],
       authenticatorSelection: {
+        authenticatorAttachment: "platform", // Force THIS device's fingerprint / face / screen lock
         residentKey: "preferred",
-        userVerification: "preferred",
+        userVerification: "required",        // Force native biometric sensor prompt
       },
+      excludeCredentials: [],
       timeout: 60000,
       attestation: "none",
     };
