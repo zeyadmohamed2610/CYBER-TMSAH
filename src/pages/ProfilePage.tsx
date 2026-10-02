@@ -2,7 +2,7 @@ import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 import { getDeviceDisplayName } from "@/lib/academicCopy";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { User, KeyRound, Shield, Building2, GraduationCap, Mail, CheckCircle2, Eye, EyeOff, ArrowLeft, Loader2, Calendar, Sparkles, Lock, Fingerprint, Trash2, Key, Camera, Copy, Check, LogOut, Smartphone, IdCard, Activity, ShieldCheck, RotateCcw } from "lucide-react";
+import { User, KeyRound, Shield, Mail, CheckCircle2, Eye, EyeOff, ArrowLeft, Loader2, Calendar, Lock, Fingerprint, Trash2, Key, Camera, Copy, Check, LogOut, IdCard, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -544,54 +544,8 @@ export default function ProfilePage() {
       </div>
 
       <main id="main-content" className="flex-1 py-8 sm:py-12 section-container relative z-10">
-        <div className="max-w-5xl mx-auto space-y-8">
-          {/* Hero Header with Glassmorphism & Cyber TMSAH badge */}
-          <div className="relative rounded-3xl p-6 sm:p-8 border border-purple-500/25 bg-gradient-to-r from-[#0C1026]/90 via-[#0B0E22]/90 to-[#120B28]/90 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden">
-            {/* Ambient decorative elements */}
-            <div className="absolute -top-12 -left-12 w-48 h-48 bg-purple-500/15 rounded-full blur-2xl" />
-            <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-cyan-500/15 rounded-full blur-2xl" />
-
-            <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-purple-500/15 border border-purple-500/30 text-purple-300 flex items-center gap-1.5 shadow-sm">
-                    <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                    <span>حسابك الأكاديمي</span>
-                  </span>
-                  <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>متصل الآن</span>
-                  </span>
-                </div>
-
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight flex items-center gap-3">
-                  <User className="w-8 h-8 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400" />
-                  <span>الملف الشخصي والحساب</span>
-                </h1>
-
-                <p className="text-xs sm:text-sm text-slate-300/80 max-w-xl">
-                  إدارة بياناتك الأكاديمية وصورتك الشخصية وإعدادات الدخول إلى حسابك.
-                </p>
-              </div>
-
-              {/* Action and security stats */}
-              <div className="flex flex-col sm:items-end gap-3 shrink-0">
-                <Button
-                  onClick={() => navigate(dashboardPath)}
-                  variant="outline"
-                  className="border-purple-500/30 bg-purple-950/20 hover:bg-purple-600/20 text-white rounded-2xl text-xs sm:text-sm font-bold gap-2.5 h-11 px-5 shadow-[0_0_20px_rgba(168,85,247,0.15)] transition-all hover:scale-[1.02] flex items-center"
-                >
-                  <span>العودة للوحة التحكم</span>
-                  <ArrowLeft className="w-4 h-4 text-purple-400" />
-                </Button>
-
-                <div className="flex items-center gap-2 border border-emerald-500/30 px-4 py-2 rounded-2xl text-xs text-emerald-400">
-                  <Fingerprint className="w-4 h-4" />
-                  <span>{passkeys.length > 0 ? "الدخول بالبصمة مفعّل" : "يمكنك تفعيل الدخول بالبصمة"}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="max-w-4xl mx-auto space-y-5">
+          <header className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-bold">الملف الشخصي والحساب</h1><p className="text-sm text-muted-foreground mt-1">بياناتك وصورتك وإعدادات الدخول.</p></div><Button onClick={() => navigate(dashboardPath)} variant="outline" className="min-h-11 gap-2"><ArrowLeft className="h-4 w-4" />العودة للوحة التحكم</Button></header>
 
           {loading ? (
             <div className="flex flex-col items-center justify-center py-24 gap-3">
@@ -599,225 +553,18 @@ export default function ProfilePage() {
               <p className="text-sm font-medium text-slate-400">جاري تحميل بيانات الحساب...</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-start">
-              {/* SIDEBAR: Futuristic Identity Card */}
-              <div className="lg:col-span-1 space-y-6 lg:sticky lg:top-24">
-                <Card className="border border-purple-500/30 bg-[#090D21]/95 backdrop-blur-2xl rounded-3xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.65)] relative group">
-                  {/* Decorative Banner Header */}
-                  <div className="h-28 bg-gradient-to-r from-purple-800/60 via-indigo-700/40 to-cyan-900/60 relative border-b border-white/10 overflow-hidden">
-                    <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#a855f7_1px,transparent_1px)] [background-size:16px_16px]" />
-                    <div className="absolute top-3 left-3">
-                      <span className="px-3 py-1 rounded-full text-[11px] font-bold border flex items-center gap-1.5 shadow-sm bg-black/60 border-emerald-500/40 text-emerald-400 backdrop-blur-md">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>نشط ومفعل</span>
-                      </span>
-                    </div>
-                  </div>
-
-                  <CardContent className="pt-0 relative px-6 pb-6 text-center space-y-4">
-                    {/* Interactive Avatar with Holographic Glow */}
-                    <div className="-mt-14 inline-block relative group/avatar">
-                      <div className="w-28 h-28 rounded-3xl bg-gradient-to-tr from-cyan-400 via-purple-500 to-pink-500 p-[3px] shadow-[0_0_35px_rgba(168,85,247,0.55)] transition-transform duration-300 group-hover/avatar:scale-105">
-                        <div className="w-full h-full bg-[#080B1C] rounded-[21px] overflow-hidden flex items-center justify-center relative">
-                          {avatarUrl ? (
-                            <img
-                              src={avatarUrl}
-                              alt={profile?.full_name || fullName || "Avatar"}
-                              className="w-full h-full object-cover select-none"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-tr from-purple-700 to-indigo-700 flex items-center justify-center text-white font-black text-4xl select-none">
-                              {userInitial}
-                            </div>
-                          )}
-
-                          {/* Hover change button overlay */}
-                          <button
-                            type="button"
-                            onClick={() => setIsAvatarStudioOpen(true)}
-                            aria-label="تغيير الصورة الشخصية"
-                            className="absolute inset-0 bg-black/65 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center text-white cursor-pointer backdrop-blur-[2px]"
-                          >
-                            <Camera className="w-6 h-6 text-cyan-400 mb-1" />
-                            <span className="text-[10px] font-bold">تغيير الصورة</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Floating edit camera trigger button */}
-                      <button
-                        type="button"
-                        onClick={() => setIsAvatarStudioOpen(true)}
-                        aria-label="استوديو الصورة الشخصية"
-                        className="absolute -bottom-1 -left-1 w-8 h-8 rounded-full bg-gradient-to-tr from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 border-2 border-[#090D21] flex items-center justify-center text-white shadow-lg transition-transform hover:scale-110 cursor-pointer"
-                        title="تعديل الصورة الشخصية"
-                      >
-                        <Camera className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    {/* Name & Username */}
-                    <div className="space-y-1">
-                      <h2 className="text-xl font-black text-white truncate">
-                        {profile?.full_name || fullName || "مستخدم مسجل"}
-                      </h2>
-
-                      <div className="flex justify-center">
-                        <span className="text-xs font-mono font-bold text-purple-300 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/15 border border-purple-500/25 shadow-sm" dir="ltr">
-                          <Sparkles className="w-3 h-3 text-cyan-400" />
-                          <span>{formatDisplayUsername(profile?.username, profile?.email || user?.email)}</span>
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Role Tag */}
-                    <div className="flex justify-center">
-                      <span className={`px-4 py-1.5 rounded-xl text-xs font-bold border ${roleInfo.bg} ${roleInfo.glow}`}>
-                        {roleInfo.label}
-                      </span>
-                    </div>
-
-                    {/* Quick Avatar Studio Button */}
-                    <Button
-                      type="button"
-                      onClick={() => setIsAvatarStudioOpen(true)}
-                      variant="outline"
-                      className="w-full border-purple-500/30 bg-purple-600/10 hover:bg-purple-600/20 text-purple-200 rounded-2xl text-xs font-bold h-10 gap-2 shadow-sm transition-all"
-                    >
-                      <Camera className="w-4 h-4 text-cyan-400" />
-                      <span>إدارة الصورة الشخصية</span>
-                    </Button>
-
-                    {/* Identity Details list */}
-                    <div className="pt-3 border-t border-white/10 space-y-2.5 text-start text-xs">
-                      {/* Email Card Badge (No Truncation) */}
-                      <div className="p-3 rounded-2xl bg-black/50 border border-white/10 hover:border-purple-500/30 transition-all space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-400 flex items-center gap-1.5 text-[11px] font-medium">
-                            <Mail className="w-3.5 h-3.5 text-purple-400" />
-                            <span>البريد الإلكتروني الأساسي:</span>
-                          </span>
-                          {(profile?.email || user?.email) && (
-                            <button
-                              onClick={() => copyToClipboard(profile?.email || user?.email || "", "البريد الإلكتروني")}
-                              className="text-slate-400 hover:text-white transition-colors p-1 rounded-md hover:bg-white/10"
-                              title="نسخ البريد"
-                            >
-                              {copiedField === "البريد الإلكتروني" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                            </button>
-                          )}
-                        </div>
-                        <span className="font-mono text-slate-200 text-xs break-all block text-start font-bold" dir="ltr">
-                          {profile?.email || user?.email || "—"}
-                        </span>
-                      </div>
-
-                      {/* Quick Stats for Owner / Coordinator */}
-                      {role === "owner" || role === "coordinator" ? (
-                        <div className="grid grid-cols-2 gap-2 pt-0.5">
-                          <div className="p-2.5 rounded-2xl bg-purple-950/20 border border-purple-500/25 space-y-1 text-center">
-                            <span className="text-[10px] text-purple-300 block">أجهزة الدخول</span>
-                            <span className="text-xs font-mono font-bold text-white flex items-center justify-center gap-1">
-                              <Fingerprint className="w-3.5 h-3.5 text-cyan-400" />
-                              <span>{passkeys.length}/2 أجهزة مسجلة</span>
-                            </span>
-                          </div>
-                          <div className="p-2.5 rounded-2xl bg-emerald-950/20 border border-emerald-500/25 space-y-1 text-center">
-                            <span className="text-[10px] text-emerald-300 block">حالة الحساب</span>
-                            <span className="text-[11px] font-bold text-emerald-400 flex items-center justify-center gap-1">
-                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                              <span>{passkeys.length > 0 ? "الدخول بالبصمة مفعّل" : "الدخول بكلمة المرور"}</span>
-                            </span>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          {/* Department */}
-                          {profile?.department && (
-                            <div className="flex items-center justify-between text-slate-300 p-2 rounded-xl bg-black/30 border border-white/5">
-                              <span className="text-slate-400 flex items-center gap-1.5 text-[11px]">
-                                <Building2 className="w-3.5 h-3.5 text-slate-500" />
-                                <span>القسم:</span>
-                              </span>
-                              <span className="text-white font-medium text-[11px]">
-                                {getDepartmentLabel(profile.department)}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Academic Year */}
-                          {profile?.academic_year && (
-                            <div className="flex items-center justify-between text-slate-300 p-2 rounded-xl bg-black/30 border border-white/5">
-                              <span className="text-slate-400 flex items-center gap-1.5 text-[11px]">
-                                <GraduationCap className="w-3.5 h-3.5 text-slate-500" />
-                                <span>الفرقة:</span>
-                              </span>
-                              <span className="text-purple-300 font-bold text-[11px]">
-                                {getAcademicYearLabel(profile.academic_year)}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Section */}
-                          {profile?.section_number && (
-                            <div className="flex items-center justify-between text-slate-300 p-2 rounded-xl bg-black/30 border border-white/5">
-                              <span className="text-slate-400 flex items-center gap-1.5 text-[11px]">
-                                <Shield className="w-3.5 h-3.5 text-slate-500" />
-                                <span>السكشن:</span>
-                              </span>
-                              <span className="px-2 py-0.5 rounded-lg bg-white/10 text-white font-bold text-[11px]">
-                                سكشن {profile.section_number}
-                              </span>
-                            </div>
-                          )}
-                        </>
-                      )}
-
-                      {/* Subject */}
-                      {profile?.subject_name && (
-                        <div className="flex items-center justify-between text-slate-300">
-                          <span className="text-slate-400 flex items-center gap-1.5">
-                            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                            <span>المادة:</span>
-                          </span>
-                          <span className="text-purple-200 font-bold truncate max-w-[140px]">
-                            {profile.subject_name}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Joined Date */}
-                      {profile?.created_at && (
-                        <div className="flex items-center justify-between text-slate-300 pt-2 border-t border-white/5">
-                          <span className="text-slate-500 flex items-center gap-1 text-[11px]">
-                            <Calendar className="w-3 h-3" />
-                            <span>تاريخ الانضمام:</span>
-                          </span>
-                          <span className="text-slate-400 text-[11px]" dir="ltr">
-                            {new Date(profile.created_at).toLocaleDateString("ar-EG")}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Sign out action */}
-                    <div className="pt-2">
-                      <Button
-                        type="button"
-                        onClick={handleSignOutConfirm}
-                        variant="ghost"
-                        className="w-full text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-2xl text-xs h-10 gap-2 transition-colors"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        <span>تسجيل الخروج من الحساب</span>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+            <div className="space-y-5">
+              <section className="flex flex-wrap items-center gap-4 rounded-2xl border bg-card p-4 sm:p-5" aria-label="ملخص الحساب">
+                <button type="button" aria-label="تغيير الصورة الشخصية" className="relative h-20 w-20 shrink-0 rounded-2xl overflow-hidden bg-primary/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" onClick={() => setIsAvatarStudioOpen(true)}>
+                  {avatarUrl ? <img src={avatarUrl} alt={profile?.full_name || fullName || 'الصورة الشخصية'} className="h-full w-full object-cover" /> : <span className="text-3xl font-bold text-primary">{userInitial}</span>}
+                  <span className="absolute bottom-0 inset-x-0 bg-black/65 py-1 flex justify-center"><Camera className="h-4 w-4" /></span>
+                </button>
+                <div className="flex-1 min-w-[160px] space-y-1"><h2 className="text-lg font-bold break-words">{profile?.full_name || fullName}</h2><p className="text-sm text-muted-foreground">{roleInfo.label}{profile?.department ? ` · ${getDepartmentLabel(profile.department)}` : ''}</p>{profile?.academic_year && <p className="text-sm text-muted-foreground">{getAcademicYearLabel(profile.academic_year)}{profile.section_number ? ` · سكشن ${profile.section_number}` : ''}</p>}</div>
+                <Button type="button" variant="ghost" onClick={handleSignOutConfirm} className="basis-full sm:basis-auto text-rose-400 min-h-11 gap-2 justify-start sm:justify-center"><LogOut className="h-4 w-4" />تسجيل الخروج</Button>
+              </section>
 
               {/* MAIN CONTENT: Tabs for Settings & Configuration */}
-              <div className="lg:col-span-2 space-y-6">
+              <div className="space-y-6">
                 <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="w-full">
                   {/* Modern Navigation Tabs Header */}
                   <TabsList className="w-full grid grid-cols-2 sm:grid-cols-4 bg-[#090D21]/90 p-1.5 rounded-2xl h-auto border border-purple-500/20 backdrop-blur-xl gap-1">
@@ -856,7 +603,7 @@ export default function ProfilePage() {
                     {/* 1. Name & Display Setting */}
                     <Card className="border border-white/10 bg-[#090D21]/80 backdrop-blur-xl rounded-3xl p-6 sm:p-7 shadow-lg">
                       <CardHeader className="p-0 pb-5 border-b border-white/5">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-wrap gap-3 items-center justify-between">
                           <div>
                             <CardTitle className="text-lg font-black text-white flex items-center gap-2.5">
                               <IdCard className="w-5 h-5 text-purple-400" />
@@ -986,138 +733,6 @@ export default function ProfilePage() {
                       </CardContent>
                     </Card>
 
-                    {/* 2. Academic / Cyber Clearance Identity Card */}
-                    {role === "owner" || role === "coordinator" || role === "doctor" ? (
-                      <Card className="border border-purple-500/30 bg-[#090D21]/90 backdrop-blur-2xl rounded-3xl p-6 sm:p-7 shadow-xl hover:border-purple-500/50 transition-all duration-300 relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-44 h-44 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
-                        <div className="absolute bottom-0 right-0 w-44 h-44 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-
-                        <CardHeader className="p-0 pb-5 border-b border-white/10 relative z-10">
-                          <div className="flex items-center justify-between flex-wrap gap-2">
-                            <div>
-                              <CardTitle className="text-lg font-black text-white flex items-center gap-2.5">
-                                <Shield className="w-5 h-5 text-purple-400" />
-                                <span>مهامك في المنصة</span>
-                              </CardTitle>
-                              <CardDescription className="text-xs text-slate-400 mt-1">
-                                المهام المتاحة لك لإدارة المنصة ومتابعة الحضور.
-                              </CardDescription>
-                            </div>
-                            <span className="px-3.5 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
-                              {role === "owner" ? "إدارة المنصة" : role === "coordinator" ? "منسق المنصة" : "دكتور محاضر"}
-                            </span>
-                          </div>
-                        </CardHeader>
-
-                        <CardContent className="p-0 pt-5 relative z-10 space-y-4">
-                          {/* 4 Cyber Permissions Badges */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                            <div className="p-3.5 rounded-2xl bg-purple-950/20 border border-purple-500/25 hover:border-purple-500/40 transition-all space-y-1">
-                              <div className="flex items-center gap-2 text-purple-300">
-                                <Building2 className="w-4 h-4 text-purple-400" />
-                                <span className="text-xs font-bold">بيانات المنصة</span>
-                              </div>
-                              <span className="text-[11px] text-slate-300 block">متابعة البيانات الأكاديمية</span>
-                            </div>
-
-                            <div className="p-3.5 rounded-2xl bg-cyan-950/20 border border-cyan-500/25 hover:border-cyan-500/40 transition-all space-y-1">
-                              <div className="flex items-center gap-2 text-cyan-300">
-                                <KeyRound className="w-4 h-4 text-cyan-400" />
-                                <span className="text-xs font-bold">إعدادات الدخول</span>
-                              </div>
-                              <span className="text-[11px] text-slate-300 block">متابعة الأجهزة المسجلة</span>
-                            </div>
-
-                            <div className="p-3.5 rounded-2xl bg-indigo-950/20 border border-indigo-500/25 hover:border-indigo-500/40 transition-all space-y-1">
-                              <div className="flex items-center gap-2 text-indigo-300">
-                                <Smartphone className="w-4 h-4 text-indigo-400" />
-                                <span className="text-xs font-bold">أجهزة الحضور</span>
-                              </div>
-                              <span className="text-[11px] text-slate-300 block">متابعة حضور المحاضرات</span>
-                            </div>
-
-                            <div className="p-3.5 rounded-2xl bg-emerald-950/20 border border-emerald-500/25 hover:border-emerald-500/40 transition-all space-y-1">
-                              <div className="flex items-center gap-2 text-emerald-300">
-                                <Activity className="w-4 h-4 text-emerald-400 animate-pulse" />
-                                <span className="text-xs font-bold">نشاط الحساب</span>
-                              </div>
-                              <span className="text-[11px] text-emerald-300 block">متابعة النشاط</span>
-                            </div>
-                          </div>
-
-                          {profile?.department && (
-                            <div className="p-4 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-300">
-                                  <Building2 className="w-5 h-5" />
-                                </div>
-                                <div>
-                                  <span className="text-[11px] text-slate-400 block">القسم الأكاديمي المشرف</span>
-                                  <span className="text-sm font-bold text-white">{getDepartmentLabel(profile.department)}</span>
-                                </div>
-                              </div>
-                              <span className="px-3 py-1 rounded-xl text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                                معتمد
-                              </span>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ) : (
-                      <Card className="border border-white/10 bg-[#090D21]/80 backdrop-blur-xl rounded-3xl p-6 sm:p-7 shadow-lg">
-                        <CardHeader className="p-0 pb-5 border-b border-white/5">
-                          <CardTitle className="text-lg font-black text-white flex items-center gap-2.5">
-                            <GraduationCap className="w-5 h-5 text-cyan-400" />
-                            <span>الهوية الأكاديمية والمقررات</span>
-                          </CardTitle>
-                          <CardDescription className="text-xs text-slate-400 mt-1">
-                            القسم الأكاديمي، الفرقة، ومجموعات السكاشن المرتبطة بالحساب
-                          </CardDescription>
-                        </CardHeader>
-
-                        <CardContent className="p-0 pt-5">
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <div className="p-4 rounded-2xl bg-gradient-to-b from-purple-950/20 to-black/40 border border-purple-500/20">
-                              <span className="text-[11px] text-purple-300/80 block mb-1">القسم الجامعي</span>
-                              <span className="text-sm font-bold text-white block">
-                                {getDepartmentLabel(profile?.department)}
-                              </span>
-                            </div>
-
-                            <div className="p-4 rounded-2xl bg-gradient-to-b from-indigo-950/20 to-black/40 border border-indigo-500/20">
-                              <span className="text-[11px] text-indigo-300/80 block mb-1">الفرقة الدراسية</span>
-                              <span className="text-sm font-bold text-white block">
-                                {getAcademicYearLabel(profile?.academic_year)}
-                              </span>
-                            </div>
-
-                            <div className="p-4 rounded-2xl bg-gradient-to-b from-cyan-950/20 to-black/40 border border-cyan-500/20">
-                              <span className="text-[11px] text-cyan-300/80 block mb-1">رقم السكشن</span>
-                              <span className="text-sm font-bold text-white block">
-                                {profile?.section_number ? `سكشن ${profile.section_number}` : "غير محدد"}
-                              </span>
-                            </div>
-                          </div>
-
-                          {profile?.subject_name && (
-                            <div className="mt-4 p-4 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-300">
-                                  <Sparkles className="w-5 h-5" />
-                                </div>
-                                <div>
-                                  <span className="text-[11px] text-slate-400 block">المادة الموكلة</span>
-                                  <span className="text-sm font-bold text-white">{profile.subject_name}</span>
-                                </div>
-                              </div>
-                              <span className="px-3 py-1 rounded-xl text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                                مادة أساسية
-                              </span>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )}
                   </TabsContent>
 
                   {/* TAB 2: AVATAR & APPEARANCE */}
@@ -1128,7 +743,7 @@ export default function ProfilePage() {
                           <div>
                             <CardTitle className="text-lg font-black text-white flex items-center gap-2.5">
                               <Camera className="w-5 h-5 text-cyan-400" />
-                              <span>استوديو الصورة الشخصية</span>
+                              <span>الصورة الشخصية</span>
                             </CardTitle>
                             <CardDescription className="text-xs text-slate-400 mt-1">
                               اختر صورتك المخصصة من جهازك أو اختر إحدى الشخصيات الرمزية الجاهزة
@@ -1141,7 +756,7 @@ export default function ProfilePage() {
                             className="bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-bold rounded-2xl text-xs h-10 px-5 gap-2 shadow-[0_4px_20px_rgba(168,85,247,0.3)] transition-all hover:scale-[1.02]"
                           >
                             <Camera className="w-4 h-4" />
-                            <span>فتح نافذة الاستوديو الشامل</span>
+                            <span>اختيار صورة</span>
                           </Button>
                         </div>
                       </CardHeader>
@@ -1179,7 +794,7 @@ export default function ProfilePage() {
                               )}
                             </div>
                             <p className="text-xs text-slate-400">
-                              تظهر صورتك الشخصية لزملائك والمحاضرين في كشوفات الحضور الذكي والتقارير.
+                              تظهر صورتك الشخصية لزملائك والمحاضرين في كشوفات الحضور والتقارير.
                             </p>
                             <div className="flex items-center justify-center sm:justify-start gap-3 pt-1 flex-wrap">
                               <Button

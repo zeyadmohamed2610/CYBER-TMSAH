@@ -43,12 +43,21 @@ check('student cannot create lecture',!!deniedLecture.error);
 const anon=createClient(url,publishable,{auth:{persistSession:false}});
 check('anonymous cannot read register',!!(await anon.rpc('get_attendance_register')).error);
 const lectures=[];
+const originalAssignments=[];
 const edge=async(action,body={})=>{
  const response=await fetch(url+'/functions/v1/passkey-login?action='+action,{method:'POST',headers:{
   apikey:publishable,Authorization:'Bearer '+sessions.student.access_token,'Content-Type':'application/json',Origin:'http://localhost:8080'},body:JSON.stringify(body)});
  const payload=await response.json();if(!response.ok||!payload.success)throw new Error(action+': '+JSON.stringify(payload));return payload;
 };
 try{
+ for (const role of ['doctor','ta']) {
+  const account=accounts.find(a=>a.role===role);
+  const assigned=await clients.owner.rpc('get_user_subjects',{p_user_id:account.profileId});if(assigned.error)throw assigned.error;
+  const profile=await admin.from('users').select('subject_id').eq('id',account.profileId).single();if(profile.error)throw profile.error;
+  const ids=assigned.data.map(s=>s.subject_id);
+  originalAssignments.push({id:account.profileId,ids,subjectId:profile.data.subject_id});
+  const setup=await clients.owner.rpc('assign_user_subjects',{p_user_id:account.profileId,p_subject_ids:[...new Set([...ids,'da995757-05bf-4ca1-bfc1-80b601a018ac'])]});if(setup.error)throw setup.error;
+ }
  for(const role of ['doctor','ta']){
   const result=await clients[role].rpc('create_lecture',{p_subject_id:'da995757-05bf-4ca1-bfc1-80b601a018ac',p_title:'اختبار حضور '+(role==='doctor'?'الدكتور':'المعيد')+' '+Date.now(),p_kind:role==='ta'?'section':'lecture',p_section:role==='ta'?'1':null});
   if(result.error)throw result.error;lectures.push(result.data.id);check(role+' creates lecture',!!result.data.id);
@@ -124,7 +133,10 @@ try{
  // Reset only the dedicated QA student's temporary credentials and device lock.
  await admin.from('webauthn_credentials').delete().eq('auth_id',student.authId);
  await admin.from('device_locks').delete().eq('student_auth_id',student.authId);
- await admin.from('student_devices').delete().eq('student_id',student.profileId);
  await admin.from('attendance_biometric_proofs').delete().eq('auth_id',student.authId);
  await admin.from('subjects').delete().eq('id',foreignSubject);
+ for (const original of originalAssignments) {
+  const restored=await clients.owner.rpc('assign_user_subjects',{p_user_id:original.id,p_subject_ids:original.ids});if(restored.error)throw restored.error;
+  const primary=await admin.from('users').update({subject_id:original.subjectId}).eq('id',original.id);if(primary.error)throw primary.error;
+ }
 }

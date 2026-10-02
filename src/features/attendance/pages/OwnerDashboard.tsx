@@ -11,7 +11,6 @@ import {
   GraduationCap,
   Inbox,
   Layers,
-  ShieldCheck,
   Smartphone,
   Users,
   Wrench,
@@ -87,25 +86,20 @@ export const OwnerDashboard = () => {
   };
 
   const ALL_TABS = [
-    ...(isOwner
-      ? [
-          { value: "coordinators", label: "رؤساء الأقسام", icon: ShieldCheck, category: "users" },
-        ]
-      : []),
+    { value: "users", label: "المستخدمون", icon: Users, category: "users" },
     { value: "requests", label: "الطلبات المعلقة", icon: Inbox, category: "system", badge: pendingRequestsCount, colorScheme: "amber" },
     { value: "devices", label: "أمان الأجهزة", icon: Smartphone, category: "system" },
     { value: "schedule", label: "الجدول الدراسي", icon: CalendarDays, category: "academic" },
     { value: "departments", label: "الأقسام والمواد", icon: Layers, category: "academic" },
-    { value: "doctors", label: "الدكاترة", icon: GraduationCap, category: "users" },
-    { value: "tas", label: "المعيدين", icon: Users, category: "users" },
-    { value: "students", label: "الطلاب", icon: Users, category: "users" },
     { value: "fixes", label: "بلاغات المشاكل", icon: Wrench, category: "system", badge: pendingFixesCount, colorScheme: "rose" },
     { value: "manual-attendance", label: "تسجيل يدوي", icon: CheckCircle2, category: "attendance" },
     { value: "lectures", label: "المحاضرات", icon: BookOpen, category: "attendance" },
     { value: "attendance-records", label: "سجلات الحضور", icon: Activity, category: "attendance" },
   ];
 
-  const activeTab = ALL_TABS.some(tab => tab.value === requestedTab) ? requestedTab : defaultTab;
+  const legacyRoles: Record<string, string> = {students:"student", doctors:"doctor", tas:"ta", coordinators:"coordinator"};
+  const destination = legacyRoles[requestedTab] && (isOwner || requestedTab !== "coordinators") ? "users" : requestedTab;
+  const activeTab = ALL_TABS.some(tab => tab.value === destination) ? destination : defaultTab;
 
   const roleBadgeLabel = isOwner ? "مالك المنصة" : isCoordinator ? "رئيس القسم" : role;
   const roleBadgeColor = isOwner
@@ -203,14 +197,9 @@ export const OwnerDashboard = () => {
       <DashboardWorkspace value={activeTab} onValueChange={setActiveTab} items={ALL_TABS} title={isOwner ? "إدارة المنصة" : "إدارة القسم"} groups={[
         {id:'academic',label:'الدراسة'}, {id:'attendance',label:'الحضور والغياب'}, {id:'users',label:'المستخدمون'}, {id:'system',label:'الطلبات والمتابعة'},
       ]}>
-        {/* Owner-only tab panels */}
-        {isOwner && (
-          <>
-            <TabsContent value="coordinators" className="mt-4 outline-none">
-              <UserList role="coordinator" title="قائمة منسقي البرامج (رؤساء الأقسام)" />
-            </TabsContent>
-          </>
-        )}
+        <TabsContent value="users" className="mt-4 outline-none">
+          <UserList key={requestedTab} role={legacyRoles[requestedTab] ?? "all"} />
+        </TabsContent>
 
         {/* Shared tab panels */}
         <TabsContent value="requests" className="mt-4 outline-none"><JoinRequestsPanel /></TabsContent>
@@ -220,15 +209,6 @@ export const OwnerDashboard = () => {
         </TabsContent>
         <TabsContent value="departments" className="mt-4 outline-none">
           <DepartmentsAndSubjectsPanel />
-        </TabsContent>
-        <TabsContent value="doctors" className="mt-4 outline-none">
-          <UserList role="doctor" title="قائمة الدكاترة" />
-        </TabsContent>
-        <TabsContent value="tas" className="mt-4 outline-none">
-          <UserList role="ta" title="قائمة المعيدين" />
-        </TabsContent>
-        <TabsContent value="students" className="mt-4 outline-none">
-          <UserList role="student" title="قائمة الطلاب" />
         </TabsContent>
         <TabsContent value="fixes" className="mt-4 outline-none">
           <FixesReportsPanel />

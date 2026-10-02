@@ -1,4 +1,5 @@
 import { AttendanceRegisterPanel } from "../components/AttendanceRegisterPanel";
+import { DepartmentsAndSubjectsPanel } from "../components/DepartmentsAndSubjectsPanel";
 import { AcademicSchedulePanel } from '../components/AcademicSchedulePanel';
 import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 // src/features/attendance/pages/StudentDashboard.tsx
@@ -182,7 +183,7 @@ export const StudentDashboard = () => {
           {value:'checkin',label:'تسجيل الحضور',shortLabel:'الحضور',icon:QrCode},
           {value:'records',label:'سجل حضوري',shortLabel:'السجل',icon:History,badge:records.length},
           {value:'schedule',label:'الجدول والامتحانات',shortLabel:'الجدول',icon:CalendarDays},
-          {value:'analytics',label:'النسب والمقررات',shortLabel:'النسب',icon:BarChart3},
+          {value:'analytics',label:'المواد ونسب الحضور',shortLabel:'المواد',icon:BarChart3},
           {value:'device',label:'أمان الجهاز',shortLabel:'الجهاز',icon:ShieldCheck},
         ]}>
         <TabsContent value="schedule"><AcademicSchedulePanel /></TabsContent>
@@ -227,6 +228,7 @@ export const StudentDashboard = () => {
 
         {/* ── TAB 3: Analytics & Progress ─────────────────────────────────── */}
         <TabsContent value="analytics" className="space-y-6 focus-visible:outline-none">
+          <DepartmentsAndSubjectsPanel />
           <div className="grid gap-3 sm:grid-cols-2">
             <StatCard
               title="معدل الحضور العام"

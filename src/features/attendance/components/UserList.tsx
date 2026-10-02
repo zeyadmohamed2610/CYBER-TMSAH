@@ -1,6 +1,7 @@
 import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 // src/features/attendance/components/UserList.tsx
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 
 import { useDebounce } from "@/hooks/useDebounce";
 import { Plus, Search, Trash2, Users, Loader2, X, Edit2, CheckCircle, XCircle, Eye, EyeOff, Building2, GraduationCap, BookOpen, Mail, UserCheck, Shield, Copy, Check, Calendar } from "lucide-react";
@@ -35,12 +36,24 @@ interface Subject {
   department?: string | null;
 }
 
+interface UserForm {
+  name: string; username: string; email: string; password: string; nationalId: string;
+  department: string; academicYear: string; sectionNumber: string; subjectIds: string[];
+}
+
 const DEPARTMENTS_STORAGE_KEY = "cyber_departments_custom_names";
 
-export function UserList({ role, title }: { role: string; title: string }) {
+export function UserList({ role: initialRole = "all", title = "المستخدمون" }: { role?: string; title?: string }) {
+  const { role: viewerRole, user: viewer } = useAttendanceAuth();
+  const [managedDepartment, setManagedDepartment] = useState<string | null>(null);
+  const allowedRoles = viewerRole === "owner" ? ["coordinator", "doctor", "ta", "student"] : ["doctor", "ta", "student"];
+  const [filterRole, setFilterRole] = useState(initialRole);
+  const [role, setRole] = useState(initialRole === "all" ? "student" : initialRole);
+  const loadVersion = useRef(0);
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [pageNumber, setPageNumber] = useState(1);
   const debouncedSearch = useDebounce(search, 300);
   const DRAFT_KEY = `cyber_userlist_draft_${role}`;
 
@@ -65,9 +78,9 @@ export function UserList({ role, title }: { role: string; title: string }) {
   const [selectedUserForDetails, setSelectedUserForDetails] = useState<UserRecord | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  const handleCopyText = (text: string, fieldName: string) => {
+  const handleCopyText = async (text: string, fieldName: string) => {
     try {
-      navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(text);
       setCopiedField(fieldName);
       toast.success(`تم نسخ ${fieldName}`);
       setTimeout(() => setCopiedField(null), 2000);
@@ -106,12 +119,12 @@ export function UserList({ role, title }: { role: string; title: string }) {
   );
 
   // Manual User Creation Form Data with draft restore
-  const [formData, setFormData] = useState(() => {
+  const [formData, setFormData] = useState<UserForm>(() => {
     try {
       const saved = sessionStorage.getItem(DRAFT_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.formData) return parsed.formData;
+        if (parsed.formData) return { ...parsed.formData, password: "" };
       }
     } catch {
       // fallback
@@ -132,11 +145,22 @@ export function UserList({ role, title }: { role: string; title: string }) {
   // Persist draft to sessionStorage whenever user types or toggles the form
   useEffect(() => {
     try {
-      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ showCreate, formData }));
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ showCreate, formData: { ...formData, password: "" } }));
     } catch {
       // ignore
     }
   }, [showCreate, formData, DRAFT_KEY]);
+
+  useEffect(() => {
+    if (viewerRole !== "coordinator" || !viewer?.id) return;
+    let active = true;
+    void supabase.from("users").select("department").eq("auth_id", viewer.id).maybeSingle().then(({data}) => {
+      if (!active || !data?.department) return;
+      setManagedDepartment(data.department);
+      setFormData(previous => ({ ...previous, department: data.department, subjectIds: previous.department === data.department ? previous.subjectIds : [] }));
+    });
+    return () => { active = false; };
+  }, [viewerRole, viewer?.id]);
 
   const resetFormAndDraft = useCallback(() => {
     try {
@@ -151,12 +175,12 @@ export function UserList({ role, title }: { role: string; title: string }) {
       email: "",
       password: "",
       nationalId: "",
-      department: "cybersecurity",
+      department: managedDepartment ?? "cybersecurity",
       academicYear: "1",
       sectionNumber: "1",
       subjectIds: [] as string[],
     });
-  }, [DRAFT_KEY]);
+  }, [DRAFT_KEY, managedDepartment]);
 
   // Edit Data
   const [editData, setEditData] = useState({
@@ -183,7 +207,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
 
   // Load multi-subject assignments for doctor/TA users
   const loadUserSubjects = useCallback(async (userIds: string[]) => {
-    if (!userIds.length || (role !== "doctor" && role !== "ta" && role !== "coordinator")) return;
+    if (!userIds.length) return;
     const results: Record<string, Subject[]> = {};
     await Promise.all(
       userIds.map(async (uid) => {
@@ -198,42 +222,38 @@ export function UserList({ role, title }: { role: string; title: string }) {
       })
     );
     setUserSubjects((prev) => ({ ...prev, ...results }));
-  }, [role]);
+  }, []);
 
   const loadUsers = useCallback(async () => {
+    const version = ++loadVersion.current;
     setLoading(true);
     try {
-      let query = supabase
-        .from("users")
-        .select("id, full_name, username, email, role, national_id, subject_id, department, academic_year, section_number, created_at")
-        .eq("role", role);
-
-      if (debouncedSearch) {
-        query = query.or(
-          `full_name.ilike.%${debouncedSearch}%,username.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%,national_id.ilike.%${debouncedSearch}%`
-        );
+      const collected: UserRecord[] = [];
+      for (let offset = 0; ; offset += 500) {
+        const {data, error} = await supabase.from("users")
+          .select("id, full_name, username, email, role, national_id, subject_id, department, academic_year, section_number, created_at")
+          .in("role", viewerRole === "owner" ? ["coordinator", "doctor", "ta", "student"] : ["doctor", "ta", "student"])
+          .order("id").range(offset, offset + 499);
+        if (version !== loadVersion.current) return;
+        if (error) throw error;
+        collected.push(...data);
+        if (data.length < 500) break;
       }
-
-      const { data, error } = await query;
-      if (error) {
-        console.error("Error loading users:", error);
-        toast.error("فشل تحميل قائمة المستخدمين");
-        setUsers([]);
-      } else {
-        const sortedData = (data ?? []).sort((a, b) =>
+        const sortedData = collected.sort((a, b) =>
           a.full_name.localeCompare(b.full_name, "ar")
         );
         setUsers(sortedData as UserRecord[]);
         // Load multi-subjects for doctors/TAs
-        void loadUserSubjects(sortedData.map((u) => u.id));
-      }
+        void loadUserSubjects(sortedData.filter(u => u.role !== "student").map((u) => u.id));
     } catch (err) {
+      if (version !== loadVersion.current) return;
       console.error(err);
+      toast.error("فشل تحميل قائمة المستخدمين");
       setUsers([]);
     } finally {
-      setLoading(false);
+      if (version === loadVersion.current) setLoading(false);
     }
-  }, [role, debouncedSearch, loadUserSubjects]);
+  }, [viewerRole, loadUserSubjects]);
 
 
   useEffect(() => {
@@ -310,14 +330,19 @@ export function UserList({ role, title }: { role: string; title: string }) {
       // After user created, assign all subjects via junction table
       const assignSubjectsAfterCreate = async (userId: string) => {
         if ((role === "doctor" || role === "ta" || role === "coordinator") && formData.subjectIds.length > 0) {
-          await supabase.rpc("assign_user_subjects", {
+          const assignment = await supabase.rpc("assign_user_subjects", {
             p_user_id: userId,
             p_subject_ids: formData.subjectIds,
           });
+          if (assignment.error) throw new Error(assignment.error.message);
         }
       };
 
       if (rpcError) {
+        if (rpcError.code !== "PGRST202" && rpcError.code !== "42883") {
+          toast.error(getFriendlyErrorMessage(rpcError.message, "تعذر إنشاء الحساب. راجع البيانات."));
+          return;
+        }
         // Fallback: If RPC not found yet or error, insert join_request and approve it immediately
         console.warn("admin_create_user RPC failed, using auto-approval fallback:", rpcError);
 
@@ -373,15 +398,15 @@ export function UserList({ role, title }: { role: string; title: string }) {
         }
         // Set national_id for student via update (admin_create_user doesn't accept it yet)
         if (newUserId && role === "student" && trimmedNID) {
-          await supabase.from("users").update({ national_id: trimmedNID }).eq("id", newUserId as string);
+          const identity = await supabase.from("users").update({ national_id: trimmedNID }).eq("id", newUserId as string);
+          if (identity.error) throw new Error(identity.error.message);
         }
         toast.success(`تمت إضافة الحساب بنجاح لـ ${trimmedName} ✓`);
         resetFormAndDraft();
         void loadUsers();
       }
     } catch (err: unknown) {
-      console.error(err);
-      toast.error("حدث خطأ أثناء إنشاء المستخدم");
+      toast.error(getFriendlyErrorMessage(err instanceof Error ? err.message : "", "تعذر استكمال إنشاء الحساب. راجع قائمة المستخدمين قبل المحاولة مرة أخرى."));
     } finally {
       setSubmitting(false);
     }
@@ -419,6 +444,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
       toast.error("الاسم يجب أن يكون 3 أحرف على الأقل");
       return;
     }
+    const role = users.find(user => user.id === userId)?.role;
     setSubmitting(true);
 
     // Validate national_id if student
@@ -456,6 +482,8 @@ export function UserList({ role, title }: { role: string; title: string }) {
       });
       if (subjectErr) {
         toast.error(getFriendlyErrorMessage("تم تحديث البيانات ولكن فشل تحديث المواد: " + subjectErr.message));
+        setSubmitting(false);
+        return;
       }
     }
 
@@ -471,8 +499,8 @@ export function UserList({ role, title }: { role: string; title: string }) {
     return found ? found.nameAr : deptId;
   };
 
-  const getRoleLabel = () => {
-    switch (role) {
+  const getRoleLabel = (value = role) => {
+    switch (value) {
       case "student":
         return "طالب";
       case "doctor":
@@ -485,6 +513,12 @@ export function UserList({ role, title }: { role: string; title: string }) {
         return "مستخدم";
     }
   };
+
+  const filteredUsers = users.filter(account => (filterRole === "all" || account.role === filterRole)
+    && [account.full_name, account.username, account.email, account.national_id].some(value => value?.toLocaleLowerCase().includes(debouncedSearch.trim().toLocaleLowerCase())));
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / 25));
+  const currentPage = Math.min(pageNumber, totalPages);
+  useEffect(() => { setPageNumber(1); }, [filterRole, debouncedSearch]);
 
   return (
     <Card className="bg-card/70 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden shadow-xl" dir="rtl">
@@ -501,7 +535,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
                   {users.length}
                 </span>
               </CardTitle>
-              <p className="text-xs text-slate-400">إدارة حسابات {getRoleLabel()} والتحكم في بياناتهم</p>
+              <p className="text-xs text-slate-400">كل الحسابات في قائمة واحدة؛ اختر الرتبة أو ابحث عن الحساب.</p>
             </div>
           </div>
 
@@ -520,6 +554,13 @@ export function UserList({ role, title }: { role: string; title: string }) {
         </div>
       </CardHeader>
 
+      <div className="flex flex-wrap gap-2 p-4" role="group" aria-label="تصفية المستخدمين حسب الرتبة">
+        {[{id:"all",label:"الكل"}, ...allowedRoles.map(id => ({id,label:getRoleLabel(id)}))].map(item =>
+          <Button key={item.id} variant={filterRole === item.id ? "default" : "outline"} aria-pressed={filterRole === item.id}
+            className="min-h-11" onClick={() => { setFilterRole(item.id); setEditingId(null); setDeleteConfirm(null); }}>
+            {item.label} <span className="mr-2 text-xs">{users.filter(account => item.id === "all" || account.role === item.id).length}</span>
+          </Button>)}
+      </div>
       <CardContent className="p-5 space-y-5">
         {/* Manual Creation Form */}
         {showCreate && (
@@ -527,10 +568,15 @@ export function UserList({ role, title }: { role: string; title: string }) {
             onSubmit={handleCreate}
             className="rounded-2xl border border-purple-500/30 bg-purple-950/20 p-5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200"
           >
+              <div className="space-y-2"><Label htmlFor="create-user-role">رتبة الحساب</Label>
+                <select id="create-user-role" className="w-full h-11 rounded-lg border border-input bg-background px-3" value={role}
+                  onChange={event => setRole(event.target.value)} disabled={submitting}>
+                  {allowedRoles.map(value => <option key={value} value={value}>{getRoleLabel(value)}</option>)}
+                </select></div>
             <div className="flex items-center gap-2 pb-2 border-b border-white/10">
               <UserCheck className="w-5 h-5 text-purple-400" />
               <h4 className="text-sm font-bold text-white">
-                إضافة {getRoleLabel()} جديد (نفس بيانات طلب الانضمام)
+                إضافة حساب جديد
               </h4>
             </div>
 
@@ -610,7 +656,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
                     <SelectValue placeholder="اختر القسم" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#120d1c] border-purple-500/30 text-white">
-                    {deptList.map((d) => (
+                    {deptList.filter(d => viewerRole !== "coordinator" || d.id === managedDepartment).map((d) => (
                       <SelectItem key={d.id} value={d.id}>
                         {d.nameAr}
                       </SelectItem>
@@ -643,7 +689,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
                   </div>
 
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-slate-300">رقم السكشن (1 - 10)*</Label>
+                      <Label className="text-xs text-slate-300">رقم السكشن (1 - 15)*</Label>
                       <Select
                         value={formData.sectionNumber}
                         onValueChange={(val) => setFormData({ ...formData, sectionNumber: val })}
@@ -653,7 +699,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
                           <SelectValue placeholder="اختر السكشن" />
                         </SelectTrigger>
                         <SelectContent className="bg-[#120d1c] border-purple-500/30 text-white">
-                          {Array.from({ length: 10 }, (_, i) => String(i + 1)).map((sec) => (
+                          {Array.from({ length: 15 }, (_, i) => String(i + 1)).map((sec) => (
                             <SelectItem key={sec} value={sec}>
                               سكشن {sec}
                             </SelectItem>
@@ -783,7 +829,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
               <Loader2 className="h-6 w-6 animate-spin text-purple-400" />
               <span>جارٍ تحميل المستخدمين...</span>
             </div>
-          ) : users.length === 0 ? (
+          ) : filteredUsers.length === 0 ? (
             <div className="text-center py-12 text-slate-400 bg-white/[0.02] border border-white/5 rounded-2xl">
               <Users className="w-10 h-10 text-slate-500 mx-auto mb-2 opacity-50" />
               <p className="text-sm font-semibold text-slate-300">
@@ -791,9 +837,10 @@ export function UserList({ role, title }: { role: string; title: string }) {
               </p>
             </div>
           ) : (
-            users.map((user, idx) => (
+            filteredUsers.slice((currentPage - 1) * 25, currentPage * 25).map((user, idx) => (
               <div
                 key={user.id}
+                data-user-id={user.id}
                 className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border p-4 transition-all ${
                   editingId === user.id
                     ? "bg-purple-950/40 border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.2)]"
@@ -823,7 +870,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
                             <SelectValue placeholder="القسم" />
                           </SelectTrigger>
                           <SelectContent className="bg-[#120d1c] border-purple-500/30 text-white">
-                            {deptList.map((d) => (
+                            {deptList.filter(d => viewerRole !== "coordinator" || d.id === managedDepartment).map((d) => (
                               <SelectItem key={d.id} value={d.id}>
                                 {d.nameAr}
                               </SelectItem>
@@ -832,7 +879,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
                         </Select>
                       </div>
 
-                      {role === "student" && (
+                      {user.role === "student" && (
                         <>
                           <div>
                             <Label className="text-xs text-slate-400">الفرقة:</Label>
@@ -863,7 +910,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
                                 <SelectValue placeholder="السكشن" />
                               </SelectTrigger>
                               <SelectContent className="bg-[#120d1c] border-purple-500/30 text-white">
-                                {Array.from({ length: 10 }, (_, i) => String(i + 1)).map((sec) => (
+                                {Array.from({ length: 15 }, (_, i) => String(i + 1)).map((sec) => (
                                   <SelectItem key={sec} value={sec}>
                                     سكشن {sec}
                                   </SelectItem>
@@ -887,8 +934,8 @@ export function UserList({ role, title }: { role: string; title: string }) {
                         </>
                       )}
 
-                      {(role === "doctor" || role === "ta" || role === "coordinator") && (
-                        <div className="col-span-2">
+                      {(user.role === "doctor" || user.role === "ta" || user.role === "coordinator") && (
+                        <div className="sm:col-span-2">
                           <Label className="text-xs text-slate-400">المواد المسندة:</Label>
                           <div className="rounded-lg border border-white/10 bg-black/40 p-2 space-y-1 max-h-40 overflow-y-auto custom-scrollbar mt-1">
                             {subjects
@@ -930,16 +977,16 @@ export function UserList({ role, title }: { role: string; title: string }) {
                   <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
                     <div
                       className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold ${
-                        role === "student"
+                        user.role === "student"
                           ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                          : role === "doctor"
+                          : user.role === "doctor"
                           ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                          : role === "coordinator"
+                          : user.role === "coordinator"
                           ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
                           : "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
                       }`}
                     >
-                      {idx + 1}
+                      {(currentPage - 1) * 25 + idx + 1}
                     </div>
 
                     <div className="min-w-0 flex-1 space-y-1">
@@ -959,7 +1006,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
                         {/* Role Badge */}
                         <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center gap-1">
                           <Shield className="w-2.5 h-2.5" />
-                          {getRoleLabel()}
+                          {getRoleLabel(user.role)}
                         </span>
 
                         {/* Department Badge */}
@@ -982,23 +1029,23 @@ export function UserList({ role, title }: { role: string; title: string }) {
                             {user.email}
                           </span>
                         )}
-                        {role === "student" && user.academic_year && (
+                        {user.role === "student" && user.academic_year && (
                           <span className="flex items-center gap-1 text-slate-300">
                             <GraduationCap className="w-3.5 h-3.5 text-purple-400" />
                             الفرقة {user.academic_year}
                           </span>
                         )}
-                        {role === "student" && user.section_number && (
+                        {user.role === "student" && user.section_number && (
                           <span className="px-1.5 py-0.5 rounded bg-white/5 text-[11px] text-slate-300">
                             سكشن {user.section_number}
                           </span>
                         )}
-                        {role === "student" && (
+                        {user.role === "student" && (
                           <span className="px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300 font-mono" dir="ltr">
                             {user.national_id || "غير مسجل"}
                           </span>
                         )}
-                        {(role === "doctor" || role === "ta" || role === "coordinator") && (
+                        {(user.role === "doctor" || user.role === "ta" || user.role === "coordinator") && (
                           <div className="flex items-center gap-1 flex-wrap">
                             <BookOpen className="w-3.5 h-3.5 text-purple-400 shrink-0" />
                             {(userSubjects[user.id] ?? (user.subject_id ? [{ id: user.subject_id, name: subjects.find((s) => s.id === user.subject_id)?.name || "مادة مسندة" }] : [])).length === 0 ? (
@@ -1047,7 +1094,8 @@ export function UserList({ role, title }: { role: string; title: string }) {
                         variant="ghost"
                         size="icon"
                         onClick={() => setDeleteConfirm(null)}
-                        className="h-7 w-7 text-slate-400 hover:text-white"
+                        aria-label="إلغاء الحذف"
+                        className="h-11 w-11 text-slate-400 hover:text-white"
                       >
                         <XCircle className="h-4 w-4" />
                       </Button>
@@ -1055,7 +1103,8 @@ export function UserList({ role, title }: { role: string; title: string }) {
                         variant="destructive"
                         size="icon"
                         onClick={() => handleDelete(user.id, user.full_name)}
-                        className="h-7 w-7"
+                        aria-label="تأكيد حذف المستخدم"
+                        className="h-11 w-11"
                       >
                         <CheckCircle className="h-4 w-4" />
                       </Button>
@@ -1066,7 +1115,8 @@ export function UserList({ role, title }: { role: string; title: string }) {
                         variant="ghost"
                         size="icon"
                         onClick={() => startEdit(user)}
-                        className="h-8 w-8 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg"
+                        className="h-11 w-11 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg"
+                        aria-label="تعديل البيانات"
                         title="تعديل البيانات"
                       >
                         <Edit2 className="h-4 w-4" />
@@ -1075,7 +1125,8 @@ export function UserList({ role, title }: { role: string; title: string }) {
                         variant="ghost"
                         size="icon"
                         onClick={() => setDeleteConfirm({ id: user.id, name: user.full_name })}
-                        className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg"
+                        className="h-11 w-11 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg"
+                        aria-label="حذف المستخدم"
                         title="حذف المستخدم"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -1088,6 +1139,8 @@ export function UserList({ role, title }: { role: string; title: string }) {
           )}
         </div>
       </CardContent>
+
+      {!loading && <div className="flex flex-wrap items-center justify-between gap-3 border-t p-4 text-sm"><span>{filteredUsers.length} حساب · صفحة {currentPage} من {totalPages}</span><div className="flex gap-2"><Button variant="outline" disabled={currentPage === 1} onClick={() => setPageNumber(currentPage - 1)}>السابق</Button><Button variant="outline" disabled={currentPage === totalPages} onClick={() => setPageNumber(currentPage + 1)}>التالي</Button></div></div>}
 
       {/* User Details Modal (rendered via Radix Dialog for perfect viewport centering) */}
       <Dialog
@@ -1115,7 +1168,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
                       </DialogTitle>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                          {getRoleLabel()}
+                          {getRoleLabel(selectedUserForDetails.role)}
                         </span>
                         <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/25">
                           {getDepartmentLabel(selectedUserForDetails.department)}
@@ -1183,7 +1236,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
                   )}
 
                   {/* Academic info if student */}
-                  {role === "student" && (
+                  {selectedUserForDetails.role === "student" && (
                     <div className="grid grid-cols-2 gap-2">
                       <div className="p-3 rounded-2xl bg-black/40 border border-white/5">
                         <span className="text-slate-400 block text-[10px] mb-0.5">الفرقة الدراسية</span>
@@ -1201,7 +1254,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
                   )}
 
                   {/* National ID if student */}
-                  {role === "student" && (
+                  {selectedUserForDetails.role === "student" && (
                     <div className="p-3 rounded-2xl bg-black/40 border border-white/5 flex items-center justify-between">
                       <div>
                         <span className="text-slate-400 block text-[10px] mb-0.5">الرقم القومي</span>
@@ -1226,7 +1279,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
 
 
                   {/* Subject if Doctor / TA / Coordinator */}
-                  {(role === "doctor" || role === "ta" || role === "coordinator") && (
+                  {(selectedUserForDetails.role === "doctor" || selectedUserForDetails.role === "ta" || selectedUserForDetails.role === "coordinator") && (
                     <div className="p-3 rounded-2xl bg-black/40 border border-white/5">
                       <span className="text-slate-400 block text-[10px] mb-1.5">المواد المسندة</span>
                       {(userSubjects[selectedUserForDetails.id] ?? []).length === 0 ? (

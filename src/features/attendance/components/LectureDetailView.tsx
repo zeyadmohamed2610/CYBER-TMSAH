@@ -121,11 +121,11 @@ export function LectureDetailView({ lecture, onBack }: Props) {
   // Reset section when session type changes
   useEffect(() => {
     if (sessionType === "lecture") {
-      setSelectedSection("عام");
+      setSelectedSection("1");
     } else {
-      setSelectedSection("سكشن 1");
+      setSelectedSection(lecture.section ?? "1");
     }
-  }, [sessionType]);
+  }, [sessionType, lecture.section]);
 
   // Load attendees and session history
   useEffect(() => { void load(); void loadSessionHistory(); }, [load, loadSessionHistory]);
@@ -267,7 +267,7 @@ export function LectureDetailView({ lecture, onBack }: Props) {
             onConfirm={handleEndLecture}
           >
             {(trigger) => (
-              <Button variant="destructive" size="sm" disabled={ending} className="gap-1" onClick={trigger}>
+              <Button variant="destructive" size="sm" disabled={ending} className="gap-1 min-h-11" aria-label="إنهاء المحاضرة" onClick={trigger}>
                 <StopCircle className="h-3 w-3" />
                 <span className="hidden sm:inline">{ending ? "جاري الإنهاء..." : "إنهاء المحاضرة"}</span>
               </Button>

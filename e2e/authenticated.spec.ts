@@ -56,6 +56,7 @@ for (const [role, destination] of [["student", "student-panel"], ["doctor", "doc
         await expect(page.getByRole("tabpanel").first()).toBeVisible();
         await page.waitForLoadState("networkidle");
         if (tab === 'schedule') {
+          await page.getByRole('button', {name:'إدارة الجدول', exact:true}).click();
           const downloaded = page.waitForEvent('download');
           await page.getByRole('button', { name: 'قالب الاستيراد', exact: true }).click();
           const file = await downloaded;

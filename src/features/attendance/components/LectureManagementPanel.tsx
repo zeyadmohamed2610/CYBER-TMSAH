@@ -81,7 +81,7 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
     if (result.error) {
       toast({ variant: "destructive", title: "خطأ", description: getFriendlyErrorMessage(result.error) });
     } else {
-      toast({ title: "تم", description: "تم انشاء المحاضرة بنجاح" });
+      toast({ title: "تم", description: "تم إنشاء الحصة بنجاح" });
       setTitle("");
       setShowCreate(false);
       await load();
@@ -120,7 +120,7 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">
             <BookOpen className="h-4 w-4 text-primary" />
-            المحاضرات
+            {role === 'ta' ? 'السكاشن' : role === 'doctor' ? 'المحاضرات' : 'المحاضرات والسكاشن'}
           </CardTitle>
           <Button
             variant={showCreate ? "secondary" : "default"}
@@ -143,9 +143,9 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
             </div>
               {(!fixedSubjectId || subjects.length > 1) && (
               <div className="space-y-1">
-                <Label className="text-xs">المادة</Label>
+                <Label htmlFor="lecture-subject" className="text-xs">المادة</Label>
                 <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                  <SelectTrigger className="h-8 text-sm">
+                  <SelectTrigger id="lecture-subject" className="h-11 text-sm">
                     <SelectValue placeholder="اختر مادة..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -160,16 +160,16 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
             )}
             <div className="flex items-end gap-3">
               <div className="flex-1 space-y-1">
-                <Label htmlFor="lecture-title" className="text-xs">عنوان المحاضرة</Label>
+                <Label htmlFor="lecture-title" className="text-xs">عنوان الحصة</Label>
                 <Input
                   id="lecture-title"
                   placeholder="مثال: المحاضرة 5 - امن الشبكات"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="h-8 text-sm"
+                  className="h-11 text-sm"
                 />
               </div>
-              <Button type="submit" size="sm" disabled={creating || (!fixedSubjectId && !selectedSubject)} className="h-8">
+              <Button type="submit" size="sm" disabled={creating || (!fixedSubjectId && !selectedSubject)} className="h-11">
                 {creating ? "جاري الانشاء" : "انشاء"}
               </Button>
             </div>
@@ -181,8 +181,8 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
         ) : lectures.length === 0 ? (
           <div className="rounded-lg border border-dashed p-8 text-center">
             <BookOpen className="mx-auto h-8 w-8 text-muted-foreground/50" />
-            <p className="mt-2 text-sm text-muted-foreground">لا توجد محاضرات بعد</p>
-            <p className="text-xs text-muted-foreground/70">اضغط "محاضرة جديدة" للبدء</p>
+            <p className="mt-2 text-sm text-muted-foreground">لا توجد حصص بعد</p>
+            <p className="text-xs text-muted-foreground/70">أضف حصة جديدة للبدء.</p>
           </div>
         ) : (
           <div className="space-y-2">
