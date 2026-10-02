@@ -3,6 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 const testPort = Number(process.env.E2E_PORT ?? 8080);
 const isWindows = process.platform === "win32";
 const CHROME_PATH = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+const remoteBaseUrl = process.env.E2E_BASE_URL;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -13,7 +14,7 @@ export default defineConfig({
   reporter: "html",
   timeout: 60000,
   use: {
-    baseURL: `http://localhost:${testPort}`,
+    baseURL: remoteBaseUrl ?? `http://localhost:${testPort}`,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     navigationTimeout: 30000,
@@ -44,7 +45,7 @@ export default defineConfig({
         : devices["Pixel 5"],
     },
   ],
-  webServer: {
+  webServer: remoteBaseUrl ? undefined : {
     command: `node node_modules/vite/bin/vite.js --port ${testPort} --strictPort`,
     url: `http://localhost:${testPort}`,
     reuseExistingServer: !process.env.CI,

@@ -551,4 +551,3 @@ REVOKE ALL ON FUNCTION private.attendance_update_session_expiry(p_session_id uui
 GRANT EXECUTE ON FUNCTION private.attendance_update_session_expiry(p_session_id uuid, p_expires_at timestamp with time zone) TO authenticated;
 REVOKE ALL ON FUNCTION public.update_session_expiry(p_session_id uuid, p_expires_at timestamp with time zone) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.update_session_expiry(p_session_id uuid, p_expires_at timestamp with time zone) TO authenticated;
-
