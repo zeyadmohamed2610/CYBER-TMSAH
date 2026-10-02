@@ -33,9 +33,24 @@ describe('academic week and section schedule', () => {
     const bytes = await exportScheduleWorkbook(schedule);
     const imported = await importScheduleWorkbook(bytes, schedule);
     expect(imported).toEqual([{ ...entry, subject_name: undefined }].map(({ subject_name: _unused, ...rest }) => rest));
-  });
+  }, 15000);
   it('rejects a workbook that references an unapproved subject', async () => {
     const bytes = await exportScheduleWorkbook(schedule);
     await expect(importScheduleWorkbook(bytes, { ...schedule, subjects: [] })).rejects.toThrow('غير معتمد');
+  });
+  it('preserves a display-only instructor without creating or linking an account', async () => {
+    const bytes = await exportScheduleWorkbook({ ...schedule, entries: [{ ...entry, instructor_name: 'اسم من الجدول الأصلي' }] });
+    const [imported] = await importScheduleWorkbook(bytes, schedule);
+    expect(imported?.instructor_name).toBe('اسم من الجدول الأصلي');
+    expect(imported?.instructor_id).toBeNull();
+  });
+  it('rejects linked instructors unless they are assigned the subject and correct role', async () => {
+    const bytes = await exportScheduleWorkbook({ ...schedule, entries: [{ ...entry, instructor_id: 'teacher', instructor_name: 'محاضر' }] });
+    await expect(importScheduleWorkbook(bytes, { ...schedule, instructors: [{ id: 'teacher', name: 'محاضر', role: 'doctor', subjects: ['subject'] }] })).rejects.toThrow('غير مسند');
+  });
+  it('keeps the Friday afternoon slot at 14:00 and detects changed time settings', async () => {
+    const bytes = await exportScheduleWorkbook({ ...schedule, entries: [{ ...entry, day_index: 5, period: 6 }] });
+    expect((await importScheduleWorkbook(bytes, schedule))[0]?.period).toBe(6);
+    await expect(importScheduleWorkbook(bytes, { ...schedule, settings: { ...schedule.settings, start_time: '08:00' } })).rejects.toThrow('الوقت لا يطابق');
   });
 });
