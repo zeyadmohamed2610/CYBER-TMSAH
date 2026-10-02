@@ -8,6 +8,7 @@ export interface AcademicEntry {
   room: string; uses_rotation: boolean; lab_room: string; hall_room: string; lab_week: number;
 }
 export interface AcademicSchedule {
+  revision?: string;
   department: string; academic_year: string; can_edit: boolean; student_section: string | null;
   settings: AcademicSettings; entries: AcademicEntry[];
   subjects: { id: string; name: string }[];

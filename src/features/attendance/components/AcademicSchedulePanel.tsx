@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Calendar, Download, Upload, Plus, Save, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAttendanceAuth } from '../context/AttendanceAuthContext';
@@ -9,11 +9,13 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { ACADEMIC_DAYS, academicWeek, weekCycle, scheduleRoom, slotTime, type AcademicEntry, type AcademicSchedule } from '../utils/academicSchedule';
-import { exportScheduleWorkbook, importScheduleWorkbook } from '../utils/scheduleWorkbook';
+import { exportScheduleWorkbook, readScheduleWorkbook } from '../utils/scheduleWorkbook';
+import type { UniversityImport } from '../utils/universitySchedule';
 import { ExamSchedulePanel } from './ExamSchedulePanel';
 import { getFriendlyErrorMessage } from '@/lib/academicCopy';
 
-const scheduleError = (message: string) => message.includes('conflict: instructor') ? 'المحاضر لديه حصة أخرى في هذا الموعد.'
+const scheduleError = (message: string) => message.includes('schedule_changed') ? 'تغير الجدول أثناء المراجعة. أعد تحميله ثم ارفع الملف وراجع المعاينة مرة أخرى.'
+  : message.includes('conflict: instructor') ? 'المحاضر لديه حصة أخرى في هذا الموعد.'
   : message.includes('conflict:') ? 'يوجد تعارض مع حصة أخرى لنفس السكشن في هذا الموعد.'
   : message.includes('permission_denied') ? 'هذا التعديل خارج صلاحيات حسابك أو قسمك.'
   : message.includes('instructor assignment') ? 'اختر دكتورًا أو معيدًا مسندًا لهذه المادة ونوع الحصة.'
@@ -34,17 +36,23 @@ export function AcademicSchedulePanel() {
   const [date, setDate] = useState(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo' }).format(new Date()));
   const [draft, setDraft] = useState<AcademicEntry | null>(null);
   const [imported, setImported] = useState<AcademicEntry[]>([]);
+  const [importReview, setImportReview] = useState<UniversityImport | null>(null);
+  const [importRevision, setImportRevision] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const loadVersion = useRef(0);
   const load = useCallback(async () => {
+    const version = ++loadVersion.current;
     setError('');
+    setData(null);
     const result = await supabase.rpc('get_academic_schedule', { p_department: role === 'owner' ? department : null, p_year: role === 'student' ? null : year });
+    if (version !== loadVersion.current) return;
     if (result.error) { setError(scheduleError(result.error.message)); setData(null); return; }
     const next = result.data as AcademicSchedule;
     next.settings.days_off ??= [];
     setData(next);
     if (next.student_section && /^[1-9]$|^1[0-5]$/.test(next.student_section)) setSection(Number(next.student_section));
   }, [department, year, role]);
-  useEffect(() => { void load(); setDraft(null); setImported([]); }, [load]);
+  useEffect(() => { void load(); setDraft(null); setImported([]); setImportReview(null); }, [load]);
   const run = async (fn: () => Promise<void>) => {
     setBusy(true); try { await fn(); } catch (e) { toast.error(e instanceof Error ? scheduleError(e.message) : 'تعذر تنفيذ الطلب'); } finally { setBusy(false); }
   };
@@ -71,8 +79,8 @@ export function AcademicSchedulePanel() {
   return <div dir="rtl" className="space-y-5">
     <div className="flex items-center justify-between flex-wrap gap-3"><h2 className="font-bold flex gap-2"><Calendar className="h-5 w-5 text-primary" />الجدول والامتحانات</h2>
       <div className="flex gap-2">
-        {role === 'owner' && <select aria-label="قسم الجدول" value={department} onChange={e => setDepartment(e.target.value)} className={selectClass}>{DEPARTMENTS.map(d => <option key={d.id} value={d.id}>{d.nameAr}</option>)}</select>}
-        {role !== 'student' && <select aria-label="الفرقة الدراسية" value={year} onChange={e => setYear(e.target.value)} className={selectClass}>{[1, 2, 3, 4].map(y => <option key={y} value={y}>الفرقة {y}</option>)}</select>}
+        {role === 'owner' && <select aria-label="قسم الجدول" disabled={busy || imported.length > 0} value={department} onChange={e => setDepartment(e.target.value)} className={selectClass}>{DEPARTMENTS.map(d => <option key={d.id} value={d.id}>{d.nameAr}</option>)}</select>}
+        {role !== 'student' && <select aria-label="الفرقة الدراسية" disabled={busy || imported.length > 0} value={year} onChange={e => setYear(e.target.value)} className={selectClass}>{[1, 2, 3, 4].map(y => <option key={y} value={y}>الفرقة {y}</option>)}</select>}
       </div>
     </div>
     <Tabs defaultValue="schedule" dir="rtl"><TabsList><TabsTrigger value="schedule">الجدول</TabsTrigger><TabsTrigger value="exams">الامتحانات</TabsTrigger></TabsList>
@@ -87,7 +95,7 @@ export function AcademicSchedulePanel() {
           <p className="text-sm text-muted-foreground">كل حصة ساعة. {previewCycle !== 'auto' ? `معاينة الأسبوع ${cycle}` : actualWeek ? `الأسبوع الدراسي ${actualWeek} · week${cycle}` : 'اضبط بداية الدراسة لحساب الأسبوع تلقائيًا؛ يمكنك معاينة week1 وweek2.'}</p>
           {role === 'student' && !data.student_section && <p role="alert" className="text-amber-400">لم يُحدد سكشن حسابك بعد. تواصل مع الإدارة؛ يمكنك عرض كل السكاشن.</p>}
           <div className="flex gap-2 flex-wrap"><Button variant="outline" disabled={busy} onClick={() => void download(false)}><Download className="h-4 w-4 ml-2" />تصدير Excel</Button>
-            {data.can_edit && <><Button variant="outline" disabled={busy} onClick={() => void download(true)}>قالب الاستيراد</Button><label className="inline-flex items-center gap-2 rounded-lg border px-3 cursor-pointer text-sm"><Upload className="h-4 w-4" />استيراد Excel<input type="file" accept=".xlsx" disabled={busy} className="hidden" onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; if (file) void run(async () => setImported(await importScheduleWorkbook(await file.arrayBuffer(), data))); }} /></label><Button disabled={busy} onClick={() => setDraft(emptyEntry(section))}><Plus className="h-4 w-4 ml-2" />إضافة حصة</Button></>}
+            {data.can_edit && <><Button variant="outline" disabled={busy} onClick={() => void download(true)}>قالب الاستيراد</Button><label className="inline-flex items-center gap-2 rounded-lg border px-3 cursor-pointer text-sm"><Upload className="h-4 w-4" />استيراد جدول الجامعة أو Excel<input type="file" accept=".xlsx" disabled={busy} className="hidden" onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; if (file) void run(async () => { setImported([]); setImportReview(null); const review = await readScheduleWorkbook(await file.arrayBuffer(), data); setImported(review.entries); setImportReview(review); setImportRevision(data.revision ?? null); }); }} /></label><Button disabled={busy} onClick={() => setDraft(emptyEntry(section))}><Plus className="h-4 w-4 ml-2" />إضافة حصة</Button></>}
           </div>
         </div>
         {data.can_edit && <details className="rounded-xl border p-4"><summary className="cursor-pointer font-bold">إعدادات بداية الدراسة والإجازات</summary><div className="grid gap-3 sm:grid-cols-3 mt-4">
@@ -108,7 +116,7 @@ export function AcademicSchedulePanel() {
           {draft.kind === 'section' && <label className="flex gap-2 items-center"><input type="checkbox" checked={draft.uses_rotation} onChange={e => field('uses_rotation', e.target.checked)} />معمل أسبوع وقاعة أسبوع</label>}
           {draft.uses_rotation && <><div><Label htmlFor="entry-lab">المعمل</Label><Input id="entry-lab" value={draft.lab_room} onChange={e => field('lab_room', e.target.value)} /></div><div><Label htmlFor="entry-hall">القاعة</Label><Input id="entry-hall" value={draft.hall_room} onChange={e => field('hall_room', e.target.value)} /></div><div><Label htmlFor="entry-lab-week">أسبوع المعمل</Label><select id="entry-lab-week" className={selectClass} value={draft.lab_week} onChange={e => field('lab_week', Number(e.target.value))}><option value="1">week1</option><option value="2">week2</option></select></div></>}
         </div><div className="flex gap-2"><Button disabled={busy} onClick={() => void saveEntry()}>حفظ الحصة</Button><Button variant="outline" onClick={() => setDraft(null)}>إلغاء</Button></div></div>}
-        {imported.length > 0 && <div className="rounded-xl border p-4 space-y-3"><h3 className="font-bold">معاينة الاستيراد · {imported.length} حصة</h3><p className="text-sm">سيتم تحديث الحصص المطابقة وإضافة الجديدة دون حذف بقية الجدول. الحفظ كاملًا أو رفضه كاملًا عند وجود تعارض.</p>{imported.some(e => e.instructor_name && !e.instructor_id) && <p className="text-sm text-amber-400">بعض أسماء المحاضرين للعرض فقط. لا يمنح الاستيراد حسابات أو صلاحيات؛ يمكنك ربط حساباتهم المسندة للمواد من تعديل الحصة لاحقًا.</p>}<div className="max-h-60 overflow-auto text-sm">{imported.slice(0, 50).map((entry, i) => <p key={i}>سكشن {entry.section} · {ACADEMIC_DAYS[entry.day_index]} · {slotTime(settings.start_time, entry.period)}–{slotTime(settings.start_time, entry.period + 1)} · {entry.room} · {data.subjects.find(s => s.id === entry.subject_id)?.name} · {entry.week_pattern ? `week${entry.week_pattern}` : 'كل أسبوع'}</p>)}</div><Button disabled={busy} onClick={() => void run(async () => { const result = await supabase.rpc('import_academic_entries', { p_department: data.department, p_year: data.academic_year, p_entries: imported }); if (result.error) throw new Error(result.error.message); setImported([]); await load(); toast.success('تم اعتماد الجدول المستورد'); })}>اعتماد الاستيراد</Button><Button variant="outline" onClick={() => setImported([])}>إلغاء</Button></div>}
+        {imported.length > 0 && <div className="rounded-xl border p-4 space-y-3"><h3 className="font-bold">معاينة الاستيراد · {imported.length} حصة</h3><p className="text-sm">{importReview?.format === 'university' ? `شيت ${importReview.sheet_name} · سيتم استبدال جدول الفرقة ${data.academic_year} بالكامل: حذف الحصص الحالية (${data.entries.length})، بما فيها إضافاتك اليدوية، واعتماد ${imported.length} حصة من الملف. بقية الفرق والامتحانات محفوظة. الحفظ كاملًا أو رفضه كاملًا عند وجود خطأ.` : 'سيتم تحديث الحصص المطابقة وإضافة الجديدة دون حذف بقية الجدول. الحفظ كاملًا أو رفضه كاملًا عند وجود تعارض.'}</p>{importReview?.warnings.map(warning => <p key={warning} className="text-sm text-amber-400">{warning}</p>)}{imported.some(e => e.instructor_name && !e.instructor_id) && <p className="text-sm text-amber-400">بعض أسماء المحاضرين للعرض فقط. لا يمنح الاستيراد حسابات أو صلاحيات؛ يمكنك ربط حساباتهم المسندة للمواد من تعديل الحصة لاحقًا.</p>}<div className="max-h-60 overflow-auto text-sm">{imported.slice(0, 50).map((entry, i) => <p key={i}>سكشن {entry.section} · {ACADEMIC_DAYS[entry.day_index]} · {slotTime(settings.start_time, entry.period)}–{slotTime(settings.start_time, entry.period + 1)} · {entry.room} · {data.subjects.find(s => s.id === entry.subject_id)?.name} · {entry.week_pattern ? `week${entry.week_pattern}` : 'كل أسبوع'}</p>)}</div><Button disabled={busy} onClick={() => void run(async () => { if (importReview?.format === 'university' && !importRevision) throw new Error('schedule_changed'); const result = importReview?.format === 'university' ? await supabase.rpc('replace_academic_schedule', { p_department: data.department, p_year: data.academic_year, p_entries: imported, p_expected_revision: importRevision }) : await supabase.rpc('import_academic_entries', { p_department: data.department, p_year: data.academic_year, p_entries: imported }); if (result.error) throw new Error(result.error.message); setImported([]); setImportReview(null); await load(); toast.success('تم اعتماد الجدول المستورد'); })}>اعتماد الاستيراد</Button><Button variant="outline" onClick={() => { setImported([]); setImportReview(null); }}>إلغاء</Button></div>}
         {days.map(day => <section key={day} className="rounded-xl border p-4"><h3 className="font-bold mb-3">{ACADEMIC_DAYS[day]} {settings.days_off.includes(day) && <span className="text-amber-400 text-sm">· إجازة</span>}</h3>
           {settings.days_off.includes(day) ? <p className="text-sm text-muted-foreground">هذا اليوم إجازة حسب الإعدادات. تبقى حصصه محفوظة لتظهر عند إلغاء الإجازة.</p> : <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{visibleEntries.filter(e => e.day_index === day).map(e => <article key={e.id} className="rounded-lg bg-muted/40 p-3 text-sm space-y-1"><p className="font-bold">{e.subject_name}</p><p>{e.kind === 'lecture' ? 'محاضرة' : 'سكشن'} · سكشن {e.section} · {slotTime(settings.start_time, e.period)}–{slotTime(settings.start_time, e.period + 1)}</p><p>{e.instructor_name || 'المحاضر لم يُحدد'}</p><p>{cycle ? scheduleRoom(e, cycle) || 'المكان لم يُحدد' : e.uses_rotation ? `week${e.lab_week}: ${e.lab_room} · الأسبوع الآخر: ${e.hall_room}` : e.room || 'المكان لم يُحدد'}</p>{/^O\.[LN]$/i.test(e.room.trim()) && <p>محاضرة مسجلة تُنشر في مجموعة الطلاب</p>}{e.week_pattern > 0 && <p>week{e.week_pattern} فقط</p>}{data.can_edit && <div className="flex gap-2 pt-2"><Button size="sm" variant="outline" onClick={() => setDraft(e)}>تعديل</Button><Button size="sm" variant="outline" disabled={busy} aria-label={`حذف حصة ${e.subject_name}`} onClick={() => void run(async () => { const result = await supabase.rpc('delete_academic_entry', { p_id: e.id }); if (result.error) throw new Error(result.error.message); await load(); })}><Trash2 className="h-4 w-4" /></Button></div>}</article>)}{!visibleEntries.some(e => e.day_index === day) && <p className="text-sm text-muted-foreground">لا توجد حصص مضافة لهذا اليوم.</p>}</div>}
         </section>)}

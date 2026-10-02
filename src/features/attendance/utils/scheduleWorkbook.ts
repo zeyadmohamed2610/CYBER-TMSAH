@@ -1,4 +1,5 @@
 import { ACADEMIC_DAYS, parseWeekPattern, slotTime, validateAcademicEntries, type AcademicEntry, type AcademicSchedule } from './academicSchedule';
+import { parseUniversitySchedule, universitySheetYear, type UniversityImport } from './universitySchedule';
 const headers = ['السكشن', 'اليوم', 'الحصة', 'المادة', 'النوع', 'الأسبوع', 'المحاضر', 'المكان', 'تناوب المعمل والقاعة', 'المعمل', 'القاعة', 'أسبوع المعمل'];
 const optionalHeaders = ['بداية الحصة', 'نهاية الحصة', 'ربط حساب المحاضر'];
 export async function exportScheduleWorkbook(schedule: AcademicSchedule, template = false): Promise<ArrayBuffer> {
@@ -16,14 +17,19 @@ export async function exportScheduleWorkbook(schedule: AcademicSchedule, templat
   help.getColumn(1).width = 90;
   return await book.xlsx.writeBuffer() as ArrayBuffer;
 }
-export async function importScheduleWorkbook(file: ArrayBuffer, schedule: AcademicSchedule): Promise<AcademicEntry[]> {
+export async function readScheduleWorkbook(file: ArrayBuffer, schedule: AcademicSchedule): Promise<UniversityImport> {
   if (file.byteLength > 5 * 1024 * 1024) throw new Error('الحد الأقصى للملف 5 ميجابايت');
   const ExcelJS = (await import('exceljs')).default;
   const book = new ExcelJS.Workbook(); await book.xlsx.load(file);
-  const sheet = book.getWorksheet('الجدول') ?? book.worksheets[0];
+  const template = book.getWorksheet('الجدول');
+  const universitySheets = book.worksheets.filter(s => universitySheetYear(s.name) === schedule.academic_year);
+  const hasTemplate = template && headers.every((header,i) => template.getRow(1).getCell(i+1).text.trim() === header);
+  if (!hasTemplate && universitySheets.length === 1) return parseUniversitySchedule(universitySheets[0]!, schedule);
+  if (!hasTemplate && universitySheets.length > 1) throw new Error('يوجد أكثر من شيت لنفس الفرقة. احتفظ بشيت واحد معتمد لها');
+  const sheet = template ?? book.worksheets[0];
   if (!sheet || sheet.rowCount > 1201) throw new Error('الملف فارغ أو يتجاوز 1200 صف');
   const first = sheet.getRow(1);
-  if (headers.some((header, i) => first.getCell(i + 1).text.trim() !== header)) throw new Error('عناوين الملف غير مطابقة. حمّل قالب الاستيراد؛ يمكن تكييفه بعد مراجعة جدولك الأصلي.');
+  if (headers.some((header, i) => first.getCell(i + 1).text.trim() !== header)) throw new Error('لم أجد قالب الموقع أو شيت الجامعة للفرقة المحددة. اختر الفرقة الصحيحة وراجع أسماء الشيتات');
   const entries: AcademicEntry[] = [];
   const optionalColumn = (name: string) => {
     let found = 0;
@@ -54,5 +60,8 @@ export async function importScheduleWorkbook(file: ArrayBuffer, schedule: Academ
   });
   if (!entries.length) throw new Error('لا توجد حصص للاستيراد');
   const errors = validateAcademicEntries(entries); if (errors.length) throw new Error(errors.slice(0, 8).join('\n'));
-  return entries;
+  return { entries, format: 'template', sheet_name: sheet.name, warnings: [], source_cells: entries.length, places: [] };
+}
+export async function importScheduleWorkbook(file: ArrayBuffer, schedule: AcademicSchedule): Promise<AcademicEntry[]> {
+  return (await readScheduleWorkbook(file, schedule)).entries;
 }
