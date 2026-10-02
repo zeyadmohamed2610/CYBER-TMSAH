@@ -1,15 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import {
-  ZoomIn,
-  ZoomOut,
-  RotateCw,
-  RotateCcw,
-  Check,
-  X,
-  Move,
-  Crop,
-  Sparkles,
-} from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCw, RotateCcw, X, Move, Crop, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface CircularImageCropperProps {
@@ -133,31 +123,35 @@ export const CircularImageCropper: React.FC<CircularImageCropperProps> = ({
 
   // Touch pan & pinch zoom handlers
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
+    const first = e.touches[0];
+    const second = e.touches[1];
+    if (e.touches.length === 1 && first) {
       isDraggingRef.current = true;
       dragStartRef.current = {
-        x: e.touches[0].clientX,
-        y: e.touches[0].clientY,
+        x: first.clientX,
+        y: first.clientY,
       };
       panStartRef.current = { ...pan };
       touchDistanceRef.current = null;
-    } else if (e.touches.length === 2) {
+    } else if (e.touches.length === 2 && first && second) {
       // Pinch to zoom
       isDraggingRef.current = false;
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dx = first.clientX - second.clientX;
+      const dy = first.clientY - second.clientY;
       touchDistanceRef.current = Math.hypot(dx, dy);
     }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length === 1 && isDraggingRef.current) {
-      const dx = e.touches[0].clientX - dragStartRef.current.x;
-      const dy = e.touches[0].clientY - dragStartRef.current.y;
+    const first = e.touches[0];
+    const second = e.touches[1];
+    if (e.touches.length === 1 && first && isDraggingRef.current) {
+      const dx = first.clientX - dragStartRef.current.x;
+      const dy = first.clientY - dragStartRef.current.y;
       setPan(clampPan(panStartRef.current.x + dx, panStartRef.current.y + dy));
-    } else if (e.touches.length === 2 && touchDistanceRef.current !== null) {
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
+    } else if (e.touches.length === 2 && first && second && touchDistanceRef.current !== null && touchDistanceRef.current > 0) {
+      const dx = first.clientX - second.clientX;
+      const dy = first.clientY - second.clientY;
       const distance = Math.hypot(dx, dy);
       const ratio = distance / touchDistanceRef.current;
       setZoom((prev) => Math.max(1, Math.min(3.5, prev * ratio)));

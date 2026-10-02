@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { getFriendlyErrorMessage } from "@/lib/academicCopy";
+import { useEffect, useRef, useState } from "react";
 import jsQR from "jsqr";
 import { Camera, Clipboard, Loader2, Lock, MapPin, Send, ShieldCheck, ShieldX } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
   const { toast } = useToast();
   const { coords } = useGps();
   const [code, setCode] = useState("");
+  useEffect(() => { setVerifiedCredentialId(null); }, [code]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [gpsStatus, setGpsStatus] = useState<string>("");
@@ -62,9 +64,9 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
       if (qr?.data) {
         const digits = qr.data.trim().replace(/\D/g, "").slice(0, 6);
         setCode(digits);
-        toast({ title: "تم مسح الـ QR", description: "الكود جاهز — اضغط تسجيل الحضور." });
+        toast({ title: "تمت قراءة رمز الحضور", description: "الرمز جاهز — اضغط تسجيل الحضور." });
       } else {
-        toast({ variant: "destructive", title: "لم يُكتشف QR", description: "تأكد من وضوح الصورة." });
+        toast({ variant: "destructive", title: "لم يظهر رمز الحضور", description: "تأكد من وضوح الصورة." });
       }
     } catch {
       toast({ variant: "destructive", title: "خطأ", description: "فشل قراءة الصورة." });
@@ -80,9 +82,9 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
       const digits = text.replace(/\D/g, "").slice(0, 6);
       if (digits) {
         setCode(digits);
-        toast({ title: "تم اللصق", description: "تم لصق الكود بنجاح." });
+        toast({ title: "تم اللصق", description: "تم لصق الرمز بنجاح." });
       } else {
-        toast({ variant: "destructive", title: "خطأ", description: "لا يوجد كود صالح في الحافظة." });
+        toast({ variant: "destructive", title: "خطأ", description: "لا يوجد رمز صالح في الحافظة." });
       }
     } catch {
       toast({ variant: "destructive", title: "خطأ", description: "فشل القراءة من الحافظة." });
@@ -93,7 +95,7 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
     e.preventDefault();
     const trimmedCode = code.trim();
     if (!trimmedCode || trimmedCode.length !== 6) {
-      toast({ variant: "destructive", title: "مطلوب", description: "أدخل كود مكون من 6 أرقام." });
+      toast({ variant: "destructive", title: "مطلوب", description: "أدخل رمز مكون من 6 أرقام." });
       return;
     }
 
@@ -120,7 +122,8 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
       }
     }
 
-    // Submit with biometric credential ID for server-side audit trail
+    try {
+    // Submit the one-use receipt returned by server verification.
     const result = await offlineAttendanceService.queueSubmission(
       trimmedCode,
       verifiedCredentialId ?? undefined,
@@ -130,7 +133,7 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
       toast({
         title: result.offline ? "تم حفظ الحضور" : "تم تسجيل الحضور",
         description: result.offline
-          ? "سيتم مزامنة التسجيل عند عودة الاتصال."
+          ? "التسجيل قيد الإرسال ويحتاج تأكيدًا عند عودة الاتصال."
           : "تم تسجيل حضورك بنجاح.",
       });
       setCode("");
@@ -139,10 +142,15 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
       setVerifiedCredentialId(null);
       onSubmitSuccess?.();
     } else {
-      toast({ variant: "destructive", title: "فشل تسجيل الحضور", description: result.error ?? "حدث خطأ." });
+      toast({ variant: "destructive", title: "فشل تسجيل الحضور", description: getFriendlyErrorMessage(result.error ?? "حدث خطأ.") });
     }
 
-    setIsSubmitting(false);
+    } catch {
+      toast({ variant: "destructive", title: "تعذر تسجيل الحضور", description: "تحقق من الاتصال ثم أعد المحاولة." });
+    } finally {
+      setVerifiedCredentialId(null);
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -152,7 +160,7 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
           <Lock className="h-5 w-5 text-primary" />
           تسجيل الحضور
         </CardTitle>
-        <CardDescription>انسخ الكود من الجلسة النشطة أو امسح QR أو الصق الكود</CardDescription>
+        <CardDescription>أدخل رمز المحاضرة أو اقرأ صورة الرمز بالكاميرا</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">
 
@@ -172,21 +180,6 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
           <p className="text-sm text-muted-foreground">لا توجد جلسات نشطة حالياً في نطاقك.</p>
         )}
 
-        {/* ── Biometric Gate ─────────────────────────────────────────────── */}
-        {!isBiometricReady ? (
-          <AttendanceBiometricGate
-            onVerified={(credId) => setVerifiedCredentialId(credId)}
-          />
-        ) : (
-          <>
-            {/* Biometric verified badge */}
-            <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5">
-              <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0" />
-              <span className="text-sm text-emerald-400 font-medium">
-                تم التحقق البيومتري بنجاح — البصمة مؤكدة لهذه الجلسة
-              </span>
-            </div>
-
             {/* QR Camera */}
             <div>
               <input
@@ -205,10 +198,10 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
                 className="w-full gap-2"
                 onClick={() => fileRef.current?.click()}
                 disabled={scanning || isSubmitting}
-                aria-label="مسح رمز QR بالكاميرا"
+                aria-label="قراءة رمز الحضور بالكاميرا"
               >
                 {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-                {scanning ? "جاري القراءة..." : "مسح QR بالكاميرا"}
+                {scanning ? "جاري القراءة..." : "قراءة الرمز بالكاميرا"}
               </Button>
             </div>
 
@@ -216,7 +209,7 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
             <form onSubmit={handleSubmit} className="grid gap-4">
               <div className="grid gap-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="attendance-code">أو الصق الكود (6 أرقام)</Label>
+                  <Label htmlFor="attendance-code">أو الصق الرمز (6 أرقام)</Label>
                   <Button
                     type="button"
                     variant="ghost"
@@ -224,7 +217,7 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
                     className="h-7 gap-1 text-xs text-muted-foreground"
                     onClick={handlePaste}
                     disabled={isSubmitting}
-                    aria-label="لصق الكود من الحافظة"
+                    aria-label="لصق الرمز من الحافظة"
                   >
                     <Clipboard className="h-3 w-3" />
                     لصق
@@ -262,21 +255,20 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
               {coords && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <MapPin className="h-3 w-3 text-green-500" />
-                  الموقع محدد ({coords.lat.toFixed(4)}, {coords.lng.toFixed(4)})
+                  تم تحديد موقعك
                 </div>
               )}
 
+              {!isBiometricReady && <AttendanceBiometricGate key={code} attendanceHash={code.trim()} onVerified={setVerifiedCredentialId} />}
               <Button
                 type="submit"
                 className="w-full h-12 rounded-xl text-base font-semibold btn-cyber shadow-lg"
-                disabled={isSubmitting || !code.trim()}
+                disabled={isSubmitting || !code.trim() || !isBiometricReady}
               >
                 {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                 تسجيل الحضور الآن
               </Button>
             </form>
-          </>
-        )}
 
       </CardContent>
     </Card>

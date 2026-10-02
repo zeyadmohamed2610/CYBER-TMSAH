@@ -15,12 +15,12 @@ interface SEOProps {
  * Provides Open Graph, Twitter Cards, and standard meta tags
  */
 export const SEO = ({
-  title = "CYBER TMSAH | سايبر تمساح - منصة الأمن السيبراني",
-  description = "منصة CYBER TMSAH (سايبر تمساح) - منصة أكاديمية متكاملة لطلاب الأمن السيبراني. مواد دراسية، جداول محاضرات، ومراجعات شاملة في مكان واحد.",
+  title = "CYBER TMSAH | سايبر تمساح - المنصة الأكاديمية",
+  description = "منصة CYBER TMSAH (سايبر تمساح) - منصة أكاديمية متكاملة للطلاب. مواد دراسية، جداول محاضرات، ومراجعات شاملة في مكان واحد.",
   image = "/og-image.png",
   url = "https://www.cyber-tmsah.site",
   type = "website",
-  keywords = "CYBER TMSAH, cyber tmsah, سايبر تمساح, منصة سايبر, منصة سايبر تمساح, منصة تمساح, منصة الأمن السيبراني, جامعة حلوان التكنولوجية الدولية, مواد دراسية, جدول محاضرات, cybersecurity",
+  keywords = "CYBER TMSAH, cyber tmsah, سايبر تمساح, منصة سايبر, منصة سايبر تمساح, منصة تمساح, المنصة الأكاديمية, جامعة حلوان التكنولوجية الدولية, مواد دراسية, جدول محاضرات, cybersecurity",
   additionalKeywords = [],
 }: SEOProps) => {
   const fullTitle = title.includes("CYBER TMSAH") || title.includes("سايبر تمساح") ? title : `${title} | CYBER TMSAH | سايبر تمساح`;
@@ -123,7 +123,7 @@ export const SEO = ({
           "@type": "EducationalOrganization",
           "name": "CYBER TMSAH",
           "alternateName": "سايبر تمساح",
-          "description": "منصة تعليمية متخصصة في الأمن السيبراني",
+          "description": "منصة تعليمية لمتابعة الدراسة الجامعية",
           "url": url,
           "logo": "https://www.cyber-tmsah.site/logo.png"
         })}

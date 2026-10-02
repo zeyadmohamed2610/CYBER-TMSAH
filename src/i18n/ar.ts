@@ -23,7 +23,7 @@ const ar: Translations = {
     student: "طالب",
     doctor: "دكتور",
     ta: "معيد",
-    seatNumber: "رقم الجلوس / كود الطالب",
+    seatNumber: "رقم الجلوس / رمز الطالب",
     seatNumberPlaceholder: "مثال: 20240001",
     sectionNumber: "رقم الشعبة / السكشن",
     sectionPlaceholder: "مثال: 3",
@@ -110,7 +110,7 @@ const ar: Translations = {
   about: {
     title: "عن منصة سايبر تمساح",
     description:
-      "CYBER TMSAH (سايبر تمساح) منصة أكاديمية متكاملة لطلاب الأمن السيبراني في جامعة حلوان التكنولوجية الدولية.",
+      "CYBER TMSAH (سايبر تمساح) منصة أكاديمية متكاملة للطلاب في جامعة حلوان التكنولوجية الدولية.",
   },
 };
 

@@ -1,5 +1,5 @@
 // src/features/auth/components/PasswordStrengthMeter.tsx
-import React from "react";
+
 
 interface PasswordStrengthMeterProps {
   password: string;
@@ -20,9 +20,9 @@ export function PasswordStrengthMeter({ password, lang }: PasswordStrengthMeterP
     { label: lang === "ar" ? "مقبولة" : "Fair", color: "bg-amber-500", glow: "shadow-[0_0_8px_rgba(245,158,11,0.5)]" },
     { label: lang === "ar" ? "جيدة" : "Good", color: "bg-purple-500", glow: "shadow-[0_0_8px_rgba(147,51,234,0.5)]" },
     { label: lang === "ar" ? "قوية جداً 🛡️" : "Very Strong 🛡️", color: "bg-emerald-500", glow: "shadow-[0_0_8px_rgba(16,185,129,0.5)]" },
-  ];
+  ] as const;
 
-  const current = config[Math.max(0, score - 1)];
+  const current = config[Math.max(0, score - 1)] ?? config[0];
 
   return (
     <div className="space-y-1.5 pt-1 animate-fade-up">

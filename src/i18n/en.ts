@@ -118,9 +118,12 @@ const en = {
   about: {
     title: "About CYBER TMSAH",
     description:
-      "CYBER TMSAH is an academic platform for cybersecurity students at Helwan International Technological University.",
+      "CYBER TMSAH is an academic platform for students at Helwan International Technological University.",
   },
 } as const;
 
 export default en;
-export type Translations = typeof en;
+type TranslationShape<T> = {
+  [K in keyof T]: T[K] extends string ? string : T[K] extends number ? number : TranslationShape<T[K]>;
+};
+export type Translations = TranslationShape<typeof en>;

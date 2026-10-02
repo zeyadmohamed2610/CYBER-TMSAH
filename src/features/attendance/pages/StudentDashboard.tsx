@@ -1,3 +1,5 @@
+import { AttendanceRegisterPanel } from "../components/AttendanceRegisterPanel";
+import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 // src/features/attendance/pages/StudentDashboard.tsx
 // Updated: Modern tabbed dashboard for Student role
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -54,12 +56,12 @@ export const StudentDashboard = () => {
     return () => window.removeEventListener("online", handleOnline);
   }, [syncAndRefresh]);
 
-  const absenceRate = Math.max(0, 100 - metrics.attendanceRate);
+  const absenceRate = metrics.absenceRate ?? 0;
   const topSubjects = useMemo(() =>
     [...subjectMetrics].sort((a, b) => b.attendanceRate - a.attendanceRate).slice(0, 3),
   [subjectMetrics]);
-  const isCriticalAttendance = metrics.attendanceRate < 50 && (metrics.totalSessions ?? 0) > 0;
-  const isWarningAttendance = metrics.attendanceRate >= 50 && metrics.attendanceRate < 70 && (metrics.totalSessions ?? 0) > 0;
+  const isCriticalAttendance = metrics.attendanceRate < 50 && (metrics.completedOpportunities ?? 0) > 0;
+  const isWarningAttendance = metrics.attendanceRate >= 50 && metrics.attendanceRate < 70 && (metrics.completedOpportunities ?? 0) > 0;
   const isLowAttendance = isCriticalAttendance || isWarningAttendance;
 
   const columns = useMemo<DataTableColumn<AttendanceRecord>[]>(() => [
@@ -92,15 +94,6 @@ export const StudentDashboard = () => {
         </Badge>
       )
     },
-    {
-      id: "session",
-      header: "معرف الجلسة",
-      cell: (row) => (
-        <span className="text-xs font-mono text-muted-foreground bg-muted/40 px-2 py-1 rounded">
-          {row.sessionId.slice(0, 8)}…
-        </span>
-      )
-    },
   ], []);
 
   return (
@@ -129,7 +122,7 @@ export const StudentDashboard = () => {
               className="gap-1.5 border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 text-xs h-8"
             >
               <CloudOff className="h-3.5 w-3.5" />
-              {pendingCount} معلق (مزامنة)
+              {pendingCount} معلق (تحديث)
             </Button>
           )}
 
@@ -150,8 +143,8 @@ export const StudentDashboard = () => {
       {/* ── Error Alert ───────────────────────────────────────────────────── */}
       {error && (
         <Alert variant="destructive" role="alert" aria-live="assertive">
-          <AlertTitle>خطأ في الاتصال بقاعدة البيانات</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertTitle>تعذر تحميل البيانات. أعد المحاولة.</AlertTitle>
+          <AlertDescription>{getFriendlyErrorMessage(error)}</AlertDescription>
         </Alert>
       )}
 
@@ -248,6 +241,7 @@ export const StudentDashboard = () => {
 
         {/* ── TAB 2: Attendance Records ───────────────────────────────────── */}
         <TabsContent value="records" className="space-y-4 focus-visible:outline-none">
+          <AttendanceRegisterPanel />
           <DataTable
             title="سجل الحضور الأكاديمي"
             caption={loading ? "جارٍ التحميل..." : "يعرض هذا الجدول جميع المحاضرات والسكاشن التي تم إثبات حضورك فيها."}
@@ -359,9 +353,9 @@ export const StudentDashboard = () => {
                   سياسة الأمان ومنع التلاعب:
                 </p>
                 <ul className="list-disc list-inside space-y-1 marker:text-primary">
-                  <li>يتم استخدام بصمة التشفير الرقمية وإحداثيات GPS للتحقق من وجود الطالب الفعلي داخل القاعة.</li>
+                  <li>نطلب تأكيد جهازك وموقعك للتأكد من وجودك داخل القاعة.</li>
                   <li>في حال تغيير هاتفك أو فرمتته، يرجى تقديم طلب للمشرف الأكاديمي أو منسق البرنامج لإعادة تعيين قفل الجهاز.</li>
-                  <li>التسجيلات غير المتصلة بالإنترنت يتم تخزينها بأمان وتتم مزامنتها تلقائياً عند عودة الاتصال.</li>
+                  <li>التسجيلات غير المتصلة بالإنترنت يتم تخزينها بأمان وتتم إرسالها تلقائياً عند عودة الاتصال.</li>
                 </ul>
               </div>
 
@@ -374,7 +368,7 @@ export const StudentDashboard = () => {
                   className="gap-2 border-white/15 hover:bg-white/5"
                 >
                   <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-                  {syncing ? "جارٍ المزامنة والتحديث..." : "مزامنة البيانات فورياً"}
+                  {syncing ? "جارٍ التحديث والتحديث..." : "تحديث البيانات فورياً"}
                 </Button>
               </div>
             </CardContent>

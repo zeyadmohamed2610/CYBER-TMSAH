@@ -1,5 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const testPort = Number(process.env.E2E_PORT ?? 8080);
 const isWindows = process.platform === "win32";
 const CHROME_PATH = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 
@@ -12,7 +13,7 @@ export default defineConfig({
   reporter: "html",
   timeout: 60000,
   use: {
-    baseURL: "http://localhost:8080",
+    baseURL: `http://localhost:${testPort}`,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     navigationTimeout: 30000,
@@ -44,8 +45,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "pnpm dev",
-    url: "http://localhost:8080",
+    command: `node node_modules/vite/bin/vite.js --port ${testPort} --strictPort`,
+    url: `http://localhost:${testPort}`,
     reuseExistingServer: !process.env.CI,
     timeout: 180000,
   },

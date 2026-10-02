@@ -21,7 +21,7 @@ interface ForgotPasswordModalProps {
 const SUPPORT_WHATSAPP = "01553450232";
 const WHATSAPP_LINK = "https://wa.me/201553450232";
 
-export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPasswordModalProps) {
+export function ForgotPasswordModal({ isOpen, onClose, lang }: ForgotPasswordModalProps) {
   const [emailInput, setEmailInput] = useState("");
   const [phoneInput, setPhoneInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -100,8 +100,8 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
           : "Password reset request submitted successfully."
       );
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : "Error";
-      toast.error(lang === "ar" ? "تعذر إرسال الطلب، تأكد من الاتصال وحاول مجدداً." : errorMsg);
+      console.error("Password reset request failed:", err);
+      toast.error(lang === "ar" ? "تعذر إرسال الطلب، تأكد من الاتصال وحاول مجدداً." : "Could not send your request. Check your connection and try again.");
     } finally {
       setSubmitting(false);
     }
@@ -116,7 +116,7 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         className="max-w-md bg-[#0A0F1D]/98 border border-purple-500/30 text-white rounded-3xl p-6 sm:p-7 shadow-[0_25px_70px_rgba(0,0,0,0.95)] max-h-[90vh] overflow-y-auto [&>button:last-child]:hidden"
-        dir={isRTL ? "rtl" : "ltr"}
+        dir="rtl"
       >
         {/* Header */}
         <DialogHeader className="text-start pb-2 border-b border-white/10 shrink-0">
@@ -131,7 +131,7 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
                 </DialogTitle>
                 <DialogDescription className="text-xs text-slate-400 mt-0.5">
                   {lang === "ar"
-                    ? "أدخل بريدك الإلكتروني ورقم هاتفك وسيقوم الدعم الفني بمساعدتك فوراً"
+                    ? "أدخل بريدك الإلكتروني ورقم هاتفك وسيقوم فريق المساعدة بمساعدتك فوراً"
                     : "Enter your email and phone number, support will assist you immediately"}
                 </DialogDescription>
               </div>
@@ -260,7 +260,7 @@ export function ForgotPasswordModal({ isOpen, onClose, lang, isRTL }: ForgotPass
               </div>
               <p className="text-[11.5px] text-slate-400 leading-relaxed">
                 {lang === "ar"
-                  ? "يمكنك أيضاً التواصل مباشرة مع الدعم الفني عبر واتساب لمتابعة حسابك:"
+                  ? "يمكنك أيضاً التواصل مباشرة مع فريق المساعدة عبر واتساب لمتابعة حسابك:"
                   : "You can reach out directly to technical support via WhatsApp:"}
               </p>
               <div className="flex items-center gap-2 pt-0.5">

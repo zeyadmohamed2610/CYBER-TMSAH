@@ -18,7 +18,7 @@ import {
   Crop,
   X,
 } from "lucide-react";
-import { compressAndCropImage, saveUserAvatar, deleteUserAvatar } from "@/lib/avatarUtils";
+import { saveUserAvatar, deleteUserAvatar } from "@/lib/avatarUtils";
 import { toast } from "sonner";
 import { CircularImageCropper } from "./CircularImageCropper";
 
@@ -163,9 +163,9 @@ export default function AvatarStudioDialog({
       } else {
         const { url, error } = await saveUserAvatar(userId, selectedAvatar);
         if (error) {
-          toast.warning("تم حفظ الصورة ومزامنتها على حسابك.");
+          toast.warning("تم حفظ الصورة في حسابك.");
         } else {
-          toast.success("تم حفظ ومزامنة صورتك الشخصية على جميع أجهزتك بنجاح!");
+          toast.success("تم حفظ وتحديث صورتك الشخصية على جميع أجهزتك بنجاح!");
         }
         onAvatarUpdated(url);
       }
@@ -232,7 +232,7 @@ export default function AvatarStudioDialog({
               onCropComplete={(croppedDataUrl) => {
                 setSelectedAvatar(croppedDataUrl);
                 setImageToCrop(null);
-                toast.success("تم قص وضبط الصورة بالفريم الدائري بنجاح! اضغط حفظ لتطبيقها ومزامنتها.");
+                toast.success("تم ضبط الصورة. اضغط حفظ لتظهر في حسابك.");
               }}
               onCancel={() => setImageToCrop(null)}
             />
@@ -392,7 +392,7 @@ export default function AvatarStudioDialog({
               <div className="flex items-center gap-2 p-3 rounded-xl bg-purple-950/30 border border-purple-500/20 text-xs text-purple-300">
                 <ShieldCheck className="w-4 h-4 text-purple-400 shrink-0" />
                 <span>
-                  تتم معالجة وضغط الصورة فورياً ومزامنتها مع قاعدة البيانات لتظهر على جميع أجهزتك.
+                  احفظ صورتك لتظهر في حسابك على جميع أجهزتك.
                 </span>
               </div>
             </div>
@@ -418,7 +418,7 @@ export default function AvatarStudioDialog({
                 {saving ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>جاري الحفظ والمزامنة...</span>
+                    <span>جاري الحفظ والتحديث...</span>
                   </>
                 ) : (
                   <>

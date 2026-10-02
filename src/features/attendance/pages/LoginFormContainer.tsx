@@ -1,3 +1,4 @@
+import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
@@ -7,7 +8,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 import { getAttendanceDashboardRoute } from "../utils/dashboardRoutes";
 import { useLang } from "@/i18n";
-import { authenticateWithPasskey, isWebAuthnSupported, saveLocalPasskey } from "@/lib/webauthn";
+import { authenticateWithPasskey, saveLocalPasskey } from "@/lib/webauthn";
 
 import { PasswordStrengthMeter } from "@/features/auth/components/PasswordStrengthMeter";
 import { CustomRoleSelect } from "@/features/auth/components/CustomRoleSelect";
@@ -441,10 +442,10 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
 
       if (!result.success || !result.user) {
         setLoginError(
-          result.error ||
+          getFriendlyErrorMessage(result.error ||
             (lang === "ar"
               ? "تعذر التحقق من البصمة. تأكد من تفعيل البصمة في حسابك أولاً."
-              : "Biometric authentication failed. Ensure a passkey is registered in your profile.")
+              : "Could not verify your fingerprint. Add your device in your profile first."), lang === "ar" ? "تعذر إكمال الطلب. أعد المحاولة." : "Could not complete your request. Please try again.")
         );
         setPasskeyLoading(false);
         return;
@@ -453,8 +454,8 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
       playCyberSuccessChime();
       toast.success(
         lang === "ar"
-          ? "✅ تم التحقق من البصمة البيومترية بنجاح!"
-          : "✅ Biometric verified successfully!"
+          ? "✅ تم التحقق من البصمة بنجاح!"
+          : "✅ Fingerprint verified successfully!"
       );
       recordAttempt(true);
 
@@ -475,7 +476,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
       navigate("/attendance", { replace: true });
     } catch (err: unknown) {
       console.error("Passkey login unexpected error:", err);
-      setLoginError(lang === "ar" ? "حدث خطأ غير متوقع أثناء فحص البصمة." : "Biometric error occurred.");
+      setLoginError(lang === "ar" ? "حدث خطأ غير متوقع أثناء فحص البصمة." : "Could not verify your fingerprint. Please try again.");
     } finally {
       setPasskeyLoading(false);
     }
@@ -649,7 +650,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
     });
 
     if (error) {
-      toast.error(lang === "ar" ? `فشل إرسال الطلب: ${error.message}` : "Failed to submit request.");
+      toast.error(getFriendlyErrorMessage(lang === "ar" ? `فشل إرسال الطلب: ${error.message}` : "Failed to submit request.", lang === "ar" ? "تعذر إكمال الطلب. أعد المحاولة." : "Could not complete your request. Please try again."));
       setJoinLoading(false);
       return;
     }
@@ -786,7 +787,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
           }}>
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
           <span className="text-[11.5px] font-semibold tracking-wider text-slate-300">
-            {lang === "ar" ? "المنظومة الأكاديمية الذكية للتحقق والحضور" : "Academic Attendance & Verification System"}
+            {lang === "ar" ? "منصتك لمتابعة الدراسة والحضور" : "Your academic attendance platform"}
           </span>
         </div>
       </div>
@@ -1016,8 +1017,8 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
                   )}
                   <span className="bg-gradient-to-r from-purple-200 via-white to-cyan-200 bg-clip-text text-transparent group-hover:to-cyan-300">
                     {passkeyLoading
-                      ? (lang === "ar" ? "جاري فحص البصمة..." : "Verifying biometric...")
-                      : (lang === "ar" ? "تسجيل الدخول بالبصمة / Passkey" : "Sign in with Biometric / Passkey")}
+                      ? (lang === "ar" ? "جاري فحص البصمة..." : "Checking your fingerprint...")
+                      : (lang === "ar" ? "تسجيل الدخول بالبصمة" : "Sign in with your fingerprint")}
                   </span>
                 </button>
 

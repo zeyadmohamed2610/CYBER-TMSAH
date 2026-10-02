@@ -4,12 +4,14 @@
   "version": "1.0.0",
   "description": "CyberTmsah university platform and smart attendance system",
   "type": "module",
+  "packageManager": "pnpm@12.5.1",
+  "engines": { "node": "24.x" },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.server.json --noEmit",
     "preview": "vite preview",
     "supabase:deploy:create-user": "npx supabase@latest functions deploy createUser --use-api --no-verify-jwt",
     "supabase:deploy:health-check": "npx supabase@latest functions deploy health-check --use-api --no-verify-jwt",
@@ -59,12 +61,14 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
     "@eslint/js": "^9.32.0",
     "@playwright/test": "^1.63.0",
+    "@simplewebauthn/server": "13.3.2",
     "@types/node": "^22.16.5",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
-    "@vitejs/plugin-react-swc": "^3.11.0",
+    "@vitejs/plugin-react": "6.1.1",
     "@vitest/coverage-v8": "^4.1.11",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.39.3",
@@ -78,10 +82,11 @@
     "typescript-eslint": "^8.36.0",
     "vite": "^8.0.2",
     "vite-plugin-compression": "^0.5.1",
-    "vite-plugin-pwa": "^0.19.8",
+    "vite-plugin-pwa": "^1.3.0",
     "vitest": "^4.1.11"
   },
   "overrides": {
-    "serialize-javascript": "^7.0.5"
+    "serialize-javascript": "7.1.2",
+    "dompurify": "3.4.16"
   }
 }

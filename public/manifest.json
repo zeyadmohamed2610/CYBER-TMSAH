@@ -1,7 +1,7 @@
 {
-  "name": "CYBER TMSAH - منظومة الحضور والتحقق الأكاديمي",
+  "name": "CYBER TMSAH - منصة الحضور والتحقق الأكاديمي",
   "short_name": "CYBER TMSAH",
-  "description": "منظومة CYBER TMSAH المتطورة للتحقق الذكي وإدارة الحضور والغياب الأكاديمي لطلاب الأمن السيبراني بجامعة حلوان التكنولوجية الدولية.",
+  "description": "منصة CYBER TMSAH لمتابعة الدراسة والحضور للطلاب بجامعة حلوان التكنولوجية الدولية.",
   "start_url": "/login",
   "display": "standalone",
   "background_color": "#0a0f1d",
@@ -17,7 +17,7 @@
       "sizes": "1200x630",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "CYBER TMSAH - Academic Attendance & Verification System"
+      "label": "CYBER TMSAH - Your academic attendance platform"
     },
     {
       "src": "/favicon.png",
@@ -83,21 +83,21 @@
     {
       "name": "تسجيل الدخول",
       "short_name": "الدخول",
-      "description": "تسجيل الدخول لمنظومة الحضور والتحقق",
+      "description": "تسجيل الدخول لمنصة الحضور والتحقق",
       "url": "/login",
       "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
     },
     {
       "name": "طلب الانضمام",
       "short_name": "الانضمام",
-      "description": "طلب اعتماد حساب جديد في المنظومة",
+      "description": "طلب اعتماد حساب جديد في المنصة",
       "url": "/join",
       "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
     },
     {
       "name": "الملف الشخصي",
       "short_name": "حسابي",
-      "description": "إدارة الحساب ومفاتيح المرور البيومترية",
+      "description": "إدارة الحساب وإعدادات الدخول بالبصمة",
       "url": "/profile",
       "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
     }

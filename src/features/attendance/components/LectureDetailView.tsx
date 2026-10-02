@@ -1,5 +1,6 @@
+import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowRight, Download, RefreshCw, Users, Clock, Hash, StopCircle, PlayCircle, MapPin, History, ToggleLeft, ToggleRight } from "lucide-react";
+import { ArrowRight, Download, RefreshCw, Users, Clock, Hash, StopCircle, MapPin, History, ToggleLeft, ToggleRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +13,7 @@ import { attendanceService } from "../services/attendanceService";
 import { reportService } from "../services/reportService";
 import { DataTable, type DataTableColumn } from "./DataTable";
 import { LiveSessionPanel } from "./LiveSessionPanel";
+import { AttendanceRegisterPanel } from "./AttendanceRegisterPanel";
 import { useSessionManager } from "../hooks/useSessionManager";
 import { supabase } from "@/lib/supabaseClient";
 import type { Lecture, LectureAttendee } from "../types";
@@ -19,7 +21,7 @@ import type { Lecture, LectureAttendee } from "../types";
 interface Props {
   lecture: Lecture;
   onBack: () => void;
-  fixedSubjectId?: string;
+  fixedSubjectId?: string | undefined;
 }
 
 interface SessionDbRow {
@@ -41,7 +43,7 @@ interface SessionHistoryItem {
   gps_radius?: number | null;
 }
 
-export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
+export function LectureDetailView({ lecture, onBack }: Props) {
   const { toast } = useToast();
   const [attendees, setAttendees] = useState<LectureAttendee[]>([]);
   const [sessionHistory, setSessionHistory] = useState<SessionHistoryItem[]>([]);
@@ -50,17 +52,16 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
   const [sessionDuration, setSessionDuration] = useState(10);
   const [sessionRadius, setSessionRadius] = useState(50);
   const [selectedSection, setSelectedSection] = useState<string>("عام");
-  const [availableSections, setAvailableSections] = useState<string[]>([]);
   const [sessionType, setSessionType] = useState<"lecture" | "section">("lecture");
   const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const { activeSession, creating, error, createSession, stopSession, updateDuration, refreshHash, restoreActiveSession } =
+  const { activeSession, creating, error, createSession, stopSession, updateDuration, restoreActiveSession } =
     useSessionManager();
 
   const load = useCallback(async () => {
     setLoading(true);
     const result = await attendanceService.getLectureAttendees(lecture.id);
     if (result.error) {
-      toast({ variant: "destructive", title: "خطأ", description: result.error });
+      toast({ variant: "destructive", title: "خطأ", description: getFriendlyErrorMessage(result.error) });
     } else {
       setAttendees(result.data ?? []);
     }
@@ -143,7 +144,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
     
     const result = await attendanceService.updateSessionExpiry(sessionId, expiresAt);
     if (result.error) {
-      toast({ variant: "destructive", title: "فشل التعديل", description: result.error });
+      toast({ variant: "destructive", title: "فشل التعديل", description: getFriendlyErrorMessage(result.error) });
     } else {
       toast({ title: activate ? "تم فتح الجلسة" : "تم غلق الجلسة", description: activate ? "الجلسة متاحة الآن لمدة 15 دقيقة." : "تم إيقاف استقبال الحضور لهذه الجلسة." });
       void loadSessionHistory();
@@ -167,7 +168,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
     setEnding(true);
     const result = await attendanceService.endLecture(lecture.id);
     if (result.error) {
-      toast({ variant: "destructive", title: "خطأ", description: result.error });
+      toast({ variant: "destructive", title: "خطأ", description: getFriendlyErrorMessage(result.error) });
     } else {
       toast({ title: "تم إنهاء المحاضرة", description: "تم إيقاف جميع الجلسات." });
       onBack();
@@ -178,7 +179,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
   const handleExportAll = async (format: "csv" | "xlsx" | "pdf") => {
     const result = await reportService.exportLecture(attendees, lecture, format);
     if (result.error) {
-      toast({ variant: "destructive", title: "فشل التصدير", description: result.error });
+      toast({ variant: "destructive", title: "فشل التصدير", description: getFriendlyErrorMessage(result.error) });
     } else {
       toast({ title: "تم التصدير", description: "تم تصدير جميع حضور المحاضرة." });
     }
@@ -192,7 +193,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
     }
     const result = await reportService.exportLecture(sessionAttendees, { ...lecture, title: `${lecture.title} - جلسة` }, format);
     if (result.error) {
-      toast({ variant: "destructive", title: "فشل التصدير", description: result.error });
+      toast({ variant: "destructive", title: "فشل التصدير", description: getFriendlyErrorMessage(result.error) });
     } else {
       toast({ title: "تم التصدير", description: `تم تصدير حضور الجلسة.` });
     }
@@ -214,7 +215,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
     },
     {
       id: "code",
-      header: "كود الجلسة",
+      header: "رمز الجلسة",
       cell: (row) => (
         <Badge variant="outline" className="font-mono">{row.short_code ?? "\u2014"}</Badge>
       ),
@@ -479,7 +480,6 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
           session={activeSession}
           onStop={stopSession}
           onUpdateDuration={updateDuration}
-          onRefreshHash={refreshHash}
         />
       ) : (
         <Card>
@@ -519,7 +519,7 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
                 </div>
               ) : (
                 <div className="space-y-1">
-                  <Label className="text-xs">نصف القطر GPS (متر)</Label>
+                  <Label className="text-xs">نطاق الحضور حول القاعة (متر)</Label>
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
                     <Input id="session-radius" type="number" min={10} max={500} value={sessionRadius}
@@ -538,9 +538,10 @@ export function LectureDetailView({ lecture, onBack, fixedSubjectId }: Props) {
         </Card>
       )}
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-destructive">{getFriendlyErrorMessage(error)}</p>}
 
       {/* Attendees table */}
+      <AttendanceRegisterPanel lectureId={lecture.id} />
       <DataTable
         title={`قائمة الحضور (${attendees.length})`}
         caption={loading ? "جاري التحميل..." : attendees.length === 0 ? "لا يوجد سجلات حضور بعد." : ""}

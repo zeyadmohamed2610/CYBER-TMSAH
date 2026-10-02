@@ -1,3 +1,4 @@
+import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 // src/features/auth/pages/ResetPasswordPage.tsx
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
@@ -19,38 +20,29 @@ export default function ResetPasswordPage() {
   const [validSession, setValidSession] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Check if the user arrived via a valid recovery token/session from Supabase
+    let active = true;
+    let subscription: { unsubscribe: () => void } | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const checkSession = async () => {
       const hash = window.location.hash || window.location.search;
-      const isRecovery = hash.includes("type=recovery") || hash.includes("access_token");
-
-      if (!isRecovery) {
-        // Direct navigation with no recovery parameters - block immediately
-        setValidSession(false);
+      if (!hash.includes("type=recovery") && !hash.includes("access_token")) {
+        if (active) setValidSession(false);
         return;
       }
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setValidSession(true);
-      } else {
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
-          if (event === "PASSWORD_RECOVERY" || s) {
-            setValidSession(true);
-          }
-        });
-        const timer = setTimeout(() => {
-          setValidSession((prev) => (prev === null ? false : prev));
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!active) return;
+        if (session) { setValidSession(true); return; }
+        subscription = supabase.auth.onAuthStateChange((event, s) => {
+          if (active && (event === "PASSWORD_RECOVERY" || s)) setValidSession(true);
+        }).data.subscription;
+        timer = setTimeout(() => {
+          if (active) setValidSession(prev => prev === null ? false : prev);
         }, 1500);
-
-        return () => {
-          subscription.unsubscribe();
-          clearTimeout(timer);
-        };
-      }
+      } catch { if (active) setValidSession(false); }
     };
-
     void checkSession();
+    return () => { active = false; subscription?.unsubscribe(); clearTimeout(timer); };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,9 +88,9 @@ export default function ResetPasswordPage() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to update password";
       toast.error(
-        lang === "ar"
+        getFriendlyErrorMessage(lang === "ar"
           ? `فشل تعيين كلمة المرور: ${msg}`
-          : `Failed to update password: ${msg}`
+          : `Failed to update password: ${msg}`, lang === "ar" ? "تعذر إكمال الطلب. أعد المحاولة." : "Could not complete your request. Please try again.")
       );
     } finally {
       setSubmitting(false);

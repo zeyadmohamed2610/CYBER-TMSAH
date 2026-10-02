@@ -1,38 +1,8 @@
+import { getFriendlyErrorMessage } from "@/lib/academicCopy";
+import { getDeviceDisplayName } from "@/lib/academicCopy";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  User,
-  KeyRound,
-  Shield,
-  Building2,
-  GraduationCap,
-  Mail,
-  CheckCircle2,
-  Eye,
-  EyeOff,
-  ArrowRight,
-  ArrowLeft,
-  Loader2,
-  Calendar,
-  Sparkles,
-  Lock,
-  Fingerprint,
-  Trash2,
-  Key,
-  Camera,
-  Copy,
-  Check,
-  LogOut,
-  ShieldAlert,
-  Smartphone,
-  Laptop,
-  IdCard,
-  Database,
-  Cpu,
-  Activity,
-  ShieldCheck,
-  RotateCcw,
-} from "lucide-react";
+import { User, KeyRound, Shield, Building2, GraduationCap, Mail, CheckCircle2, Eye, EyeOff, ArrowLeft, Loader2, Calendar, Sparkles, Lock, Fingerprint, Trash2, Key, Camera, Copy, Check, LogOut, Smartphone, IdCard, Activity, ShieldCheck, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,7 +17,7 @@ import Navbar from "@/components/Navbar";
 import { checkPwnedPassword } from "@/lib/pwnedPassword";
 import Footer from "@/components/Footer";
 import AvatarStudioDialog from "@/components/AvatarStudioDialog";
-import { saveUserAvatar, deleteUserAvatar } from "@/lib/avatarUtils";
+import { deleteUserAvatar } from "@/lib/avatarUtils";
 import { registerPasskey, isWebAuthnSupported, clearAllLocalPasskeys } from "@/lib/webauthn";
 import {
   Dialog,
@@ -122,7 +92,7 @@ export default function ProfilePage() {
     if (!raw && !fallbackEmail) return "—";
     let name = (raw || fallbackEmail || "").trim();
     if (name.includes("@")) {
-      name = name.split("@")[0];
+      name = name.split("@")[0] ?? "";
     }
     return `@${name.replace(/^@+/, "")}`;
   };
@@ -142,7 +112,7 @@ export default function ProfilePage() {
           const mapped = data.map((item) => ({
             id: item.credential_id,
             rawId: item.credential_id,
-            label: item.device_name || "مفتاح أمان بيومتري",
+            label: item.device_name || "جهاز للدخول بالبصمة",
             createdAt: item.created_at || new Date().toISOString(),
           }));
           setPasskeys(mapped);
@@ -186,13 +156,13 @@ export default function ProfilePage() {
 
   const handleInitiatePasskeyCreation = () => {
     if (!isWebAuthnSupported()) {
-      toast.error("متصفحك أو جهازك الحالي لا يدعم تقنية مفاتيح المرور (WebAuthn).");
+      toast.error("الدخول بالبصمة غير متاح على جهازك أو متصفحك الحالي.");
       return;
     }
 
     // Enforce 2-passkeys limit per user
     if (passkeys.length >= 2) {
-      toast.error("لقد وصلت للحد الأقصى المسموح به لمفاتيح المرور (جهازين فقط). يرجى حذف أحد الأجهزة القديمة لإضافة جهاز جديد.");
+      toast.error("لقد وصلت للحد الأقصى المسموح به لأجهزة الدخول (جهازين فقط). يرجى حذف أحد الأجهزة القديمة لإضافة جهاز جديد.");
       return;
     }
 
@@ -241,7 +211,7 @@ export default function ProfilePage() {
 
   const executePasskeyCreation = async () => {
     if (passkeys.length >= 2) {
-      toast.error("لقد وصلت للحد الأقصى المسموح به لمفاتيح المرور (جهازين فقط).");
+      toast.error("لقد وصلت للحد الأقصى المسموح به لأجهزة الدخول (جهازين فقط).");
       return;
     }
 
@@ -250,31 +220,31 @@ export default function ProfilePage() {
 
       const ua = navigator.userAgent;
       const deviceLabel = /iPhone/i.test(ua)
-        ? "هاتف iPhone (Face ID / Touch ID)"
+        ? "هاتف"
         : /iPad/i.test(ua)
-        ? "جهاز iPad"
+        ? "جهاز لوحي"
         : /Samsung/i.test(ua)
-        ? "هاتف Samsung Galaxy"
+        ? "هاتف"
         : /Xiaomi|Redmi|POCO/i.test(ua)
-        ? "هاتف Xiaomi / Redmi"
+        ? "هاتف"
         : /Android/i.test(ua)
-        ? "هاتف أندرويد (بصمة)"
+        ? "هاتف"
         : /Windows/i.test(ua)
-        ? "جهاز كمبيوتر (Windows Hello)"
+        ? "كمبيوتر"
         : /Mac/i.test(ua)
-        ? "جهاز Mac (Touch ID)"
-        : "مفتاح أمان بيومتري";
+        ? "كمبيوتر"
+        : "جهاز للدخول بالبصمة";
 
       const formattedLabel = `${deviceLabel} - ${new Date().toLocaleDateString("ar-EG")}`;
       const result = await registerPasskey(formattedLabel);
 
       if (result.cancelled) {
-        toast.info("تم إلغاء عملية إضافة مفتاح المرور.");
+        toast.info("تم إلغاء عملية إضافة جهاز الدخول.");
         return;
       }
 
       if (!result.success || !result.credentialId) {
-        toast.error(result.error || "فشل تسجيل مفتاح المرور. تأكد من تفعيل البصمة أو PIN على جهازك.");
+        toast.error(getFriendlyErrorMessage(result.error || "فشل تسجيل جهاز الدخول. تأكد من تفعيل البصمة أو رمز قفل الجهاز على جهازك."));
         return;
       }
 
@@ -304,7 +274,7 @@ export default function ProfilePage() {
         }
       }
 
-      toast.success("✅ تم توثيق وتسجيل مفتاح المرور البيومتري بنجاح!");
+      toast.success("✅ تم توثيق وتسجيل الدخول بالبصمة بنجاح!");
     } catch (err: unknown) {
       console.error("Passkey creation unexpected error:", err);
       toast.error("خطأ غير متوقع. الرجاء المحاولة مرة أخرى.");
@@ -317,7 +287,7 @@ export default function ProfilePage() {
 
   const handleTestPasskey = async (passkeyId: string) => {
     if (typeof window === "undefined" || !window.PublicKeyCredential) {
-      toast.error("المتصفح لا يدعم WebAuthn.");
+      toast.error("الدخول بالبصمة غير متاح في هذا المتصفح.");
       return;
     }
 
@@ -339,7 +309,7 @@ export default function ProfilePage() {
       };
 
       if (!isMobile && isChromium) {
-        (reqOptions as Record<string, unknown>)["hints"] = ["client-device"];
+        (reqOptions as PublicKeyCredentialRequestOptions & { hints?: string[] })["hints"] = ["client-device"];
       }
 
       const assertion = await navigator.credentials.get({
@@ -347,14 +317,14 @@ export default function ProfilePage() {
       });
 
       if (assertion) {
-        toast.success("تم التحقق بنجاح! يعمل مفتاح المرور البيومتري بكفاءة تامة.");
+        toast.success("تم التحقق بنجاح! يعمل الدخول بالبصمة بكفاءة تامة.");
       }
     } catch (err: unknown) {
       console.error("Passkey test error:", err);
       if (err instanceof Error && err.name === "NotAllowedError") {
         toast.info("تم إلغاء عملية التحقق.");
       } else {
-        toast.error("فشل التحقق من مفتاح المرور.");
+        toast.error("فشل التحقق من جهاز الدخول.");
       }
     } finally {
       setTestingPasskeyId(null);
@@ -375,7 +345,7 @@ export default function ProfilePage() {
         console.warn("Failed to delete passkey from db:", err);
       }
     }
-    toast.success("تم حذف مفتاح المرور.");
+    toast.success("تم حذف جهاز الدخول.");
   };
 
   // Fetch full user profile
@@ -450,6 +420,8 @@ export default function ProfilePage() {
 
           setProfile({
             ...data,
+            full_name: data.full_name ?? fullName ?? "",
+            role: data.role ?? role ?? "student",
             subject_name: subjectName,
             email: data.email || user.email || null,
           });
@@ -467,12 +439,12 @@ export default function ProfilePage() {
     return () => {
       isMounted = false;
     };
-  }, [user, fullName]);
+  }, [user, fullName, role]);
 
   const getRoleBadge = (userRole?: string) => {
     switch (userRole) {
       case "owner":
-        return { label: "المالك العام (Owner)", bg: "bg-purple-500/20 text-purple-300 border-purple-500/30", glow: "shadow-[0_0_15px_rgba(168,85,247,0.3)]" };
+        return { label: "مدير المنصة", bg: "bg-purple-500/20 text-purple-300 border-purple-500/30", glow: "shadow-[0_0_15px_rgba(168,85,247,0.3)]" };
       case "coordinator":
         return { label: "منسق البرنامج (رئيس القسم)", bg: "bg-indigo-500/20 text-indigo-300 border-indigo-500/30", glow: "shadow-[0_0_15px_rgba(99,102,241,0.3)]" };
       case "doctor":
@@ -570,7 +542,7 @@ export default function ProfilePage() {
     } catch (err: unknown) {
       console.error(err);
       const msg = err instanceof Error ? err.message : "فشل تغيير كلمة المرور";
-      toast.error(`حدث خطأ: ${msg}`);
+      toast.error(getFriendlyErrorMessage(`حدث خطأ: ${msg}`));
     } finally {
       setSavingPassword(false);
     }
@@ -605,7 +577,7 @@ export default function ProfilePage() {
   const passwordStrengthScore = (hasMinLength ? 1 : 0) + (hasNumbers ? 1 : 0) + (hasSpecial ? 1 : 0);
 
   // Security score
-  const securityScore = 70 + (passkeys.length > 0 ? 30 : 0);
+
 
   return (
     <div className="min-h-screen flex flex-col bg-[#050713] text-white selection:bg-purple-500/30 selection:text-purple-200" dir="rtl">
@@ -631,7 +603,7 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-2">
                   <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-purple-500/15 border border-purple-500/30 text-purple-300 flex items-center gap-1.5 shadow-sm">
                     <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                    <span>منظومة الحسابات الموحدة</span>
+                    <span>حسابك الأكاديمي</span>
                   </span>
                   <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -645,7 +617,7 @@ export default function ProfilePage() {
                 </h1>
 
                 <p className="text-xs sm:text-sm text-slate-300/80 max-w-xl">
-                  تحكم كامل في هويتك الأكاديمية، صورتك الشخصية، ومفاتيح الأمان البيومترية في منصة CYBER TMSAH.
+                  إدارة بياناتك الأكاديمية وصورتك الشخصية وإعدادات الدخول إلى حسابك.
                 </p>
               </div>
 
@@ -660,23 +632,9 @@ export default function ProfilePage() {
                   <ArrowLeft className="w-4 h-4 text-purple-400" />
                 </Button>
 
-                <div className="flex items-center gap-3 bg-gradient-to-r from-emerald-950/30 via-black/50 to-black/60 border border-emerald-500/30 hover:border-emerald-500/50 px-4 py-2 rounded-2xl shadow-[0_0_20px_rgba(16,185,129,0.15)] backdrop-blur-md transition-all">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400">
-                    <ShieldCheck className="w-4 h-4 text-emerald-400 animate-pulse" />
-                    <span>معدل الأمان:</span>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-24 h-2.5 bg-black/60 border border-white/10 rounded-full overflow-hidden p-[1px]">
-                      <div
-                        className="h-full bg-gradient-to-r from-cyan-400 via-emerald-400 to-teal-300 rounded-full shadow-[0_0_12px_rgba(52,211,153,0.8)] transition-all duration-700"
-                        style={{ width: `${securityScore}%` }}
-                      />
-                    </div>
-                    <span className="text-xs font-mono font-black text-emerald-300">{securityScore}%</span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      {securityScore === 100 ? "حماية قصوى" : "مستوى جيد"}
-                    </span>
-                  </div>
+                <div className="flex items-center gap-2 border border-emerald-500/30 px-4 py-2 rounded-2xl text-xs text-emerald-400">
+                  <Fingerprint className="w-4 h-4" />
+                  <span>{passkeys.length > 0 ? "الدخول بالبصمة مفعّل" : "يمكنك تفعيل الدخول بالبصمة"}</span>
                 </div>
               </div>
             </div>
@@ -805,17 +763,17 @@ export default function ProfilePage() {
                       {role === "owner" || role === "coordinator" ? (
                         <div className="grid grid-cols-2 gap-2 pt-0.5">
                           <div className="p-2.5 rounded-2xl bg-purple-950/20 border border-purple-500/25 space-y-1 text-center">
-                            <span className="text-[10px] text-purple-300 block">الأجهزة الموثقة</span>
+                            <span className="text-[10px] text-purple-300 block">أجهزة الدخول</span>
                             <span className="text-xs font-mono font-bold text-white flex items-center justify-center gap-1">
                               <Fingerprint className="w-3.5 h-3.5 text-cyan-400" />
-                              <span>{passkeys.length}/2 مفاتيح أمان</span>
+                              <span>{passkeys.length}/2 أجهزة مسجلة</span>
                             </span>
                           </div>
                           <div className="p-2.5 rounded-2xl bg-emerald-950/20 border border-emerald-500/25 space-y-1 text-center">
                             <span className="text-[10px] text-emerald-300 block">حالة الحساب</span>
                             <span className="text-[11px] font-bold text-emerald-400 flex items-center justify-center gap-1">
                               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                              <span>درع FIDO2 نشط</span>
+                              <span>{passkeys.length > 0 ? "الدخول بالبصمة مفعّل" : "الدخول بكلمة المرور"}</span>
                             </span>
                           </div>
                         </div>
@@ -936,7 +894,7 @@ export default function ProfilePage() {
                       className="rounded-xl text-xs font-bold py-2.5 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg gap-1.5"
                     >
                       <Fingerprint className="w-3.5 h-3.5" />
-                      <span>مفاتيح Passkeys</span>
+                      <span>الدخول بالبصمة</span>
                     </TabsTrigger>
                   </TabsList>
 
@@ -1029,9 +987,9 @@ export default function ProfilePage() {
                               <div className="flex items-center justify-between">
                                 <span className="text-[11px] text-cyan-300/90 font-medium flex items-center gap-1.5">
                                   <IdCard className="w-3.5 h-3.5 text-cyan-400" />
-                                  <span>اسم المستخدم الموحد</span>
+                                  <span>اسم المستخدم</span>
                                 </span>
-                                <span className="text-[10px] font-mono text-cyan-400">@Handle</span>
+                                <span className="text-[10px] font-mono text-cyan-400">اسم الدخول</span>
                               </div>
                               <span className="text-sm font-mono font-bold text-cyan-200 block truncate" dir="ltr">
                                 {formatDisplayUsername(profile?.username, profile?.email || user?.email)}
@@ -1060,25 +1018,14 @@ export default function ProfilePage() {
                               </span>
                             </div>
 
-                            {/* User ID Card */}
-                            <div className="p-4 rounded-2xl bg-gradient-to-b from-white/[0.04] to-black/50 border border-white/10 hover:border-indigo-500/40 transition-all duration-300 shadow-sm space-y-2 group">
-                              <div className="flex items-center justify-between">
-                                <span className="text-[11px] text-indigo-300/90 font-medium flex items-center gap-1.5">
-                                  <Cpu className="w-3.5 h-3.5 text-indigo-400" />
-                                  <span>معرّف الحساب السيبراني (UUID)</span>
-                                </span>
-                                {user?.id && (
-                                  <button
-                                    onClick={() => copyToClipboard(user.id, "معرّف الحساب")}
-                                    className="text-slate-400 hover:text-white transition-colors p-1 rounded-md hover:bg-white/10"
-                                    title="نسخ المعرف"
-                                  >
-                                    {copiedField === "معرّف الحساب" ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                                  </button>
-                                )}
-                              </div>
-                              <span className="text-xs font-mono text-slate-400 block truncate" dir="ltr">
-                                {user?.id ? user.id : "—"}
+                            {/* Account membership date */}
+                            <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-2">
+                              <span className="text-[11px] text-slate-400 flex items-center gap-1.5">
+                                <Calendar className="w-3.5 h-3.5" />
+                                تاريخ الانضمام
+                              </span>
+                              <span className="text-sm text-slate-200 block">
+                                {profile?.created_at ? new Date(profile.created_at).toLocaleDateString("ar-EG") : "—"}
                               </span>
                             </div>
                           </div>
@@ -1097,14 +1044,14 @@ export default function ProfilePage() {
                             <div>
                               <CardTitle className="text-lg font-black text-white flex items-center gap-2.5">
                                 <Shield className="w-5 h-5 text-purple-400" />
-                                <span>صلاحيات ومستوى الوصول السيبراني</span>
+                                <span>مهامك في المنصة</span>
                               </CardTitle>
                               <CardDescription className="text-xs text-slate-400 mt-1">
-                                مستوى التحكم الإداري، تدقيق العمليات المباشر، وتوثيق أجهزة FIDO2 في المنظومة
+                                المهام المتاحة لك لإدارة المنصة ومتابعة الحضور.
                               </CardDescription>
                             </div>
                             <span className="px-3.5 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
-                              {role === "owner" ? "صلاحيات المالك (Root Admin)" : role === "coordinator" ? "منسق المنظومة" : "دكتور محاضر"}
+                              {role === "owner" ? "إدارة المنصة" : role === "coordinator" ? "منسق المنصة" : "دكتور محاضر"}
                             </span>
                           </div>
                         </CardHeader>
@@ -1114,18 +1061,18 @@ export default function ProfilePage() {
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                             <div className="p-3.5 rounded-2xl bg-purple-950/20 border border-purple-500/25 hover:border-purple-500/40 transition-all space-y-1">
                               <div className="flex items-center gap-2 text-purple-300">
-                                <Database className="w-4 h-4 text-purple-400" />
-                                <span className="text-xs font-bold">قاعدة البيانات</span>
+                                <Building2 className="w-4 h-4 text-purple-400" />
+                                <span className="text-xs font-bold">بيانات المنصة</span>
                               </div>
-                              <span className="text-[11px] text-slate-300 block">وصول كامل للقواعد</span>
+                              <span className="text-[11px] text-slate-300 block">متابعة البيانات الأكاديمية</span>
                             </div>
 
                             <div className="p-3.5 rounded-2xl bg-cyan-950/20 border border-cyan-500/25 hover:border-cyan-500/40 transition-all space-y-1">
                               <div className="flex items-center gap-2 text-cyan-300">
                                 <KeyRound className="w-4 h-4 text-cyan-400" />
-                                <span className="text-xs font-bold">مفاتيح التشفير</span>
+                                <span className="text-xs font-bold">إعدادات الدخول</span>
                               </div>
-                              <span className="text-[11px] text-slate-300 block">إدارة مفاتيح FIDO2</span>
+                              <span className="text-[11px] text-slate-300 block">متابعة الأجهزة المسجلة</span>
                             </div>
 
                             <div className="p-3.5 rounded-2xl bg-indigo-950/20 border border-indigo-500/25 hover:border-indigo-500/40 transition-all space-y-1">
@@ -1133,15 +1080,15 @@ export default function ProfilePage() {
                                 <Smartphone className="w-4 h-4 text-indigo-400" />
                                 <span className="text-xs font-bold">أجهزة الحضور</span>
                               </div>
-                              <span className="text-[11px] text-slate-300 block">تحكم بالبوابات والسكاشن</span>
+                              <span className="text-[11px] text-slate-300 block">متابعة حضور المحاضرات</span>
                             </div>
 
                             <div className="p-3.5 rounded-2xl bg-emerald-950/20 border border-emerald-500/25 hover:border-emerald-500/40 transition-all space-y-1">
                               <div className="flex items-center gap-2 text-emerald-300">
                                 <Activity className="w-4 h-4 text-emerald-400 animate-pulse" />
-                                <span className="text-xs font-bold">سجلات الأمان</span>
+                                <span className="text-xs font-bold">نشاط الحساب</span>
                               </div>
-                              <span className="text-[11px] text-emerald-300 block">إشراف وتدقيق 24/7</span>
+                              <span className="text-[11px] text-emerald-300 block">متابعة النشاط</span>
                             </div>
                           </div>
 
@@ -1408,9 +1355,9 @@ export default function ProfilePage() {
                           <div className="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-start gap-3 text-xs text-slate-300">
                             <Shield className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
                             <div className="space-y-0.5">
-                              <span className="font-bold text-white block">حماية مشفرة لمعلوماتك</span>
+                              <span className="font-bold text-white block">خصوصية حسابك</span>
                               <span className="text-slate-400 text-[11px] leading-relaxed block">
-                                يتم تشفير كلمات المرور باستخدام خوارزميات التجزئة العالمية (Argon2 / bcrypt) بحيث لا يستطيع أي شخص حتى فريق العمل الاطلاع على كلمة مرورك.
+                                اختر كلمة مرور قوية ولا تشاركها مع الآخرين.
                               </span>
                             </div>
                           </div>
@@ -1447,15 +1394,15 @@ export default function ProfilePage() {
                           <div>
                             <CardTitle className="text-lg font-black text-white flex items-center gap-2.5">
                               <Fingerprint className="w-5 h-5 text-purple-400" />
-                              <span>مفاتيح المرور البيومترية (Passkeys)</span>
+                              <span>الدخول بالبصمة</span>
                             </CardTitle>
                             <CardDescription className="text-xs text-slate-400 mt-1">
-                              سجل الدخول فورياً باستخدام بصمة الإصبع، التعرف على الوجه، أو Windows Hello دون كلمات مرور
+                              سجّل الدخول باستخدام بصمة الإصبع أو الوجه أو رمز قفل جهازك.
                             </CardDescription>
                           </div>
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="inline-flex items-center rounded-full border border-purple-500/40 bg-purple-500/15 px-3 py-1 text-[11px] font-bold text-purple-300">
-                              معيار FIDO2 / WebAuthn
+                              دخول سهل
                             </span>
                             <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-bold ${
                               passkeys.length >= 2
@@ -1475,9 +1422,9 @@ export default function ProfilePage() {
                               <Fingerprint className="w-7 h-7" />
                             </div>
                             <div>
-                              <p className="text-base font-bold text-white">لم تقم بربط مفتاح مرور حتى الآن</p>
+                              <p className="text-base font-bold text-white">لم تضف جهازاً للدخول بالبصمة بعد</p>
                               <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto leading-relaxed">
-                                يمكنك ربط جهازك الحالي لتسجيل الدخول السريع بلمسة بصمة واحدة بأعلى معايير التشفير السيبراني المقاوم للاختراق والتصيد.
+                                أضف جهازك لتسجيل الدخول بسهولة باستخدام بصمة الإصبع أو الوجه.
                               </p>
                             </div>
                           </div>
@@ -1493,7 +1440,7 @@ export default function ProfilePage() {
                                     <Key className="w-5 h-5" />
                                   </div>
                                   <div className="min-w-0">
-                                    <p className="text-sm font-bold text-white truncate">{pk.label}</p>
+                                    <p className="text-sm font-bold text-white truncate">{getDeviceDisplayName(pk.label)}</p>
                                     <p className="text-[11px] text-slate-400 font-mono mt-0.5" dir="ltr">
                                       {new Date(pk.createdAt).toLocaleString("ar-EG")}
                                     </p>
@@ -1513,7 +1460,7 @@ export default function ProfilePage() {
                                     ) : (
                                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                                     )}
-                                    <span>اختبار المفتاح</span>
+                                    <span>تجربة الدخول</span>
                                   </Button>
 
                                   <Button
@@ -1521,7 +1468,7 @@ export default function ProfilePage() {
                                     variant="ghost"
                                     onClick={() => handleDeletePasskey(pk.id)}
                                     className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 text-xs h-9 rounded-xl px-2.5"
-                                    title="حذف المفتاح"
+                                    title="إزالة الجهاز"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
@@ -1534,7 +1481,7 @@ export default function ProfilePage() {
                         <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-white/5">
                           <div className="flex items-center gap-2 text-xs text-slate-400">
                             <Shield className="w-4 h-4 text-purple-400 shrink-0" />
-                            <span>مفاتيح المرور مشفرة محلياً (الحد الأقصى: جهازين لكل طالب).</span>
+                            <span>يمكنك إضافة جهازين للدخول بالبصمة.</span>
                           </div>
 
                           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -1543,15 +1490,15 @@ export default function ProfilePage() {
                               type="button"
                               variant="outline"
                               size="sm"
-                              title="امسح ذاكرة الجلسة المحلية (لا يحذف البصمة من الجهاز)"
+                              title="تحديث إعدادات الدخول على هذا الجهاز دون حذف البصمة"
                               onClick={() => {
                                 clearAllLocalPasskeys();
-                                toast.success("✅ تم مسح ذاكرة الجلسة المحلية. أعد تسجيل الدخول بالبصمة.");
+                                toast.success("✅ تم تحديث إعدادات الدخول. أعد تسجيل الدخول بالبصمة.");
                               }}
                               className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 text-xs h-10 rounded-xl gap-1.5 px-3 shrink-0"
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
-                              <span className="hidden sm:inline">إعادة ضبط Cache</span>
+                              <span className="hidden sm:inline">تحديث إعدادات الدخول</span>
                               <span className="sm:hidden">إعادة ضبط</span>
                             </Button>
 
@@ -1568,7 +1515,7 @@ export default function ProfilePage() {
                               {creatingPasskey ? (
                                 <>
                                   <Loader2 className="w-4 h-4 animate-spin" />
-                                  <span>جاري إنشاء المفتاح...</span>
+                                  <span>جاري إضافة الجهاز...</span>
                                 </>
                               ) : passkeys.length >= 2 ? (
                                 <>
@@ -1578,7 +1525,7 @@ export default function ProfilePage() {
                               ) : (
                                 <>
                                   <Fingerprint className="w-4 h-4" />
-                                  <span>إنشاء مفتاح مرور جديد</span>
+                                  <span>إضافة جهاز للدخول بالبصمة</span>
                                 </>
                               )}
                             </Button>

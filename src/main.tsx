@@ -11,17 +11,14 @@ if (dsn) {
   Sentry.init({
     dsn,
     integrations: [
-      new Sentry.BrowserTracing(),
-      new Sentry.Replay(),
-      new Sentry.BrowserSessionReplay(),
+      Sentry.browserTracingIntegration(),
+      Sentry.replayIntegration(),
     ],
     tracesSampleRate: 1.0,
     replaysSessionSampleRate: 0.1,
     replaysOnErrorSampleRate: 1.0,
     environment: import.meta.env.MODE,
-    release: {
-      name: import.meta.env.VITE_SENTRY_RELEASE || `v${Date.now()}`,
-    },
+    release: import.meta.env.VITE_SENTRY_RELEASE,
     beforeSend(event, hint) {
       // Filter out known non-actionable errors
       const error = hint.originalException;

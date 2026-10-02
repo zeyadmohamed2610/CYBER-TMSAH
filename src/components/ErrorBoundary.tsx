@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
-import { AlertCircle, CheckCircle2, RefreshCw, Home, Send, ShieldAlert } from "lucide-react";
+import { CheckCircle2, RefreshCw, Home, Send, ShieldAlert } from "lucide-react";
 import { sendErrorReportToDoctor } from "@/lib/errorReporting";
 
 interface Props {

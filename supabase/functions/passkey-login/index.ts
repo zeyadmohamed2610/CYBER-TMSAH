@@ -14,7 +14,9 @@
  *   - Private key NEVER touches the server
  */
 
-import { createClient } from "@supabase/supabase-js";
+import { createSupabaseContext } from "npm:@supabase/server@1.8.0";
+import { createAdminClient } from "npm:@supabase/server@1.8.0/core";
+import { readAssertionChallenge } from "../_shared/passkeyChallenge.ts";
 import { Buffer } from "node:buffer";
 import {
   generateRegistrationOptions,
@@ -23,7 +25,7 @@ import {
   verifyAuthenticationResponse,
   type VerifiedRegistrationResponse,
   type VerifiedAuthenticationResponse,
-} from "npm:@simplewebauthn/server@10";
+} from "npm:@simplewebauthn/server@13.3.2";
 
 function uint8ArrayToBase64Url(bytes: Uint8Array): string {
   let binary = "";
@@ -71,8 +73,7 @@ function getOrigin(req?: Request): string | string[] {
       if (
         u.hostname === "localhost" ||
         u.hostname === "127.0.0.1" ||
-        u.hostname.endsWith(".vercel.app") ||
-        u.hostname.endsWith("cyber-tmsah.site")
+        allowedOrigins.includes(requestOrigin)
       ) {
         if (!allowedOrigins.includes(requestOrigin)) {
           allowedOrigins.push(requestOrigin);
@@ -116,35 +117,28 @@ function getRpName(): string {
   return Deno.env.get("WEBAUTHN_RP_NAME") ?? "CYBER TMSAH";
 }
 
-Deno.serve(async (req) => {
+export async function handlePasskeyRequest(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const admin = createClient(supabaseUrl, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-
+  if (req.method !== "POST") return json({ success: false, error: "Method not allowed" }, 405);
   const url = new URL(req.url);
   const body = await req.json().catch(() => ({})) as Record<string, unknown>;
   const action = (url.searchParams.get("action") ?? body.action ?? "") as string;
 
   try {
+    const serverEnv = {
+      ...(Deno.env.get("APP_SUPABASE_PUBLISHABLE_KEY") ? { publishableKeys: { default: Deno.env.get("APP_SUPABASE_PUBLISHABLE_KEY")! } } : {}),
+      ...(Deno.env.get("APP_SUPABASE_SECRET_KEY") ? { secretKeys: { default: Deno.env.get("APP_SUPABASE_SECRET_KEY")! } } : {}),
+    };
+    const admin = createAdminClient({ env: serverEnv });
     // ──────────────────────────────────────────────────────────────────────
     // REGISTER-START: generate registration options + store challenge
     // ──────────────────────────────────────────────────────────────────────
     if (action === "register-start") {
-      const authHeader = req.headers.get("authorization") ?? "";
-      const token = authHeader.replace(/^Bearer\s+/i, "");
-      if (!token) return json({ success: false, error: "Unauthorized" }, 401);
-
-      // Verify the JWT to get the calling user
-      const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-        auth: { persistSession: false, autoRefreshToken: false },
-        global: { headers: { Authorization: `Bearer ${token}` } },
-      });
-      const { data: { user }, error: authErr } = await userClient.auth.getUser();
-      if (authErr || !user) return json({ success: false, error: "Unauthorized — invalid session" }, 401);
+      const { data: context, error: contextError } = await createSupabaseContext(req, { auth: "user", env: serverEnv });
+      if (contextError || !context) return json({ success: false, error: "Unauthorized" }, 401);
+      const { data: { user }, error: authErr } = await context.supabase.auth.getUser();
+      if (authErr || !user) return json({ success: false, error: "Unauthorized" }, 401);
 
       // Fetch existing credentials to exclude (prevent re-registration)
       const { data: existingCreds } = await admin
@@ -177,7 +171,7 @@ Deno.serve(async (req) => {
         userDisplayName,
         timeout: 60000,
         attestationType: "none",
-        excludeCredentials: [], // Never exclude platform authenticator so user is never prompted for USB/NFC
+        excludeCredentials,
         authenticatorSelection: {
           authenticatorAttachment: "platform", // Force this device's biometric scanner
           residentKey: "preferred",
@@ -204,15 +198,9 @@ Deno.serve(async (req) => {
     // REGISTER-FINISH: verify registration + store credential
     // ──────────────────────────────────────────────────────────────────────
     if (action === "register-finish") {
-      const authHeader = req.headers.get("authorization") ?? "";
-      const token = authHeader.replace(/^Bearer\s+/i, "");
-      if (!token) return json({ success: false, error: "Unauthorized" }, 401);
-
-      const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-        auth: { persistSession: false, autoRefreshToken: false },
-        global: { headers: { Authorization: `Bearer ${token}` } },
-      });
-      const { data: { user }, error: authErr } = await userClient.auth.getUser();
+      const { data: context, error: contextError } = await createSupabaseContext(req, { auth: "user", env: serverEnv });
+      if (contextError || !context) return json({ success: false, error: "Unauthorized" }, 401);
+      const { data: { user }, error: authErr } = await context.supabase.auth.getUser();
       if (authErr || !user) return json({ success: false, error: "Unauthorized" }, 401);
 
       const { credential, deviceName } = body as {
@@ -227,7 +215,7 @@ Deno.serve(async (req) => {
         .eq("auth_id", user.id)
         .eq("type", "registration")
         .gt("expires_at", new Date().toISOString())
-        .order("created_at", { ascending: false })
+        .eq("challenge", readAssertionChallenge(credential))
         .limit(1);
 
       if (fetchErr || !challengeRows?.length) {
@@ -236,18 +224,17 @@ Deno.serve(async (req) => {
 
       const { id: challengeId, challenge } = challengeRows[0];
 
-      // Delete challenge immediately (single-use)
-      await admin.from("webauthn_challenges").delete().eq("id", challengeId);
+
 
       // Verify the registration response cryptographically
       let verification: VerifiedRegistrationResponse;
       try {
         verification = await verifyRegistrationResponse({
-          response: credential as Parameters<typeof verifyRegistrationResponse>[0]["response"],
+          response: credential as unknown as Parameters<typeof verifyRegistrationResponse>[0]["response"],
           expectedChallenge: challenge,
           expectedOrigin: getOrigin(req),
           expectedRPID: getExpectedRpIds(req),
-          requireUserVerification: false,
+          requireUserVerification: true,
         });
       } catch (err) {
         console.error("[passkey-login] registration verification failed:", err);
@@ -258,15 +245,16 @@ Deno.serve(async (req) => {
         return json({ success: false, error: "Registration verification failed" });
       }
 
+      const { data: consumed, error: consumeError } = await admin.from("webauthn_challenges")
+        .delete().eq("id", challengeId).gt("expires_at", new Date().toISOString()).select("id");
+      if (consumeError || consumed?.length !== 1) return json({ success: false, error: "Challenge already used" }, 409);
       const {
-        credentialID,
-        credentialPublicKey,
-        counter,
+        credential: registeredCredential,
         aaguid,
       } = verification.registrationInfo;
 
-      const credId = credentialID || (credential.id as string);
-      const pubKeyB64 = uint8ArrayToBase64Url(credentialPublicKey);
+      const credId = registeredCredential.id;
+      const pubKeyB64 = uint8ArrayToBase64Url(registeredCredential.publicKey);
 
       // Get user's public.users record
       const { data: publicUser } = await admin
@@ -286,7 +274,7 @@ Deno.serve(async (req) => {
         user_id: publicUser?.id ?? null,
         credential_id: credId,
         public_key: pubKeyB64,
-        sign_count: counter ?? 0,
+        sign_count: registeredCredential.counter ?? 0,
         transports: validTransports,
         aaguid: aaguid ?? null,
         device_name: deviceName ?? `جهاز بيومتري ${new Date().toLocaleDateString("ar-EG")}`,
@@ -316,15 +304,31 @@ Deno.serve(async (req) => {
     // ──────────────────────────────────────────────────────────────────────
     // AUTH-START: generate authentication options + store challenge
     // ──────────────────────────────────────────────────────────────────────
-    if (action === "auth-start") {
+    if (action === "auth-start" || action === "attendance-start") {
       const { identifier } = body as { identifier?: string };
 
-      let allowCredentials: Array<{ id: string; type: "public-key"; transports?: string[] }> = [];
+      let allowCredentials: Array<{ id: string; type: "public-key"; transports?: ("internal" | "usb" | "nfc" | "ble" | "hybrid")[] }> = [];
       let authId: string | null = null;
 
+      let attendanceHash: string | null = null;
+      if (action === "attendance-start") {
+      const { data: context, error: contextError } = await createSupabaseContext(req, { auth: "user", env: serverEnv });
+      if (contextError || !context) return json({ success: false, error: "Unauthorized" }, 401);
+      const { data: { user }, error: authErr } = await context.supabase.auth.getUser();
+      if (authErr || !user) return json({ success: false, error: "Unauthorized" }, 401);
+        authId = user.id;
+        attendanceHash = typeof body.attendanceHash === "string" ? body.attendanceHash.trim() : "";
+        if (!/^[0-9]{6}$/.test(attendanceHash)) return json({ success: false, error: "Invalid attendance code" }, 400);
+        const { data: creds, error: credsError } = await admin.from("webauthn_credentials")
+          .select("credential_id, transports").eq("auth_id", user.id).not("public_key", "is", null);
+        if (credsError) return json({ success: false, error: "Could not load credentials" }, 503);
+        if (!creds?.length) return json({ success: false, noPasskeyRegistered: true, error: "سجل بصمة لحسابك أولاً." });
+        allowCredentials = creds.map(c => ({ id: c.credential_id as string, type: "public-key" as const }));
+      }
       // If identifier provided, restrict to that user's credentials
-      if (identifier?.trim()) {
+      if (action === "auth-start" && identifier?.trim()) {
         const clean = identifier.trim().toLowerCase();
+        if (!/^[a-z0-9@._+-]+$/.test(clean)) return json({ success: false, error: "Invalid identifier" }, 400);
         const { data: uRow } = await admin
           .from("users")
           .select("auth_id")
@@ -350,7 +354,7 @@ Deno.serve(async (req) => {
             type: "public-key" as const,
             // CRITICAL: Always force "internal" transport to prevent Chrome from showing
             // USB/NFC/another-device picker. "internal" = platform authenticator only (fingerprint/face/PIN)
-            transports: ["internal"] as string[],
+            transports: ["internal"] as ("internal")[],
           }));
         } else {
           return json({
@@ -370,11 +374,13 @@ Deno.serve(async (req) => {
       });
 
       // Store challenge (no auth_id if discoverable/usernameless)
-      await admin.from("webauthn_challenges").insert({
+      const { error: challengeError } = await admin.from("webauthn_challenges").insert({
         challenge: options.challenge,
         auth_id: authId ?? null,
         type: "authentication",
+        attendance_hash: attendanceHash,
       });
+      if (challengeError) return json({ success: false, error: "Could not create challenge" }, 503);
 
       return json({ success: true, options });
     }
@@ -382,7 +388,7 @@ Deno.serve(async (req) => {
     // ──────────────────────────────────────────────────────────────────────
     // AUTH-FINISH: verify assertion + create session
     // ──────────────────────────────────────────────────────────────────────
-    if (action === "auth-finish") {
+    if (action === "auth-finish" || action === "attendance-finish") {
       const { credential } = body as { credential: Record<string, unknown> };
       if (!credential) return json({ success: false, error: "Missing credential" });
 
@@ -411,14 +417,13 @@ Deno.serve(async (req) => {
 
       const storedCred = credRows[0];
 
-      // Fetch the challenge by finding the most recent valid one
-      // (for discoverable flow, auth_id may be null)
+      // Select this assertion's exact server-issued challenge, never another user's.
       const { data: challengeRows } = await admin
         .from("webauthn_challenges")
-        .select("id, challenge")
+        .select("id, challenge, auth_id, attendance_hash")
         .eq("type", "authentication")
         .gt("expires_at", new Date().toISOString())
-        .order("created_at", { ascending: false })
+        .eq("challenge", readAssertionChallenge(credential))
         .limit(1);
 
       if (!challengeRows?.length) {
@@ -427,11 +432,20 @@ Deno.serve(async (req) => {
 
       const { id: challengeId, challenge } = challengeRows[0];
 
-      // Consume challenge immediately
-      await admin.from("webauthn_challenges").delete().eq("id", challengeId);
+      const storedChallenge = challengeRows[0];
+      if (storedChallenge.auth_id && storedChallenge.auth_id !== storedCred.auth_id) return json({ success: false, error: "Account mismatch" }, 403);
+      const attendanceFlow = action === "attendance-finish";
+      if (attendanceFlow !== Boolean(storedChallenge.attendance_hash)) return json({ success: false, error: "Challenge purpose mismatch" }, 403);
+      if (attendanceFlow) {
+      const { data: context, error: contextError } = await createSupabaseContext(req, { auth: "user", env: serverEnv });
+      if (contextError || !context) return json({ success: false, error: "Unauthorized" }, 401);
+      const { data: { user }, error: authErr } = await context.supabase.auth.getUser();
+      if (authErr || !user) return json({ success: false, error: "Unauthorized" }, 401);
+        if (user.id !== storedCred.auth_id || storedChallenge.attendance_hash !== body.attendanceHash) return json({ success: false, error: "Attendance mismatch" }, 403);
+      }
 
       // Decode stored public key
-      let publicKeyBuffer: Uint8Array;
+      let publicKeyBuffer: Uint8Array<ArrayBuffer>;
       try {
         const b64 = storedCred.public_key as string;
         const clean = b64.replace(/-/g, "+").replace(/_/g, "/");
@@ -445,16 +459,16 @@ Deno.serve(async (req) => {
       let verification: VerifiedAuthenticationResponse;
       try {
         verification = await verifyAuthenticationResponse({
-          response: credential as Parameters<typeof verifyAuthenticationResponse>[0]["response"],
+          response: credential as unknown as Parameters<typeof verifyAuthenticationResponse>[0]["response"],
           expectedChallenge: challenge,
           expectedOrigin: getOrigin(req),
           expectedRPID: getExpectedRpIds(req),
-          requireUserVerification: false,
-          authenticator: {
-            credentialID: storedCred.credential_id as string,
-            credentialPublicKey: publicKeyBuffer,
+          requireUserVerification: true,
+          credential: {
+            id: storedCred.credential_id as string,
+            publicKey: publicKeyBuffer,
             counter: Number(storedCred.sign_count ?? 0),
-            transports: (storedCred.transports as any) ?? ["internal"],
+            transports: (storedCred.transports as Parameters<typeof verifyAuthenticationResponse>[0]["credential"]["transports"]) ?? ["internal"],
           },
         });
       } catch (err) {
@@ -466,15 +480,25 @@ Deno.serve(async (req) => {
         return json({ success: false, error: "Authentication verification failed" });
       }
 
-      // Update sign counter
-      await admin
-        .from("webauthn_credentials")
-        .update({
-          sign_count: verification.authenticationInfo.newCounter,
-          last_used_at: new Date().toISOString(),
-        })
-        .eq("id", storedCred.id);
-
+      // Only one concurrent request can consume this verified ceremony.
+      const { data: consumed, error: consumeError } = await admin.from("webauthn_challenges")
+        .delete().eq("id", challengeId).gt("expires_at", new Date().toISOString()).select("id");
+      if (consumeError || consumed?.length !== 1) return json({ success: false, error: "Challenge already used" }, 409);
+      const { data: updated, error: counterError } = await admin.from("webauthn_credentials")
+        .update({ sign_count: verification.authenticationInfo.newCounter, last_used_at: new Date().toISOString() })
+        .eq("id", storedCred.id).eq("sign_count", storedCred.sign_count ?? 0).select("id");
+      if (counterError || updated?.length !== 1) return json({ success: false, error: "Credential changed; retry verification" }, 409);
+      if (attendanceFlow) {
+        const fingerprint = body.deviceFingerprint;
+        if (typeof fingerprint !== "string" || !/^(?:[a-f0-9]{64}|fb[a-f0-9]{16})$/i.test(fingerprint)) return json({ success: false, error: "Invalid device" }, 400);
+        const { data: proof, error: proofError } = await admin.from("attendance_biometric_proofs").insert({
+          auth_id: storedCred.auth_id, attendance_hash: storedChallenge.attendance_hash,
+          device_fingerprint: fingerprint, credential_id: storedCred.credential_id,
+        }).select("id").single();
+        if (proofError || !proof) return json({ success: false, error: "Could not confirm attendance" }, 503);
+        await admin.from("attendance_biometric_proofs").delete().lt("expires_at", new Date().toISOString());
+        return json({ success: true, proofId: proof.id });
+      }
       // Fetch user info
       const authId = storedCred.auth_id as string;
       const { data: authUserData } = await admin.auth.admin.getUserById(authId);
@@ -489,7 +513,7 @@ Deno.serve(async (req) => {
         .eq("auth_id", authId)
         .maybeSingle();
 
-      const role = publicProfile?.role ?? authUserData.user.user_metadata?.role ?? "student";
+      const role = publicProfile?.role ?? authUserData.user.app_metadata?.role ?? "student";
       const fullName = publicProfile?.full_name ?? authUserData.user.user_metadata?.full_name ?? "";
 
       // Create session via magic link token
@@ -512,80 +536,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ──────────────────────────────────────────────────────────────────────
-    // LEGACY fallback — old clients that POST credentialId + rawId directly
-    // ──────────────────────────────────────────────────────────────────────
-    if (!action || action === "legacy") {
-      const { credentialId, rawId, userHandle } = body as {
-        credentialId?: string;
-        rawId?: string;
-        userHandle?: string;
-      };
-
-      if (!credentialId && !rawId && !userHandle) {
-        return json({ success: false, error: "Missing credential details" });
-      }
-
-      const candidates = new Set<string>();
-      for (const val of [credentialId, rawId]) {
-        if (val && typeof val === "string") {
-          candidates.add(val);
-          candidates.add(val.replace(/-/g, "+").replace(/_/g, "/"));
-          candidates.add(val.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""));
-        }
-      }
-
-      const { data: dbCreds } = await admin
-        .from("webauthn_credentials")
-        .select("auth_id, device_name, credential_id, public_key")
-        .in("credential_id", Array.from(candidates))
-        .limit(1);
-
-      let authId: string | null = null;
-      let deviceName: string | null = null;
-
-      if (dbCreds?.length) {
-        authId = dbCreds[0].auth_id as string;
-        deviceName = dbCreds[0].device_name as string;
-      }
-
-      if (!authId) {
-        return json({
-          success: false,
-          error: "هذا المفتاح غير مسجل في النظام. يرجى تسجيل بصمتك من الملف الشخصي.",
-        });
-      }
-
-      const { data: authUserData } = await admin.auth.admin.getUserById(authId);
-      if (!authUserData?.user?.email) {
-        return json({ success: false, error: "تعذر العثور على بريد المستخدم." });
-      }
-
-      const { data: publicProfile } = await admin
-        .from("users")
-        .select("id, role, full_name")
-        .eq("auth_id", authId)
-        .maybeSingle();
-
-      const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
-        type: "magiclink",
-        email: authUserData.user.email,
-      });
-
-      if (linkError || !linkData?.properties?.hashed_token) {
-        return json({ success: false, error: "فشل إنشاء الجلسة." });
-      }
-
-      return json({
-        success: true,
-        hashed_token: linkData.properties.hashed_token,
-        email: authUserData.user.email,
-        role: publicProfile?.role ?? "student",
-        full_name: publicProfile?.full_name ?? "",
-        device_name: deviceName,
-      });
-    }
-
     return json({ success: false, error: `Unknown action: ${action}` }, 400);
 
   } catch (err: unknown) {
@@ -593,4 +543,6 @@ Deno.serve(async (req) => {
     console.error("[passkey-login] Unexpected error:", message);
     return json({ success: false, error: `حدث خطأ داخلي: ${message}` });
   }
-});
+}
+
+if (typeof Deno !== "undefined") Deno.serve(handlePasskeyRequest);

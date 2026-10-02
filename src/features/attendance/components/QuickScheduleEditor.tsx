@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Pencil, Save, Globe, CheckCircle2, Trash2, ChevronDown, ChevronRight, ChevronLeft, Calendar, Loader2, FileSpreadsheet, UploadCloud, Download, FileText, GraduationCap, Coffee, Upload, Eye } from "lucide-react";
+import { Pencil, Save, Globe, CheckCircle2, Trash2, ChevronDown, ChevronRight, ChevronLeft, Calendar, Loader2, UploadCloud, Download, FileText, GraduationCap, Coffee, Upload, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -57,7 +57,6 @@ export function QuickScheduleEditor() {
   // Exam state
   const [examFiles, setExamFiles] = useState<{id: string, title: string, type: string, url: string, section: number}[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [previewExam, setPreviewExam] = useState<{id: string, title: string, type: string, url: string} | null>(null);
 
   const current = allSections[selectedSection] || makeEmpty();
 
@@ -67,11 +66,12 @@ export function QuickScheduleEditor() {
         const init = initAll();
         for (const row of data) {
           const di = DAYS.indexOf(row.day);
-          if (di === -1 || !init[row.section]) continue;
-          if (row.is_holiday) init[row.section][di].isHoliday = true;
-          if (row.is_training) init[row.section][di].isTraining = true;
+          const target = init[row.section]?.[di];
+          if (di === -1 || !target) continue;
+          if (row.is_holiday) target.isHoliday = true;
+          if (row.is_training) target.isTraining = true;
           if (row.subject && row.period >= 1 && row.period <= 11) {
-            init[row.section][di].entries[row.period - 1] = {
+            target.entries[row.period - 1] = {
               subject: row.subject,
               instructor: row.instructor,
               room: row.room,
@@ -105,15 +105,19 @@ export function QuickScheduleEditor() {
 
   const toggleHoliday = (di: number) => {
     const n = current.map(d => ({ ...d, entries: [...d.entries] }));
-    n[di].isHoliday = !n[di].isHoliday;
-    if (n[di].isHoliday) { n[di].isTraining = false; n[di].entries = new Array(11).fill(null); }
+    const day = n[di];
+    if (!day) return;
+    day.isHoliday = !day.isHoliday;
+    if (day.isHoliday) { day.isTraining = false; day.entries = new Array(11).fill(null); }
     update(n);
   };
 
   const toggleTraining = (di: number) => {
     const n = current.map(d => ({ ...d, entries: [...d.entries] }));
-    n[di].isTraining = !n[di].isTraining;
-    if (n[di].isTraining) { n[di].isHoliday = false; n[di].entries = new Array(11).fill(null); }
+    const day = n[di];
+    if (!day) return;
+    day.isTraining = !day.isTraining;
+    if (day.isTraining) { day.isHoliday = false; day.entries = new Array(11).fill(null); }
     update(n);
   };
 
@@ -127,14 +131,18 @@ export function QuickScheduleEditor() {
     if (!editing) return;
     if (!editForm.subject.trim()) { clearEntry(editing.day, editing.period); setEditing(null); return; }
     const n = current.map(d => ({ ...d, entries: [...d.entries] }));
-    n[editing.day].entries[editing.period] = { ...editForm };
+    const day = n[editing.day];
+    if (!day) return;
+    day.entries[editing.period] = { ...editForm };
     update(n);
     setEditing(null);
   };
 
   const clearEntry = (di: number, pi: number) => {
     const n = current.map(d => ({ ...d, entries: [...d.entries] }));
-    n[di].entries[pi] = null;
+    const day = n[di];
+    if (!day) return;
+    day.entries[pi] = null;
     update(n);
   };
 
@@ -145,17 +153,18 @@ export function QuickScheduleEditor() {
       for (const [sec, days] of Object.entries(allSections)) {
         for (let di = 0; di < DAYS.length; di++) {
           const dayData = days[di];
+          if (!dayData) continue;
           const isHoliday = dayData.isHoliday || false;
           const isTraining = dayData.isTraining || false;
 
           if (isHoliday || isTraining) {
-            rows.push({ section: Number(sec), day: DAYS[di], period: 1, subject: "", instructor: "", room: "", entry_type: "lecture", is_holiday: isHoliday, is_training: isTraining });
+            rows.push({ section: Number(sec), day: dayData.day, period: 1, subject: "", instructor: "", room: "", entry_type: "lecture", is_holiday: isHoliday, is_training: isTraining });
           }
 
           for (let pi = 0; pi < 11; pi++) {
             const e = dayData.entries[pi];
             if (e && e.subject) {
-              rows.push({ section: Number(sec), day: DAYS[di], period: pi + 1, subject: e.subject, instructor: e.instructor, room: e.room, entry_type: e.entry_type, is_holiday: false, is_training: false });
+              rows.push({ section: Number(sec), day: dayData.day, period: pi + 1, subject: e.subject, instructor: e.instructor, room: e.room, entry_type: e.entry_type, is_holiday: false, is_training: false });
             }
           }
         }
@@ -175,6 +184,7 @@ export function QuickScheduleEditor() {
     for (const [sec, days] of Object.entries(allSections)) {
       for (let di = 0; di < DAYS.length; di++) {
         const d = days[di];
+        if (!d) continue;
         if (d.isHoliday) {
           rows += `${sec},"${DAYS[di]}",1,"","","","lecture",true\n`;
         }
@@ -215,13 +225,14 @@ export function QuickScheduleEditor() {
         // Skip header line
         for (let i = 1; i < lines.length; i++) {
           const line = lines[i];
+          if (!line) continue;
           // regex to handle quoted csv
           const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(p => p.replace(/^"|"$/g, "").trim());
           if (parts.length < 4) continue;
 
-          const sec = parseInt(parts[0]);
-          const day = parts[1];
-          const period = parseInt(parts[2]);
+          const sec = parseInt(parts[0] ?? "");
+          const day = parts[1] ?? "";
+          const period = parseInt(parts[2] ?? "");
           const subject = parts[3] || "";
           const instructor = parts[4] || "";
           const room = parts[5] || "";
@@ -229,13 +240,14 @@ export function QuickScheduleEditor() {
           const isHol = parts[7] === "true";
 
           const di = DAYS.indexOf(day);
-          if (di === -1 || !newInit[sec]) continue;
+          const target = newInit[sec]?.[di];
+          if (di === -1 || !target) continue;
 
           if (isHol) {
-            newInit[sec][di].isHoliday = true;
+            target.isHoliday = true;
           }
           if (subject && period >= 1 && period <= 11) {
-            newInit[sec][di].entries[period - 1] = {
+            target.entries[period - 1] = {
               subject,
               instructor,
               room,
@@ -274,7 +286,7 @@ export function QuickScheduleEditor() {
       }
       
       const fileName = `${Date.now()}_${file.name}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("exam-files")
         .upload(fileName, file);
       
@@ -319,9 +331,8 @@ export function QuickScheduleEditor() {
         })));
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "فشل رفع الملف";
       console.error("Upload error:", err);
-      toast.error(errorMessage);
+      toast.error("تعذر رفع الملف. أعد المحاولة.");
     }
     setUploading(false);
     e.target.value = "";
@@ -516,7 +527,7 @@ export function QuickScheduleEditor() {
               </tr>
             </thead>
             <tbody>
-              {PERIODS.map((period, pi) => (
+              {PERIODS.map((_period, pi) => (
                 <tr key={pi} className="border-b border-border/50">
                   <td className="p-2 text-center">
                     <div className="text-[10px] font-bold text-primary">{PERIODS[pi]?.label ?? ""}</div>

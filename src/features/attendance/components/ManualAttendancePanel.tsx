@@ -1,3 +1,4 @@
+import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 import { useEffect, useState } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { UserPlus, Loader2, CheckCircle2, UserCheck } from "lucide-react";
@@ -29,14 +30,18 @@ export function ManualAttendancePanel() {
   const [adding, setAdding] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState("");
   const [selectedSession, setSelectedSession] = useState("");
+  const [reason, setReason] = useState("");
   const [added, setAdded] = useState(false);
 
   useEffect(() => {
     const load = async () => {
       const [sRes, sessRes] = await Promise.all([
         supabase.from("users").select("id, full_name, national_id").eq("role", "student"),
-        supabase.from("sessions").select("id, expires_at, created_at, subject_id, section").limit(50),
+        supabase.from("sessions").select("id, expires_at, created_at, subject_id, section").order("created_at", { ascending: false }).limit(100),
       ]);
+      if (sRes.error || sessRes.error) {
+        toast.error("تعذر تحميل الطلاب أو جلسات الحضور."); setLoading(false); return;
+      }
       
       const studentsData = (sRes.data ?? []).sort((a, b) => a.full_name.localeCompare(b.full_name, 'ar'));
       setStudents(studentsData as Student[]);
@@ -48,7 +53,7 @@ export function ManualAttendancePanel() {
         const subjectIds = [...new Set(sessData.map((s: { subject_id: string }) => s.subject_id).filter(Boolean))];
         const { data: subjects } = await supabase.from("subjects").select("id, name").in("id", subjectIds as string[]);
         const nameMap = new Map((subjects ?? []).map((s: { id: string; name: string }) => [s.id, s.name]));
-        setSessions(sessData.map((s: { id: string; expires_at: string | null; created_at: string; subject_id: string; section: string | null }) => ({
+        setSessions(sortedSessions.map((s: { id: string; expires_at: string | null; created_at: string; subject_id: string; section: string | null }) => ({
           id: s.id,
           subject_name: nameMap.get(s.subject_id) || "غير معروف",
           subject_id: s.subject_id,
@@ -64,17 +69,18 @@ export function ManualAttendancePanel() {
   }, []);
 
   const handleAdd = async () => {
-    if (!selectedStudent || !selectedSession) { toast.error("اختر طالب وجلسة"); return; }
+    if (!selectedStudent || !selectedSession || reason.trim().length < 3) { toast.error("اختر الطالب والجلسة واكتب سبب التسجيل اليدوي"); return; }
     setAdding(true);
     setAdded(false);
 
     const { error } = await supabase.rpc("add_manual_attendance", {
       p_student_id: selectedStudent,
       p_session_id: selectedSession,
+      p_reason: reason.trim(),
     });
 
     if (error) {
-      toast.error("فشل: " + error.message);
+      toast.error(getFriendlyErrorMessage("فشل: " + error.message));
     } else {
       setAdded(true);
       toast.success("تم تسجيل الحضور بنجاح");
@@ -105,7 +111,7 @@ export function ManualAttendancePanel() {
           <UserCheck className="h-6 w-6 text-primary" />
           تسجيل حضور يدوي
         </CardTitle>
-        <p className="text-xs text-muted-foreground mt-1">سجل حضور اي طالب في اي جلسة يدوياً.</p>
+        <p className="text-xs text-muted-foreground mt-1">صحح حضور الطالب في الجلسات التي تديرها، مع توثيق سبب التعديل.</p>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid gap-6 md:grid-cols-2">
@@ -164,7 +170,9 @@ export function ManualAttendancePanel() {
           </div>
         </div>
 
-        <Button onClick={handleAdd} disabled={adding || !selectedStudent || !selectedSession} className="w-full h-12 rounded-xl gap-2 shadow-lg shadow-primary/20">
+        <div className="space-y-2"><Label htmlFor="manual-reason">سبب التسجيل اليدوي</Label>
+          <Input id="manual-reason" value={reason} maxLength={500} onChange={e => setReason(e.target.value)} placeholder="مثال: تعذر التسجيل أثناء المحاضرة" /></div>
+        <Button onClick={handleAdd} disabled={adding || !selectedStudent || !selectedSession || reason.trim().length < 3} className="w-full h-12 rounded-xl gap-2 shadow-lg shadow-primary/20">
           {added ? <CheckCircle2 className="h-5 w-5" /> : adding ? <Loader2 className="h-5 w-5 animate-spin" /> : <UserPlus className="h-5 w-5" />}
           {added ? "تم التسجيل" : adding ? "جاري التسجيل" : "إضافة الحضور"}
         </Button>

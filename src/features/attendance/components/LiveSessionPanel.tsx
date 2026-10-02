@@ -1,3 +1,4 @@
+import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 /**
  * LiveSessionPanel — shown to doctors and owners after a session is created.
  * Displays the rotating short code + QR code, stop button, and duration editor.
@@ -86,14 +87,14 @@ export function LiveSessionPanel({ session, onStop, onUpdateDuration }: Props) {
     setDurationError(null);
     setUpdating(true);
     const result = await onUpdateDuration(session.id, newMinutes);
-    if (result.error) setDurationError(result.error.replace(/^validation_error: /, ""));
+    if (result.error) setDurationError(getFriendlyErrorMessage(result.error.replace(/^validation_error: /, "")));
     setUpdating(false);
   };
 
   const handleCopyCode = () => {
     if (totpCode && totpCode !== "------") {
       navigator.clipboard.writeText(totpCode).then(() => {
-        toast({ title: "تم نسخ الكود", description: totpCode });
+        toast({ title: "تم نسخ الرمز", description: totpCode });
       });
     }
   };
@@ -126,16 +127,16 @@ export function LiveSessionPanel({ session, onStop, onUpdateDuration }: Props) {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-6 w-full">
           {/* TOTP Code Block */}
           <div className="flex-1 w-full rounded-3xl border-2 border-primary/30 bg-background/50 backdrop-blur-xl px-4 sm:px-8 py-8 text-center shadow-[0_0_30px_rgba(0,180,216,0.15)] flex flex-col justify-center">
-            <p className="mb-3 text-xs sm:text-sm font-bold text-primary tracking-widest uppercase opacity-80">كود الحضور المباشر</p>
+            <p className="mb-3 text-xs sm:text-sm font-bold text-primary tracking-widest uppercase opacity-80">رمز الحضور المباشر</p>
             <p
               className="font-mono text-5xl sm:text-7xl lg:text-8xl font-black tracking-[0.2em] sm:tracking-[0.3em] text-foreground select-all break-all"
               style={{ textShadow: "0 0 25px hsl(var(--primary)/0.4)" }}
             >
               {totpCode}
             </p>
-            <Button variant="ghost" size="sm" className="mt-4 gap-2 mx-auto text-muted-foreground hover:text-primary transition-colors" onClick={handleCopyCode} aria-label="نسخ كود الحضور">
+            <Button variant="ghost" size="sm" className="mt-4 gap-2 mx-auto text-muted-foreground hover:text-primary transition-colors" onClick={handleCopyCode} aria-label="نسخ رمز الحضور">
               <Copy className="h-4 w-4" />
-              نسخ الكود
+              نسخ الرمز
             </Button>
           </div>
 

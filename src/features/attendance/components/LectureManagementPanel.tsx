@@ -1,3 +1,4 @@
+import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 import { useCallback, useEffect, useState } from "react";
 import { BookOpen, Calendar, Plus, Users, Layers, StopCircle, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -11,16 +12,18 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabaseClient";
 import { attendanceService } from "../services/attendanceService";
 import type { Lecture } from "../types";
+import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 
 interface Subject { id: string; name: string; doctor_name: string; }
 
 interface Props {
-  fixedSubjectId?: string;
+  fixedSubjectId?: string | undefined;
   onSelectLecture: (lecture: Lecture) => void;
 }
 
 export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Props) {
   const { toast } = useToast();
+  const { user, role } = useAttendanceAuth();
   const [lectures, setLectures] = useState<Lecture[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,31 +34,41 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
 
   const load = useCallback(async () => {
     setLoading(true);
-    const result = await attendanceService.fetchLectures(fixedSubjectId);
+    const result = await attendanceService.fetchLectures();
     if (result.error) {
-      toast({ variant: "destructive", title: "خطأ", description: result.error });
+      toast({ variant: "destructive", title: "خطأ", description: getFriendlyErrorMessage(result.error) });
     } else {
       setLectures(result.data ?? []);
     }
     setLoading(false);
-  }, [fixedSubjectId, toast]);
+  }, [toast]);
 
   useEffect(() => { void load(); }, [load]);
 
   useEffect(() => {
-    if (fixedSubjectId) return;
-    supabase.from("subjects").select("id, name, doctor_name")
-      .then(({ data }) => { 
-        if (data) {
-          const sorted = data.sort((a, b) => a.name.localeCompare(b.name, 'ar'));
-          setSubjects(sorted);
-        }
-      });
-  }, [fixedSubjectId]);
+    let active = true;
+    const loadSubjects = async () => {
+      let query = supabase.from("subjects").select("id, name, doctor_name");
+      if (role === "doctor" || role === "ta") {
+        const profile = await supabase.from("users").select("id, subject_id").eq("auth_id", user?.id).maybeSingle();
+        if (!profile.data) return;
+        const assigned = await supabase.rpc("get_user_subjects", { p_user_id: profile.data.id });
+        const ids = new Set<string>((assigned.data ?? []).map((row: { subject_id: string }) => row.subject_id));
+        if (profile.data.subject_id) ids.add(profile.data.subject_id);
+        if (!ids.size) { if (active) setSubjects([]); return; }
+        query = query.in("id", [...ids]);
+      }
+      const { data, error } = await query;
+      if (error) { toast({ variant: "destructive", title: "تعذر تحميل المواد", description: getFriendlyErrorMessage(error.message) }); return; }
+      if (active) setSubjects((data ?? []).sort((a, b) => a.name.localeCompare(b.name, "ar")));
+    };
+    void loadSubjects();
+    return () => { active = false; };
+  }, [role, user?.id, toast]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const subjectId = fixedSubjectId || selectedSubject;
+    const subjectId = selectedSubject || fixedSubjectId;
     if (!subjectId) {
       toast({ variant: "destructive", title: "خطأ", description: "اختر مادة اولاً" });
       return;
@@ -63,7 +76,7 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
     setCreating(true);
     const result = await attendanceService.createLecture(subjectId, title || "محاضرة");
     if (result.error) {
-      toast({ variant: "destructive", title: "خطأ", description: result.error });
+      toast({ variant: "destructive", title: "خطأ", description: getFriendlyErrorMessage(result.error) });
     } else {
       toast({ title: "تم", description: "تم انشاء المحاضرة بنجاح" });
       setTitle("");
@@ -80,7 +93,7 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
     e.stopPropagation();
     const result = await attendanceService.endLecture(lectureId);
     if (result.error) {
-      toast({ variant: "destructive", title: "خطأ", description: result.error });
+      toast({ variant: "destructive", title: "خطأ", description: getFriendlyErrorMessage(result.error) });
     } else {
       toast({ title: "تم", description: "تم انهاء المحاضرة و ايقاف جميع الجلسات" });
       await load();
@@ -91,7 +104,7 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
     e.stopPropagation();
     const { error } = await supabase.rpc("delete_lecture", { p_lecture_id: lectureId });
     if (error) {
-      toast({ variant: "destructive", title: "خطأ", description: error.message });
+      toast({ variant: "destructive", title: "خطأ", description: getFriendlyErrorMessage(error.message) });
     } else {
       toast({ title: "تم", description: "تم حذف المحاضرة: " + lectureTitle });
       await load();
@@ -120,7 +133,7 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
       <CardContent className="space-y-4">
         {showCreate && (
           <form onSubmit={handleCreate} className="space-y-3 rounded-lg border bg-muted/30 p-4">
-            {!fixedSubjectId && (
+              {(!fixedSubjectId || subjects.length > 1) && (
               <div className="space-y-1">
                 <Label className="text-xs">المادة</Label>
                 <Select value={selectedSubject} onValueChange={setSelectedSubject}>
@@ -166,11 +179,11 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
         ) : (
           <div className="space-y-2">
             {lectures.map((lec) => (
-              <button
+              <div
                 key={lec.id}
-                onClick={() => onSelectLecture(lec)}
                 className={"flex w-full items-center gap-4 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-muted/50 " + (lec.is_ended ? "opacity-60" : "")}
               >
+                <button type="button" onClick={() => onSelectLecture(lec)} className="flex min-w-0 flex-1 items-center gap-4 text-right" aria-label={`عرض المحاضرة ${lec.title}`}>
                 <div className={"flex h-10 w-10 items-center justify-center rounded-lg " + (lec.is_ended ? "bg-muted" : "bg-primary/10")}>
                   <Calendar className={"h-5 w-5 " + (lec.is_ended ? "text-muted-foreground" : "text-primary")} />
                 </div>
@@ -183,6 +196,7 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
                     {lec.subject_name} — {formatDate(lec.lecture_date)}
                   </p>
                 </div>
+                </button>
                 <div className="flex items-center gap-2 sm:gap-3 shrink-0 flex-wrap justify-end">
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Layers className="h-3 w-3" />
@@ -224,7 +238,7 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
                     </ConfirmAction>
                   )}
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         )}

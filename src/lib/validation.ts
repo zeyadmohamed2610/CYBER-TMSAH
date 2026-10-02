@@ -146,12 +146,14 @@ export const rpcSchemas = {
   gps_distance_meters: gpsDistanceMetersSchema,
 } as const;
 
+export type RpcSchemas = typeof rpcSchemas;
+
 export function validateRpcInput<T extends keyof typeof rpcSchemas>(
   rpcName: T,
   input: unknown
 ): z.infer<typeof rpcSchemas[T]> {
   const schema = rpcSchemas[rpcName];
-  return schema.parse(input);
+  return schema.parse(input) as z.infer<typeof rpcSchemas[T]>;
 }
 
 export function safeValidateRpcInput<T extends keyof typeof rpcSchemas>(
@@ -161,7 +163,7 @@ export function safeValidateRpcInput<T extends keyof typeof rpcSchemas>(
   const schema = rpcSchemas[rpcName];
   const result = schema.safeParse(input);
   if (result.success) {
-    return { success: true, data: result.data };
+    return { success: true, data: result.data as z.infer<typeof rpcSchemas[T]> };
   }
   return { success: false, error: result.error };
 }

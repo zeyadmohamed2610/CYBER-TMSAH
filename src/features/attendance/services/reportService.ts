@@ -1,21 +1,11 @@
 import type { AttendanceApiResponse, AttendanceRecord, ExportRequest, ExportResult, Lecture, LectureAttendee } from "../types";
 import { attendanceService } from "./attendanceService";
+import { escapeReportHtml as escapeHtml, escapeReportCsvCell as escapeCsvCell } from "../utils/reportEncoding";
 
 const EXPORT_ROW_LIMIT = 500;
 
 const ok = <T>(data: T): AttendanceApiResponse<T> => ({ data, error: null });
 const fail = <T>(error: string): AttendanceApiResponse<T> => ({ data: null, error });
-
-const escapeCsvCell = (value: string) => `"${value.replace(/"/g, '""')}"`;
-
-const escapeHtml = (value: string) => {
-  const QUOTE = "\"";
-  return value
-    .replace(/&/g, "&")
-    .replace(/</g, "<")
-    .replace(/>/g, ">")
-    .replace(/"/g, QUOTE);
-};
 
 const roleLabels: Record<string, string> = {
   student: "Student",
@@ -162,7 +152,7 @@ const exportPdf = async (rows: ExportRow[], role: ExportRequest["role"]) => {
   // Dynamic imports for heavy libraries
   const [html2canvasModule, jspdfModule] = await Promise.all([
     import("html2canvas-pro"),
-    import("jspdf/dist/jspdf.umd.min.js"),
+    import("jspdf"),
   ]);
 
   const html2canvas = html2canvasModule.default;

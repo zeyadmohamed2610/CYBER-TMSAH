@@ -7,7 +7,7 @@ interface StatCardProps {
   icon: LucideIcon;
   className?: string;
   colorScheme?: "purple" | "cyan" | "emerald" | "amber" | "rose" | "blue" | "default";
-  badge?: string | number;
+  badge?: string | number | undefined;
   onClick?: () => void;
 }
 

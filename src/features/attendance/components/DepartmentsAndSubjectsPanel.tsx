@@ -1,23 +1,12 @@
+import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 import { useState, useEffect, useCallback } from "react";
-import {
-  FolderKanban,
-  Plus,
-  BookOpen,
-  Edit2,
-  Trash2,
-  Save,
-  X,
-  Users,
-  Search,
-  CheckCircle2,
-  Sparkles,
-  ArrowRight,
-} from "lucide-react";
+import { FolderKanban, Plus, BookOpen, Edit2, Trash2, Save, Search, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
 import { DEPARTMENTS, type DepartmentInfo } from "../types";
+import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 
 interface SubjectItem {
   id: string;
@@ -30,6 +19,13 @@ interface SubjectItem {
 const DEPARTMENTS_STORAGE_KEY = "cyber_departments_custom_names";
 
 export const DepartmentsAndSubjectsPanel = () => {
+  const { role, user } = useAttendanceAuth();
+  const [managedDepartment, setManagedDepartment] = useState<string | null>(null);
+  useEffect(() => {
+    if (role !== "coordinator" || !user?.id) return;
+    supabase.from("users").select("department").eq("auth_id", user.id).maybeSingle()
+      .then(({ data }) => setManagedDepartment(data?.department ?? null));
+  }, [role, user?.id]);
   const [departments, setDepartments] = useState<DepartmentInfo[]>(() => {
     try {
       const stored = localStorage.getItem(DEPARTMENTS_STORAGE_KEY);
@@ -144,7 +140,7 @@ export const DepartmentsAndSubjectsPanel = () => {
         .single();
 
       if (error) {
-        toast.error(`فشل إضافة المادة: ${error.message}`);
+        toast.error(getFriendlyErrorMessage(`فشل إضافة المادة: ${error.message}`));
       } else {
         toast.success(`تمت إضافة مادة "${newSubjectName}" بنجاح`);
         setSubjects((prev) => [data as SubjectItem, ...prev]);
@@ -153,7 +149,7 @@ export const DepartmentsAndSubjectsPanel = () => {
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "حدث خطأ غير متوقع";
-      toast.error(msg);
+      toast.error(getFriendlyErrorMessage(msg));
     } finally {
       setAddingSubject(false);
     }
@@ -190,7 +186,7 @@ export const DepartmentsAndSubjectsPanel = () => {
     try {
       const { error } = await supabase.from("subjects").delete().eq("id", id);
       if (error) {
-        toast.error(`تعذر حذف المادة: ${error.message}`);
+        toast.error(getFriendlyErrorMessage(`تعذر حذف المادة: ${error.message}`));
       } else {
         toast.success(`تم حذف مادة "${name}"`);
         setSubjects((prev) => prev.filter((s) => s.id !== id));
@@ -394,7 +390,7 @@ export const DepartmentsAndSubjectsPanel = () => {
 
       {/* Departments Grid (7 Departments) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {departments.map((dept, index) => {
+        {departments.filter(dept => role !== "coordinator" || dept.id === managedDepartment).map((dept, index) => {
           const isEditing = editingDeptId === dept.id;
 
           return (

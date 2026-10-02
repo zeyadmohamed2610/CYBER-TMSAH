@@ -71,25 +71,6 @@ export const Navbar = () => {
     setOpen(false);
   };
 
-  const getRoleLabel = () => {
-    if (!role) return null;
-    switch (role) {
-      case "student":
-        return "بوابة الطالب";
-      case "doctor":
-        return "بوابة المحاضر";
-      case "ta":
-        return "بوابة المعيد";
-      case "owner":
-        return "الإدارة الأكاديمية (المالك)";
-      case "coordinator":
-        return "منسق البرنامج الأكاديمي";
-      default:
-        return null;
-    }
-  };
-
-  const roleLabel = getRoleLabel();
   const dashboardPath = role ? getAttendanceDashboardRoute(role) : "/";
   const displayName = fullName || user?.email?.split("@")[0] || "User";
   const userInitial = displayName.charAt(0).toUpperCase();

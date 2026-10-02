@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { AlertCircle, CheckCircle2, Send, RefreshCw, X, ShieldAlert } from "lucide-react";
+import { CheckCircle2, Send, RefreshCw, X, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   subscribeToErrorModal,

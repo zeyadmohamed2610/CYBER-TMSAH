@@ -125,6 +125,7 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
 
   useEffect(() => {
     let active = true;
+    let authRevision = 0;
 
     /** Full apply — fetches role silently if already initialized to prevent unmounting active forms */
     const applySession = async (sessionUser: User | null, silent = false) => {
@@ -164,6 +165,7 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
       const isSameUser = currentUserRef.current?.id === sessionUser.id;
       if (isSameUser && roleRef.current) {
         currentUserRef.current = sessionUser;
+        setUser(sessionUser);
         setLoading(false);
         initializedRef.current = true;
         return;
@@ -175,11 +177,18 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
 
       setUser(sessionUser);
       currentUserRef.current = sessionUser;
+      if (!isSameUser) {
+        roleRef.current = null;
+        setRole(null);
+        setFullName(null);
+        setDepartment(null);
+        setLoading(true);
+      }
 
       const userAvatar =
         (sessionUser.user_metadata?.avatar_url as string | undefined) ||
         localStorage.getItem(`cyber_avatar_${sessionUser.id}`) ||
-        localStorage.getItem(AVATAR_STORAGE_KEY) ||
+        (isSameUser ? localStorage.getItem(AVATAR_STORAGE_KEY) : null) ||
         null;
       setAvatarUrl(userAvatar);
       if (userAvatar) {
@@ -193,7 +202,7 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
 
       try {
         const profile = await withTimeout(fetchUserProfile(sessionUser.id), 8_000, "fetchUserProfile");
-        if (!active) return;
+        if (!active || currentUserRef.current?.id !== sessionUser.id) return;
 
         setRole(profile.role);
         setFullName(profile.fullName);
@@ -222,15 +231,12 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
           // ignore
         }
       } catch (err) {
-        if (!active) return;
+        if (!active || currentUserRef.current?.id !== sessionUser.id) return;
         console.warn("Could not refresh role in background, keeping current cached role:", err);
         // CRITICAL: DO NOT set role to null if a background query fails while app is in use!
-        // Fallback to cached role or metadata
-        const cachedRole = sessionStorage.getItem(ROLE_STORAGE_KEY) || localStorage.getItem(ROLE_STORAGE_KEY);
-        if (!roleRef.current && isAttendanceRole(cachedRole)) {
-          setRole(cachedRole);
-        } else {
-          const metaRole = sessionUser.app_metadata?.role || sessionUser.user_metadata?.role;
+        // A saved browser value is not an authority for account permissions.
+        if (!roleRef.current) {
+          const metaRole = sessionUser.app_metadata?.role;
           if (!roleRef.current && isAttendanceRole(metaRole)) {
             setRole(metaRole);
             const metaName = sessionUser.user_metadata?.full_name || sessionUser.user_metadata?.name;
@@ -238,7 +244,7 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
           }
         }
       } finally {
-        if (active) {
+        if (active && currentUserRef.current?.id === sessionUser.id) {
           setLoading(false);
           initializedRef.current = true;
         }
@@ -246,12 +252,14 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
     };
 
     const initializeAuth = async () => {
+      const revision = authRevision;
       try {
         const { data, error } = await withTimeout(supabase.auth.getSession(), 8_000, "getSession");
+        if (!active || revision !== authRevision) return;
         if (error) throw error;
         await applySession(data.session?.user ?? null, initializedRef.current);
       } catch (err) {
-        if (!active) return;
+        if (!active || revision !== authRevision) return;
         console.warn("Session check fallback:", err);
         setLoading(false);
         initializedRef.current = true;
@@ -264,9 +272,11 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (!active) return;
+      authRevision += 1;
 
       // SIGNED_OUT: only here do we clear the user session
       if (event === "SIGNED_OUT") {
+        roleRef.current = null;
         setUser(null);
         setRole(null);
         setFullName(null);
@@ -314,6 +324,8 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
     if (!user) return;
     try {
       const profile = await withTimeout(fetchUserProfile(user.id), 10_000, "refreshRole");
+      if (currentUserRef.current?.id !== user.id) return;
+      roleRef.current = profile.role;
       setRole(profile.role);
       setFullName(profile.fullName);
       setDepartment(profile.department);
@@ -337,6 +349,7 @@ export const AttendanceAuthProvider = ({ children }: { children: ReactNode }) =>
     setDepartment(null);
     setAvatarUrl(null);
     currentUserRef.current = null;
+    roleRef.current = null;
     try {
       sessionStorage.removeItem(ROLE_STORAGE_KEY);
       sessionStorage.removeItem(NAME_STORAGE_KEY);

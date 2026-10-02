@@ -1,7 +1,9 @@
 import { attendanceService } from "./attendanceService";
-import { computeFingerprint } from "../utils/fingerprint";
+
+import { supabase } from "@/lib/supabaseClient";
 
 interface PendingSubmission {
+  authId?: string;
   id: string;
   hash: string;
   deviceFingerprint: string;
@@ -14,11 +16,7 @@ interface PendingSubmission {
 
 const STORAGE_KEY = "cyber_tmsah_pending_attendance";
 
-let cachedFingerprint: string | null = null;
 
-function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
 
 function getPending(): PendingSubmission[] {
   try {
@@ -33,16 +31,10 @@ function savePending(items: PendingSubmission[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
 }
 
-async function getFingerprint(): Promise<string> {
-  if (cachedFingerprint) return cachedFingerprint;
-  cachedFingerprint = await computeFingerprint();
-  return cachedFingerprint;
-}
 
 /** Submit attendance via RPC with device fingerprint, GPS, and biometric credential */
 async function submitAttendanceDirect(
   hash: string,
-  fingerprint: string,
   lat: number | null,
   lng: number | null,
   biometricCredentialId?: string,
@@ -54,12 +46,55 @@ async function submitAttendanceDirect(
   return { success: true };
 }
 
+let syncInFlight: Promise<{ synced: number; failed: number }> | null = null;
+async function syncPendingOnce(): Promise<{ synced: number; failed: number }> {
+    const pending = getPending();
+    if (pending.length === 0) return { synced: 0, failed: 0 };
+    const { data } = await supabase.auth.getSession();
+    const authId = data.session?.user.id;
+    if (!authId) return { synced: 0, failed: pending.length };
+
+    let synced = 0;
+    const remaining: PendingSubmission[] = [];
+
+    for (const item of pending) {
+      // Never submit another account's attendance, including legacy unbound entries.
+      const { data: current } = await supabase.auth.getSession();
+      if (item.authId !== authId || current.session?.user.id !== authId) {
+        remaining.push(item);
+        continue;
+      }
+      const result = await submitAttendanceDirect(
+        item.hash,
+        item.latitude,
+        item.longitude,
+        item.biometricCredentialId,
+      );
+      if (result.success) {
+        synced += 1;
+      } else {
+        item.retries += 1;
+        remaining.push(item);
+      }
+    }
+
+    // Keep submissions added while the synchronization request was running.
+    const processedIds = new Set(pending.map(item => item.id));
+    const additions = getPending().filter(item => !processedIds.has(item.id));
+    savePending([...remaining, ...additions]);
+    return { synced, failed: remaining.length };
+}
+
 export const offlineAttendanceService = {
   async queueSubmission(
     hash: string,
     biometricCredentialId?: string,
   ): Promise<{ success: boolean; offline: boolean; error?: string }> {
-    const fingerprint = await getFingerprint();
+    if (!navigator.onLine) return { success: false, offline: false, error: "تسجيل الحضور يحتاج اتصالًا بالإنترنت لتأكيد الرمز والبصمة. أعد المحاولة عند عودة الاتصال." };
+    const { data: authData } = await supabase.auth.getSession();
+    const authId = authData.session?.user.id;
+    if (!authId) return { success: false, offline: false, error: "يرجى تسجيل الدخول قبل تسجيل الحضور." };
+
 
     let lat: number | null = null;
     let lng: number | null = null;
@@ -73,52 +108,17 @@ export const offlineAttendanceService = {
     } catch { /* GPS unavailable */ }
 
     if (navigator.onLine) {
-      const result = await submitAttendanceDirect(hash, fingerprint, lat, lng, biometricCredentialId);
+      const result = await submitAttendanceDirect(hash, lat, lng, biometricCredentialId);
       if (result.success) return { success: true, offline: false };
-      return { success: false, offline: false, error: result.error };
+      return { success: false, offline: false, error: result.error ?? "تعذر تسجيل الحضور. أعد المحاولة." };
     }
 
-    const pending = getPending();
-    pending.push({
-      id: generateId(),
-      hash,
-      deviceFingerprint: fingerprint,
-      latitude: lat,
-      longitude: lng,
-      biometricCredentialId,
-      timestamp: new Date().toISOString(),
-      retries: 0,
-    });
-    savePending(pending);
-
-    return { success: true, offline: true };
+    return { success: false, offline: false, error: "انقطع الاتصال. أعد تسجيل الحضور عند عودته." };
   },
 
-  async syncPending(): Promise<{ synced: number; failed: number }> {
-    const pending = getPending();
-    if (pending.length === 0) return { synced: 0, failed: 0 };
-
-    let synced = 0;
-    const remaining: PendingSubmission[] = [];
-
-    for (const item of pending) {
-      const result = await submitAttendanceDirect(
-        item.hash,
-        item.deviceFingerprint,
-        item.latitude,
-        item.longitude,
-        item.biometricCredentialId,
-      );
-      if (result.success) {
-        synced += 1;
-      } else {
-        item.retries += 1;
-        if (item.retries < 5) remaining.push(item);
-      }
-    }
-
-    savePending(remaining);
-    return { synced, failed: remaining.length };
+  syncPending(): Promise<{ synced: number; failed: number }> {
+    if (!syncInFlight) syncInFlight = syncPendingOnce().finally(() => { syncInFlight = null; });
+    return syncInFlight;
   },
 
   getPendingCount(): number {

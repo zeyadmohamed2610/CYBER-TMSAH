@@ -88,7 +88,8 @@ export async function saveUserAvatar(
     try {
       const base64Data = imageDataUrl.split(",")[1];
       const mimeMatch = imageDataUrl.match(/^data:(.*?);base64/);
-      const mimeType = mimeMatch ? mimeMatch[1] : "image/webp";
+      const mimeType = mimeMatch?.[1] ?? "image/webp";
+      if (!base64Data || !/^image\/(png|jpeg|webp)$/.test(mimeType)) throw new Error("Invalid image data");
       const byteCharacters = atob(base64Data);
       const byteNumbers = new Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {

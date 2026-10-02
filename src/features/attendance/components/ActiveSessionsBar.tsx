@@ -64,7 +64,7 @@ export function ActiveSessionsBar() {
   const handleCopy = (sessionId: string, code: string) => {
     navigator.clipboard.writeText(code).then(() => {
       setCopiedId(sessionId);
-      toast.success("تم نسخ الكود!");
+      toast.success("تم نسخ الرمز!");
       setTimeout(() => setCopiedId(null), 2000);
     });
   };
@@ -84,7 +84,7 @@ export function ActiveSessionsBar() {
           <Clock className="h-8 w-8 text-muted-foreground/50" />
         </div>
         <p className="text-sm font-medium text-muted-foreground">لا توجد جلسات نشطة حالياً.</p>
-        <p className="text-xs text-muted-foreground/60">سيظهر كود الحضور تلقائياً عند بدء الجلسة.</p>
+        <p className="text-xs text-muted-foreground/60">سيظهر رمز الحضور تلقائياً عند بدء الجلسة.</p>
       </div>
     );
   }
@@ -121,7 +121,7 @@ export function ActiveSessionsBar() {
               size="icon"
               className="h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors"
               onClick={() => handleCopy(s.session_id, s.short_code)}
-              aria-label={`نسخ كود ${s.subject_name}`}
+              aria-label={`نسخ رمز ${s.subject_name}`}
             >
               {copiedId === s.session_id ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
             </Button>

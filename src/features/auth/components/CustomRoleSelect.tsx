@@ -36,8 +36,6 @@ export function CustomRoleSelect({
   labelColor = "#CBD5E1",
   fieldBg = "rgba(255, 255, 255, 0.045)",
   fieldBorder = "rgba(255, 255, 255, 0.12)",
-  fieldFocus = "rgba(99, 102, 241, 0.08)",
-  fieldGlow = "0 0 0 3.5px rgba(99, 102, 241, 0.22), 0 2px 8px rgba(0,0,0,0.3)",
   textColor = "#FFFFFF",
   faintColor = "#94A3B8",
   isRTL = true,

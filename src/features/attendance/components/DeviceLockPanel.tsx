@@ -1,3 +1,4 @@
+import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 import { useEffect, useState } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Shield, Trash2, RefreshCw, Smartphone, Search } from "lucide-react";
@@ -47,7 +48,7 @@ export function DeviceLockPanel() {
   const handleUnlock = async (authId: string, name: string) => {
     const { error } = await supabase.from("device_locks").delete().eq("student_auth_id", authId);
     if (error) {
-      toast({ variant: "destructive", title: "خطأ", description: error.message });
+      toast({ variant: "destructive", title: "خطأ", description: getFriendlyErrorMessage(error.message) });
     } else {
       toast({ title: "تم الإلغاء", description: "تم إلغاء قفل جهاز " + name });
       void load();
@@ -116,7 +117,7 @@ export function DeviceLockPanel() {
                         title="إلغاء قفل الجهاز"
                         description={`هل تريد إلغاء قفل جهاز "${student.full_name}"؟ سيتمكن من تسجيل الحضور من أي جهاز.`}
                         confirmLabel="إلغاء القفل"
-                        onConfirm={() => student.auth_id && handleUnlock(student.auth_id, student.full_name)}
+                        onConfirm={async () => { if (student.auth_id) await handleUnlock(student.auth_id, student.full_name); }}
                       >
                         {(trigger) => (
                           <Button size="sm" variant="ghost" className="text-xs text-destructive h-7" onClick={trigger}>

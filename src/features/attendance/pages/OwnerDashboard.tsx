@@ -1,3 +1,4 @@
+import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -31,6 +32,9 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AttendanceRecordsPanel } from "../components/AttendanceRecordsPanel";
+import { LectureManagementPanel } from "../components/LectureManagementPanel";
+import { LectureDetailView } from "../components/LectureDetailView";
+import type { Lecture } from "../types";
 import { QuickScheduleEditor } from "../components/QuickScheduleEditor";
 import { ManualAttendancePanel } from "../components/ManualAttendancePanel";
 import { StatCard } from "../components/StatCard";
@@ -69,6 +73,7 @@ export const OwnerDashboard = () => {
   const [pendingFixesCount, setPendingFixesCount] = useState<number>(0);
   const [facultyCount, setFacultyCount] = useState<number>(0);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
 
   useEffect(() => {
     if (!role) return;
@@ -117,6 +122,7 @@ export const OwnerDashboard = () => {
     { value: "students", label: "الطلاب", icon: Users, category: "users" },
     { value: "fixes", label: "بلاغات المشاكل", icon: Wrench, category: "system", badge: pendingFixesCount, colorScheme: "rose" },
     { value: "manual-attendance", label: "تسجيل يدوي", icon: CheckCircle2, category: "attendance" },
+    { value: "lectures", label: "المحاضرات", icon: BookOpen, category: "attendance" },
     { value: "attendance-records", label: "سجلات الحضور", icon: Activity, category: "attendance" },
   ];
 
@@ -131,7 +137,7 @@ export const OwnerDashboard = () => {
         : ["students", "tas", "doctors"],
     },
     { id: "academic", label: "الجداول والأقسام", icon: BookOpen, tabKeys: ["schedule", "departments"] },
-    { id: "attendance", label: "الحضور والغياب", icon: CalendarCheck, tabKeys: ["manual-attendance", "attendance-records"] },
+    { id: "attendance", label: "الحضور والغياب", icon: CalendarCheck, tabKeys: ["lectures", "manual-attendance", "attendance-records"] },
     {
       id: "system",
       label: "النظام والطلبات",
@@ -143,10 +149,10 @@ export const OwnerDashboard = () => {
   const visibleTabs =
     activeCategory === "all" ? ALL_TABS : ALL_TABS.filter((t) => t.category === activeCategory);
 
-  const currentTabObj = ALL_TABS.find((t) => t.value === activeTab) || ALL_TABS[0];
+  const currentTabObj = ALL_TABS.find((t) => t.value === activeTab) || { value: "overview", label: "نظرة عامة", icon: Activity, badge: 0 };
   const CurrentTabIcon = currentTabObj.icon;
 
-  const roleBadgeLabel = isOwner ? "الأونر" : isCoordinator ? "منسق البرنامج" : role;
+  const roleBadgeLabel = isOwner ? "مالك المنصة" : isCoordinator ? "رئيس القسم" : role;
   const roleBadgeColor = isOwner
     ? "bg-purple-600/20 text-purple-300 border-purple-500/40"
     : "bg-blue-600/20 text-blue-300 border-blue-500/40";
@@ -155,8 +161,8 @@ export const OwnerDashboard = () => {
     <div className="space-y-5" dir="rtl">
       {error && (
         <Alert variant="destructive">
-          <AlertTitle>خطأ في قاعدة البيانات</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertTitle>تعذر تحميل البيانات. أعد المحاولة.</AlertTitle>
+          <AlertDescription>{getFriendlyErrorMessage(error)}</AlertDescription>
         </Alert>
       )}
 
@@ -374,7 +380,7 @@ export const OwnerDashboard = () => {
                   onClick={() => {
                     setActiveCategory(cat.id);
                     if (cat.tabKeys && !cat.tabKeys.includes(activeTab)) {
-                      setActiveTab(cat.tabKeys[0]);
+                      if (cat.tabKeys[0]) setActiveTab(cat.tabKeys[0]);
                     }
                   }}
                   className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 border ${
@@ -459,6 +465,10 @@ export const OwnerDashboard = () => {
         </TabsContent>
         <TabsContent value="attendance-records" className="mt-4 outline-none">
           <AttendanceRecordsPanel />
+        </TabsContent>
+        <TabsContent value="lectures" className="mt-4 outline-none">
+          {selectedLecture ? <LectureDetailView lecture={selectedLecture} onBack={() => setSelectedLecture(null)} /> :
+            <LectureManagementPanel onSelectLecture={setSelectedLecture} />}
         </TabsContent>
       </Tabs>
     </div>

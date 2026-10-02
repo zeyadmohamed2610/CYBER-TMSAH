@@ -1,6 +1,7 @@
+import { interpolate } from "./interpolate";
 // src/i18n/index.ts — Language context (Arabic-first, translation removed)
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo } from "react";
 import type { ReactNode } from "react";
 import ar from "./ar";
 import type { Translations } from "./en";
@@ -11,15 +12,15 @@ interface LanguageContextValue {
   lang: Language;
   t: Translations;
   setLang: (l: Language) => void;
-  dir: "rtl";
+  dir: "rtl" | "ltr";
   isRTL: true;
+  interpolate: typeof interpolate;
 }
 
 const LanguageContext = createContext<LanguageContextValue | undefined>(undefined);
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   // Always Arabic across the entire site
-  const [lang] = useState<Language>("ar");
 
   const setLang = useCallback(() => {
     // No-op: Arabic is the permanent and only language
@@ -38,10 +39,11 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const value = useMemo<LanguageContextValue>(
     () => ({
       lang: "ar",
-      t: ar as unknown as Translations,
+      t: ar,
       setLang,
       dir: "rtl",
       isRTL: true,
+      interpolate,
     }),
     [setLang],
   );
@@ -55,7 +57,3 @@ export const useLang = () => {
   if (!ctx) throw new Error("useLang must be used inside LanguageProvider");
   return ctx;
 };
-
-/** Simple template interpolation: t("lockedOutTimer", { minutes: 3 }) */
-export const interpolate = (template: string, vars: Record<string, string | number>): string =>
-  template.replace(/\{\{(\w+)\}\}/g, (_, key) => String(vars[key] ?? `{{${key}}}`));

@@ -77,7 +77,7 @@ const AttendanceStudentPage = () => {
             </div>
             <Button onClick={lockDevice} disabled={locking} className="w-full gap-2 h-14 rounded-xl text-lg btn-cyber" size="lg">
               <Smartphone className="h-6 w-6" />
-              {locking ? "جاري التشفير والقفل..." : "قفل هذا الجهاز والمتابعة"}
+              {locking ? "جاري تسجيل الجهاز..." : "قفل هذا الجهاز والمتابعة"}
             </Button>
             <div className="pt-2">
               <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground/70 hover:text-white">تسجيل الخروج</Button>
@@ -95,7 +95,7 @@ const AttendanceStudentPage = () => {
           <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div className="space-y-3">
               <span className="inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-bold tracking-wide text-primary shadow-[0_0_10px_rgba(0,0,0,0.1)] shadow-primary/20 backdrop-blur-sm">بوابة الطالب الخاصة</span>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground md:text-4xl tracking-tight">مركز الحضور السيبراني</h1>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground md:text-4xl tracking-tight">الحضور الدراسي</h1>
             </div>
             <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-3 mt-2 sm:mt-0">
               <Button variant="destructive" size="sm" onClick={signOut} className="h-10 px-4 rounded-xl shadow-md transition-all hover:scale-105 shrink-0 gap-2 font-medium">

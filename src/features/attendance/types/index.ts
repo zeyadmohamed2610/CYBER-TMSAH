@@ -103,6 +103,8 @@ export interface DashboardMetrics {
   activeSessions: number;
   attendanceRate: number;
   pendingSubmissions: number;
+  completedOpportunities?: number;
+  absenceRate?: number;
 }
 
 export interface AttendanceTrendPoint {

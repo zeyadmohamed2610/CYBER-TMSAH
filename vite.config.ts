@@ -1,14 +1,14 @@
 import { defineConfig } from "vite";
 import type { ViteDevServer, PreviewServer } from "vite";
 import type { ServerResponse, IncomingMessage } from "http";
-import react from "@vitejs/plugin-react-swc";
+import react from "@vitejs/plugin-react";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 import compression from "vite-plugin-compression";
 
 type NextFn = () => void;
 
-let sentryVitePlugin: import("@sentry/vite-plugin").SentryVitePlugin | null = null;
+let sentryVitePlugin: typeof import("@sentry/vite-plugin").sentryVitePlugin | null = null;
 try {
   const mod = await import("@sentry/vite-plugin");
   sentryVitePlugin = mod.sentryVitePlugin;
@@ -32,9 +32,10 @@ function e2eSupportPlugin() {
           res.setHeader("Content-Type", "application/json");
           res.statusCode = 200;
           res.end(JSON.stringify({
-            status: "healthy",
+            status: "ok",
+            scope: "web-server",
             timestamp: new Date().toISOString(),
-            checks: { database: "ok", server: "ok" },
+            checks: { server: "ok" },
           }));
           return;
         }
@@ -60,7 +61,7 @@ function e2eSupportPlugin() {
   };
 }
 
-export default defineConfig(async ({ mode }) => ({
+export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
@@ -78,22 +79,8 @@ export default defineConfig(async ({ mode }) => ({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: false,
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
-      manifest: {
-        name: 'CYBER TMSAH - منصة الحضور الذكي',
-        short_name: 'CYBER TMSAH',
-        description: 'منصة جامعية شاملة لنظام الحضور الذكي',
-        theme_color: '#0d9488',
-        background_color: '#0a0a0f',
-        display: 'standalone',
-        orientation: 'portrait',
-        scope: '/',
-        start_url: '/',
-        icons: [
-          { src: 'favicon.png', sizes: '192x192', type: 'image/png' },
-          { src: 'favicon.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
-        ]
-      },
+      includeAssets: ['manifest.json', 'favicon.png', 'logo.png'],
+      manifest: false,
       workbox: {
         cleanupOutdatedCaches: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
@@ -110,8 +97,8 @@ export default defineConfig(async ({ mode }) => ({
       release: {
         name: process.env.VITE_SENTRY_RELEASE || `v${Date.now()}`,
       },
-      sourcemap: {
-        files: ['dist/**/*.js'],
+      sourcemaps: {
+        assets: ['dist/**/*.js'],
       },
     }),
   ].filter(Boolean),
@@ -139,7 +126,7 @@ export default defineConfig(async ({ mode }) => ({
           if (id.includes('node_modules/jspdf')) return 'export-pdf';
           if (id.includes('node_modules/chart.js') || id.includes('node_modules/react-chartjs')) return 'charts';
         },
-        chunkFileNames: (chunkInfo) => mode === 'production' ? 'assets/[hash].js' : 'assets/[name]-[hash].js',
+        chunkFileNames: () => mode === 'production' ? 'assets/[hash].js' : 'assets/[name]-[hash].js',
         entryFileNames: (chunkInfo) => mode === 'production' ? 'assets/[hash].js' : 'assets/[name]-[hash].js',
       },
     },

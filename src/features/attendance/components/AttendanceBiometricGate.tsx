@@ -1,3 +1,4 @@
+import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -15,28 +16,17 @@ import { isWebAuthnSupported } from "@/lib/webauthn";
 interface AttendanceBiometricGateProps {
   /** Called when biometric verification succeeds */
   onVerified: (credentialId: string) => void;
+  attendanceHash: string;
   // NO onBypass — biometric is MANDATORY
 }
 
 type GateState = "idle" | "loading" | "verified" | "error" | "no_passkey" | "unsupported";
 
-/**
- * MANDATORY anti-cheat biometric gate for attendance.
- *
- * Security:
- *  - NO bypass — if user has no passkey, they MUST register one before submitting
- *  - Fetches ONLY credentials for the current user's auth_id (allowCredentials restricted)
- *  - userVerification: 'required' — actual biometric, not just presence
- *  - Challenge is random per-attempt (replay-safe)
- *  - After success the gate resets for the next session
- *
- * Anti-cheat guarantees:
- *  - Cannot use another student's device/fingerprint
- *  - Cannot share QR alone — biometric must be present
- *  - Cannot bypass without registering a passkey first
- *  - All attempts logged in DB (biometric: yes/no) visible to owner
+/** Server-verified attendance gate. The returned receipt is bound to this code,
+ * account and device, and is consumed once by the attendance procedure.
+ * Device verification may use a fingerprint, face or device PIN.
  */
-export const AttendanceBiometricGate = ({ onVerified }: AttendanceBiometricGateProps) => {
+export const AttendanceBiometricGate = ({ onVerified, attendanceHash }: AttendanceBiometricGateProps) => {
   const navigate   = useNavigate();
   const [state, setState]     = useState<GateState>("idle");
   const [errorMsg, setErrorMsg] = useState<string>("");
@@ -48,7 +38,7 @@ export const AttendanceBiometricGate = ({ onVerified }: AttendanceBiometricGateP
     setState("loading");
     setErrorMsg("");
 
-    const result = await verifyPasskeyForCurrentUser();
+    const result = await verifyPasskeyForCurrentUser(attendanceHash);
 
     if (result.success && result.credentialId) {
       setState("verified");
@@ -58,18 +48,18 @@ export const AttendanceBiometricGate = ({ onVerified }: AttendanceBiometricGateP
 
     if (result.noPasskeyRegistered) {
       setState("no_passkey");
-      setErrorMsg(result.error ?? "");
+      setErrorMsg(getFriendlyErrorMessage(result.error ?? ""));
       return;
     }
 
     if (result.cancelled) {
       setState("idle");
-      setErrorMsg("تم إلغاء التحقق البيومتري. يجب الموافقة على البصمة لتسجيل الحضور.");
+      setErrorMsg("تم إلغاء التحقق بالبصمة. يجب الموافقة على البصمة لتسجيل الحضور.");
       return;
     }
 
     setState("error");
-    setErrorMsg(result.error ?? "فشل التحقق البيومتري.");
+    setErrorMsg(getFriendlyErrorMessage(result.error ?? "فشل التحقق بالبصمة."));
   };
 
   // ── Verified ──────────────────────────────────────────────────────────────
@@ -79,7 +69,7 @@ export const AttendanceBiometricGate = ({ onVerified }: AttendanceBiometricGateP
         <div className="w-16 h-16 rounded-full bg-emerald-500/15 flex items-center justify-center ring-2 ring-emerald-500/30">
           <ShieldCheck className="h-8 w-8 text-emerald-400" />
         </div>
-        <p className="text-emerald-400 font-bold text-base">تم التحقق البيومتري بنجاح!</p>
+        <p className="text-emerald-400 font-bold text-base">تم التحقق بالبصمة بنجاح!</p>
         <p className="text-xs text-muted-foreground">يمكنك الآن تسجيل حضورك.</p>
       </div>
     );
@@ -106,7 +96,7 @@ export const AttendanceBiometricGate = ({ onVerified }: AttendanceBiometricGateP
           <ol className="list-decimal list-inside space-y-1 marker:text-destructive">
             <li>اذهب إلى <strong className="text-foreground">الملف الشخصي</strong></li>
             <li>افتح قسم <strong className="text-foreground">الأمان والبصمة</strong></li>
-            <li>اضغط "إضافة بصمة / Passkey"</li>
+            <li>اضغط "إضافة بصمة"</li>
             <li>اتبع التعليمات على جهازك</li>
             <li>عد هنا وسجل حضورك</li>
           </ol>
@@ -130,10 +120,10 @@ export const AttendanceBiometricGate = ({ onVerified }: AttendanceBiometricGateP
         <div className="flex items-start gap-3">
           <ShieldAlert className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
           <div>
-            <p className="font-bold text-amber-400 text-sm">المتصفح لا يدعم التحقق البيومتري</p>
+            <p className="font-bold text-amber-400 text-sm">المتصفح لا يدعم التحقق بالبصمة</p>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
               يجب استخدام Chrome أو Safari أو Edge لتسجيل الحضور عبر البصمة.
-              تسجيل الحضور مستحيل بدون دعم WebAuthn.
+              جرّب جهازاً أو متصفحاً يدعم الدخول بالبصمة لتسجيل حضورك.
             </p>
           </div>
         </div>
@@ -152,7 +142,7 @@ export const AttendanceBiometricGate = ({ onVerified }: AttendanceBiometricGateP
         </div>
         <div>
           <p className="font-bold text-base text-foreground flex items-center gap-2">
-            التحقق البيومتري الإلزامي
+            التحقق بالبصمة الإلزامي
             <span className="text-[10px] bg-destructive/20 text-destructive px-2 py-0.5 rounded-full font-bold">مطلوب</span>
           </p>
           <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
@@ -184,7 +174,7 @@ export const AttendanceBiometricGate = ({ onVerified }: AttendanceBiometricGateP
         }`}>
           <ShieldAlert className={`h-4 w-4 shrink-0 mt-0.5 ${state === "error" ? "text-destructive" : "text-amber-400"}`} />
           <p className={`text-xs leading-relaxed ${state === "error" ? "text-destructive" : "text-amber-300"}`}>
-            {errorMsg}
+            {getFriendlyErrorMessage(errorMsg)}
           </p>
         </div>
       )}
@@ -192,14 +182,14 @@ export const AttendanceBiometricGate = ({ onVerified }: AttendanceBiometricGateP
       {/* CTA */}
       <Button
         onClick={handleVerify}
-        disabled={state === "loading"}
+        disabled={state === "loading" || !/^[0-9]{6}$/.test(attendanceHash)}
         className="w-full h-13 rounded-xl text-base font-bold btn-cyber shadow-lg gap-2"
         size="lg"
       >
         {state === "loading" ? (
           <><Loader2 className="h-5 w-5 animate-spin" />جارٍ التحقق من البصمة...</>
         ) : (
-          <><Fingerprint className="h-5 w-5" />تحقق بالبصمة / الوجه / PIN</>
+          <><Fingerprint className="h-5 w-5" />تحقق بالبصمة / الوجه / رمز قفل الجهاز</>
         )}
       </Button>
 

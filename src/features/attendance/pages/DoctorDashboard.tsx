@@ -1,3 +1,5 @@
+import { AttendanceRegisterPanel } from "../components/AttendanceRegisterPanel";
+import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 // src/features/attendance/pages/DoctorDashboard.tsx
 // Updated: Rich tabbed dashboard for Doctor role
 import { useEffect, useState, useCallback } from "react";
@@ -127,7 +129,7 @@ function DoctorInfoCard({ subjectId }: { subjectId: string | undefined }) {
   useEffect(() => {
     if (!user) return;
     if (user.email) setUserEmail(user.email);
-    supabase.from("users").select("email, department").eq("auth_id", user.id).maybeSingle()
+    Promise.resolve(supabase.from("users").select("email, department").eq("auth_id", user.id).maybeSingle())
       .then(({ data, error }) => {
         if (!error && data) {
           if (data.email) setUserEmail(data.email);
@@ -207,8 +209,8 @@ export const DoctorDashboard = () => {
 
       {error && (
         <Alert variant="destructive">
-          <AlertTitle>خطأ في قاعدة البيانات</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertTitle>تعذر تحميل البيانات. أعد المحاولة.</AlertTitle>
+          <AlertDescription>{getFriendlyErrorMessage(error)}</AlertDescription>
         </Alert>
       )}
 
@@ -280,6 +282,7 @@ export const DoctorDashboard = () => {
 
         <TabsContent value="records" className="mt-4">
           <DoctorAttendanceRecords subjectId={doctorSubjectId} />
+          <AttendanceRegisterPanel />
         </TabsContent>
 
         <TabsContent value="schedule" className="mt-4">

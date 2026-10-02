@@ -1,3 +1,4 @@
+import { computeFingerprint } from "../utils/fingerprint";
 import type {
   AttendanceApiResponse,
   AttendanceRecord,
@@ -59,13 +60,6 @@ type SessionRow = {
   subjects?: { name?: string | null } | Array<{ name?: string | null }> | null;
 };
 
-type SystemLogRow = {
-  id: string;
-  actor_id: string | null;
-  action: string;
-  created_at: string;
-  users?: { full_name?: string | null } | Array<{ full_name?: string | null }> | null;
-};
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -299,153 +293,14 @@ export const attendanceService = {
     }
   },
 
-  /** Dashboard metrics recomputed from real columns. */
-  async fetchDashboardMetrics(
-    role: AttendanceRole,
-    sectionFilter?: string[],
-  ): Promise<AttendanceApiResponse<DashboardMetrics>> {
-    const operation = "attendanceService.fetchDashboardMetrics";
+  /** Ratios use eligible students and completed lecture opportunities. */
+  async fetchDashboardMetrics(_role: AttendanceRole, sectionFilter?: string[]): Promise<AttendanceApiResponse<DashboardMetrics>> {
     try {
-      if (role === "owner") {
-        const [sessionsResult, studentsResult, attendanceResult] = await Promise.all([
-          supabase.from("sessions").select("id, expires_at", { count: "exact" }),
-          supabase.rpc("count_students"),
-          supabase.from("attendance").select("id", { count: "exact" }),
-        ]);
-        if (sessionsResult.error) throw sessionsResult.error;
-        if (attendanceResult.error) throw attendanceResult.error;
-
-        let totalStudents = 0;
-        if (!studentsResult.error && studentsResult.data !== null && studentsResult.data !== undefined) {
-          totalStudents = Number(studentsResult.data);
-        } else {
-          const fallbackStudents = await supabase
-            .from("users")
-            .select("id", { count: "exact", head: true })
-            .eq("role", "student");
-          totalStudents = fallbackStudents.count ?? 0;
-        }
-
-        const sessions = sessionsResult.data ?? [];
-        const totalSessions = sessions.length;
-        const activeSessions = sessions.filter(
-          (s) => s.expires_at && new Date(s.expires_at as string).getTime() > Date.now(),
-        ).length;
-        const attendanceCount = attendanceResult.count ?? 0;
-
-        // Attendance rate = actual records / possible records (1 per student per session)
-        const possibleAttendance = totalSessions * totalStudents;
-        return ok<DashboardMetrics>({
-          totalSessions,
-          totalStudents,
-          activeSessions,
-          attendanceRate:
-            possibleAttendance > 0
-              ? Math.min(100, (attendanceCount / possibleAttendance) * 100)
-              : 0,
-          pendingSubmissions: 0,
-        });
-      }
-
-      const authId = await resolveAuthUserId();
-      if (!authId) throw new Error("Not authenticated.");
-      const profile = await resolveDbUserProfile(authId);
-
-      if (role === "student") {
-        if (!profile) {
-          return ok<DashboardMetrics>({
-            totalSessions: 0,
-            totalStudents: 1,
-            activeSessions: 0,
-            attendanceRate: 0,
-            pendingSubmissions: 0,
-          });
-        }
-
-        // Students can attend any active subject, so their metrics are global.
-        const [sessionsResult, attendedResult] = await Promise.all([
-          supabase.from("sessions").select("id, expires_at"),
-          supabase
-            .from("attendance")
-            .select("id", { head: true, count: "exact" })
-            .eq("student_id", profile.id),
-        ]);
-
-        if (sessionsResult.error) throw sessionsResult.error;
-        if (attendedResult.error) throw attendedResult.error;
-
-        const sessions = sessionsResult.data ?? [];
-        const totalSessions = sessions.length;
-        const activeSessions = sessions.filter(
-          (s) => s.expires_at && new Date(s.expires_at as string).getTime() > Date.now(),
-        ).length;
-        const attended = attendedResult.count ?? 0;
-
-        return ok<DashboardMetrics>({
-          totalSessions,
-          totalStudents: 1,
-          activeSessions,
-          attendanceRate: totalSessions > 0 ? Math.min(100, (attended / totalSessions) * 100) : 0,
-          pendingSubmissions: 0,
-        });
-      }
-
-      // Doctor
-      if (!profile?.subjectId) {
-        return ok<DashboardMetrics>({
-          totalSessions: 0,
-          totalStudents: 0,
-          activeSessions: 0,
-          attendanceRate: 0,
-          pendingSubmissions: 0,
-        });
-      }
-
-      const sessionListQuery = supabase.from("sessions").select("id, expires_at, section").eq("subject_id", profile.subjectId);
-      if (sectionFilter && sectionFilter.length > 0) {
-        sessionListQuery.in("section", sectionFilter);
-      }
-      const [sessionsResult, studentsResult] = await Promise.all([
-        sessionListQuery,
-        supabase
-          .from("users")
-          .select("id", { head: true, count: "exact" })
-          .eq("role", "student"),
-      ]);
-      if (sessionsResult.error) throw sessionsResult.error;
-      if (studentsResult.error) throw studentsResult.error;
-
-      const sessionList = sessionsResult.data ?? [];
-      const totalSessions = sessionList.length;
-      const activeSessions = sessionList.filter(
-        (s) => s.expires_at && new Date(s.expires_at as string).getTime() > Date.now(),
-      ).length;
-      const totalStudents = studentsResult.count ?? 0;
-
-      const sessionIds = sessionList.map((s) => s.id as string);
-      let attendanceCount = 0;
-      if (sessionIds.length > 0) {
-        const { count, error: aErr } = await supabase
-          .from("attendance")
-          .select("id", { head: true, count: "exact" })
-          .in("session_id", sessionIds);
-        if (aErr) throw aErr;
-        attendanceCount = count ?? 0;
-      }
-
-      return ok<DashboardMetrics>({
-        totalSessions,
-        totalStudents,
-        activeSessions,
-        attendanceRate:
-          totalSessions > 0 && totalStudents > 0
-            ? Math.min(100, (attendanceCount / (totalSessions * totalStudents)) * 100)
-            : 0,
-        pendingSubmissions: 0,
-      });
-    } catch (error) {
-      return fail<DashboardMetrics>(operation, error);
-    }
+      const { data, error } = await supabase.rpc("get_attendance_summary", { p_sections: sectionFilter?.length ? sectionFilter : null });
+      if (error) throw error;
+      if (!data?.dashboard) throw new Error("تعذر تحميل إحصاءات الحضور.");
+      return ok<DashboardMetrics>(data.dashboard as DashboardMetrics);
+    } catch (error) { return fail<DashboardMetrics>("attendanceService.fetchDashboardMetrics", error); }
   },
 
   /**
@@ -489,117 +344,12 @@ export const attendanceService = {
       return fail<SessionSummary>(operation, error);
     }
   },
-  async fetchSubjectMetrics(
-    role: AttendanceRole,
-    sectionFilter?: string[],
-  ): Promise<AttendanceApiResponse<SubjectAttendanceMetric[]>> {
-    const operation = "attendanceService.fetchSubjectMetrics";
+  async fetchSubjectMetrics(_role: AttendanceRole, sectionFilter?: string[]): Promise<AttendanceApiResponse<SubjectAttendanceMetric[]>> {
     try {
-      const authId = await resolveAuthUserId();
-      const profile = authId ? await resolveDbUserProfile(authId) : null;
-
-      let sessionsQuery = supabase
-        .from("sessions")
-        .select("id, subject_id, subjects(name)");
-
-      if (role === "doctor" || role === "ta") {
-        if (!profile?.subjectId) return ok<SubjectAttendanceMetric[]>([]);
-        sessionsQuery = sessionsQuery.eq("subject_id", profile.subjectId);
-        if (sectionFilter && sectionFilter.length > 0) {
-          sessionsQuery = sessionsQuery.in("section", sectionFilter);
-        }
-      }
-
-      const { data: sessionData, error: sessionError } = await sessionsQuery;
-      if (sessionError) throw sessionError;
-
-      type SubjectMetricSessionRow = {
-        id: string;
-        subject_id: string;
-        subjects?: { name?: string | null } | Array<{ name?: string | null }> | null;
-      };
-
-      const sessions = (sessionData ?? []) as SubjectMetricSessionRow[];
-      if (sessions.length === 0) return ok<SubjectAttendanceMetric[]>([]);
-
-      const sessionToSubject = new Map<string, string>();
-      const bySubject: Record<string, { subjectName: string; totalSessions: number; attendedRows: number }> = {};
-
-      for (const row of sessions) {
-        const subjectName = asObj(row.subjects)?.name ?? "Unknown Subject";
-        sessionToSubject.set(row.id, row.subject_id);
-        if (!bySubject[row.subject_id]) {
-          bySubject[row.subject_id] = { subjectName, totalSessions: 0, attendedRows: 0 };
-        }
-        bySubject[row.subject_id].totalSessions += 1;
-      }
-
-      const sessionIds = sessions.map((row) => row.id);
-
-      if (role === "student") {
-        if (!profile) return ok<SubjectAttendanceMetric[]>([]);
-
-        const { data: attendanceData, error: attendanceError } = await supabase
-          .from("attendance")
-          .select("session_id")
-          .eq("student_id", profile.id)
-          .in("session_id", sessionIds);
-
-        if (attendanceError) throw attendanceError;
-
-        for (const row of (attendanceData ?? []) as Array<{ session_id: string }>) {
-          const subjectId = sessionToSubject.get(row.session_id);
-          if (subjectId && bySubject[subjectId]) bySubject[subjectId].attendedRows += 1;
-        }
-
-        return ok<SubjectAttendanceMetric[]>(
-          Object.values(bySubject)
-            .map((entry) => ({
-              subjectName: entry.subjectName,
-              totalSessions: entry.totalSessions,
-              attendanceRate:
-                entry.totalSessions > 0
-                  ? Math.min(100, (entry.attendedRows / entry.totalSessions) * 100)
-                  : 0,
-            }))
-            .sort((a, b) => a.subjectName.localeCompare(b.subjectName)),
-        );
-      }
-
-      const { count: totalStudents, error: studentCountError } = await supabase
-        .from("users")
-        .select("id", { head: true, count: "exact" })
-        .eq("role", "student");
-
-      if (studentCountError) throw studentCountError;
-
-      const { data: attendanceData, error: attendanceError } = await supabase
-        .from("attendance")
-        .select("session_id")
-        .in("session_id", sessionIds);
-
-      if (attendanceError) throw attendanceError;
-
-      for (const row of (attendanceData ?? []) as Array<{ session_id: string }>) {
-        const subjectId = sessionToSubject.get(row.session_id);
-        if (subjectId && bySubject[subjectId]) bySubject[subjectId].attendedRows += 1;
-      }
-
-      return ok<SubjectAttendanceMetric[]>(
-        Object.values(bySubject)
-          .map((entry) => ({
-            subjectName: entry.subjectName,
-            totalSessions: entry.totalSessions,
-            attendanceRate:
-              entry.totalSessions > 0 && (totalStudents ?? 0) > 0
-                ? Math.min(100, (entry.attendedRows / (entry.totalSessions * (totalStudents ?? 0))) * 100)
-                : 0,
-          }))
-          .sort((a, b) => a.subjectName.localeCompare(b.subjectName)),
-      );
-    } catch (error) {
-      return fail<SubjectAttendanceMetric[]>(operation, error);
-    }
+      const { data, error } = await supabase.rpc("get_attendance_summary", { p_sections: sectionFilter?.length ? sectionFilter : null });
+      if (error) throw error;
+      return ok<SubjectAttendanceMetric[]>((data?.subjects ?? []) as SubjectAttendanceMetric[]);
+    } catch (error) { return fail<SubjectAttendanceMetric[]>("attendanceService.fetchSubjectMetrics", error); }
   },
 
   /** Submit attendance via RPC with device fingerprint and GPS for verification. */
@@ -611,39 +361,8 @@ export const attendanceService = {
   ): Promise<AttendanceApiResponse<AttendanceSubmissionResult>> {
     const operation = "attendanceService.submitAttendance";
     try {
-      // Compute a stable browser fingerprint from device characteristics
-      const { sha256Hash } = await import("../utils/fingerprint");
-      const canvasFingerprint = (() => {
-        try {
-          const c = document.createElement("canvas");
-          const ctx = c.getContext("2d");
-          if (!ctx) return "no-canvas";
-          ctx.textBaseline = "top";
-          ctx.font = "14px Arial";
-          ctx.fillStyle = "#f60";
-          ctx.fillRect(125, 1, 62, 20);
-          ctx.fillStyle = "#069";
-          ctx.fillText("cyber-tmsah", 2, 15);
-          return c.toDataURL();
-        } catch {
-          return "canvas-error";
-        }
-      })();
-
-      const fpRaw = [
-        navigator.userAgent,
-        navigator.language,
-        navigator.platform,
-        String(screen.width),
-        String(screen.height),
-        String(screen.colorDepth ?? 0),
-        String(navigator.hardwareConcurrency ?? 0),
-        String(Intl.DateTimeFormat().resolvedOptions().timeZone),
-        navigator.vendor,
-        canvasFingerprint,
-      ].join("|");
-
-      const deviceFingerprint = await sha256Hash(fpRaw);
+      // Use the same device identity as registration and device-lock checks.
+      const deviceFingerprint = await computeFingerprint();
 
       const validation = validateRpcInput(submitAttendanceSchema, {
         p_hash: hash,
@@ -691,7 +410,7 @@ export const attendanceService = {
 
   /** Fetch system logs (owner only). */
   async fetchSystemLogs(): Promise<AttendanceApiResponse<SystemLogEntry[]>> {
-    const operation = "attendanceService.fetchSystemLogs";
+
     try {
       const { data, error } = await supabase
         .from("system_logs")
@@ -721,7 +440,7 @@ export const attendanceService = {
 
   /** Clear all system logs (owner only). */
   async clearSystemLogs(): Promise<AttendanceApiResponse<null>> {
-    const operation = "attendanceService.clearSystemLogs";
+
     try {
       const { error } = await supabase.rpc("clear_system_logs");
       if (error) {

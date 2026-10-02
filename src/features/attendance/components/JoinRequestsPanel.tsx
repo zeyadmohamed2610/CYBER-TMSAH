@@ -1,3 +1,4 @@
+import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 // src/features/attendance/components/JoinRequestsPanel.tsx
 import { useEffect, useState, useCallback } from "react";
 import {
@@ -156,7 +157,7 @@ export function JoinRequestsPanel() {
       void loadJoinRequests();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
-      toast.error(lang === "ar" ? `فشل الموافقة: ${msg}` : `Approval failed: ${msg}`);
+      toast.error(getFriendlyErrorMessage(lang === "ar" ? `فشل الموافقة: ${msg}` : `Approval failed: ${msg}`, lang === "ar" ? "تعذر إكمال الطلب. أعد المحاولة." : "Could not complete your request. Please try again."));
     }
     setProcessingId(null);
   };
@@ -220,7 +221,7 @@ export function JoinRequestsPanel() {
       void loadResetRequests();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Error sending link";
-      toast.error(lang === "ar" ? `فشل إرسال الرابط: ${msg}` : `Failed: ${msg}`);
+      toast.error(getFriendlyErrorMessage(lang === "ar" ? `فشل إرسال الرابط: ${msg}` : `Failed: ${msg}`, lang === "ar" ? "تعذر إكمال الطلب. أعد المحاولة." : "Could not complete your request. Please try again."));
     } finally {
       setProcessingResetId(null);
     }

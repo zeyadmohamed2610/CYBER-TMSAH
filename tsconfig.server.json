@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", "lib": ["ES2023", "DOM"], "module": "ESNext",
+    "moduleResolution": "bundler", "allowImportingTsExtensions": true,
+    "strict": true, "noEmit": true, "skipLibCheck": true,
+    "types": ["node", "vitest/globals"], "baseUrl": ".",
+    "paths": {
+      "npm:@supabase/server@1.8.0": ["node_modules/@supabase/server/dist/index.d.mts"],
+      "npm:@supabase/server@1.8.0/core": ["node_modules/@supabase/server/dist/core/index.d.mts"],
+      "npm:@simplewebauthn/server@13.3.2": ["node_modules/@simplewebauthn/server/esm/index.d.ts"]
+    }
+  },
+  "include": ["tests/**/*.ts", "supabase/functions/passkey-login/index.ts", "supabase/functions/_shared/passkeyChallenge.ts"]
+}

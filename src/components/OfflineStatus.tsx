@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from "react";
+import { useState, useEffect, useCallback, useRef, createContext, useContext, ReactNode } from "react";
 import { WifiOff, Wifi, RefreshCw, CloudOff } from "lucide-react";
 import { toast } from "sonner";
 
@@ -33,6 +33,7 @@ export const OfflineStatusProvider = ({
   const [isOnline, setIsOnline] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
+  const lastAutoSync = useRef<string | null>(null);
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -71,6 +72,7 @@ export const OfflineStatusProvider = ({
       
       return () => clearInterval(interval);
     }
+    return undefined;
   }, [getPendingCountFunction]);
 
   const syncNow = useCallback(async (): Promise<void> => {
@@ -80,30 +82,35 @@ export const OfflineStatusProvider = ({
     try {
       const result = await syncFunction();
       if (result.synced > 0) {
-        toast.success(`تم مزامنة ${result.synced} حضور`, {
+        toast.success(`تم تحديث ${result.synced} حضور`, {
           icon: <RefreshCw className="h-4 w-4" />
         });
       }
       if (result.failed > 0) {
-        toast.error(`فشلت مزامنة ${result.failed} حضور`, {
+        toast.error(`تعذر إرسال ${result.failed} تسجيل حضور`, {
           icon: <CloudOff className="h-4 w-4" />
         });
       }
     } catch {
-      toast.error("فشلت المزامنة");
+      toast.error("تعذر تحديث تسجيلات الحضور");
     } finally {
       setIsSyncing(false);
     }
   }, [syncFunction, isSyncing, isOnline]);
 
   useEffect(() => {
+    if (!isOnline) lastAutoSync.current = null;
     if (isOnline && pendingCount > 0 && !isSyncing) {
+      const attempt = `${isOnline}:${pendingCount}`;
+      if (lastAutoSync.current === attempt) return;
       const autoSync = setTimeout(() => {
+        lastAutoSync.current = attempt;
         syncNow();
       }, 2000);
       
       return () => clearTimeout(autoSync);
     }
+    return undefined;
   }, [isOnline, pendingCount, isSyncing, syncNow]);
 
   return (
@@ -145,7 +152,7 @@ export const OfflineIndicator = () => {
           onClick={syncNow}
           className="ml-1 px-2 py-0.5 text-xs bg-white/10 hover:bg-white/20 rounded-full transition-colors"
         >
-          مزامنة
+          تحديث
         </button>
       )}
     </div>

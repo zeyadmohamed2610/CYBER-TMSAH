@@ -1,3 +1,5 @@
+import { AttendanceRegisterPanel } from "../components/AttendanceRegisterPanel";
+import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 // src/features/attendance/pages/TADashboard.tsx
 // Updated: Rich tabbed dashboard for TA (Teaching Assistant) role
 import { useEffect, useState, useCallback } from "react";
@@ -146,7 +148,7 @@ function TAInfoCard({
   useEffect(() => {
     if (!user) return;
     if (user.email) setUserEmail(user.email);
-    supabase.from("users").select("email, department").eq("auth_id", user.id).maybeSingle()
+    Promise.resolve(supabase.from("users").select("email, department").eq("auth_id", user.id).maybeSingle())
       .then(({ data, error }) => {
         if (!error && data) {
           if (data.email) setUserEmail(data.email);
@@ -262,8 +264,8 @@ export const TADashboard = () => {
 
       {error && (
         <Alert variant="destructive">
-          <AlertTitle>خطأ في قاعدة البيانات</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertTitle>تعذر تحميل البيانات. أعد المحاولة.</AlertTitle>
+          <AlertDescription>{getFriendlyErrorMessage(error)}</AlertDescription>
         </Alert>
       )}
 
@@ -335,6 +337,7 @@ export const TADashboard = () => {
 
         <TabsContent value="records" className="mt-4">
           <TAAttendanceRecords subjectId={taSubjectId} sections={taSections} />
+          <AttendanceRegisterPanel />
         </TabsContent>
 
         <TabsContent value="schedule" className="mt-4">

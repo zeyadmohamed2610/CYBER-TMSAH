@@ -3,3 +3,7 @@ allowBuilds:
   '@swc/core': true
   core-js: true
   esbuild: true
+
+overrides:
+  serialize-javascript: 7.1.2
+  dompurify: 3.4.16

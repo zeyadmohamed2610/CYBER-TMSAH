@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 export interface ReportPayload {
   errorMessage: string;
-  errorStack?: string;
+  errorStack?: string | undefined;
   pageUrl?: string;
   userNotes?: string;
 }

@@ -1,3 +1,4 @@
+import { AttendanceRegisterPanel } from "./AttendanceRegisterPanel";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Loader2, Search, Users } from "lucide-react";
@@ -68,6 +69,8 @@ export const AttendanceRecordsPanel = () => {
   }, [records, debouncedSearch]);
 
   return (
+    <>
+    <AttendanceRegisterPanel />
     <Card className="bg-card/80">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -111,5 +114,6 @@ export const AttendanceRecordsPanel = () => {
         )}
       </CardContent>
     </Card>
+    </>
   );
 };

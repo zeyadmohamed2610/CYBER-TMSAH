@@ -1,3 +1,4 @@
+import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 // src/features/attendance/components/FixesReportsPanel.tsx
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
@@ -10,7 +11,6 @@ import {
   ExternalLink,
   User,
   ShieldAlert,
-  Code,
   Check,
   Building2,
   GraduationCap,
@@ -86,8 +86,8 @@ export function FixesReportsPanel() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 250);
 
-  // Technical details dialog
-  const [selectedTechReport, setSelectedTechReport] = useState<ErrorReport | null>(null);
+  // Report history dialog
+  const [selectedReport, setSelectedReport] = useState<ErrorReport | null>(null);
 
   const handleFilterChange = (newFilter: "all" | "pending" | "resolved") => {
     setFilter(newFilter);
@@ -190,7 +190,7 @@ export function FixesReportsPanel() {
     setAllReports((prev) => prev.filter((r) => r.id !== id));
     const { error } = await supabase.from("error_reports").delete().eq("id", id);
     if (error) {
-      toast.error("فشل حذف التقرير من قاعدة البيانات");
+      toast.error("تعذر حذف البلاغ. أعد المحاولة.");
       void loadReports();
     } else {
       toast.success("تم حذف التقرير بنجاح");
@@ -389,7 +389,7 @@ export function FixesReportsPanel() {
                 <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-1.5">
                   <div className="text-xs text-slate-400 font-semibold">تفاصيل المشكلة التي واجهت المستخدم:</div>
                   <div className="text-sm font-medium text-slate-200 leading-relaxed font-mono">
-                    {report.error_message}
+                    {getFriendlyErrorMessage(report.error_message, "واجه المستخدم مشكلة أثناء استخدام المنصة.")}
                   </div>
                   {report.page_url && (
                     <div className="text-[11px] text-slate-500 flex items-center gap-1.5 pt-1 truncate">
@@ -442,17 +442,15 @@ export function FixesReportsPanel() {
                       {report.status === "pending" ? "تحديد كـ تم الإصلاح" : "إعادة للانتظار"}
                     </Button>
 
-                    {report.error_stack && (
                       <Button
-                        onClick={() => setSelectedTechReport(report)}
+                        onClick={() => setSelectedReport(report)}
                         variant="outline"
                         size="sm"
                         className="rounded-xl border-white/10 hover:bg-white/5 text-slate-300 text-xs gap-1.5"
                       >
-                        <Code className="w-3.5 h-3.5 text-purple-400" />
-                        التفاصيل التقنية (للمطور)
+                        <History className="w-3.5 h-3.5 text-purple-400" />
+                        متابعة البلاغ
                       </Button>
-                    )}
                   </div>
 
                   <Button
@@ -471,17 +469,17 @@ export function FixesReportsPanel() {
         </div>
       )}
 
-      {/* Technical Details Modal for Owner */}
-      {selectedTechReport && (
-        <Dialog open={!!selectedTechReport} onOpenChange={() => setSelectedTechReport(null)}>
+      {/* Report history dialog */}
+      {selectedReport && (
+        <Dialog open={!!selectedReport} onOpenChange={() => setSelectedReport(null)}>
           <DialogContent className="max-w-2xl bg-[#0e0a16] border border-purple-500/30 text-right text-white">
             <DialogHeader className="text-right space-y-1">
               <DialogTitle className="text-lg font-bold flex items-center gap-2">
-                <Code className="w-5 h-5 text-purple-400" />
-                التقرير التقني وتاريخ دورة حياة الخطأ
+                <History className="w-5 h-5 text-purple-400" />
+                متابعة البلاغ
               </DialogTitle>
               <DialogDescription className="text-xs text-slate-400">
-                تفاصيل السجل الزمني و Stack Trace لمساعدة المطور في مراجعة وتوثيق الخلل بدقة.
+                تاريخ تقديم البلاغ وحالة معالجته.
               </DialogDescription>
             </DialogHeader>
 
@@ -491,7 +489,7 @@ export function FixesReportsPanel() {
                 <div>
                   <span className="text-slate-400 block mb-0.5">وقت الإبلاغ الأولي:</span>
                   <span className="font-semibold text-slate-200">
-                    {new Date(selectedTechReport.created_at).toLocaleString("ar-EG", {
+                    {new Date(selectedReport.created_at).toLocaleString("ar-EG", {
                       dateStyle: "medium",
                       timeStyle: "medium",
                     })}
@@ -500,8 +498,8 @@ export function FixesReportsPanel() {
                 <div>
                   <span className="text-slate-400 block mb-0.5">تاريخ ووقت الإنجاز:</span>
                   <span className="font-semibold text-emerald-300">
-                    {selectedTechReport.resolved_at
-                      ? new Date(selectedTechReport.resolved_at).toLocaleString("ar-EG", {
+                    {selectedReport.resolved_at
+                      ? new Date(selectedReport.resolved_at).toLocaleString("ar-EG", {
                           dateStyle: "medium",
                           timeStyle: "medium",
                         })
@@ -511,15 +509,9 @@ export function FixesReportsPanel() {
               </div>
 
               <div className="p-3 rounded-lg bg-black/60 border border-white/10 text-xs text-slate-300">
-                <span className="font-bold text-white block mb-1">رسالة الخطأ الأصلية:</span>
-                {selectedTechReport.error_message}
+                <span className="font-bold text-white block mb-1">وصف المشكلة:</span>
+                {getFriendlyErrorMessage(selectedReport.error_message, "واجه المستخدم مشكلة أثناء استخدام المنصة.")}
               </div>
-
-              {selectedTechReport.error_stack && (
-                <div className="p-3 rounded-lg bg-black/80 border border-purple-500/20 max-h-60 overflow-y-auto font-mono text-[11px] text-purple-300/90 whitespace-pre-wrap dir-ltr text-left">
-                  {selectedTechReport.error_stack}
-                </div>
-              )}
             </div>
           </DialogContent>
         </Dialog>

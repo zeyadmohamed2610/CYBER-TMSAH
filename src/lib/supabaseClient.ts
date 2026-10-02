@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import type { z } from "zod";
 import { validateRpcInput, safeValidateRpcInput, type RpcSchemas } from "./validation";
 
 export const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -18,7 +19,7 @@ type ValidatedRpcNames = keyof typeof import("./validation").rpcSchemas;
 
 function validateAndCall<T extends ValidatedRpcNames>(
   rpcName: T,
-  params: RpcSchemas[T] extends z.ZodTypeAny ? z.infer<RpcSchemas[T]> : never
+  params: unknown
 ): ReturnType<typeof supabase.rpc> {
   const validated = validateRpcInput(rpcName, params);
   return supabase.rpc(rpcName, validated as Record<string, unknown>);
@@ -50,6 +51,6 @@ export const validatedRpc = {
 export function safeValidateRpc<T extends ValidatedRpcNames>(
   rpcName: T,
   params: unknown
-): { success: true; data: RpcSchemas[T] extends z.ZodTypeAny ? z.infer<RpcSchemas[T]> : never } | { success: false; error: z.ZodError } {
+): { success: true; data: z.infer<RpcSchemas[T]> } | { success: false; error: z.ZodError } {
   return safeValidateRpcInput(rpcName, params);
 }

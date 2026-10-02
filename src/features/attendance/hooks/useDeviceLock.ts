@@ -103,9 +103,8 @@ export function useDeviceLock(userId: string | undefined) {
       setLockLabel(label);
       toast.success("تم قفل هذا الجهاز بنجاح");
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : "فشل قفل الجهاز";
       console.error("[useDeviceLock] Failed to lock device:", err);
-      toast.error(`فشل قفل الجهاز: ${errorMsg}`);
+      toast.error("تعذر تسجيل هذا الجهاز للحضور. أعد المحاولة أو تواصل مع إدارة المنصة.");
     } finally {
       setLocking(false);
     }

@@ -52,8 +52,8 @@ describe("attendanceService", () => {
         { id: "2", sessionId: "s1", studentId: "st2", submittedAt: "2026-03-25T10:00:00Z" },
       ];
       const result = attendanceService.computeTrendData(records);
-      expect(result[0].date).toBe("2026-03-25");
-      expect(result[1].date).toBe("2026-03-27");
+      expect(result[0]?.date).toBe("2026-03-25");
+      expect(result[1]?.date).toBe("2026-03-27");
     });
 
     it("should handle many date entries", () => {

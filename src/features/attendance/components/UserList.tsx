@@ -1,42 +1,15 @@
+import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 // src/features/attendance/components/UserList.tsx
 import { useState, useEffect, useCallback } from "react";
-import { createPortal } from "react-dom";
+
 import { useDebounce } from "@/hooks/useDebounce";
-import {
-  Plus,
-  Search,
-  Trash2,
-  Users,
-  Loader2,
-  X,
-  Edit2,
-  CheckCircle,
-  XCircle,
-  Eye,
-  EyeOff,
-  Building2,
-  GraduationCap,
-  BookOpen,
-  Mail,
-  UserCheck,
-  Shield,
-  Layers,
-  Copy,
-  Check,
-  Calendar,
-} from "lucide-react";
+import { Plus, Search, Trash2, Users, Loader2, X, Edit2, CheckCircle, XCircle, Eye, EyeOff, Building2, GraduationCap, BookOpen, Mail, UserCheck, Shield, Copy, Check, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
 import { DEPARTMENTS, ACADEMIC_YEARS, type DepartmentInfo } from "../types";
@@ -104,7 +77,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
   };
 
   // Departments list with customized names
-  const [deptList, setDeptList] = useState<DepartmentInfo[]>(() => {
+  const [deptList] = useState<DepartmentInfo[]>(() => {
     try {
       const stored = localStorage.getItem(DEPARTMENTS_STORAGE_KEY);
       if (stored) {
@@ -369,7 +342,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
           if (joinErr.message.includes("duplicate") || joinErr.message.includes("username")) {
             toast.error("اسم المستخدم مسجل بالفعل. يرجى اختيار اسم مستخدم آخر.");
           } else {
-            toast.error(`فشل إنشاء المستخدم: ${joinErr.message}`);
+            toast.error(getFriendlyErrorMessage(`فشل إنشاء المستخدم: ${joinErr.message}`));
           }
           setSubmitting(false);
           return;
@@ -382,7 +355,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
         });
 
         if (approveErr) {
-          toast.error(`تم إنشاء الطلب ولكن فشل التفعيل المباشر: ${approveErr.message}`);
+          toast.error(getFriendlyErrorMessage(`تم إنشاء الطلب ولكن فشل التفعيل المباشر: ${approveErr.message}`));
         } else {
           // If coordinator, doctor, or TA had subjects selected, assign them
           const createdUid = (approveResult as { user_id?: string })?.user_id;
@@ -417,7 +390,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
   const handleDelete = async (userId: string, name: string) => {
     const { error } = await supabase.rpc("delete_user_by_id", { p_user_id: userId });
     if (error) {
-      toast.error(`فشل حذف المستخدم: ${error.message}`);
+      toast.error(getFriendlyErrorMessage(`فشل حذف المستخدم: ${error.message}`));
     } else {
       toast.success(`تم حذف "${name}" بنجاح`);
       setDeleteConfirm(null);
@@ -470,7 +443,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
     const { error } = await supabase.from("users").update(updatePayload).eq("id", userId);
 
     if (error) {
-      toast.error("فشل تحديث البيانات: " + error.message);
+      toast.error(getFriendlyErrorMessage("فشل تحديث البيانات: " + error.message));
       setSubmitting(false);
       return;
     }
@@ -482,7 +455,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
         p_subject_ids: editData.subjectIds,
       });
       if (subjectErr) {
-        toast.error("تم تحديث البيانات ولكن فشل تحديث المواد: " + subjectErr.message);
+        toast.error(getFriendlyErrorMessage("تم تحديث البيانات ولكن فشل تحديث المواد: " + subjectErr.message));
       }
     }
 
@@ -493,7 +466,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
   };
 
   const getDepartmentLabel = (deptId?: string | null) => {
-    if (!deptId) return "الأمن السيبراني";
+    if (!deptId) return "غير محدد";
     const found = deptList.find((d) => d.id === deptId || d.nameAr === deptId || d.nameEn === deptId);
     return found ? found.nameAr : deptId;
   };
@@ -742,7 +715,7 @@ export function UserList({ role, title }: { role: string; title: string }) {
                                 if (e.target.checked) {
                                   setFormData({ ...formData, subjectIds: [...formData.subjectIds, s.id] });
                                 } else {
-                                  setFormData({ ...formData, subjectIds: formData.subjectIds.filter((id) => id !== s.id) });
+                                  setFormData({ ...formData, subjectIds: formData.subjectIds.filter((id: string) => id !== s.id) });
                                 }
                               }}
                               disabled={submitting}

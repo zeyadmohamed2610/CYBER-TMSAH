@@ -352,7 +352,7 @@ describe("attendanceService - RPC success/error handling", () => {
       expect(result.error).toBeNull();
       expect(result.data).toHaveLength(1);
       if (result.data) {
-        expect(result.data[0].title).toBe("Lecture 1");
+        expect(result.data[0]?.title).toBe("Lecture 1");
       }
     });
   });

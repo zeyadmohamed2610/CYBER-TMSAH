@@ -3,9 +3,9 @@
      xmlns:content="http://purl.org/rss/1.0/modules/content/"
      xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>CYBER TMSAH | منظومة الحضور والتحقق الأكاديمي</title>
+    <title>CYBER TMSAH | منصة الحضور والتحقق الأكاديمي</title>
     <link>https://www.cyber-tmsah.site</link>
-    <description>منظومة CYBER TMSAH المتطورة للتحقق الذكي وإدارة الحضور والغياب الأكاديمي لطلاب الأمن السيبراني بجامعة حلوان التكنولوجية الدولية.</description>
+    <description>منصة CYBER TMSAH لمتابعة الدراسة والحضور للطلاب بجامعة حلوان التكنولوجية الدولية.</description>
     <language>ar</language>
     <lastBuildDate>Thu, 01 Oct 2026 15:00:00 GMT</lastBuildDate>
     <atom:link href="https://www.cyber-tmsah.site/rss.xml" rel="self" type="application/rss+xml"/>
@@ -16,33 +16,33 @@
     </image>
     
     <item>
-      <title>منظومة CYBER TMSAH - تسجيل الدخول</title>
+      <title>منصة CYBER TMSAH - تسجيل الدخول</title>
       <link>https://www.cyber-tmsah.site/login</link>
       <guid isPermaLink="true">https://www.cyber-tmsah.site/login</guid>
       <pubDate>Thu, 01 Oct 2026 15:00:00 GMT</pubDate>
-      <description>بوابة تسجيل الدخول لمنظومة CYBER TMSAH الأكاديمية باستخدام كلمة المرور أو مفاتيح المرور البيومترية.</description>
+      <description>بوابة تسجيل الدخول لمنصة CYBER TMSAH الأكاديمية باستخدام كلمة المرور أو إعدادات الدخول بالبصمة.</description>
       <category>Authentication</category>
-      <category>Cybersecurity</category>
+      <category>التعليم</category>
     </item>
     
     <item>
-      <title>طلب الانضمام للمنظومة الأكاديمية</title>
+      <title>طلب الانضمام للمنصة الأكاديمية</title>
       <link>https://www.cyber-tmsah.site/join</link>
       <guid isPermaLink="true">https://www.cyber-tmsah.site/join</guid>
       <pubDate>Thu, 01 Oct 2026 15:00:00 GMT</pubDate>
-      <description>تقديم طلبات الانضمام واعتماد حسابات الطلاب وأعضاء هيئة التدريس في منظومة CYBER TMSAH.</description>
+      <description>تقديم طلبات الانضمام واعتماد حسابات الطلاب وأعضاء هيئة التدريس في منصة CYBER TMSAH.</description>
       <category>Registration</category>
-      <category>Cybersecurity</category>
+      <category>التعليم</category>
     </item>
     
     <item>
-      <title>الملف الشخصي وإدارة الأمان البيومتري</title>
+      <title>الملف الشخصي وإعدادات الدخول</title>
       <link>https://www.cyber-tmsah.site/profile</link>
       <guid isPermaLink="true">https://www.cyber-tmsah.site/profile</guid>
       <pubDate>Thu, 01 Oct 2026 15:00:00 GMT</pubDate>
-      <description>إدارة الحساب الشخصي وتفعيل مفاتيح المرور البيومترية (Passkeys) للبصمة وقفل الشاشة.</description>
+      <description>إدارة الحساب الشخصي وتفعيل الدخول بالبصمة للبصمة وقفل الشاشة.</description>
       <category>Security</category>
-      <category>Passkeys</category>
+      <category>الحساب الشخصي</category>
     </item>
     
   </channel>
