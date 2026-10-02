@@ -1,7 +1,7 @@
 import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 import { useEffect, useRef, useState } from "react";
 import jsQR from "jsqr";
-import { Camera, Clipboard, Loader2, Lock, MapPin, Send, ShieldCheck, ShieldX } from "lucide-react";
+import { Camera, Clipboard, Loader2, Lock, MapPin, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,16 +17,6 @@ interface Props {
   onSubmitSuccess?: () => void;
 }
 
-function getDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371000;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) => {
   const { toast } = useToast();
   const { coords } = useGps();
@@ -34,9 +24,15 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
   useEffect(() => { setVerifiedCredentialId(null); }, [code]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [scanning, setScanning] = useState(false);
-  const [gpsStatus, setGpsStatus] = useState<string>("");
   const [verifiedCredentialId, setVerifiedCredentialId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const latestCode = useRef(code);
+  latestCode.current = code;
+  useEffect(() => {
+    if (!verifiedCredentialId) return;
+    const expire = setTimeout(() => setVerifiedCredentialId(null), 110000);
+    return () => clearTimeout(expire);
+  }, [verifiedCredentialId]);
 
   const activeSessions = sessions.filter((s) => s.isActive);
   const isBiometricReady = verifiedCredentialId !== null;
@@ -99,29 +95,12 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
       return;
     }
 
-    setIsSubmitting(true);
-
-    // GPS check - use cached coords from GpsContext
-    if (coords) {
-      const nearbySession = activeSessions.find((s) => s.latitude && s.longitude);
-      if (nearbySession && nearbySession.latitude && nearbySession.longitude) {
-        const distance = getDistanceMeters(
-          coords.lat, coords.lng,
-          nearbySession.latitude, nearbySession.longitude
-        );
-        if (distance > (nearbySession.radiusMeters ?? 50)) {
-          toast({
-            variant: "destructive",
-            title: "خارج النطاق الجغرافي",
-            description: `أنت على بُعد ${Math.round(distance)} متر من القاعة. يجب أن تكون ضمن نطاق ${nearbySession.radiusMeters ?? 50} متر.`,
-          });
-          setIsSubmitting(false);
-          return;
-        }
-        setGpsStatus("موقعك ضمن النطاق المطلوب");
-      }
+    if (!verifiedCredentialId) {
+      toast({ variant: 'destructive', title: 'أكمل التحقق أولًا', description: 'تحقق بالبصمة لهذا الرمز قبل تسجيل الحضور.' });
+      return;
     }
-
+    setIsSubmitting(true);
+    // The server validates fresh coordinates against the session belonging to the entered code.
     try {
     // Submit the one-use receipt returned by server verification.
     const result = await offlineAttendanceService.queueSubmission(
@@ -137,7 +116,6 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
           : "تم تسجيل حضورك بنجاح.",
       });
       setCode("");
-      setGpsStatus("");
       // Reset biometric gate after successful submission (require re-verify for next session)
       setVerifiedCredentialId(null);
       onSubmitSuccess?.();
@@ -243,14 +221,6 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
                 />
               </div>
 
-              {/* GPS status */}
-              {gpsStatus && (
-                <div className={`flex items-center gap-2 text-xs ${gpsStatus.includes("النطاق") ? "text-green-600" : "text-destructive"}`}>
-                  {gpsStatus.includes("النطاق") ? <ShieldCheck className="h-3 w-3" /> : <ShieldX className="h-3 w-3" />}
-                  {gpsStatus}
-                </div>
-              )}
-
               {/* GPS indicator */}
               {coords && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -259,7 +229,7 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
                 </div>
               )}
 
-              {!isBiometricReady && <AttendanceBiometricGate key={code} attendanceHash={code.trim()} onVerified={setVerifiedCredentialId} />}
+              {!isBiometricReady && <AttendanceBiometricGate key={code} attendanceHash={code.trim()} onVerified={receipt => { if (latestCode.current === code) setVerifiedCredentialId(receipt); }} />}
               <Button
                 type="submit"
                 className="w-full h-12 rounded-xl text-base font-semibold btn-cyber shadow-lg"
