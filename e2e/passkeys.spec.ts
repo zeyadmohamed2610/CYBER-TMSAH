@@ -7,7 +7,7 @@ for (const [role, destination] of [['student', 'student-panel'], ['doctor', 'doc
     test.skip(process.env.E2E_ALLOW_LIVE_AUTH !== '1' || !identifier || !password, 'Dedicated QA accounts required');
     const cdp = await context.newCDPSession(page);
     await cdp.send('WebAuthn.enable');
-    await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } });
+    await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: process.env.E2E_PASSKEY_TRANSPORT === 'usb' ? 'usb' : 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } });
     await page.goto('/login', { waitUntil: "domcontentloaded" });
     await page.locator('input[name="identifier"]').fill(identifier!);
     await page.locator('input[name="password"]').fill(password!);

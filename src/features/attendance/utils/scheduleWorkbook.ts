@@ -17,7 +17,7 @@ export async function exportScheduleWorkbook(schedule: AcademicSchedule, templat
   help.getColumn(1).width = 90;
   return await book.xlsx.writeBuffer() as ArrayBuffer;
 }
-export async function readScheduleWorkbook(file: ArrayBuffer, schedule: AcademicSchedule): Promise<UniversityImport> {
+async function readWorkbook(file: ArrayBuffer, schedule: AcademicSchedule): Promise<UniversityImport> {
   if (file.byteLength > 5 * 1024 * 1024) throw new Error('الحد الأقصى للملف 5 ميجابايت');
   const ExcelJS = (await import('exceljs')).default;
   const book = new ExcelJS.Workbook(); await book.xlsx.load(file);
@@ -64,4 +64,13 @@ export async function readScheduleWorkbook(file: ArrayBuffer, schedule: Academic
 }
 export async function importScheduleWorkbook(file: ArrayBuffer, schedule: AcademicSchedule): Promise<AcademicEntry[]> {
   return (await readScheduleWorkbook(file, schedule)).entries;
+}
+
+export class ScheduleImportError extends Error {}
+export async function readScheduleWorkbook(file: ArrayBuffer, schedule: AcademicSchedule): Promise<UniversityImport> {
+  try { return await readWorkbook(file, schedule); }
+  catch (error) {
+    const message = error instanceof Error && /[\u0600-\u06ff]/.test(error.message) ? error.message : 'تعذر قراءة الملف. ارفع ملف جدول الجامعة بصيغة Excel دون تغيير امتداده.';
+    throw new ScheduleImportError(message);
+  }
 }

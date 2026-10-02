@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 import { getAttendanceDashboardRoute } from "../utils/dashboardRoutes";
 import { useLang } from "@/i18n";
-import { authenticateWithPasskey, saveLocalPasskey } from "@/lib/webauthn";
+import { authenticateWithPasskey } from "@/lib/webauthn";
 
 import { PasswordStrengthMeter } from "@/features/auth/components/PasswordStrengthMeter";
 import { CustomRoleSelect } from "@/features/auth/components/CustomRoleSelect";
@@ -379,25 +379,6 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
     // ensures the client internal state is fully up to date before we hand
     // control to the router.
     await supabase.auth.getSession();
-
-    // Cache session token for device passkey if this device has a passkey registered
-    if (authData?.session && authData?.user) {
-      try {
-        const latestKey = localStorage.getItem("cyber_latest_passkey");
-        if (latestKey) {
-          saveLocalPasskey({
-            credentialId: latestKey,
-            rawId: latestKey,
-            refreshToken: authData.session.refresh_token,
-            userId: authData.user.id,
-            email: authData.user.email,
-            savedAt: Date.now(),
-          });
-        }
-      } catch {
-        // ignore
-      }
-    }
 
     if (authData?.user) {
       try {

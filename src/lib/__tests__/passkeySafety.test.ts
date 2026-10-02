@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ invoke: vi.fn(), getSession: vi.fn(), setSession: vi.fn(), from: vi.fn() }));
 vi.mock("../supabaseClient", () => ({ supabase: { functions: { invoke: mocks.invoke }, auth: { getSession: mocks.getSession, setSession: mocks.setSession }, from: mocks.from } }));
-import { authenticateWithPasskey, registerPasskey } from "../webauthn";
+import { authenticateWithPasskey, registerPasskey, saveLocalPasskey } from "../webauthn";
 
 describe("passkey sign-in safety", () => {
   beforeEach(() => {
@@ -18,6 +18,10 @@ describe("passkey sign-in safety", () => {
     expect(mocks.invoke).toHaveBeenCalledWith("passkey-login?action=auth-start", expect.objectContaining({ body: expect.objectContaining({ identifier: "requested-account" }) }));
     expect(mocks.setSession).not.toHaveBeenCalled();
     expect(result.success).toBe(false);
+  });
+  it('stores credential metadata without duplicating a session token',()=>{
+    saveLocalPasskey({credentialId:'key',rawId:'key',savedAt:1,...{refreshToken:'must-not-be-stored'}});
+    expect(localStorage.getItem('cyber_device_passkey_key')).not.toContain('must-not-be-stored');
   });
   it("does not save an unverified credential when registration is unavailable", async () => {
     const result = await registerPasskey("my device");

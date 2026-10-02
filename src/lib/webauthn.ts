@@ -6,7 +6,7 @@ import { computeFingerprint } from "@/features/attendance/utils/fingerprint";
  *   - Challenge generated SERVER-SIDE and stored in webauthn_challenges (5-min TTL)
  *   - Assertion verified SERVER-SIDE using @simplewebauthn/server (signature check)
  *   - Private key NEVER leaves the device (managed by platform/OS/password manager)
- *   - localStorage stores ONLY the session refresh_token (NOT the passkey itself)
+ *   - The local passkey hint stores only non-secret credential metadata
  *   - Deleting cookies/site-data logs the user out but does NOT delete the passkey
  *   - The passkey survives in the platform's credential store (Windows Hello, iCloud, etc.)
  */
@@ -18,7 +18,6 @@ import { supabase } from "./supabaseClient";
 export interface StoredPasskeyDevice {
   credentialId: string;
   rawId: string;
-  refreshToken?: string;
   userId?: string;
   email?: string | undefined;
   role?: string;
@@ -49,7 +48,7 @@ export interface BiometricVerifyResult {
   noPasskeyRegistered?: boolean;
 }
 
-// ─── Local session cache (NOT the passkey — just the session refresh token) ───
+// ─── Non-secret local credential hints (never used to authenticate) ───
 const STORAGE_PREFIX = "cyber_device_passkey_";
 const LATEST_KEY     = "cyber_latest_passkey";
 
@@ -82,15 +81,14 @@ function bufferToBase64url(buffer: ArrayBuffer): string {
 export function isWebAuthnSupported(): boolean {
   return (
     typeof window !== "undefined" &&
+    window.isSecureContext !== false &&
     typeof window.PublicKeyCredential !== "undefined" &&
     typeof navigator?.credentials !== "undefined"
   );
 }
 
-// ─── Local session cache helpers ─────────────────────────────────────────────
-// IMPORTANT: This caches the SUPABASE SESSION refresh token, NOT the passkey.
-// The passkey itself lives in the platform authenticator and is unaffected by
-// clearing these localStorage entries.
+// Local hints never contain session tokens. Supabase alone manages the session.
+// The private key stays in the authenticator or password manager.
 
 export function hasLocalPasskey(): boolean {
   if (typeof window === "undefined") return false;
@@ -121,7 +119,7 @@ export function clearAllLocalPasskeys(): void {
 export function saveLocalPasskey(data: StoredPasskeyDevice): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(`${STORAGE_PREFIX}${data.credentialId}`, JSON.stringify(data));
+    localStorage.setItem(`${STORAGE_PREFIX}${data.credentialId}`, JSON.stringify({ ...data, refreshToken: undefined }));
     localStorage.setItem(LATEST_KEY, data.credentialId);
   } catch (err) {
     console.warn("[WebAuthn] Failed to cache session token:", err);
@@ -205,7 +203,7 @@ export async function registerPasskey(deviceName?: string): Promise<PasskeyRegis
 
   if (startErr || !startData?.success || !startData?.options) {
     console.warn("[WebAuthn] register-start unavailable:", startErr, startData);
-    return { success: false, error: "تعذر إضافة جهاز الدخول. أعد المحاولة لاحقاً." };
+    return { success: false, error: startData?.error ?? "تعذر إضافة جهاز الدخول. أعد المحاولة لاحقاً." };
   }
 
   const options = startData.options as PublicKeyCredentialCreationOptions & {
@@ -325,9 +323,7 @@ export async function authenticateWithPasskey(identifier?: string, verificationC
   };
 
   // ── 3. Convert to WebAuthn format ─────────────────────────────────────────
-  // CRITICAL: Always override transports to ["internal"] regardless of what the server sends.
-  // "internal" tells the browser to ONLY use this device's platform authenticator (fingerprint/face/PIN).
-  // Any other value (or empty) can trigger Chrome's device-picker dialog showing USB/NFC options.
+  // Transport hints come from the registered key; allow password managers and external keys.
   const allowCredentials = (serverOptions.allowCredentials ?? []).map((c) => ({
     id: base64urlToUint8Array(c.id),
     type: "public-key" as PublicKeyCredentialType,
@@ -399,14 +395,10 @@ export async function authenticateWithPasskey(identifier?: string, verificationC
     return { success: false, error: verifyErr?.message ?? "فشل إنشاء الجلسة. حاول مجدداً." };
   }
 
-  // ── 8. Cache session refresh token for next visit (NOT the passkey) ───────
-  // IMPORTANT: This token is a SESSION token, not the passkey.
-  // Clearing cookies/localStorage deletes this token → user is logged out.
-  // But the passkey remains in the platform (Windows Hello / iCloud / Android).
+  // Keep only a non-secret hint for the credential that actually signed in.
   saveLocalPasskey({
     credentialId: assertion.id,
     rawId: bufferToBase64url(assertion.rawId),
-    refreshToken: verifyData.session.refresh_token,
     userId: verifyData.user.id,
     email: verifyData.user.email,
     role: finishData.role,
@@ -437,7 +429,7 @@ export async function verifyPasskeyForCurrentUser(attendanceHash: string): Promi
       challenge: base64urlToUint8Array(options.challenge),
       ...(options.rpId ? { rpId: options.rpId } : {}),
       timeout: 60000, userVerification: "required",
-      allowCredentials: (options.allowCredentials ?? []).map(c => ({ id: base64urlToUint8Array(c.id), type: "public-key", transports: c.transports ?? ["internal"] })),
+      allowCredentials: (options.allowCredentials ?? []).map(c => ({ id: base64urlToUint8Array(c.id), type: "public-key", ...(c.transports?.length ? { transports: c.transports } : {}) })),
     } }) as PublicKeyCredential | null;
     if (!assertion) return { success: false, cancelled: true };
     const response = assertion.response as AuthenticatorAssertionResponse;

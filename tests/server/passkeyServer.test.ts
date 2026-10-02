@@ -17,9 +17,9 @@ const jwk = publicKey.export({ format: "jwk" });
 const cose = isoCBOR.encode(new Map<number, number | Uint8Array>([
   [1, 2], [3, -7], [-1, 1], [-2, Buffer.from(jwk.x!, "base64url")], [-3, Buffer.from(jwk.y!, "base64url")],
 ]));
-function assertion(flags = 5) {
-  const clientData = Buffer.from(JSON.stringify({ type: "webauthn.get", challenge, origin: "http://localhost:8080" }));
-  const authData = Buffer.concat([createHash("sha256").update("localhost").digest(), Buffer.from([flags, 0, 0, 0, 1])]);
+function assertion(flags = 5, origin = "http://localhost:8080", rpId = "localhost", assertionChallenge = challenge, counter = 1) {
+  const clientData = Buffer.from(JSON.stringify({ type: "webauthn.get", challenge: assertionChallenge, origin }));
+  const authData = Buffer.concat([createHash("sha256").update(rpId).digest(), Buffer.from([flags, 0, 0, 0, counter])]);
   const signed = Buffer.concat([authData, createHash("sha256").update(clientData).digest()]);
   return {
     id: "Y3JlZA", rawId: "Y3JlZA", type: "public-key", clientExtensionResults: {},
@@ -41,6 +41,7 @@ function query(table: string) {
     delete: () => { operation = "delete"; return builder; },
     insert: (row: Row) => { operation = "insert"; value = row; return builder; },
     update: (row: Row) => { operation = "update"; value = row; return builder; },
+    maybeSingle: () => { single = true; return builder; },
     single: () => { single = true; return builder; },
     then: (resolve: (result: { data: Row | Row[] | null; error: null }) => unknown) => {
       const matching = (rows[table] ?? []).filter(r => filters.every(f => f(r)));
@@ -67,7 +68,7 @@ describe("actual server verification of attendance assertions", () => {
     ];
     rows.attendance_biometric_proofs = [];
     mocks.admin.mockReturnValue({ from: query });
-    mocks.context.mockResolvedValue({ data: { supabase: { auth: { getUser: async () => ({ data: { user: { id: "student-a" } }, error: null }) } } }, error: null });
+    mocks.context.mockResolvedValue({ data: { supabase: { auth: { getUser: async () => ({ data: { user: { id: "student-a", last_sign_in_at: new Date().toISOString() } }, error: null }) } } }, error: null });
   });
   it("verifies a real signature, consumes only its challenge and issues a bound receipt", async () => {
     const response = await handlePasskeyRequest(request());
@@ -92,6 +93,33 @@ describe("actual server verification of attendance assertions", () => {
     mocks.context.mockResolvedValue({ data: { supabase: { auth: { getUser: async () => ({ data: { user: { id: 'student-b' } }, error: null }) } } }, error: null });
     expect((await (await handlePasskeyRequest(request(assertion(), 'verify-finish'))).json()).success).toBe(false);
     expect(rows.webauthn_challenges).toHaveLength(2);
+  });
+  it.each([
+    ['wrong origin', assertion(5,'https://attacker.example')],
+    ['wrong relying party', assertion(5,'http://localhost:8080','attacker.example')],
+    ['unissued challenge', assertion(5,'http://localhost:8080','localhost','unissued')],
+    ['counter rollback', assertion(5,'http://localhost:8080','localhost',challenge,0)],
+  ])('rejects %s despite a valid cryptographic signature',async(_label,credential)=>{
+    rows.webauthn_credentials![0]!.sign_count=1;
+    expect((await (await handlePasskeyRequest(request(credential))).json()).success).toBe(false);
+    expect(rows.attendance_biometric_proofs).toHaveLength(0);
+  });
+  it('rejects expired challenges and a different attendance code',async()=>{
+    rows.webauthn_challenges![0]!.expires_at='2000-01-01';
+    expect((await (await handlePasskeyRequest(request())).json()).success).toBe(false);
+    rows.webauthn_challenges![0]!.expires_at='2099-01-01';
+    rows.webauthn_challenges![0]!.attendance_hash='999999';
+    expect((await (await handlePasskeyRequest(request())).json()).success).toBe(false);
+  });
+  it('requires a recent account verification before adding a new key',async()=>{
+    mocks.context.mockResolvedValue({data:{supabase:{auth:{getUser:async()=>({data:{user:{id:'student-a',last_sign_in_at:'2000-01-01'}},error:null})}}},error:null});
+    expect((await handlePasskeyRequest(request(assertion(),'register-start'))).status).toBe(403);
+    expect(rows.webauthn_credentials).toHaveLength(1);
+  });
+  it('supports the numeric local loopback origin without issuing the wrong relying party',async()=>{
+    const credential=assertion(5,'http://127.0.0.1:8080','127.0.0.1');
+    const req=new Request('http://127.0.0.1:8080/?action=attendance-finish',{method:'POST',headers:{origin:'http://127.0.0.1:8080','Content-Type':'application/json'},body:JSON.stringify({credential,attendanceHash:'123456',deviceFingerprint:'a'.repeat(64)})});
+    expect((await (await handlePasskeyRequest(req)).json()).success).toBe(true);
   });
   it("rejects a forged signature without deleting challenges", async () => {
     const forged = assertion();

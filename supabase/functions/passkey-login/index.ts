@@ -94,7 +94,7 @@ function getRpId(req?: Request): string {
     try {
       const u = new URL(requestOrigin);
       if (u.hostname === "localhost" || u.hostname === "127.0.0.1") {
-        return "localhost";
+        return u.hostname;
       }
       return u.hostname;
     } catch { /* ignore */ }
@@ -139,6 +139,11 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
       if (contextError || !context) return json({ success: false, error: "Unauthorized" }, 401);
       const { data: { user }, error: authErr } = await context.supabase.auth.getUser();
       if (authErr || !user) return json({ success: false, error: "Unauthorized" }, 401);
+
+      const signedInAt = Date.parse(user.last_sign_in_at ?? '');
+      if (!Number.isFinite(signedInAt) || Date.now() - signedInAt > 5 * 60 * 1000) {
+        return json({ success: false, error: 'أكد كلمة المرور مجددًا قبل إضافة جهاز للدخول.' }, 403);
+      }
 
       // Fetch existing credentials to exclude (prevent re-registration)
       const { data: existingCreds } = await admin
@@ -266,7 +271,7 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
       // Transports reported by browser, defaulting to "internal"
       const clientResp = credential.response as Record<string, unknown> | undefined;
       const clientTransports = clientResp?.transports as string[] | undefined;
-      const validTransports = (clientTransports && clientTransports.length > 0) ? clientTransports : ["internal"];
+      const validTransports = (clientTransports ?? []).filter(transport => ["internal", "hybrid", "usb", "nfc", "ble", "smart-card"].includes(transport));
 
       // Store credential
       const { error: upsertErr } = await admin.from("webauthn_credentials").insert({
@@ -474,7 +479,7 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
             id: storedCred.credential_id as string,
             publicKey: publicKeyBuffer,
             counter: Number(storedCred.sign_count ?? 0),
-            transports: (storedCred.transports as Parameters<typeof verifyAuthenticationResponse>[0]["credential"]["transports"]) ?? ["internal"],
+            transports: (storedCred.transports as Parameters<typeof verifyAuthenticationResponse>[0]["credential"]["transports"]) ?? [],
           },
         });
       } catch (err) {

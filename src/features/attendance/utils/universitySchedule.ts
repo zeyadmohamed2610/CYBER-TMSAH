@@ -3,6 +3,7 @@ import { slotTime, validateAcademicEntries, type AcademicEntry, type AcademicSch
 
 export interface UniversityImport {
   entries: AcademicEntry[]; format: 'university' | 'template'; sheet_name: string; warnings: string[];
+  start_time?: string;
   source_cells: number; places: { cell: string; section: number; start: string; end: string }[];
 }
 const normalize = (value: string) => value.toLowerCase().replace(/[أإآ]/g, 'ا').replace(/[^a-z0-9\u0600-\u06ff+]/g, '');
@@ -33,6 +34,20 @@ export function parseUniversitySchedule(sheet: Worksheet, schedule: AcademicSche
   const firstColumn = Math.min(...columns.map(c => c.column));
   const entries: AcademicEntry[] = [], places: UniversityImport['places'] = [], seen = new Set<string>();
   const warnings = new Set<string>();
+  // The university workbook owns its times, independently of previously saved settings.
+  const firstTimes = new Map<number, number>();
+  let scanDay: number | undefined;
+  for (let row = headerRow + 1; row <= sheet.rowCount; row++) {
+    for (let col = 1; col < firstColumn; col++) {
+      const text = sheet.getCell(row, col).text.trim();
+      const namedDay = dayNames[normalize(text)];
+      if (namedDay !== undefined) scanDay = namedDay;
+      const time = text.match(/^(\d{1,2}):(\d{2})\s*[-–]\s*\d{1,2}:\d{2}$/);
+      if (scanDay !== undefined && time && !firstTimes.has(scanDay)) firstTimes.set(scanDay, Number(time[1]) * 60 + Number(time[2]));
+    }
+  }
+  const baseMinutes = firstTimes.size ? Math.min(...firstTimes.values()) : 540;
+  const startTime = `${String(Math.floor(baseMinutes / 60)).padStart(2, '0')}:${String(baseMinutes % 60).padStart(2, '0')}`;
   let day: number | undefined, previousEnd = 0, sourceCells = 0;
   const fail = (cell: string, message: string): never => { throw new Error(`${sheet.name} · ${cell}: ${message}`); };
   for (let row = headerRow + 1; row <= sheet.rowCount; row++) {
@@ -56,8 +71,7 @@ export function parseUniversitySchedule(sheet: Worksheet, schedule: AcademicSche
     while (end <= start) end += 720;
     if (end - start !== 60 || end > 1440) fail(timeCell, 'مدة الحصة يجب أن تكون ساعة وبترتيب زمني صحيح');
     previousEnd = end;
-    const [baseH = 9, baseM = 0] = schedule.settings.start_time.split(':').map(Number);
-    const period = (start - (baseH * 60 + baseM)) / 60 + 1;
+    const period = (start - baseMinutes) / 60 + 1;
     if (!Number.isInteger(period) || period < 1 || period > 11) fail(timeCell, 'الموعد خارج الحصص الـ11. اضبط بداية أول حصة لتطابق الملف');
     for (const column of columns) {
       const cell = sheet.getCell(row, column.column), master = cell.master;
@@ -103,7 +117,7 @@ export function parseUniversitySchedule(sheet: Worksheet, schedule: AcademicSche
         const placements = rooms.length === 2 ? rooms.map((place, i) => ({ room: place, week: i + 1 })) : [{ room: rooms[0]!, week }];
         for (const placement of placements) for (const section of sections) {
           entries.push({section, day_index: day!, period, subject_id: subject!.id, instructor_id: null, instructor_name: name, kind, week_pattern: placement.week, room: placement.room, uses_rotation: false, lab_room: '', hall_room: '', lab_week: 1});
-          places.push({cell: master.address, section, start: slotTime(schedule.settings.start_time, period), end: slotTime(schedule.settings.start_time, period + 1)});
+          places.push({cell: master.address, section, start: slotTime(startTime, period), end: slotTime(startTime, period + 1)});
         }
       }
     }
@@ -117,5 +131,5 @@ export function parseUniversitySchedule(sheet: Worksheet, schedule: AcademicSche
     const missing = columns.map(c => c.section).filter(section => !entries.some(e => e.subject_id === subject.id && e.kind === 'section' && e.section === section && (!e.week_pattern || e.week_pattern === week)));
     if (missing.length) warnings.add(`${subject.name} · week${week}: لا توجد حصص للسكاشن ${missing.join('، ')}. لن نضيف مواعيد افتراضية.`);
   }
-  return {entries, format:'university', sheet_name:sheet.name, warnings:[...warnings], source_cells:sourceCells, places};
+  return {entries, start_time:startTime, format:'university', sheet_name:sheet.name, warnings:[...warnings], source_cells:sourceCells, places};
 }

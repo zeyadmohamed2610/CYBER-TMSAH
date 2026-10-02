@@ -8,11 +8,35 @@ export interface AcademicEntry {
   room: string; uses_rotation: boolean; lab_room: string; hall_room: string; lab_week: number;
 }
 export interface AcademicSchedule {
+  server_time?: string;
+  cycles?: { anchor: { date: string; cycle: number } | null; days: Record<string, number> };
   revision?: string;
   department: string; academic_year: string; can_edit: boolean; student_section: string | null;
   settings: AcademicSettings; entries: AcademicEntry[];
   subjects: { id: string; name: string }[];
   instructors: { id: string; name: string; role: string; subjects: string[] }[];
+}
+export function cairoDate(now: Date): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo' }).format(now);
+}
+export function weekStartDate(date: string, startDay: number): string {
+  const day = new Date(`${date}T00:00:00Z`);
+  day.setUTCDate(day.getUTCDate() - (day.getUTCDay() - startDay + 7) % 7);
+  return day.toISOString().slice(0, 10);
+}
+export function scheduleCycle(date: string, schedule: AcademicSchedule): number {
+  const exception = schedule.cycles?.days[date];
+  if (exception === 1 || exception === 2) return exception;
+  return weeklyScheduleCycle(date, schedule);
+}
+export function weeklyScheduleCycle(date: string, schedule: AcademicSchedule): number {
+  const anchor = schedule.cycles?.anchor;
+  if (anchor) {
+    const weeks = (Date.parse(weekStartDate(date, schedule.settings.week_start_day)) - Date.parse(weekStartDate(anchor.date, schedule.settings.week_start_day))) / 604800000;
+    return ((weeks + anchor.cycle - 1) % 2 + 2) % 2 + 1;
+  }
+  const week = academicWeek(date, schedule.settings.semester_start, schedule.settings.week_start_day);
+  return week ? weekCycle(week) : 1;
 }
 export function academicWeek(date: string, start: string | null, weekStart: number): number | null {
   if (!start) return null;

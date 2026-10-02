@@ -21,7 +21,7 @@ async function click(label: string) {
 describe('Student timetable display', () => {
   it('opens own section, switches to all sections and combines a shared lecture without duplicate cards',async()=>{
     await act(async()=>root.render(<Harness data={schedule([entry(1),entry(2)])}/>));
-    expect(container.querySelectorAll('article')).toHaveLength(1);expect(container.textContent).toContain('جدول سكشن 1');
+    expect(container.querySelectorAll('article')).toHaveLength(1);expect(container.textContent).toContain('جدول اليوم · سكشن 1');
     await click('كل السكاشن');expect(container.querySelectorAll('article')).toHaveLength(1);expect(container.textContent).toContain('السكاشن: 1، 2');
     expect(container.textContent).toContain('2:00 م');expect(container.textContent).toContain('3:00 م');
     expect(container.textContent).not.toMatch(/Excel|week1|week2|استيراد/);

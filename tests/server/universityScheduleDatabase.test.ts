@@ -25,9 +25,10 @@ beforeAll(async()=>{
  await db.exec(latest.slice(latest.indexOf('CREATE OR REPLACE FUNCTION private.academic_save_entry')));
  await db.exec(readMigration);
  await db.exec(migration);
+ await db.exec(readFileSync('supabase/migrations/20261002161935_schedule_day_cycles_and_clock.sql','utf8'));
 },30000);
 beforeEach(async()=>{
- await db.exec(`TRUNCATE academic_schedule_entries,academic_schedule_settings,system_logs,user_subjects,users,subjects CASCADE;
+ await db.exec(`TRUNCATE private.academic_cycle_controls,private.academic_day_cycles,academic_schedule_entries,academic_schedule_settings,system_logs,user_subjects,users,subjects CASCADE;
  INSERT INTO users(id,auth_id,role,department,academic_year,full_name) VALUES('${user}','${auth}','owner','cybersecurity','2','مالك');
  INSERT INTO subjects VALUES('${subject}','مادة','cybersecurity',NULL);
  SELECT set_config('test.auth','${auth}',false);`);
@@ -36,6 +37,22 @@ afterAll(()=>db.close());
 const revision=async()=>String((await db.query<{revision:string}>("SELECT public.get_academic_schedule('cybersecurity','2')->>'revision' AS revision")).rows[0]?.revision);
 const replace=(entries: object[],rev: string)=>db.query("SELECT public.replace_academic_schedule('cybersecurity','2',$1::jsonb,$2)",[JSON.stringify(entries),rev]);
 describe('database university schedule replacement',()=>{
+ it('synchronizes source time atomically without clearing holidays',async()=>{
+  await db.exec("SELECT private.academic_save_settings('cybersecurity','2','{\"week_start_day\":5,\"start_time\":\"07:30\",\"days_off\":[4,6]}')");
+  await replace([{...entry,source_start_time:'09:00'}],await revision());
+  expect((await db.query('SELECT start_time::text,days_off FROM academic_schedule_settings')).rows[0]).toEqual({start_time:'09:00:00',days_off:[4,6]});
+  const rev=await revision();await expect(replace([{...entry,source_start_time:'10:00'},{...entry,source_start_time:'10:00'}],rev)).rejects.toThrow('conflict');
+  expect(await revision()).toBe(rev);
+ });
+ it('keeps day exceptions separate from the weekly anchor and restricts changes to the owner',async()=>{
+  await db.exec("SELECT public.save_academic_cycle('cybersecurity','2','2026-10-02',1,'week'); SELECT public.save_academic_cycle('cybersecurity','2','2026-10-05',2,'day');");
+  const controls=(await db.query<{cycles:unknown}>("SELECT public.get_academic_schedule('cybersecurity','2')->'cycles' cycles")).rows[0]?.cycles;
+  expect(controls).toEqual({anchor:{date:'2026-10-02',cycle:1},days:{'2026-10-05':2}});
+  await db.exec("UPDATE users SET role='coordinator'");
+  await expect(db.exec("SELECT public.save_academic_cycle('cybersecurity','2','2026-10-05',1,'day')")).rejects.toThrow('owner only');
+  await db.exec("UPDATE users SET role='owner'; SELECT public.save_academic_cycle('cybersecurity','2','2026-10-05',NULL,'day')");
+  expect((await db.query("SELECT count(*)::integer n FROM private.academic_day_cycles")).rows[0]).toEqual({n:0});
+ });
  it('removes old and manual slots and preserves other academic years',async()=>{
   await replace([entry,{...entry,section:2}],await revision());
   await db.query("SELECT private.academic_save_entry('cybersecurity','1',$1::jsonb)",[JSON.stringify(entry)]);

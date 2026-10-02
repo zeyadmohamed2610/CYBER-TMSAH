@@ -33,7 +33,7 @@ export function AcademicScheduleSettings({ value, saved, busy, onChange, onReset
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           <div className="min-w-0 space-y-2"><Label htmlFor="semester-start" className="text-sm font-semibold">بداية الدراسة</Label>
             <Input id="semester-start" type="date" dir="ltr" className={controlClass} aria-describedby="semester-start-help" value={value.semester_start ?? ''} onChange={event => onChange({ ...value, semester_start: event.target.value || null })} />
-            <p id="semester-start-help" className="text-xs leading-relaxed text-muted-foreground">من هذا التاريخ يبدأ حساب الأسبوع الأول والثاني.</p>
+            <p id="semester-start-help" className="text-xs leading-relaxed text-muted-foreground">اختياري لحساب التناوب تلقائيًا. يمكن للمالك تحديد الأسبوع مباشرة من التحكم أعلاه.</p>
           </div>
           <div className="min-w-0 space-y-2"><Label htmlFor="week-start" className="text-sm font-semibold">أول يوم في الأسبوع</Label>
             <select id="week-start" className={`${controlClass} border border-input bg-background px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`} aria-describedby="week-start-help" value={value.week_start_day} onChange={event => onChange({ ...value, week_start_day: Number(event.target.value) })}>

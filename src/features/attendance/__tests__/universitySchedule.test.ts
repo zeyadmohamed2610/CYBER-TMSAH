@@ -27,6 +27,11 @@ describe('university workbook structure',()=>{
  it.each(['1 C++', 'C++ 1', 'week1 C++', 'C++ week1', 'week1\nC++', '1\nC++'])('reads university week label %s',label=>{
   const sheet=grid();sheet.getCell('E5').value=`${label}\nEng. Amal / A01`;expect(parseUniversitySchedule(sheet,schedule).entries[0]?.week_pattern).toBe(1);
  });
+ it('derives university times from the file even if saved first-class time differs',()=>{
+  const sheet=grid();sheet.getCell('E8').value='C++\nEng. Amal / A02';
+  const result=parseUniversitySchedule(sheet,{...schedule,settings:{...schedule.settings,start_time:'07:30'}});
+  expect(result.start_time).toBe('09:00');expect(result.entries[0]?.period).toBe(6);expect(result.places[0]?.start).toBe('14:00');
+ });
  it('rejects unknown subjects and reports their source cell',()=>{
   const sheet=grid();sheet.getCell('E5').value='Unknown Subject\nDr. Name / G203';expect(()=>parseUniversitySchedule(sheet,schedule)).toThrow('E5');
  });

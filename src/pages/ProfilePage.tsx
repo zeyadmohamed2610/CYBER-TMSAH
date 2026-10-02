@@ -1021,7 +1021,7 @@ export default function ProfilePage() {
                                     variant="outline"
                                     onClick={() => handleTestPasskey(pk.id)}
                                     disabled={testingPasskeyId === pk.id}
-                                    className="border-purple-500/30 hover:bg-purple-500/15 text-purple-300 text-xs h-9 rounded-xl gap-1.5 px-3"
+                                    className="border-purple-500/30 hover:bg-purple-500/15 text-purple-300 text-xs min-h-11 rounded-xl gap-1.5 px-3"
                                   >
                                     {testingPasskeyId === pk.id ? (
                                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1035,8 +1035,9 @@ export default function ProfilePage() {
                                     size="sm"
                                     variant="ghost"
                                     onClick={() => handleDeletePasskey(pk.id)}
-                                    className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 text-xs h-9 rounded-xl px-2.5"
+                                    className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 text-xs min-h-11 min-w-11 rounded-xl px-2.5"
                                     title="إزالة الجهاز"
+                                    aria-label="إزالة الجهاز"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
