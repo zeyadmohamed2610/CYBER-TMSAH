@@ -222,15 +222,12 @@ export async function registerPasskey(deviceName?: string): Promise<PasskeyRegis
       ...options.user,
       id: base64urlToUint8Array(options.user.id as unknown as string),
     },
-    // CRITICAL: Force the browser to use THIS DEVICE'S internal platform authenticator (Fingerprint / Face / Screen lock)
-    // NEVER allow or fallback to USB security keys, NFC fobs, or another device!
+    // Require a discoverable credential and user verification, as on the server.
     authenticatorSelection: {
-      authenticatorAttachment: "platform",
       userVerification: "required",
-      residentKey: "preferred",
+      residentKey: "required",
     },
-    // CRITICAL: Empty excludeCredentials so Chrome NEVER diverts to USB/NFC/Use another device!
-    excludeCredentials: [],
+    excludeCredentials: (options.excludeCredentials ?? []).map(c => ({ id: base64urlToUint8Array(c.id as unknown as string), type: 'public-key' as const })),
   };
 
   // ── 3. Prompt platform authenticator ─────────────────────────────────────
@@ -300,16 +297,19 @@ export async function registerPasskey(deviceName?: string): Promise<PasskeyRegis
  * KEY POINT: Deleting cookies logs the user out but does NOT delete the passkey.
  * The passkey lives in the platform (Windows Hello, iCloud, Android) — not in cookies.
  */
-export async function authenticateWithPasskey(identifier?: string): Promise<PasskeyAuthResult> {
+export async function authenticateWithPasskey(identifier?: string, verificationCredentialId?: string): Promise<PasskeyAuthResult> {
   if (!isWebAuthnSupported()) {
     return { success: false, error: "الدخول بالبصمة غير متاح على جهازك أو متصفحك الحالي." };
   }
 
   // Every fingerprint sign-in requires a fresh device verification.
   // ── 2. Get server-generated authentication options ────────────────────────
-  const { data: startData, error: startErr } = await callPasskeyFn("auth-start", {
+  const token = verificationCredentialId ? (await supabase.auth.getSession()).data.session?.access_token : undefined;
+  if (verificationCredentialId && !token) return { success: false, error: 'يرجى تسجيل الدخول أولًا' };
+  const { data: startData, error: startErr } = await callPasskeyFn(verificationCredentialId ? 'verify-start' : "auth-start", {
     identifier: identifier?.trim() ?? "",
-  });
+    ...(verificationCredentialId ? { credentialId: verificationCredentialId } : {}),
+  }, token);
 
   if (startErr || !startData?.success || !startData?.options) {
     console.error("[WebAuthn] auth-start failed:", startErr, startData);
@@ -331,9 +331,7 @@ export async function authenticateWithPasskey(identifier?: string): Promise<Pass
   const allowCredentials = (serverOptions.allowCredentials ?? []).map((c) => ({
     id: base64urlToUint8Array(c.id),
     type: "public-key" as PublicKeyCredentialType,
-    transports: (c.transports && c.transports.length > 0)
-      ? (c.transports as AuthenticatorTransport[])
-      : (["internal"] as AuthenticatorTransport[]),
+    ...(c.transports?.length ? { transports: c.transports as AuthenticatorTransport[] } : {}),
   }));
 
   const reqOptions: PublicKeyCredentialRequestOptions = {
@@ -380,15 +378,16 @@ export async function authenticateWithPasskey(identifier?: string): Promise<Pass
   };
 
   // ── 6. Server verifies signature and creates session ──────────────────────
-  const { data: finishData, error: finishErr } = await callPasskeyFn("auth-finish", {
+  const { data: finishData, error: finishErr } = await callPasskeyFn(verificationCredentialId ? 'verify-finish' : "auth-finish", {
     credential: serialized,
-  });
+  }, token);
 
   if (finishErr || !finishData?.success) {
     console.error("[WebAuthn] auth-finish failed:", finishErr, finishData);
     return { success: false, error: finishData?.error ?? "تعذر تأكيد البصمة. أعد المحاولة." };
   }
 
+  if (verificationCredentialId) return { success: true };
   // ── 7. Exchange hashed_token for Supabase session ─────────────────────────
   const { data: verifyData, error: verifyErr } = await supabase.auth.verifyOtp({
     token_hash: finishData.hashed_token,

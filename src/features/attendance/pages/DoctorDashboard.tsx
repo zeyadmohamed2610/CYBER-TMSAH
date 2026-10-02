@@ -281,7 +281,7 @@ export const DoctorDashboard = () => {
         </TabsContent>
 
         <TabsContent value="records" className="mt-4">
-          <DoctorAttendanceRecords subjectId={doctorSubjectId} />
+          <DoctorAttendanceRecords subjectId={undefined} />
           <AttendanceRegisterPanel />
         </TabsContent>
 

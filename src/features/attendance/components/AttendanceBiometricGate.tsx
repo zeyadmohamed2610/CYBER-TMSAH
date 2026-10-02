@@ -95,16 +95,17 @@ export const AttendanceBiometricGate = ({ onVerified, attendanceHash }: Attendan
           <p className="font-semibold text-foreground">لتسجيل بصمتك:</p>
           <ol className="list-decimal list-inside space-y-1 marker:text-destructive">
             <li>اذهب إلى <strong className="text-foreground">الملف الشخصي</strong></li>
-            <li>افتح قسم <strong className="text-foreground">الأمان والبصمة</strong></li>
-            <li>اضغط "إضافة بصمة"</li>
+            <li>افتح قسم <strong className="text-foreground">الدخول بالبصمة</strong></li>
+            <li>اضغط "إضافة جهاز للدخول بالبصمة"</li>
             <li>اتبع التعليمات على جهازك</li>
             <li>عد هنا وسجل حضورك</li>
           </ol>
         </div>
 
         <Button
+          type="button"
           className="w-full gap-2 bg-primary/90 hover:bg-primary"
-          onClick={() => navigate("/profile?section=security")}
+          onClick={() => navigate("/profile?section=passkeys")}
         >
           <ArrowRight className="h-4 w-4" />
           اذهب إلى الملف الشخصي لتسجيل البصمة
@@ -154,8 +155,8 @@ export const AttendanceBiometricGate = ({ onVerified, attendanceHash }: Attendan
       {/* Security badges */}
       <div className="grid grid-cols-3 gap-2 text-center">
         {[
-          { icon: "🔐", label: "بصمتك فقط" },
-          { icon: "🛡️", label: "مضاد للغش" },
+          { icon: "🔐", label: "تأكيد الهوية" },
+          { icon: "🛡️", label: "حضور موثّق" },
           { icon: "📋", label: "مسجل للمراقب" },
         ].map(({ icon, label }) => (
           <div key={label} className="rounded-xl border border-white/10 bg-background/40 px-2 py-2.5">
@@ -181,6 +182,7 @@ export const AttendanceBiometricGate = ({ onVerified, attendanceHash }: Attendan
 
       {/* CTA */}
       <Button
+        type="button"
         onClick={handleVerify}
         disabled={state === "loading" || !/^[0-9]{6}$/.test(attendanceHash)}
         className="w-full h-13 rounded-xl text-base font-bold btn-cyber shadow-lg gap-2"

@@ -49,10 +49,10 @@ export function LectureDetailView({ lecture, onBack }: Props) {
   const [sessionHistory, setSessionHistory] = useState<SessionHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [ending, setEnding] = useState(false);
-  const [sessionDuration, setSessionDuration] = useState(10);
+  const [sessionDuration, setSessionDuration] = useState(60);
   const [sessionRadius, setSessionRadius] = useState(50);
-  const [selectedSection, setSelectedSection] = useState<string>("عام");
-  const [sessionType, setSessionType] = useState<"lecture" | "section">("lecture");
+  const [selectedSection, setSelectedSection] = useState<string>(lecture.section ?? '1');
+  const sessionType = lecture.kind ?? 'lecture';
   const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
   const { activeSession, creating, error, createSession, stopSession, updateDuration, restoreActiveSession } =
     useSessionManager();
@@ -486,14 +486,14 @@ export function LectureDetailView({ lecture, onBack }: Props) {
           <CardContent className="p-6 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               <div className="space-y-1">
-                <Label className="text-xs">المدة (دقائق)</Label>
+                <Label className="text-xs">فترة تسجيل الحضور (دقائق)</Label>
                 <Input id="session-duration" type="number" min={5} max={180} value={sessionDuration}
                   onChange={(e) => setSessionDuration(Number(e.target.value))}
                   className="h-8 text-sm" dir="ltr" />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">نوع الجلسة</Label>
-                <Select value={sessionType} onValueChange={(v) => { setSessionType(v as "lecture" | "section"); if (v === "lecture") setSelectedSection("عام"); }}>
+                <Select value={sessionType} disabled>
                   <SelectTrigger className="h-8 text-sm">
                     <SelectValue />
                   </SelectTrigger>
@@ -506,13 +506,13 @@ export function LectureDetailView({ lecture, onBack }: Props) {
               {sessionType === "section" ? (
                 <div className="space-y-1">
                   <Label className="text-xs">رقم السكشن</Label>
-                  <Select value={selectedSection} onValueChange={setSelectedSection}>
+                  <Select value={selectedSection} onValueChange={setSelectedSection} disabled={Boolean(lecture.section)}>
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue placeholder="اختر السكشن..." />
                     </SelectTrigger>
                     <SelectContent>
                       {Array.from({ length: 15 }, (_, i) => i + 1).map(n => (
-                        <SelectItem key={n} value={`سكشن ${n}`}>سكشن {n}</SelectItem>
+                        <SelectItem key={n} value={String(n)}>سكشن {n}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

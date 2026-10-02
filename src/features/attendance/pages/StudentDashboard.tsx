@@ -1,4 +1,5 @@
 import { AttendanceRegisterPanel } from "../components/AttendanceRegisterPanel";
+import { AcademicSchedulePanel } from '../components/AcademicSchedulePanel';
 import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 // src/features/attendance/pages/StudentDashboard.tsx
 // Updated: Modern tabbed dashboard for Student role
@@ -210,9 +211,11 @@ export const StudentDashboard = () => {
               <ShieldCheck className="h-4 w-4 shrink-0" />
               <span>أمان الجهاز</span>
             </TabsTrigger>
+            <TabsTrigger value="schedule" className="rounded-xl px-3 py-2.5 font-bold text-xs sm:text-sm">الجدول والامتحانات</TabsTrigger>
           </TabsList>
         </div>
 
+        <TabsContent value="schedule"><AcademicSchedulePanel /></TabsContent>
         {/* ── TAB 1: Check-in ─────────────────────────────────────────────── */}
         <TabsContent value="checkin" className="space-y-6 focus-visible:outline-none">
           {/* Active Sessions Panel */}

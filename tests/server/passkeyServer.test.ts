@@ -75,6 +75,24 @@ describe("actual server verification of attendance assertions", () => {
     expect(rows.webauthn_challenges?.map(r => r.id)).toEqual(["challenge-b"]);
     expect(rows.attendance_biometric_proofs?.[0]).toMatchObject({ auth_id: "student-a", attendance_hash: "123456", device_fingerprint: "a".repeat(64) });
   });
+  it('verifies a settings test on the server without creating an attendance receipt or login token', async () => {
+    Object.assign(rows.webauthn_challenges?.[0] ?? {}, { purpose: 'verify', attendance_hash: null });
+    const response = await handlePasskeyRequest(request(assertion(), 'verify-finish'));
+    expect(await response.json()).toEqual({ success: true, credentialId: 'Y3JlZA' });
+    expect(rows.attendance_biometric_proofs).toHaveLength(0);
+  });
+  it('does not turn a settings verification into a login or attendance ceremony', async () => {
+    Object.assign(rows.webauthn_challenges?.[0] ?? {}, { purpose: 'verify', attendance_hash: null });
+    expect((await (await handlePasskeyRequest(request(assertion(), 'auth-finish'))).json()).success).toBe(false);
+    expect((await (await handlePasskeyRequest(request())).json()).success).toBe(false);
+    expect(rows.webauthn_challenges).toHaveLength(2);
+  });
+  it('rejects another account testing a credential it does not own', async () => {
+    Object.assign(rows.webauthn_challenges?.[0] ?? {}, { purpose: 'verify', attendance_hash: null });
+    mocks.context.mockResolvedValue({ data: { supabase: { auth: { getUser: async () => ({ data: { user: { id: 'student-b' } }, error: null }) } } }, error: null });
+    expect((await (await handlePasskeyRequest(request(assertion(), 'verify-finish'))).json()).success).toBe(false);
+    expect(rows.webauthn_challenges).toHaveLength(2);
+  });
   it("rejects a forged signature without deleting challenges", async () => {
     const forged = assertion();
     forged.response.signature = Buffer.alloc(70, 9).toString("base64url");

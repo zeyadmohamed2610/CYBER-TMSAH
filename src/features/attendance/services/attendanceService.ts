@@ -482,6 +482,9 @@ export const attendanceService = {
         session_count: Number(row.session_count ?? 0),
         attendee_count: Number(row.attendee_count ?? 0),
         is_ended: (row.is_ended as boolean) ?? false,
+        kind: row.kind === 'section' ? 'section' : 'lecture',
+        section: (row.section as string | null) ?? null,
+        duration_minutes: Number(row.duration_minutes ?? 60),
       }));
 
       return ok<Lecture[]>(lectures);
@@ -494,12 +497,15 @@ export const attendanceService = {
   async createLecture(
     subjectId: string,
     title: string,
+    kind?: 'lecture' | 'section',
+    section?: string | null,
   ): Promise<AttendanceApiResponse<Lecture>> {
     const operation = "attendanceService.createLecture";
     try {
       const validation = validateRpcInput(createLectureSchema, {
         p_subject_id: subjectId,
         p_title: title,
+        ...(kind ? { p_kind: kind, p_section: section ?? null } : {}),
       });
       if (!validation.success) {
         return fail<Lecture>(operation, new Error(validation.error));
@@ -508,7 +514,7 @@ export const attendanceService = {
       const { data, error } = await supabase.rpc("create_lecture", validation.data);
       if (error) throw error;
 
-      const row = data as { id: string; subject_id: string; title: string; lecture_date: string; created_by: string | null; created_at: string };
+      const row = data as Lecture;
       return ok<Lecture>({
         id: row.id,
         subject_id: row.subject_id,
@@ -516,6 +522,9 @@ export const attendanceService = {
         lecture_date: row.lecture_date,
         created_by: row.created_by,
         created_at: row.created_at,
+        kind: row.kind ?? 'lecture',
+        section: row.section ?? null,
+        duration_minutes: row.duration_minutes ?? 60,
       });
     } catch (error) {
       return fail<Lecture>(operation, error);

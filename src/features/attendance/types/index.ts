@@ -45,6 +45,9 @@ export interface Subject {
 }
 
 export interface Lecture {
+  kind?: 'lecture' | 'section';
+  section?: string | null;
+  duration_minutes?: number;
   id: string;
   subject_id: string;
   title: string;

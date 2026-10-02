@@ -336,7 +336,7 @@ export const TADashboard = () => {
         </TabsContent>
 
         <TabsContent value="records" className="mt-4">
-          <TAAttendanceRecords subjectId={taSubjectId} sections={taSections} />
+          <TAAttendanceRecords subjectId={undefined} sections={taSections} />
           <AttendanceRegisterPanel />
         </TabsContent>
 

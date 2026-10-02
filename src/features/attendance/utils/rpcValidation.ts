@@ -28,6 +28,8 @@ export const createUserSchema = z.object({
 export const createLectureSchema = z.object({
   p_subject_id: z.string().uuid("Invalid subject ID"),
   p_title: z.string().min(1).max(200).default("محاضرة"),
+  p_kind: z.enum(['lecture', 'section']).optional(),
+  p_section: z.string().regex(/^(?:[1-9]|1[0-5])$/).nullable().optional(),
 });
 
 export const updateSessionExpirySchema = z.object({

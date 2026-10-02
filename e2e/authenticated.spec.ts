@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { readFile } from 'node:fs/promises';
 // Dedicated live accounts are opt-in; the student test binds its disposable device.
 for (const [role, destination] of [["student", "student-panel"], ["doctor", "doctor-dashboard"], ["owner", "owner-dashboard"], ["coordinator", "coordinator-dashboard"], ["ta", "ta-dashboard"]] as const) {
   test("@auth " + role + " opens the correct dashboard", async ({ page }, testInfo) => {
@@ -36,19 +37,28 @@ for (const [role, destination] of [["student", "student-panel"], ["doctor", "doc
     }
     if (role === "owner" || role === "coordinator") {
       const adminTabs = ["schedule", "departments", "doctors", "tas", "students", "fixes", "lectures", "manual-attendance", "attendance-records",
-        ...(role === "owner" ? ["requests", "coordinators", "devices"] : [])];
+        'requests', 'devices', ...(role === "owner" ? ["coordinators"] : [])];
       for (const tab of adminTabs) {
-        await page.goto(`/${destination}?tab=${tab}`);
+        await page.goto(`/${destination}?tab=${tab}`, { waitUntil: "domcontentloaded" });
         await expect(page.getByRole("tabpanel").first()).toBeVisible();
         await page.waitForLoadState("networkidle");
+        if (tab === 'schedule') {
+          const downloaded = page.waitForEvent('download');
+          await page.getByRole('button', { name: 'قالب الاستيراد', exact: true }).click();
+          const file = await downloaded;
+          expect(file.suggestedFilename()).toMatch(/\.xlsx$/);
+          expect((await readFile((await file.path())!)).subarray(0, 2).toString()).toBe('PK');
+          await page.getByRole('tab', { name: 'الامتحانات', exact: true }).click();
+          await expect(page.getByText('جداول الميدتيرم والفاينل', { exact: true })).toBeVisible();
+        }
       }
     }
     expect(errors).toEqual([]);
     if (role !== "owner" && role !== "coordinator") {
-      await page.goto("/owner-dashboard");
+      await page.goto("/owner-dashboard", { waitUntil: "domcontentloaded" });
       await expect(page).not.toHaveURL(/\/owner-dashboard(?:\?|$)/);
     }
-    await page.goto("/profile");
+    await page.goto("/profile", { waitUntil: "domcontentloaded" });
     await expect(page.getByText("الملف الشخصي والحساب", { exact: true })).toBeVisible();
     await expect(page.getByRole("tab", { name: "البيانات الأساسية" })).toBeVisible();
     await page.screenshot({ path: `.private/screenshots/${role}-profile-${testInfo.project.name}.png`, fullPage: true });

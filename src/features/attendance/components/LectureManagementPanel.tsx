@@ -31,6 +31,9 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
   const [title, setTitle] = useState("");
   const [selectedSubject, setSelectedSubject] = useState(fixedSubjectId ?? "");
   const [showCreate, setShowCreate] = useState(false);
+  const [kind, setKind] = useState<'lecture' | 'section'>(role === 'ta' ? 'section' : 'lecture');
+  const [section, setSection] = useState('1');
+  const selectedKind = role === 'ta' ? 'section' : role === 'doctor' ? 'lecture' : kind;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -74,7 +77,7 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
       return;
     }
     setCreating(true);
-    const result = await attendanceService.createLecture(subjectId, title || "محاضرة");
+    const result = await attendanceService.createLecture(subjectId, title || (selectedKind === 'section' ? 'سكشن' : 'محاضرة'), selectedKind, selectedKind === 'section' ? section : null);
     if (result.error) {
       toast({ variant: "destructive", title: "خطأ", description: getFriendlyErrorMessage(result.error) });
     } else {
@@ -126,13 +129,18 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
             className="gap-1"
           >
             <Plus className="h-3 w-3" />
-            محاضرة جديدة
+            {role === 'ta' ? 'سكشن جديد' : 'حصة جديدة'}
           </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {showCreate && (
           <form onSubmit={handleCreate} className="space-y-3 rounded-lg border bg-muted/30 p-4">
+            <div className="flex gap-3 flex-wrap">
+              {(role === 'owner' || role === 'coordinator') && <div><Label htmlFor="unit-kind">نوع الحصة</Label><select id="unit-kind" className="h-9 rounded-lg border bg-background px-3 mr-2" value={kind} onChange={e => setKind(e.target.value as 'lecture' | 'section')}><option value="lecture">محاضرة</option><option value="section">سكشن</option></select></div>}
+              {selectedKind === 'section' && <div><Label htmlFor="unit-section">السكشن</Label><select id="unit-section" className="h-9 rounded-lg border bg-background px-3 mr-2" value={section} onChange={e => setSection(e.target.value)}>{Array.from({ length: 15 }, (_, i) => <option key={i} value={i + 1}>سكشن {i + 1}</option>)}</select></div>}
+              <p className="text-sm text-muted-foreground">مدة الحصة ساعة · {selectedKind === 'section' ? 'سكشن' : 'محاضرة'}</p>
+            </div>
               {(!fixedSubjectId || subjects.length > 1) && (
               <div className="space-y-1">
                 <Label className="text-xs">المادة</Label>

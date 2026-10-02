@@ -110,11 +110,11 @@ export const OwnerDashboard = () => {
   const ALL_TABS = [
     ...(isOwner
       ? [
-          { value: "requests", label: "الطلبات المعلقة", icon: Inbox, category: "system", badge: pendingRequestsCount, colorScheme: "amber" },
           { value: "coordinators", label: "رؤساء الأقسام", icon: ShieldCheck, category: "users" },
-          { value: "devices", label: "أمان الأجهزة", icon: Smartphone, category: "system" },
         ]
       : []),
+    { value: "requests", label: "الطلبات المعلقة", icon: Inbox, category: "system", badge: pendingRequestsCount, colorScheme: "amber" },
+    { value: "devices", label: "أمان الأجهزة", icon: Smartphone, category: "system" },
     { value: "schedule", label: "الجدول الدراسي", icon: CalendarDays, category: "academic" },
     { value: "departments", label: "الأقسام والمواد", icon: Layers, category: "academic" },
     { value: "doctors", label: "الدكاترة", icon: GraduationCap, category: "users" },
@@ -142,7 +142,7 @@ export const OwnerDashboard = () => {
       id: "system",
       label: "النظام والطلبات",
       icon: Shield,
-      tabKeys: isOwner ? ["requests", "fixes", "devices"] : ["fixes"],
+      tabKeys: ["requests", "fixes", "devices"],
     },
   ];
 
@@ -429,19 +429,15 @@ export const OwnerDashboard = () => {
         {/* Owner-only tab panels */}
         {isOwner && (
           <>
-            <TabsContent value="requests" className="mt-4 outline-none">
-              <JoinRequestsPanel />
-            </TabsContent>
             <TabsContent value="coordinators" className="mt-4 outline-none">
               <UserList role="coordinator" title="قائمة منسقي البرامج (رؤساء الأقسام)" />
-            </TabsContent>
-            <TabsContent value="devices" className="mt-4 outline-none">
-              <DeviceLockPanel />
             </TabsContent>
           </>
         )}
 
         {/* Shared tab panels */}
+        <TabsContent value="requests" className="mt-4 outline-none"><JoinRequestsPanel /></TabsContent>
+        <TabsContent value="devices" className="mt-4 outline-none"><DeviceLockPanel /></TabsContent>
         <TabsContent value="schedule" className="mt-4 outline-none">
           <QuickScheduleEditor />
         </TabsContent>

@@ -173,8 +173,7 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
         attestationType: "none",
         excludeCredentials,
         authenticatorSelection: {
-          authenticatorAttachment: "platform", // Force this device's biometric scanner
-          residentKey: "preferred",
+          residentKey: "required",
           userVerification: "required",        // Force fingerprint / face ID prompt
         },
         supportedAlgorithmIDs: [-7, -257], // ES256, RS256
@@ -269,7 +268,7 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
       const validTransports = (clientTransports && clientTransports.length > 0) ? clientTransports : ["internal"];
 
       // Store credential
-      const { error: upsertErr } = await admin.from("webauthn_credentials").upsert({
+      const { error: upsertErr } = await admin.from("webauthn_credentials").insert({
         auth_id: user.id,
         user_id: publicUser?.id ?? null,
         credential_id: credId,
@@ -279,7 +278,7 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
         aaguid: aaguid ?? null,
         device_name: deviceName ?? `جهاز بيومتري ${new Date().toLocaleDateString("ar-EG")}`,
         last_used_at: new Date().toISOString(),
-      }, { onConflict: "credential_id" });
+      });
 
       if (upsertErr) {
         console.error("[passkey-login] credential upsert failed:", upsertErr);
@@ -304,26 +303,30 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
     // ──────────────────────────────────────────────────────────────────────
     // AUTH-START: generate authentication options + store challenge
     // ──────────────────────────────────────────────────────────────────────
-    if (action === "auth-start" || action === "attendance-start") {
+    if (action === "auth-start" || action === "attendance-start" || action === "verify-start") {
       const { identifier } = body as { identifier?: string };
 
       let allowCredentials: Array<{ id: string; type: "public-key"; transports?: ("internal" | "usb" | "nfc" | "ble" | "hybrid")[] }> = [];
       let authId: string | null = null;
 
       let attendanceHash: string | null = null;
-      if (action === "attendance-start") {
+      if (action === "attendance-start" || action === "verify-start") {
       const { data: context, error: contextError } = await createSupabaseContext(req, { auth: "user", env: serverEnv });
       if (contextError || !context) return json({ success: false, error: "Unauthorized" }, 401);
       const { data: { user }, error: authErr } = await context.supabase.auth.getUser();
       if (authErr || !user) return json({ success: false, error: "Unauthorized" }, 401);
         authId = user.id;
-        attendanceHash = typeof body.attendanceHash === "string" ? body.attendanceHash.trim() : "";
-        if (!/^[0-9]{6}$/.test(attendanceHash)) return json({ success: false, error: "Invalid attendance code" }, 400);
+        if (action === 'attendance-start') {
+          attendanceHash = typeof body.attendanceHash === "string" ? body.attendanceHash.trim() : "";
+          if (!/^[0-9]{6}$/.test(attendanceHash)) return json({ success: false, error: "Invalid attendance code" }, 400);
+        }
         const { data: creds, error: credsError } = await admin.from("webauthn_credentials")
           .select("credential_id, transports").eq("auth_id", user.id).not("public_key", "is", null);
         if (credsError) return json({ success: false, error: "Could not load credentials" }, 503);
         if (!creds?.length) return json({ success: false, noPasskeyRegistered: true, error: "سجل بصمة لحسابك أولاً." });
-        allowCredentials = creds.map(c => ({ id: c.credential_id as string, type: "public-key" as const }));
+        const selected = action === 'verify-start' ? creds.filter(c => c.credential_id === body.credentialId) : creds;
+        if (!selected.length) return json({ success: false, error: 'Credential does not belong to your account' }, 403);
+        allowCredentials = selected.map(c => ({ id: c.credential_id as string, type: "public-key" as const, transports: (c.transports ?? []) as AuthenticatorTransport[] }));
       }
       // If identifier provided, restrict to that user's credentials
       if (action === "auth-start" && identifier?.trim()) {
@@ -352,9 +355,8 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
           allowCredentials = creds.map((c) => ({
             id: c.credential_id as string,
             type: "public-key" as const,
-            // CRITICAL: Always force "internal" transport to prevent Chrome from showing
-            // USB/NFC/another-device picker. "internal" = platform authenticator only (fingerprint/face/PIN)
-            transports: ["internal"] as ("internal")[],
+            // Preserve authenticator transports, including synced/cross-device passkeys.
+            transports: (c.transports ?? []) as AuthenticatorTransport[],
           }));
         } else {
           return json({
@@ -379,6 +381,7 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
         auth_id: authId ?? null,
         type: "authentication",
         attendance_hash: attendanceHash,
+        purpose: action === 'attendance-start' ? 'attendance' : action === 'verify-start' ? 'verify' : 'login',
       });
       if (challengeError) return json({ success: false, error: "Could not create challenge" }, 503);
 
@@ -388,7 +391,7 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
     // ──────────────────────────────────────────────────────────────────────
     // AUTH-FINISH: verify assertion + create session
     // ──────────────────────────────────────────────────────────────────────
-    if (action === "auth-finish" || action === "attendance-finish") {
+    if (action === "auth-finish" || action === "attendance-finish" || action === "verify-finish") {
       const { credential } = body as { credential: Record<string, unknown> };
       if (!credential) return json({ success: false, error: "Missing credential" });
 
@@ -420,7 +423,7 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
       // Select this assertion's exact server-issued challenge, never another user's.
       const { data: challengeRows } = await admin
         .from("webauthn_challenges")
-        .select("id, challenge, auth_id, attendance_hash")
+        .select("id, challenge, auth_id, attendance_hash, purpose")
         .eq("type", "authentication")
         .gt("expires_at", new Date().toISOString())
         .eq("challenge", readAssertionChallenge(credential))
@@ -435,13 +438,15 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
       const storedChallenge = challengeRows[0];
       if (storedChallenge.auth_id && storedChallenge.auth_id !== storedCred.auth_id) return json({ success: false, error: "Account mismatch" }, 403);
       const attendanceFlow = action === "attendance-finish";
+      const expectedPurpose = attendanceFlow ? 'attendance' : action === 'verify-finish' ? 'verify' : 'login';
+      if ((storedChallenge.purpose ?? (storedChallenge.attendance_hash ? 'attendance' : 'login')) !== expectedPurpose) return json({ success: false, error: 'Challenge purpose mismatch' }, 403);
       if (attendanceFlow !== Boolean(storedChallenge.attendance_hash)) return json({ success: false, error: "Challenge purpose mismatch" }, 403);
-      if (attendanceFlow) {
+      if (attendanceFlow || action === 'verify-finish') {
       const { data: context, error: contextError } = await createSupabaseContext(req, { auth: "user", env: serverEnv });
       if (contextError || !context) return json({ success: false, error: "Unauthorized" }, 401);
       const { data: { user }, error: authErr } = await context.supabase.auth.getUser();
       if (authErr || !user) return json({ success: false, error: "Unauthorized" }, 401);
-        if (user.id !== storedCred.auth_id || storedChallenge.attendance_hash !== body.attendanceHash) return json({ success: false, error: "Attendance mismatch" }, 403);
+        if (user.id !== storedCred.auth_id || attendanceFlow && storedChallenge.attendance_hash !== body.attendanceHash) return json({ success: false, error: "Account mismatch" }, 403);
       }
 
       // Decode stored public key
@@ -488,6 +493,7 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
         .update({ sign_count: verification.authenticationInfo.newCounter, last_used_at: new Date().toISOString() })
         .eq("id", storedCred.id).eq("sign_count", storedCred.sign_count ?? 0).select("id");
       if (counterError || updated?.length !== 1) return json({ success: false, error: "Credential changed; retry verification" }, 409);
+      if (action === 'verify-finish') return json({ success: true, credentialId: storedCred.credential_id });
       if (attendanceFlow) {
         const fingerprint = body.deviceFingerprint;
         if (typeof fingerprint !== "string" || !/^(?:[a-f0-9]{64}|fb[a-f0-9]{16})$/i.test(fingerprint)) return json({ success: false, error: "Invalid device" }, 400);

@@ -1,7 +1,7 @@
 import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 import { getDeviceDisplayName } from "@/lib/academicCopy";
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { User, KeyRound, Shield, Building2, GraduationCap, Mail, CheckCircle2, Eye, EyeOff, ArrowLeft, Loader2, Calendar, Sparkles, Lock, Fingerprint, Trash2, Key, Camera, Copy, Check, LogOut, Smartphone, IdCard, Activity, ShieldCheck, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import { checkPwnedPassword } from "@/lib/pwnedPassword";
 import Footer from "@/components/Footer";
 import AvatarStudioDialog from "@/components/AvatarStudioDialog";
 import { deleteUserAvatar } from "@/lib/avatarUtils";
-import { registerPasskey, isWebAuthnSupported, clearAllLocalPasskeys } from "@/lib/webauthn";
+import { registerPasskey, authenticateWithPasskey, isWebAuthnSupported, clearAllLocalPasskeys } from "@/lib/webauthn";
 import {
   Dialog,
   DialogContent,
@@ -44,13 +44,14 @@ interface UserProfileDetails {
 
 export default function ProfilePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, role, fullName, refreshRole, avatarUrl, updateAvatarUrl, signOut } = useAttendanceAuth();
 
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfileDetails | null>(null);
 
   // Active Tab
-  const [activeMainTab, setActiveMainTab] = useState<string>("overview");
+  const [activeMainTab, setActiveMainTab] = useState<string>(() => ['overview', 'avatar', 'security', 'passkeys'].includes(searchParams.get('section') ?? '') ? searchParams.get('section')! : 'overview');
 
   // Avatar Studio Dialog
   const [isAvatarStudioOpen, setIsAvatarStudioOpen] = useState(false);
@@ -108,30 +109,14 @@ export default function ProfilePage() {
           .select("id, credential_id, device_name, created_at")
           .eq("auth_id", user?.id);
 
-        if (!error && data && data.length > 0 && isMounted) {
-          const mapped = data.map((item) => ({
-            id: item.credential_id,
-            rawId: item.credential_id,
-            label: item.device_name || "جهاز للدخول بالبصمة",
-            createdAt: item.created_at || new Date().toISOString(),
-          }));
-          setPasskeys(mapped);
-          localStorage.setItem(`cyber_passkeys_${user?.id}`, JSON.stringify(mapped));
-          return;
-        }
+        if (error) throw error;
+        if (!isMounted) return;
+        const mapped = (data ?? []).map(item => ({ id: item.credential_id, rawId: item.credential_id, label: item.device_name || "جهاز للدخول بالبصمة", createdAt: item.created_at }));
+        setPasskeys(mapped);
+        localStorage.setItem(`cyber_passkeys_${user?.id}`, JSON.stringify(mapped));
       } catch (err) {
-        console.warn("Failed to load passkeys from database:", err);
-      }
-
-      try {
-        const stored = localStorage.getItem(`cyber_passkeys_${user?.id}`);
-        if (stored && isMounted) {
-          setPasskeys(JSON.parse(stored));
-        } else if (user?.user_metadata?.passkeys && isMounted) {
-          setPasskeys(user.user_metadata.passkeys);
-        }
-      } catch (e) {
-        console.error("Failed to load passkeys:", e);
+        console.error("Failed to load verified passkeys", err);
+        if (isMounted) { setPasskeys([]); toast.error("تعذر تحميل أجهزة الدخول المعتمدة."); }
       }
     }
 
@@ -146,9 +131,7 @@ export default function ProfilePage() {
     setPasskeys(items);
     try {
       localStorage.setItem(`cyber_passkeys_${user.id}`, JSON.stringify(items));
-      supabase.auth.updateUser({
-        data: { passkeys: items },
-      }).catch(console.error);
+
     } catch (e) {
       console.error("Failed to persist passkeys:", e);
     }
@@ -293,32 +276,9 @@ export default function ProfilePage() {
 
     try {
       setTestingPasskeyId(passkeyId);
-      const challenge = new Uint8Array(32);
-      crypto.getRandomValues(challenge);
-      const domain = window.location.hostname;
-
-      const ua = navigator.userAgent;
-      const isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
-      const isChromium = /Chrome|Chromium|CriOS/i.test(ua) && !/Firefox|OPR|Opera/i.test(ua);
-
-      const reqOptions: PublicKeyCredentialRequestOptions = {
-        challenge,
-        rpId: domain === "localhost" ? "localhost" : domain,
-        userVerification: "preferred",
-        timeout: 60000,
-      };
-
-      if (!isMobile && isChromium) {
-        (reqOptions as PublicKeyCredentialRequestOptions & { hints?: string[] })["hints"] = ["client-device"];
-      }
-
-      const assertion = await navigator.credentials.get({
-        publicKey: reqOptions,
-      });
-
-      if (assertion) {
-        toast.success("تم التحقق بنجاح! يعمل الدخول بالبصمة بكفاءة تامة.");
-      }
+      const result = await authenticateWithPasskey(undefined, passkeyId);
+      if (!result.success) { toast.error(getFriendlyErrorMessage(result.error || "تعذر تأكيد مفتاح الدخول")); return; }
+      toast.success("تم تأكيد جهاز الدخول بنجاح.");
     } catch (err: unknown) {
       console.error("Passkey test error:", err);
       if (err instanceof Error && err.name === "NotAllowedError") {
@@ -332,20 +292,13 @@ export default function ProfilePage() {
   };
 
   const handleDeletePasskey = async (passkeyId: string) => {
-    const updated = passkeys.filter((p) => p.id !== passkeyId);
-    savePasskeys(updated);
-    if (user?.id) {
-      try {
-        await supabase.from("webauthn_credentials").delete().eq("credential_id", passkeyId);
-        localStorage.removeItem(`cyber_device_passkey_${passkeyId}`);
-        if (localStorage.getItem("cyber_latest_passkey") === passkeyId) {
-          localStorage.removeItem("cyber_latest_passkey");
-        }
-      } catch (err) {
-        console.warn("Failed to delete passkey from db:", err);
-      }
-    }
-    toast.success("تم حذف جهاز الدخول.");
+    if (!user?.id) return;
+    const result = await supabase.from("webauthn_credentials").delete().eq("auth_id", user.id).eq("credential_id", passkeyId).select("credential_id");
+    if (result.error || result.data?.length !== 1) { toast.error("تعذر حذف جهاز الدخول. لم يتغير المفتاح المعتمد."); return; }
+    savePasskeys(passkeys.filter(p => p.id !== passkeyId));
+    localStorage.removeItem(`cyber_device_passkey_${passkeyId}`);
+    if (localStorage.getItem("cyber_latest_passkey") === passkeyId) localStorage.removeItem("cyber_latest_passkey");
+    toast.success("تم إلغاء اعتماد المفتاح على المنصة. يمكنك حذفه من مدير مفاتيح جهازك أيضًا.");
   };
 
   // Fetch full user profile

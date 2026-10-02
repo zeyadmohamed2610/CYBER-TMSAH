@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import assert from 'node:assert/strict';
 const keys=JSON.parse(await readFile('.private/api-keys.json','utf8'));
 const accounts=JSON.parse(await readFile('.private/test-accounts.json','utf8'));
+if(accounts.some(a=>!/^qa\.[a-z]+\.20261002@example\.com$/.test(a.email)))throw new Error('Dedicated QA accounts required');
 const url='https://clfhllujvxhfvhenvwfz.supabase.co';
 const publishable=keys.find(k=>k.type==='publishable').api_key;
 const admin=createClient(url,keys.find(k=>k.type==='secret').api_key,{auth:{persistSession:false}});
@@ -21,6 +22,9 @@ for(const account of accounts){
  check(account.role+' summary',!!summary.data.dashboard);
 }
 const student=accounts.find(a=>a.role==='student');
+const baseline=await clients.student.rpc('get_attendance_register',{p_limit:500,p_offset:0});if(baseline.error)throw baseline.error;
+const baselinePresent=baseline.data.filter(r=>r.status==='present').length;
+const baselineAbsent=baseline.data.filter(r=>r.status==='absent').length;
 await admin.from('device_locks').delete().eq('student_auth_id',student.authId);
 const foreignSubject='8e9a9733-3972-4284-865f-890f972d782d';
 const foreign = await admin.from('subjects').upsert({id:foreignSubject,name:'مادة اختبار قسم آخر',doctor_name:'اختبار',department:'ai',academic_year:'1'});
@@ -46,7 +50,7 @@ const edge=async(action,body={})=>{
 };
 try{
  for(const role of ['doctor','ta']){
-  const result=await clients[role].rpc('create_lecture',{p_subject_id:'da995757-05bf-4ca1-bfc1-80b601a018ac',p_title:'اختبار حضور '+(role==='doctor'?'الدكتور':'المعيد')+' '+Date.now()});
+  const result=await clients[role].rpc('create_lecture',{p_subject_id:'da995757-05bf-4ca1-bfc1-80b601a018ac',p_title:'اختبار حضور '+(role==='doctor'?'الدكتور':'المعيد')+' '+Date.now(),p_kind:role==='ta'?'section':'lecture',p_section:role==='ta'?'1':null});
   if(result.error)throw result.error;lectures.push(result.data.id);check(role+' creates lecture',!!result.data.id);
  }
  const generated=await clients.doctor.rpc('generate_rotating_hash',{p_subject_id:'da995757-05bf-4ca1-bfc1-80b601a018ac',p_lecture_id:lectures[0],p_duration_minutes:10,p_section:null,p_latitude:30,p_longitude:31,p_radius_meters:50});
@@ -101,7 +105,8 @@ try{
  const absent=await clients.student.rpc('get_attendance_register',{p_lecture_id:lectures[1]});if(absent.error)throw absent.error;
  check('closed unattended lecture is absent',absent.data[0]?.status==='absent');
  const summary=await clients.student.rpc('get_attendance_summary');if(summary.error)throw summary.error;
- check('two lectures produce 50 percent attendance',Number(summary.data.dashboard.attendanceRate)===50);
+ const expectedRate=100*(baselinePresent+1)/(baselinePresent+baselineAbsent+2);
+ check('one present and one absent unit update the real denominator',Math.abs(Number(summary.data.dashboard.attendanceRate)-expectedRate)<0.0001);
  const noReason=await clients.owner.rpc('add_manual_attendance',{p_student_id:student.profileId,p_session_id:absentSession.data.id,p_reason:''});
  check('manual correction requires reason',!!noReason.error);
  const corrected=await clients.owner.rpc('add_manual_attendance',{p_student_id:student.profileId,p_session_id:absentSession.data.id,p_reason:'تصحيح حضور موثق للاختبار'});
@@ -112,6 +117,10 @@ try{
  await admin.from('attendance').delete().eq('id',corrected.data.id);
  await writeFile('.private/live-verification.json',JSON.stringify({checks,lectureIds:lectures,completedAt:new Date().toISOString()},null,2));
 }finally{
+ if(lectures.length){
+  const removedSessions=await admin.from('sessions').delete().in('lecture_id',lectures);if(removedSessions.error)throw removedSessions.error;
+  const removedLectures=await admin.from('lectures').delete().in('id',lectures);if(removedLectures.error)throw removedLectures.error;
+ }
  // Reset only the dedicated QA student's temporary credentials and device lock.
  await admin.from('webauthn_credentials').delete().eq('auth_id',student.authId);
  await admin.from('device_locks').delete().eq('student_auth_id',student.authId);
