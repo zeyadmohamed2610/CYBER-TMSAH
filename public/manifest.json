@@ -1,80 +1,36 @@
 {
-  "name": "CYBER TMSAH - منصة الحضور والتحقق الأكاديمي",
+  "name": "CYBER TMSAH — المنصة الأكاديمية",
   "short_name": "CYBER TMSAH",
   "description": "منصة CYBER TMSAH لمتابعة الدراسة والحضور للطلاب بجامعة حلوان التكنولوجية الدولية.",
   "start_url": "/login",
   "display": "standalone",
-  "background_color": "#0a0f1d",
-  "theme_color": "#0a0f1d",
+  "background_color": "#060813",
+  "theme_color": "#060813",
   "orientation": "portrait",
   "scope": "/",
   "lang": "ar",
   "dir": "rtl",
-  "categories": ["education", "academic", "cybersecurity"],
-  "screenshots": [
-    {
-      "src": "/og-image.png",
-      "sizes": "1200x630",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "CYBER TMSAH - Your academic attendance platform"
-    },
-    {
-      "src": "/favicon.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "CYBER TMSAH Mobile"
-    }
+  "categories": [
+    "education"
   ],
   "icons": [
     {
-      "src": "/favicon.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/favicon.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/favicon.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/favicon.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/favicon.png",
-      "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/favicon.png",
+      "src": "/brand/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/favicon.png",
-      "sizes": "384x384",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/favicon.png",
+      "src": "/brand/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "related_applications": [],
@@ -85,21 +41,39 @@
       "short_name": "الدخول",
       "description": "تسجيل الدخول لمنصة الحضور والتحقق",
       "url": "/login",
-      "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/brand/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "طلب الانضمام",
       "short_name": "الانضمام",
       "description": "طلب اعتماد حساب جديد في المنصة",
       "url": "/join",
-      "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/brand/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "الملف الشخصي",
       "short_name": "حسابي",
       "description": "إدارة الحساب وإعدادات الدخول بالبصمة",
       "url": "/profile",
-      "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/brand/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }

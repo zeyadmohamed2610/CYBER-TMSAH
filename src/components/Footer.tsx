@@ -19,6 +19,7 @@ const Footer = () => {
         <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
           <div className="flex flex-col items-center lg:items-start gap-4 order-2 lg:order-1">
             <Link to="/" className="group flex items-center select-none" dir="ltr" aria-label="CYBER TMSAH Home">
+              <img src="/logo.png" alt="" width="40" height="40" className="h-10 w-10 mr-2 shrink-0 object-contain" />
               <span className="font-black text-2xl text-white tracking-[0.14em] drop-shadow-[0_2px_12px_rgba(255,255,255,0.3)]">
                 CYBER
               </span>

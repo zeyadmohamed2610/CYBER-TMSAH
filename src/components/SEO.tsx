@@ -42,7 +42,7 @@ export const SEO = ({
       
       {/* Favicon */}
       <link rel="icon" type="image/png" href="/favicon.png" />
-      <link rel="apple-touch-icon" href="/favicon.png" />
+      <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" sizes="180x180" />
       
       {/* Canonical URL */}
       <link rel="canonical" href={url} />

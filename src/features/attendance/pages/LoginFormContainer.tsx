@@ -755,6 +755,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
 
         {/* Hero Wordmark */}
         <div className="flex items-center justify-center gap-2.5" dir="ltr">
+          <img src="/logo.png" alt="" width="44" height="44" className="h-9 w-9 md:h-11 md:w-11 shrink-0 object-contain" />
           <span
             className="font-black text-white text-[28px] md:text-[34px] tracking-[0.14em]"
             style={{
