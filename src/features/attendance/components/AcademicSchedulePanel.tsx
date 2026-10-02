@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Calendar, Download, Upload, Plus, Save, Trash2 } from 'lucide-react';
+import { Calendar, Download, Upload, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAttendanceAuth } from '../context/AttendanceAuthContext';
 import { DEPARTMENTS } from '../types';
@@ -13,6 +13,7 @@ import { exportScheduleWorkbook, readScheduleWorkbook } from '../utils/scheduleW
 import type { UniversityImport } from '../utils/universitySchedule';
 import { ScheduleWeekView } from './ScheduleWeekView';
 import { ExamSchedulePanel } from './ExamSchedulePanel';
+import { AcademicScheduleSettings } from './AcademicScheduleSettings';
 import { getFriendlyErrorMessage } from '@/lib/academicCopy';
 
 const scheduleError = (message: string) => message.includes('schedule_changed') ? 'تغير الجدول أثناء المراجعة. أعد تحميله ثم ارفع الملف وراجع المعاينة مرة أخرى.'
@@ -98,12 +99,11 @@ export function AcademicSchedulePanel() {
             {data.can_edit && <><Button variant="outline" disabled={busy} onClick={() => void download(true)}>قالب الاستيراد</Button><label className="inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 cursor-pointer text-sm"><Upload className="h-4 w-4" />استيراد جدول الجامعة أو Excel<input type="file" accept=".xlsx" disabled={busy} className="hidden" onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; if (file) void run(async () => { setImported([]); setImportReview(null); const review = await readScheduleWorkbook(await file.arrayBuffer(), data); setImported(review.entries); setImportReview(review); setImportRevision(data.revision ?? null); }); }} /></label><Button disabled={busy} onClick={() => setDraft(emptyEntry(section))}><Plus className="h-4 w-4 ml-2" />إضافة حصة</Button></>}
           </div>
         </div>
-        {data.can_edit && <details className="rounded-xl border p-4"><summary className="cursor-pointer font-bold">إعدادات بداية الدراسة والإجازات</summary><div className="grid gap-3 sm:grid-cols-3 mt-4">
-          <div><Label htmlFor="semester-start">بداية الدراسة</Label><Input id="semester-start" type="date" value={editableSettings.semester_start ?? ''} onChange={e => setSettingsDraft({ ...editableSettings, semester_start: e.target.value || null })} /></div>
-          <div><Label htmlFor="week-start">أول يوم في الأسبوع</Label><select id="week-start" className={selectClass} value={editableSettings.week_start_day} onChange={e => setSettingsDraft({ ...editableSettings, week_start_day: Number(e.target.value) })}>{ACADEMIC_DAYS.map((day, i) => <option key={i} value={i}>{day}</option>)}</select></div>
-          <div><Label htmlFor="day-start">بداية أول حصة</Label><Input id="day-start" type="time" value={editableSettings.start_time.slice(0, 5)} onChange={e => setSettingsDraft({ ...editableSettings, start_time: e.target.value })} /></div>
-        </div><div className="flex flex-wrap gap-4 my-4">{ACADEMIC_DAYS.map((day, i) => <label key={day} className="flex gap-2 items-center text-sm"><input type="checkbox" checked={editableSettings.days_off.includes(i)} onChange={e => setSettingsDraft({ ...editableSettings, days_off: e.target.checked ? [...editableSettings.days_off, i] : editableSettings.days_off.filter(d => d !== i) })} />{day} إجازة</label>)}</div>
-          <Button disabled={busy} onClick={() => void run(async () => { const result = await supabase.rpc('save_academic_settings', { p_department: data.department, p_year: data.academic_year, p_settings: editableSettings }); if (result.error) throw new Error(result.error.message); await load(); toast.success('تم حفظ إعدادات الجدول'); })}><Save className="h-4 w-4 ml-2" />حفظ الإعدادات</Button></details>}
+        <AcademicScheduleSettings value={editableSettings} saved={settings} busy={busy} onChange={setSettingsDraft} onReset={() => setSettingsDraft(null)} onSave={() => void run(async () => {
+          const result = await supabase.rpc('save_academic_settings', { p_department: data.department, p_year: data.academic_year, p_settings: editableSettings });
+          if (result.error) throw new Error(result.error.message);
+          await load(); toast.success('تم حفظ إعدادات الجدول');
+        })} />
         {draft && data.can_edit && <div className="rounded-xl border border-primary/40 p-4 space-y-4"><h3 className="font-bold">{draft.id ? 'تعديل الحصة' : 'حصة جديدة'}</h3><div className="grid sm:grid-cols-3 gap-3">
           <div><Label htmlFor="entry-section">السكشن</Label><select id="entry-section" className={selectClass} value={draft.section} onChange={e => field('section', Number(e.target.value))}>{Array.from({ length: 15 }, (_, i) => <option key={i} value={i + 1}>{i + 1}</option>)}</select></div>
           <div><Label htmlFor="entry-day">اليوم</Label><select id="entry-day" className={selectClass} value={draft.day_index} onChange={e => field('day_index', Number(e.target.value))}>{ACADEMIC_DAYS.map((d, i) => <option key={d} value={i}>{d}</option>)}</select></div>
