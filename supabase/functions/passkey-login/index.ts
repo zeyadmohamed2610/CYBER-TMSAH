@@ -184,6 +184,7 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
         challenge: options.challenge,
         auth_id: user.id,
         type: "registration",
+        purpose: "registration",
       });
       if (insertErr) {
         console.error("[passkey-login] challenge insert failed:", insertErr);
