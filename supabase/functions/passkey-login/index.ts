@@ -489,6 +489,9 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
         });
       } catch (err) {
         console.error("[passkey-login] authentication verification failed:", err);
+        if (err instanceof Error && err.message === 'User verification required, but user could not be verified') {
+          return json({ success: false, code: 'USER_VERIFICATION_REQUIRED', error: 'لم يؤكد الجهاز هويتك. أعد المحاولة باستخدام البصمة أو الوجه أو رمز قفل الجهاز. إذا تكرر الرفض، ادخل بكلمة المرور وأضف مفتاح دخول من جهاز يدعم تأكيد الهوية.' });
+        }
         return json({ success: false, error: `Authentication failed: ${(err as Error).message}` });
       }
 

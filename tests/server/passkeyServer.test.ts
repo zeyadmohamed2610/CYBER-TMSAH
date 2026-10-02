@@ -129,8 +129,12 @@ describe("actual server verification of attendance assertions", () => {
     expect(rows.attendance_biometric_proofs).toHaveLength(0);
   });
   it("rejects user presence without user verification", async () => {
-    expect((await (await handlePasskeyRequest(request(assertion(1)))).json()).success).toBe(false);
+    const result = await (await handlePasskeyRequest(request(assertion(1)))).json();
+    expect(result).toMatchObject({ success: false, code: 'USER_VERIFICATION_REQUIRED' });
+    expect(result.error).toContain('رمز قفل الجهاز');
     expect(rows.attendance_biometric_proofs).toHaveLength(0);
+    expect(rows.webauthn_challenges).toHaveLength(2);
+    expect(rows.webauthn_credentials![0]!.sign_count).toBe(0);
   });
   it("rejects a replay", async () => {
     const credential = assertion();

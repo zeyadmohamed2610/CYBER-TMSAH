@@ -334,7 +334,7 @@ export async function authenticateWithPasskey(identifier?: string, verificationC
     challenge: base64urlToUint8Array(serverOptions.challenge),
     timeout: serverOptions.timeout ?? 60000,
     ...(serverOptions.rpId ? { rpId: serverOptions.rpId } : {}),
-    userVerification: serverOptions.userVerification ?? "required",
+    userVerification: "required",
     ...(allowCredentials.length > 0 ? { allowCredentials } : {}),
   };
 
@@ -379,7 +379,7 @@ export async function authenticateWithPasskey(identifier?: string, verificationC
   }, token);
 
   if (finishErr || !finishData?.success) {
-    console.error("[WebAuthn] auth-finish failed:", finishErr, finishData);
+    console.error("[WebAuthn] auth-finish failed:", finishData?.code ?? "VERIFICATION_FAILED", finishData?.error ?? finishErr?.message ?? "No response");
     return { success: false, error: finishData?.error ?? "تعذر تأكيد البصمة. أعد المحاولة." };
   }
 
