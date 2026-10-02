@@ -112,7 +112,7 @@ describe("actual server verification of attendance assertions", () => {
     expect((await (await handlePasskeyRequest(request())).json()).success).toBe(false);
   });
   it('requires a recent account verification before adding a new key',async()=>{
-    mocks.context.mockResolvedValue({data:{supabase:{auth:{getUser:async()=>({data:{user:{id:'student-a',last_sign_in_at:'2000-01-01'}},error:null})}}},error:null});
+    mocks.context.mockResolvedValue({data:{jwtClaims:{amr:[{method:'password',timestamp:1}]},supabase:{auth:{getUser:async()=>({data:{user:{id:'student-a',last_sign_in_at:new Date().toISOString()}},error:null})}}},error:null});
     expect((await handlePasskeyRequest(request(assertion(),'register-start'))).status).toBe(403);
     expect(rows.webauthn_credentials).toHaveLength(1);
   });

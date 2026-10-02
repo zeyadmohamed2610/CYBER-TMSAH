@@ -140,8 +140,13 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
       const { data: { user }, error: authErr } = await context.supabase.auth.getUser();
       if (authErr || !user) return json({ success: false, error: "Unauthorized" }, 401);
 
-      const signedInAt = Date.parse(user.last_sign_in_at ?? '');
-      if (!Number.isFinite(signedInAt) || Date.now() - signedInAt > 5 * 60 * 1000) {
+      // The proof belongs to THIS verified session; another session's recent login is insufficient.
+      const methods = context.jwtClaims?.amr;
+      const nowSeconds = Date.now() / 1000;
+      const recentlyVerified = Array.isArray(methods) && methods.some(method =>
+        method && typeof method === 'object' && method.method === 'password'
+        && typeof method.timestamp === 'number' && method.timestamp >= nowSeconds - 300 && method.timestamp <= nowSeconds + 60);
+      if (!recentlyVerified) {
         return json({ success: false, error: 'أكد كلمة المرور مجددًا قبل إضافة جهاز للدخول.' }, 403);
       }
 
