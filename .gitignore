@@ -19,6 +19,11 @@ supabase/.temp/
 .vs/
 .private/
 
+# Local agent tools and configuration (keep on this machine)
+/.agents/
+/.codex/
+/skills-lock.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
