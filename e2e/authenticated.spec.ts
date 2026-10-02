@@ -29,6 +29,19 @@ for (const [role, destination] of [["student", "student-panel"], ["doctor", "doc
     const errors: string[] = [];
     await page.screenshot({ path: `.private/screenshots/${role}-${testInfo.project.name}.png`, fullPage: true });
     page.on("pageerror", error => errors.push(error.message));
+    if (role !== 'student' && (page.viewportSize()?.width ?? 1280) < 1024) {
+      const menu = page.getByRole('button', { name: 'فتح قائمة التنقل', exact: true });
+      await menu.click();
+      const labels = await page.getByRole('dialog').locator('nav button').allTextContents();
+      await page.keyboard.press('Escape');
+      await expect(menu).toBeFocused();
+      for (const label of labels) {
+        await menu.click();
+        await page.getByRole('dialog').locator('nav button').filter({ hasText: label }).click();
+        await expect(page.getByRole('dialog')).toHaveCount(0);
+        await expect(page.getByRole('tabpanel').first()).toBeVisible();
+      }
+    }
     const tabs = page.getByRole("tab");
     for (let index = 0; index < await tabs.count(); index++) {
       await tabs.nth(index).click();

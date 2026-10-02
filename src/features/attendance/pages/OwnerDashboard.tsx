@@ -5,32 +5,20 @@ import {
   Activity,
   BookOpen,
   BookOpenCheck,
-  CalendarCheck,
   CalendarDays,
-  Check,
   CheckCircle2,
-  ChevronDown,
   Clock3,
   GraduationCap,
   Inbox,
   Layers,
-  LayoutGrid,
-  Shield,
   ShieldCheck,
   Smartphone,
   Users,
   Wrench,
-  X,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TabsContent } from "@/components/ui/tabs";
+import { DashboardWorkspace } from "../components/DashboardWorkspace";
 import { AttendanceRecordsPanel } from "../components/AttendanceRecordsPanel";
 import { LectureManagementPanel } from "../components/LectureManagementPanel";
 import { LectureDetailView } from "../components/LectureDetailView";
@@ -47,13 +35,6 @@ import { useAttendanceDashboardData } from "../hooks/useAttendanceDashboardData"
 import { useAttendanceAuth } from "../context/AttendanceAuthContext";
 import { supabase } from "@/lib/supabaseClient";
 
-interface CategoryGroup {
-  id: string;
-  label: string;
-  icon: typeof LayoutGrid;
-  tabKeys?: string[];
-}
-
 export const OwnerDashboard = () => {
   const { role, fullName } = useAttendanceAuth();
   const isOwner = role === "owner";
@@ -63,16 +44,14 @@ export const OwnerDashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const defaultTab = isOwner ? "requests" : "schedule";
-  const activeTab =
+  const requestedTab =
     searchParams.get("tab") ||
-    sessionStorage.getItem("cyber_owner_active_tab") ||
+    sessionStorage.getItem(`cyber_${role}_active_tab`) ||
     defaultTab;
 
-  const [activeCategory, setActiveCategory] = useState<string>("all");
   const [pendingRequestsCount, setPendingRequestsCount] = useState<number>(0);
   const [pendingFixesCount, setPendingFixesCount] = useState<number>(0);
   const [facultyCount, setFacultyCount] = useState<number>(0);
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
 
   useEffect(() => {
@@ -100,7 +79,7 @@ export const OwnerDashboard = () => {
 
   const setActiveTab = (tab: string) => {
     try {
-      sessionStorage.setItem("cyber_owner_active_tab", tab);
+      sessionStorage.setItem(`cyber_${role}_active_tab`, tab);
     } catch {
       // ignore
     }
@@ -126,31 +105,7 @@ export const OwnerDashboard = () => {
     { value: "attendance-records", label: "سجلات الحضور", icon: Activity, category: "attendance" },
   ];
 
-  const CATEGORIES: CategoryGroup[] = [
-    { id: "all", label: "الكل", icon: LayoutGrid },
-    {
-      id: "users",
-      label: "المستخدمين",
-      icon: Users,
-      tabKeys: isOwner
-        ? ["students", "tas", "doctors", "coordinators"]
-        : ["students", "tas", "doctors"],
-    },
-    { id: "academic", label: "الجداول والأقسام", icon: BookOpen, tabKeys: ["schedule", "departments"] },
-    { id: "attendance", label: "الحضور والغياب", icon: CalendarCheck, tabKeys: ["lectures", "manual-attendance", "attendance-records"] },
-    {
-      id: "system",
-      label: "النظام والطلبات",
-      icon: Shield,
-      tabKeys: ["requests", "fixes", "devices"],
-    },
-  ];
-
-  const visibleTabs =
-    activeCategory === "all" ? ALL_TABS : ALL_TABS.filter((t) => t.category === activeCategory);
-
-  const currentTabObj = ALL_TABS.find((t) => t.value === activeTab) || { value: "overview", label: "نظرة عامة", icon: Activity, badge: 0 };
-  const CurrentTabIcon = currentTabObj.icon;
+  const activeTab = ALL_TABS.some(tab => tab.value === requestedTab) ? requestedTab : defaultTab;
 
   const roleBadgeLabel = isOwner ? "مالك المنصة" : isCoordinator ? "رئيس القسم" : role;
   const roleBadgeColor = isOwner
@@ -226,7 +181,6 @@ export const OwnerDashboard = () => {
             colorScheme={pendingRequestsCount > 0 ? "amber" : "default"}
             badge={pendingRequestsCount > 0 ? pendingRequestsCount : undefined}
             onClick={() => {
-              setActiveCategory("system");
               setActiveTab("requests");
             }}
           />
@@ -239,7 +193,6 @@ export const OwnerDashboard = () => {
             colorScheme={pendingFixesCount > 0 ? "rose" : "default"}
             badge={pendingFixesCount > 0 ? pendingFixesCount : undefined}
             onClick={() => {
-              setActiveCategory("system");
               setActiveTab("fixes");
             }}
           />
@@ -247,185 +200,9 @@ export const OwnerDashboard = () => {
       </div>
 
       {/* ── TABS NAVIGATION (Zero Horizontal Scroll on Mobile) ── */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl" className="w-full space-y-4">
-        
-        {/* ── MOBILE: Section Switcher Bar + Dialog (100% Vertical, No Horizontal Scroll) ── */}
-        <div className="md:hidden" dir="rtl">
-          <button
-            type="button"
-            onClick={() => setIsMobileNavOpen(true)}
-            className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-white/[0.04] border border-purple-500/40 shadow-[0_0_20px_rgba(168,85,247,0.15)] active:scale-[0.99] transition-all"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-600/25 border border-purple-500/40 flex items-center justify-center text-purple-300 shrink-0">
-                <CurrentTabIcon className="w-5 h-5" />
-              </div>
-              <div className="text-right">
-                <div className="text-[11px] text-slate-400 font-medium">القسم المعروض حالياً</div>
-                <div className="text-sm font-black text-white flex items-center gap-2">
-                  <span>{currentTabObj.label}</span>
-                  {currentTabObj.badge !== undefined && currentTabObj.badge > 0 && (
-                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
-                      {currentTabObj.badge}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600/25 text-purple-200 border border-purple-500/40 text-xs font-bold">
-              <span>تغيير القسم</span>
-              <ChevronDown className="w-4 h-4 text-purple-300" />
-            </div>
-          </button>
-        </div>
-
-        {/* ── MOBILE MODAL: Vertical Section Picker ── */}
-        <Dialog open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen}>
-          <DialogContent
-            className="max-w-md bg-[#0a0d1e]/98 border border-purple-500/40 text-white rounded-3xl p-5 shadow-2xl backdrop-blur-2xl max-h-[85vh] overflow-y-auto [&>button:last-child]:hidden"
-            dir="rtl"
-          >
-            <DialogHeader className="text-start pb-3 border-b border-white/10">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <DialogTitle className="text-base font-black text-white flex items-center gap-2">
-                    <Layers className="w-5 h-5 text-purple-400" />
-                    <span>اختر القسم المطلوب</span>
-                  </DialogTitle>
-                  <DialogDescription className="text-xs text-slate-400 mt-0.5">
-                    تصفح أقسام لوحة الإدارة الأكاديمية بنقرة واحدة
-                  </DialogDescription>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsMobileNavOpen(false)}
-                  className="shrink-0 w-8 h-8 rounded-xl bg-white/5 hover:bg-rose-500/20 border border-white/10 hover:border-rose-500/40 flex items-center justify-center text-slate-400 hover:text-rose-400 transition-all duration-200 cursor-pointer"
-                  aria-label="إغلاق القائمة"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </DialogHeader>
-
-            <div className="space-y-4 py-2">
-              {CATEGORIES.filter((c) => c.id !== "all").map((cat) => {
-                const CatIcon = cat.icon;
-                const catTabs = ALL_TABS.filter((t) => t.category === cat.id);
-                if (catTabs.length === 0) return null;
-
-                return (
-                  <div key={cat.id} className="space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-purple-300 px-1 pt-1">
-                      <CatIcon className="w-3.5 h-3.5" />
-                      <span>{cat.label}</span>
-                    </div>
-                    <div className="grid grid-cols-1 gap-1.5">
-                      {catTabs.map((t) => {
-                        const TIcon = t.icon;
-                        const isCurrent = activeTab === t.value;
-                        return (
-                          <button
-                            key={t.value}
-                            type="button"
-                            onClick={() => {
-                              setActiveTab(t.value);
-                              setIsMobileNavOpen(false);
-                            }}
-                            className={`w-full flex items-center justify-between p-3 rounded-xl border text-sm font-bold transition-all ${
-                              isCurrent
-                                ? "bg-purple-600/30 text-white border-purple-500/60 shadow-[0_0_15px_rgba(168,85,247,0.3)]"
-                                : "bg-white/[0.02] text-slate-300 border-white/[0.06] hover:bg-white/[0.06] hover:text-white"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5">
-                              <TIcon className={`w-4 h-4 ${isCurrent ? "text-purple-300" : "text-slate-400"}`} />
-                              <span>{t.label}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {t.badge !== undefined && t.badge > 0 && (
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                                  {t.badge}
-                                </span>
-                              )}
-                              {isCurrent && <Check className="w-4 h-4 text-purple-400 stroke-[3]" />}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* ── DESKTOP ONLY: Category Filters + TabsList (Visible on md and up) ── */}
-        <div className="hidden md:block space-y-3" dir="rtl">
-          {/* Category Filter Buttons */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {CATEGORIES.map((cat) => {
-              const isSelected = activeCategory === cat.id;
-              const CatIcon = cat.icon;
-              const catBadge =
-                cat.id === "system"
-                  ? (isOwner ? pendingRequestsCount : 0) + pendingFixesCount
-                  : 0;
-
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => {
-                    setActiveCategory(cat.id);
-                    if (cat.tabKeys && !cat.tabKeys.includes(activeTab)) {
-                      if (cat.tabKeys[0]) setActiveTab(cat.tabKeys[0]);
-                    }
-                  }}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 border ${
-                    isSelected
-                      ? "bg-purple-600/25 text-purple-200 border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.25)]"
-                      : "bg-white/[0.03] text-slate-400 border-white/[0.08] hover:text-white hover:bg-white/[0.07]"
-                  }`}
-                >
-                  <CatIcon className={`h-3.5 w-3.5 ${isSelected ? "text-purple-400" : "text-slate-400"}`} />
-                  <span>{cat.label}</span>
-                  {catBadge > 0 && (
-                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                      {catBadge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Sub-tabs List */}
-          <div className="w-full pb-2 border-b border-white/[0.08]">
-            <TabsList className="flex flex-wrap h-auto w-full justify-start gap-1.5 bg-transparent p-0">
-              {visibleTabs.map((tab) => {
-                const TabIcon = tab.icon;
-                return (
-                  <TabsTrigger
-                    key={tab.value}
-                    value={tab.value}
-                    className="data-[state=active]:bg-purple-600/25 data-[state=active]:text-purple-200 data-[state=active]:border-purple-500/50 data-[state=active]:shadow-[0_0_15px_rgba(168,85,247,0.2)] border border-transparent px-3.5 py-2 rounded-xl font-bold transition-all text-slate-400 hover:text-white hover:bg-white/[0.04] text-xs sm:text-sm flex items-center gap-2"
-                  >
-                    <TabIcon className="h-4 w-4 shrink-0 text-slate-400 group-data-[state=active]:text-purple-300" />
-                    <span>{tab.label}</span>
-                    {tab.badge !== undefined && tab.badge > 0 && (
-                      <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
-                        {tab.badge}
-                      </span>
-                    )}
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
-          </div>
-        </div>
-
+      <DashboardWorkspace value={activeTab} onValueChange={setActiveTab} items={ALL_TABS} title={isOwner ? "إدارة المنصة" : "إدارة القسم"} groups={[
+        {id:'academic',label:'الدراسة'}, {id:'attendance',label:'الحضور والغياب'}, {id:'users',label:'المستخدمون'}, {id:'system',label:'الطلبات والمتابعة'},
+      ]}>
         {/* Owner-only tab panels */}
         {isOwner && (
           <>
@@ -466,7 +243,7 @@ export const OwnerDashboard = () => {
           {selectedLecture ? <LectureDetailView lecture={selectedLecture} onBack={() => setSelectedLecture(null)} /> :
             <LectureManagementPanel onSelectLecture={setSelectedLecture} />}
         </TabsContent>
-      </Tabs>
+      </DashboardWorkspace>
     </div>
   );
 };

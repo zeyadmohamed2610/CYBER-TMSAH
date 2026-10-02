@@ -8,7 +8,8 @@ import {
   ListChecks, CalendarDays, UserCheck, Info, GraduationCap,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TabsContent } from "@/components/ui/tabs";
+import { DashboardWorkspace } from "../components/DashboardWorkspace";
 import { StatCard } from "../components/StatCard";
 import { LectureManagementPanel } from "../components/LectureManagementPanel";
 import { LectureDetailView } from "../components/LectureDetailView";
@@ -295,42 +296,13 @@ export const TADashboard = () => {
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl" className="w-full space-y-4">
-        <div className="w-full" dir="rtl">
-          <TabsList className="grid grid-cols-2 sm:flex sm:flex-wrap h-auto w-full justify-start gap-1.5 bg-white/[0.02] border border-white/10 p-1.5 rounded-2xl backdrop-blur-md" dir="rtl">
-            <TabsTrigger
-              value="lectures"
-              className="data-[state=active]:bg-cyan-500/25 data-[state=active]:text-cyan-200 data-[state=active]:border-cyan-500/50 border border-transparent px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm gap-2 transition-all justify-center sm:justify-start"
-            >
-              <BookOpenCheck className="h-4 w-4 shrink-0" /> <span>السكاشن</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="records"
-              className="data-[state=active]:bg-cyan-500/25 data-[state=active]:text-cyan-200 data-[state=active]:border-cyan-500/50 border border-transparent px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm gap-2 transition-all justify-center sm:justify-start"
-            >
-              <ListChecks className="h-4 w-4 shrink-0" /> <span>سجلات الحضور</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="schedule"
-              className="data-[state=active]:bg-cyan-500/25 data-[state=active]:text-cyan-200 data-[state=active]:border-cyan-500/50 border border-transparent px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm gap-2 transition-all justify-center sm:justify-start"
-            >
-              <CalendarDays className="h-4 w-4 shrink-0" /> <span>الجدول الدراسي</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="stats"
-              className="data-[state=active]:bg-cyan-500/25 data-[state=active]:text-cyan-200 data-[state=active]:border-cyan-500/50 border border-transparent px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm gap-2 transition-all justify-center sm:justify-start"
-            >
-              <BarChart2 className="h-4 w-4 shrink-0" /> <span>الإحصائيات</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="profile"
-              className="col-span-2 sm:col-span-1 data-[state=active]:bg-cyan-500/25 data-[state=active]:text-cyan-200 data-[state=active]:border-cyan-500/50 border border-transparent px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm gap-2 transition-all justify-center sm:justify-start"
-            >
-              <Info className="h-4 w-4 shrink-0" /> <span>بياناتي الشخصية</span>
-            </TabsTrigger>
-          </TabsList>
-        </div>
-
+      <DashboardWorkspace value={activeTab} onValueChange={setActiveTab} title="لوحة المعيد" items={[
+          {value:'lectures',label:'السكاشن',icon:BookOpenCheck},
+          {value:'records',label:'سجلات الحضور',icon:ListChecks},
+          {value:'schedule',label:'الجدول الدراسي',icon:CalendarDays},
+          {value:'stats',label:'الإحصائيات',icon:BarChart2},
+          {value:'profile',label:'بياناتي الشخصية',icon:Info},
+        ]}>
         <TabsContent value="lectures" className="mt-4">
           <LectureManagementPanel fixedSubjectId={taSubjectId} onSelectLecture={setSelectedLecture} />
         </TabsContent>
@@ -386,7 +358,7 @@ export const TADashboard = () => {
         <TabsContent value="profile" className="mt-4">
           <TAInfoCard subjectId={taSubjectId} sections={taSections} />
         </TabsContent>
-      </Tabs>
+      </DashboardWorkspace>
     </div>
   );
 };

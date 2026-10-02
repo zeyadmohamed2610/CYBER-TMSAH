@@ -5,14 +5,15 @@ import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 // Updated: Modern tabbed dashboard for Student role
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Activity, AlertCircle, AlertTriangle, ClipboardCheck, CloudOff,
+  CalendarDays, Activity, AlertCircle, AlertTriangle, ClipboardCheck, CloudOff,
   TrendingUp, CheckCircle2, QrCode, History, BarChart3, ShieldCheck,
   RefreshCw, Smartphone, Sparkles, BookOpen
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TabsContent } from "@/components/ui/tabs";
+import { DashboardWorkspace } from "../components/DashboardWorkspace";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable, type DataTableColumn } from "../components/DataTable";
 import { ActiveSessionsBar } from "../components/ActiveSessionsBar";
@@ -177,44 +178,13 @@ export const StudentDashboard = () => {
       )}
 
       {/* ── Navigation Tabs ───────────────────────────────────────────────── */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl" className="w-full space-y-4">
-        <div className="w-full" dir="rtl">
-          <TabsList className="grid grid-cols-2 sm:flex sm:flex-wrap h-auto w-full justify-start gap-1.5 bg-white/[0.02] border border-white/10 p-1.5 rounded-2xl backdrop-blur-md">
-            <TabsTrigger
-              value="checkin"
-              className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary data-[state=active]:border-primary/50 border border-transparent px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm gap-2 transition-all justify-center sm:justify-start"
-            >
-              <QrCode className="h-4 w-4 shrink-0" />
-              <span>تسجيل الحضور</span>
-            </TabsTrigger>
-
-            <TabsTrigger
-              value="records"
-              className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary data-[state=active]:border-primary/50 border border-transparent px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm gap-2 transition-all justify-center sm:justify-start"
-            >
-              <History className="h-4 w-4 shrink-0" />
-              <span>سجل حضوري ({records.length})</span>
-            </TabsTrigger>
-
-            <TabsTrigger
-              value="analytics"
-              className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary data-[state=active]:border-primary/50 border border-transparent px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm gap-2 transition-all justify-center sm:justify-start"
-            >
-              <BarChart3 className="h-4 w-4 shrink-0" />
-              <span>النسب والمقررات</span>
-            </TabsTrigger>
-
-            <TabsTrigger
-              value="device"
-              className="data-[state=active]:bg-primary/25 data-[state=active]:text-primary data-[state=active]:border-primary/50 border border-transparent px-3 py-2.5 rounded-xl font-bold text-xs sm:text-sm gap-2 transition-all justify-center sm:justify-start"
-            >
-              <ShieldCheck className="h-4 w-4 shrink-0" />
-              <span>أمان الجهاز</span>
-            </TabsTrigger>
-            <TabsTrigger value="schedule" className="rounded-xl px-3 py-2.5 font-bold text-xs sm:text-sm">الجدول والامتحانات</TabsTrigger>
-          </TabsList>
-        </div>
-
+      <DashboardWorkspace value={activeTab} onValueChange={setActiveTab} title="منصتي الأكاديمية" compactMobile items={[
+          {value:'checkin',label:'تسجيل الحضور',shortLabel:'الحضور',icon:QrCode},
+          {value:'records',label:'سجل حضوري',shortLabel:'السجل',icon:History,badge:records.length},
+          {value:'schedule',label:'الجدول والامتحانات',shortLabel:'الجدول',icon:CalendarDays},
+          {value:'analytics',label:'النسب والمقررات',shortLabel:'النسب',icon:BarChart3},
+          {value:'device',label:'أمان الجهاز',shortLabel:'الجهاز',icon:ShieldCheck},
+        ]}>
         <TabsContent value="schedule"><AcademicSchedulePanel /></TabsContent>
         {/* ── TAB 1: Check-in ─────────────────────────────────────────────── */}
         <TabsContent value="checkin" className="space-y-6 focus-visible:outline-none">
@@ -377,7 +347,7 @@ export const StudentDashboard = () => {
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
+      </DashboardWorkspace>
     </div>
   );
 };
