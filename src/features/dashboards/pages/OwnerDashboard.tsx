@@ -1,3 +1,4 @@
+import { LearningCenter } from "../../learning/components/LearningCenter";
 import { supabase } from "@/shared/api/supabaseClient";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
 import { TabsContent } from "@/shared/components/ui/tabs";
@@ -95,6 +96,7 @@ export const OwnerDashboard = () => {
   };
 
   const ALL_TABS = [
+    { value: "followup", label: "متابعة الدراسة", icon: BookOpenCheck, category: "academic" },
     { value: "users", label: "المستخدمون", icon: Users, category: "users" },
     {
       value: "requests",
@@ -284,6 +286,9 @@ export const OwnerDashboard = () => {
           ) : (
             <LectureManagementPanel onSelectLecture={setSelectedLecture} />
           )}
+        </TabsContent>
+        <TabsContent value="followup" aria-label="متابعة الدراسة">
+          <LearningCenter />
         </TabsContent>
       </DashboardWorkspace>
     </div>

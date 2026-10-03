@@ -21,6 +21,7 @@ import { ExamSchedulePanel } from "./ExamSchedulePanel";
 import { ScheduleEntryEditor } from "./ScheduleEntryEditor";
 import { ScheduleImportReview } from "./ScheduleImportReview";
 import { ScheduleWeekView } from "./ScheduleWeekView";
+import { ScheduleVersions } from "./ScheduleVersions";
 
 import { useAcademicSchedule } from "../hooks/useAcademicSchedule";
 export function AcademicSchedulePanel() {
@@ -269,6 +270,7 @@ export function AcademicSchedulePanel() {
               {draft && data.can_edit && (
                 <ScheduleEntryEditor model={model} schedule={data} entry={draft} />
               )}
+              <ScheduleVersions schedule={data} busy={busy} run={run} load={load} />
               {imported.length > 0 && <ScheduleImportReview model={model} schedule={data} />}
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>

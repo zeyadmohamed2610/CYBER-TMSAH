@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { type useAcademicSchedule } from "../hooks/useAcademicSchedule";
 import type { AcademicSchedule } from "../utils/academicSchedule";
 import { ACADEMIC_DAYS, slotTime } from "../utils/academicSchedule";
+import { scheduleDiff } from "../utils/scheduleDiff";
 export function ScheduleImportReview({
   model,
   schedule,
@@ -15,9 +16,16 @@ export function ScheduleImportReview({
   const { imported, importReview, busy, run, importRevision, setImported, setImportReview, load } =
     model;
   const settings = data.settings;
+  const changes = scheduleDiff(data.entries, imported);
   return (
     <div className="rounded-xl border p-4 space-y-3">
       <h3 className="font-bold">معاينة الاستيراد · {imported.length} حصة</h3>
+      {importReview?.format === "university" && (
+        <p className="text-sm">
+          جديدة: {changes.added} · محذوفة: {changes.removed} · معدّلة: {changes.changed} · دون
+          تغيير: {changes.unchanged}
+        </p>
+      )}
       <p className="text-sm">
         {importReview?.format === "university"
           ? `شيت ${importReview.sheet_name} · سيتم استبدال جدول الفرقة ${data.academic_year} بالكامل: حذف الحصص الحالية (${data.entries.length})، بما فيها إضافاتك اليدوية، واعتماد ${imported.length} حصة من الملف. بقية الفرق والامتحانات محفوظة. الحفظ كاملًا أو رفضه كاملًا عند وجود خطأ.`

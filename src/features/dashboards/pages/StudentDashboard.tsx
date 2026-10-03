@@ -1,3 +1,5 @@
+import { useDashboardTab } from "../hooks/useDashboardTab";
+import { LearningCenter } from "../../learning/components/LearningCenter";
 import { getFriendlyErrorMessage } from "@/shared/lib/academicCopy";
 import { DepartmentsAndSubjectsPanel } from "../../academics/components/DepartmentsAndSubjectsPanel";
 import { AttendanceRegisterPanel } from "../../attendance/components/AttendanceRegisterPanel";
@@ -16,8 +18,6 @@ import {
 import { TabsContent } from "@/shared/components/ui/tabs";
 import {
   Activity,
-  AlertCircle,
-  AlertTriangle,
   BarChart3,
   BookOpen,
   CalendarDays,
@@ -52,7 +52,14 @@ export const StudentDashboard = () => {
     useAttendanceDashboardData("student");
   const { isDeviceLocked, lockLabel } = useDeviceLock(user?.id);
 
-  const [activeTab, setActiveTab] = useState("checkin");
+  const [activeTab, setActiveTab] = useDashboardTab("checkin", [
+    "checkin",
+    "records",
+    "schedule",
+    "analytics",
+    "device",
+    "followup",
+  ]);
   const [pendingCount, setPendingCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
 
@@ -82,14 +89,6 @@ export const StudentDashboard = () => {
     () => [...subjectMetrics].sort((a, b) => b.attendanceRate - a.attendanceRate).slice(0, 3),
     [subjectMetrics],
   );
-  const isCriticalAttendance =
-    metrics.attendanceRate < 50 && (metrics.completedOpportunities ?? 0) > 0;
-  const isWarningAttendance =
-    metrics.attendanceRate >= 50 &&
-    metrics.attendanceRate < 70 &&
-    (metrics.completedOpportunities ?? 0) > 0;
-  const isLowAttendance = isCriticalAttendance || isWarningAttendance;
-
   const columns = useMemo<DataTableColumn<AttendanceRecord>[]>(
     () => [
       {
@@ -186,35 +185,6 @@ export const StudentDashboard = () => {
         </Alert>
       )}
 
-      {/* ── Attendance Warning ────────────────────────────────────────────── */}
-      {isLowAttendance && (
-        <Alert
-          variant="default"
-          className={
-            isCriticalAttendance
-              ? "border-red-500 bg-red-950/30 border-red-500/70 animate-pulse text-red-200"
-              : "border-amber-500 bg-amber-950/30 border-amber-500/70 text-amber-200"
-          }
-        >
-          {isCriticalAttendance ? (
-            <AlertCircle className="h-5 w-5 text-red-400" />
-          ) : (
-            <AlertTriangle className="h-5 w-5 text-amber-400" />
-          )}
-          <AlertTitle className="text-base font-bold">
-            {isCriticalAttendance
-              ? "تحذير أمني وأكاديمي: معدل الحضور منخفض للغاية!"
-              : "تنبيه انخفاض نسبة الحضور"}
-          </AlertTitle>
-          <AlertDescription className="text-sm mt-1 leading-relaxed">
-            معدل حضورك الحالي <strong>{metrics.attendanceRate.toFixed(1)}%</strong>.
-            {isCriticalAttendance
-              ? " تجاوزت نسبة الغياب المسموح بها ويجب مراجعة إدارة الكلية لحضور الجلسات القادمة لتجنب الحرمان."
-              : " يُرجى الحرص على حضور الجلسات القادمة لتحسين تقييمك التراكمي."}
-          </AlertDescription>
-        </Alert>
-      )}
-
       {/* ── Navigation Tabs ───────────────────────────────────────────────── */}
       <DashboardWorkspace
         value={activeTab}
@@ -242,6 +212,7 @@ export const StudentDashboard = () => {
             shortLabel: "المواد",
             icon: BarChart3,
           },
+          { value: "followup", label: "متابعة الدراسة", icon: BookOpen },
           { value: "device", label: "أمان الجهاز", shortLabel: "الجهاز", icon: ShieldCheck },
         ]}
       >
@@ -312,14 +283,14 @@ export const StudentDashboard = () => {
               value={`${metrics.attendanceRate.toFixed(1)}%`}
               description="نسبة التزامك الكلية"
               icon={Activity}
-              colorScheme={metrics.attendanceRate >= 70 ? "emerald" : "amber"}
+              colorScheme="emerald"
             />
             <StatCard
               title="معدل الغياب"
               value={`${absenceRate.toFixed(1)}%`}
               description="نسبة الغياب عن المحاضرات"
               icon={ClipboardCheck}
-              colorScheme={absenceRate > 30 ? "rose" : "default"}
+              colorScheme="default"
             />
           </div>
 
@@ -435,6 +406,9 @@ export const StudentDashboard = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+        <TabsContent value="followup" aria-label="متابعة الدراسة">
+          <LearningCenter />
         </TabsContent>
       </DashboardWorkspace>
     </div>

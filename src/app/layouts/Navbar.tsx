@@ -1,5 +1,6 @@
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { getDashboardRoute } from "@/features/auth/utils/dashboardRoutes";
+import { NotificationShortcut } from "@/features/learning/components/NotificationShortcut";
 import { ChevronDown, LogOut, Menu, User, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -140,6 +141,7 @@ export const Navbar = () => {
 
           {/* Desktop Right Controls: User Account Popup (Language switcher removed) */}
           <div className="hidden md:flex items-center gap-3">
+            {user && role && <NotificationShortcut destination={dashboardPath} />}
             {user ? (
               <div className="relative" ref={dropdownRef}>
                 <button
@@ -222,6 +224,7 @@ export const Navbar = () => {
 
           {/* Mobile Menu Button */}
           <div className="flex md:hidden items-center gap-2">
+            {user && role && <NotificationShortcut destination={dashboardPath} />}
             <button
               className="flex items-center justify-center text-slate-200 p-2 rounded-xl hover:bg-purple-600/15 transition-colors"
               onClick={() => setOpen((v) => !v)}

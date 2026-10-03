@@ -1,3 +1,5 @@
+import { useDashboardTab } from "../hooks/useDashboardTab";
+import { LearningCenter } from "../../learning/components/LearningCenter";
 import { getFriendlyErrorMessage } from "@/shared/lib/academicCopy";
 import { AttendanceRegisterPanel } from "../../attendance/components/AttendanceRegisterPanel";
 // Updated: Rich tabbed dashboard for Doctor role
@@ -227,7 +229,14 @@ export const DoctorDashboard = () => {
   const { metrics, error } = useAttendanceDashboardData("doctor");
   const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
   const [doctorSubjectId, setDoctorSubjectId] = useState<string | undefined>(undefined);
-  const [activeTab, setActiveTab] = useState("lectures");
+  const [activeTab, setActiveTab] = useDashboardTab("lectures", [
+    "lectures",
+    "records",
+    "schedule",
+    "stats",
+    "profile",
+    "followup",
+  ]);
 
   useEffect(() => {
     if (!user) return;
@@ -301,6 +310,7 @@ export const DoctorDashboard = () => {
           { value: "records", label: "سجلات الحضور", icon: ListChecks },
           { value: "schedule", label: "الجدول الدراسي", icon: CalendarDays },
           { value: "stats", label: "الإحصائيات", icon: BarChart2 },
+          { value: "followup", label: "متابعة الدراسة", icon: BookOpenCheck },
           { value: "profile", label: "بياناتي الشخصية", icon: Info },
         ]}
       >
@@ -357,6 +367,9 @@ export const DoctorDashboard = () => {
 
         <TabsContent aria-label="بياناتي الشخصية" value="profile" className="mt-4">
           <DoctorInfoCard subjectId={doctorSubjectId} />
+        </TabsContent>
+        <TabsContent value="followup" aria-label="متابعة الدراسة">
+          <LearningCenter />
         </TabsContent>
       </DashboardWorkspace>
     </div>

@@ -13,9 +13,9 @@ interface RegisterRow {
   subject_name: string;
   title: string;
   lecture_date: string;
-  status: "present" | "absent" | "pending";
+  status: "present" | "absent" | "pending" | "excused";
 }
-const labels = { present: "حاضر", absent: "غائب", pending: "التسجيل مفتوح" };
+const labels = { present: "حاضر", absent: "غائب", pending: "التسجيل مفتوح", excused: "عذر مقبول" };
 const pageSize = 100;
 export function AttendanceRegisterPanel({ lectureId }: { lectureId?: string }) {
   const [rows, setRows] = useState<RegisterRow[]>([]);
