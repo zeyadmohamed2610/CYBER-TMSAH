@@ -121,3 +121,26 @@ test('@passkey a stored credential creates a fresh session after site-data delet
     await expect(newPage).toHaveURL(/owner-dashboard/,{timeout:30000});
   } finally {await browser.close();}
 });
+
+test('@passkey failed device registration exposes a safe copyable report',async({page,context})=>{
+ const identifier=process.env.E2E_OWNER_IDENTIFIER,password=process.env.E2E_OWNER_PASSWORD;
+ test.skip(process.env.E2E_ALLOW_LIVE_AUTH!=='1'||!identifier||!password,'Dedicated QA account required');
+ await context.grantPermissions(['clipboard-read','clipboard-write']);
+ await page.goto('/login');
+ await page.locator('input[name="identifier"]').fill(identifier!);
+ await page.locator('input[name="password"]').fill(password!);
+ await page.locator('button[type="submit"]').click();
+ await expect(page).toHaveURL(/owner-dashboard/,{timeout:30000});
+ await page.goto('/profile?section=passkeys');
+ await page.evaluate(()=>Object.defineProperty(navigator.credentials,'create',{configurable:true,value:async()=>{throw new TypeError('Device API error private@example.com');}}));
+ await page.getByRole('button',{name:'إضافة جهاز للدخول بالبصمة'}).click();
+ await page.locator('#passkey-reauth-pass').fill(password!);
+ await page.getByRole('button',{name:'تأكيد ومتابعة البصمة'}).click();
+ await page.getByRole('button',{name:'حفظ على هذا الجهاز',exact:true}).click();
+ await page.getByRole('button',{name:'نسخ تفاصيل الخطأ',exact:true}).click();
+ await expect(page.getByText('تم نسخ تفاصيل الخطأ.',{exact:true})).toBeVisible();
+ const copied=await page.evaluate(()=>navigator.clipboard.readText());
+ expect(JSON.parse(copied)).toMatchObject({stage:'device-create',errorName:'TypeError',userActivation:true});
+ expect(copied).not.toContain('private@example.com');
+ expect(copied).not.toContain(identifier!);
+});

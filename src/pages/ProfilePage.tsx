@@ -19,6 +19,7 @@ import AvatarStudioDialog from "@/components/AvatarStudioDialog";
 import { deleteUserAvatar } from "@/lib/avatarUtils";
 import { registerPasskey, preparePasskeyRegistration, authenticateWithPasskey, isWebAuthnSupported, checkLocalPasskeyAvailability, type PreparedPasskeyRegistration } from "@/lib/webauthn";
 import { passkeyFailure } from '@/lib/passkeys/errors';
+import type {RegistrationDiagnostic} from '@/lib/passkeys/registrationDiagnostics';
 import {
   Dialog,
   DialogContent,
@@ -80,6 +81,7 @@ export default function ProfilePage() {
   const [preparedPasskey, setPreparedPasskey] = useState<PreparedPasskeyRegistration|null>(null);
   const [checkingPasskeyDevice, setCheckingPasskeyDevice] = useState(false);
   const [passkeyDeviceCheck, setPasskeyDeviceCheck] = useState<string|null>(null);
+  const [passkeyDiagnostic, setPasskeyDiagnostic] = useState<RegistrationDiagnostic|null>(null);
   const [testingPasskeyId, setTestingPasskeyId] = useState<string | null>(null);
 
   // Passkey Re-authentication State (Security enhancement)
@@ -150,6 +152,7 @@ export default function ProfilePage() {
     // Open security re-authentication modal
     setPasskeyDestination(destination);
     setPreparedPasskey(null);
+    setPasskeyDiagnostic(null);
     setPasskeyAuthPassword("");
     setShowPasskeyAuthPassword(false);
     setIsPasskeyAuthModalOpen(true);
@@ -209,6 +212,7 @@ export default function ProfilePage() {
 
       const formattedLabel = `${deviceLabel} - ${new Date().toLocaleDateString("ar-EG")}`;
       const result = await registerPasskey(formattedLabel,passkeyDestination,prepared);
+      setPasskeyDiagnostic(result.diagnostic ?? null);
 
       if (result.cancelled) {
         toast.info(passkeyDestination==='device' ? "لم تكتمل الإضافة على هذا الجهاز. إذا لم يظهر خيار الحفظ، راجع مدير كلمات المرور وقفل الشاشة في إعدادات جهازك." : "تم إلغاء عملية إضافة جهاز الدخول.");
@@ -1100,6 +1104,10 @@ export default function ProfilePage() {
                         <p className="text-xs text-slate-400 leading-6">إذا لم يظهر خيار الحفظ على جهازك، افتح الموقع مباشرة في متصفح محدث، وفعّل مدير كلمات المرور وقفل الشاشة من إعدادات الجهاز.</p>
                         <Button type="button" variant="outline" className="min-h-11 text-xs" disabled={checkingPasskeyDevice || creatingPasskey} onClick={handleCheckPasskeyDevice}>{checkingPasskeyDevice ? 'جارٍ فحص الجهاز...' : 'فحص جاهزية الجهاز'}</Button>
                         {passkeyDeviceCheck && <p role="status" className="text-sm leading-7 rounded-xl border border-white/10 bg-white/5 p-3 text-slate-200">{passkeyDeviceCheck}</p>}
+                        {passkeyDiagnostic && <div role="alert" className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 space-y-3">
+                          <p className="text-sm leading-7 text-slate-200">توقف طلب الإضافة عند خطوة الجهاز. يمكنك نسخ تفاصيل الخطأ للمساعدة في تحديد السبب. لا تتضمن كلمة المرور أو مفتاح الدخول.</p>
+                          <Button type="button" variant="outline" className="min-h-11 text-xs w-full sm:w-auto" onClick={async()=>{try{await navigator.clipboard.writeText(JSON.stringify(passkeyDiagnostic,null,2));toast.success('تم نسخ تفاصيل الخطأ.');}catch{toast.error('تعذر النسخ. اسم الخطأ: '+passkeyDiagnostic.errorName);}}}>نسخ تفاصيل الخطأ</Button>
+                        </div>}
                       </CardContent>
                     </Card>
                   </TabsContent>

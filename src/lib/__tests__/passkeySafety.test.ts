@@ -50,3 +50,9 @@ it('refuses an expired prepared request before opening the device prompt',async(
  expect(await registerPasskey(undefined,'device',{challengeId:'expired',options:{},expiresAt:Date.now()-1000})).toMatchObject({success:false,code:'REGISTRATION_EXPIRED'});
  expect(navigator.credentials.create).not.toHaveBeenCalled();expect(mocks.verifyRegistration).not.toHaveBeenCalled();
 });
+it('keeps device creation failures out of native verification and returns safe diagnostics',async()=>{
+ const nativeOptions={challenge:'Y2hhbGxlbmdl',rp:{name:'CYBER TMSAH',id:'www.cyber-tmsah.site'},user:{id:'dXNlcg',name:'student',displayName:'Student'},pubKeyCredParams:[{alg:-7,type:'public-key'}]};
+ vi.mocked(navigator.credentials.create).mockRejectedValue(new TypeError('Device API error'));
+ expect(await registerPasskey(undefined,'device',{challengeId:'prepared',options:nativeOptions,expiresAt:Date.now()+60000})).toMatchObject({success:false,diagnostic:{stage:'device-create',errorName:'TypeError'}});
+ expect(mocks.verifyRegistration).not.toHaveBeenCalled();
+});

@@ -4,6 +4,7 @@ import { createPasskey, getPasskeyAssertion, isWebAuthnSupported, logPasskeyVeri
 import { PasskeyError, passkeyFailure } from './errors';
 import { currentPasskeySession, passkeyRequest } from './service';
 import { clearAllLocalPasskeys } from './legacyHints';
+import {registrationDiagnostic,type RegistrationDiagnostic} from './registrationDiagnostics';
 
 let inProgress = false;
 export interface PasskeyResult {
@@ -15,6 +16,7 @@ export interface PasskeyResult {
   credentialId?:string;
   user?:unknown;
   role?:string|null;
+  diagnostic?:RegistrationDiagnostic;
 }
 async function ceremony(work:()=>Promise<PasskeyResult>):Promise<PasskeyResult> {
   if (inProgress) return passkeyFailure(new PasskeyError('أكمل طلب البصمة الحالي أولًا.','CEREMONY_IN_PROGRESS'));
@@ -38,8 +40,9 @@ export function registerPasskey(deviceName?:string, destination:PasskeyDestinati
     if(registration.expiresAt<Date.now())throw new PasskeyError('انتهى طلب الإضافة. أكّد كلمة المرور مجددًا.','REGISTRATION_EXPIRED');
     // Prepared options let the native prompt run directly from the final user click.
     let credential;
+    const activation=navigator.userActivation?.isActive ?? null;
     try {credential=await createPasskey(registration.options,destination);}
-    catch(error){const failure=passkeyFailure(error);console.warn('[Passkey] registration device failed',{code:'code' in failure ? failure.code : 'DEVICE_PROMPT_FAILED'});throw error;}
+    catch(error){const failure=passkeyFailure(error),diagnostic=registrationDiagnostic(error,registration.options,destination,activation);console.warn('[Passkey] registration device failed',diagnostic);return {...failure,diagnostic};}
     const finish = await supabase.auth.passkey.verifyRegistration({challengeId:registration.challengeId,credential});
     if(finish.error || !finish.data?.id)throw new PasskeyError('تعذر حفظ مفتاح الدخول. قد يكون مسجلًا من قبل أو وصلت للحد المسموح.');
     if(deviceName) await supabase.auth.passkey.update({passkeyId:finish.data.id,friendlyName:deviceName});
