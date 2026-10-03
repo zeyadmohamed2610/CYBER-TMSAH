@@ -1,6 +1,6 @@
 import { computeFingerprint } from '@/features/attendance/utils/fingerprint';
 import { supabase } from '../supabaseClient';
-import { createPasskey, getPasskeyAssertion, isWebAuthnSupported, logPasskeyVerification } from './browser';
+import { createPasskey, getPasskeyAssertion, isWebAuthnSupported, logPasskeyVerification, type PasskeyDestination } from './browser';
 import { PasskeyError, passkeyFailure } from './errors';
 import { currentPasskeySession, passkeyRequest } from './service';
 import { clearAllLocalPasskeys } from './legacyHints';
@@ -24,13 +24,13 @@ async function ceremony(work:()=>Promise<PasskeyResult>):Promise<PasskeyResult> 
   try { return await work(); } catch(error) { return passkeyFailure(error); } finally { inProgress = false; }
 }
 
-export function registerPasskey(deviceName?:string) {
+export function registerPasskey(deviceName?:string, destination:PasskeyDestination='device') {
   return ceremony(async()=>{
     const token = await currentPasskeySession();
     if (!token) throw new PasskeyError('يرجى تسجيل الدخول مجددًا.');
     const start = await supabase.auth.passkey.startRegistration();
     if(start.error || !start.data)throw new PasskeyError('تعذر إضافة مفتاح الدخول. تأكد من تسجيل الدخول وتأكيد بريدك الإلكتروني.');
-    const credential = await createPasskey(start.data.options);
+    const credential = await createPasskey(start.data.options,destination);
     const finish = await supabase.auth.passkey.verifyRegistration({challengeId:start.data.challenge_id,credential});
     if(finish.error || !finish.data?.id)throw new PasskeyError('تعذر حفظ مفتاح الدخول. قد يكون مسجلًا من قبل أو وصلت للحد المسموح.');
     if(deviceName) await supabase.auth.passkey.update({passkeyId:finish.data.id,friendlyName:deviceName});

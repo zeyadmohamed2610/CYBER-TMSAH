@@ -8,7 +8,7 @@ The hosted project's native passkey API is enabled. Its RP ID is `www.cyber-tmsa
 
 ## Registration and management
 
-A confirmed, signed-in account starts native registration. The browser adapter requires a discoverable credential and user verification, without forcing a platform attachment. Supabase verifies and stores the registration. Profile management uses native `auth.passkey.list`, `update` and `delete`, including friendly names and last-used dates. Native metadata UUIDs are distinct from WebAuthn credential IDs. Multiple keys belong to each account; no private keys or biometric information enter the application database.
+A confirmed, signed-in account starts native registration. The browser adapter requires a discoverable credential and user verification. The primary profile action explicitly requests a platform authenticator with the client-device hint, keeping registration on the current device/provider. A separate action leaves attachment unrestricted for other-device and security-key registration. A failed local request never silently retries on an external device. Neither action selects a vendor or biometric method. Supabase verifies and stores the registration. Profile management uses native `auth.passkey.list`, `update` and `delete`, including friendly names and last-used dates. Native metadata UUIDs are distinct from WebAuthn credential IDs. Multiple keys belong to each account; no private keys or biometric information enter the application database.
 
 The profile still asks for password confirmation before adding a key. This is an application UI check; Supabase's native registration endpoint independently requires an authenticated, confirmed account. Do not describe the UI check as a server-enforced recent-password policy.
 

@@ -75,6 +75,7 @@ export default function ProfilePage() {
   const [passkeyName, setPasskeyName] = useState('');
   const [savingPasskeyName, setSavingPasskeyName] = useState(false);
   const [creatingPasskey, setCreatingPasskey] = useState(false);
+  const [passkeyDestination, setPasskeyDestination] = useState<'device'|'any'>('device');
   const [testingPasskeyId, setTestingPasskeyId] = useState<string | null>(null);
 
   // Passkey Re-authentication State (Security enhancement)
@@ -131,7 +132,7 @@ export default function ProfilePage() {
     setPasskeys(items);
   };
 
-  const handleInitiatePasskeyCreation = () => {
+  const handleInitiatePasskeyCreation = (destination:'device'|'any'='device') => {
     if (!isWebAuthnSupported()) {
       toast.error("الدخول بالبصمة غير متاح على جهازك أو متصفحك الحالي.");
       return;
@@ -143,6 +144,7 @@ export default function ProfilePage() {
     }
 
     // Open security re-authentication modal
+    setPasskeyDestination(destination);
     setPasskeyAuthPassword("");
     setShowPasskeyAuthPassword(false);
     setIsPasskeyAuthModalOpen(true);
@@ -198,10 +200,10 @@ export default function ProfilePage() {
       const deviceLabel = "مفتاح دخول";
 
       const formattedLabel = `${deviceLabel} - ${new Date().toLocaleDateString("ar-EG")}`;
-      const result = await registerPasskey(formattedLabel);
+      const result = await registerPasskey(formattedLabel,passkeyDestination);
 
       if (result.cancelled) {
-        toast.info("تم إلغاء عملية إضافة جهاز الدخول.");
+        toast.info(passkeyDestination==='device' ? "لم تكتمل الإضافة على هذا الجهاز. إذا لم يظهر خيار الحفظ، راجع مدير كلمات المرور وقفل الشاشة في إعدادات جهازك." : "تم إلغاء عملية إضافة جهاز الدخول.");
         return;
       }
 
@@ -234,7 +236,7 @@ export default function ProfilePage() {
         }
       }
 
-      toast.success("✅ تم توثيق وتسجيل الدخول بالبصمة بنجاح!");
+      toast.success("تم حفظ مفتاح الدخول بنجاح.");
     } catch (err: unknown) {
       console.error("Passkey creation unexpected error:", err);
       toast.error("خطأ غير متوقع. الرجاء المحاولة مرة أخرى.");
@@ -1042,15 +1044,15 @@ export default function ProfilePage() {
                         <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-white/5">
                           <div className="flex items-center gap-2 text-xs text-slate-400">
                             <Shield className="w-4 h-4 text-purple-400 shrink-0" />
-                            <span>يمكنك إضافة 10 مفاتيح. يختار جهازك طريقة التأكيد ومكان الحفظ، ويمكنك استخدام هاتفك عبر خيارات المتصفح.</span>
+                            <span>الإضافة الأساسية تحفظ المفتاح على جهازك الحالي. يختار جهازك البصمة أو الوجه أو رمز القفل لتأكيد هويتك.</span>
                           </div>
 
-                          <div className="flex items-center gap-2 w-full sm:w-auto">
+                          <div className="flex flex-col items-stretch gap-2 w-full sm:w-auto">
 
 
                             <Button
                               type="button"
-                              onClick={handleInitiatePasskeyCreation}
+                              onClick={()=>handleInitiatePasskeyCreation('device')}
                               disabled={creatingPasskey || passkeys.length >= MAX_PASSKEYS}
                               className={`flex-1 sm:flex-initial text-white font-bold rounded-2xl h-10 px-6 text-xs gap-2 shrink-0 transition-all ${
                                 passkeys.length >= MAX_PASSKEYS
@@ -1075,8 +1077,10 @@ export default function ProfilePage() {
                                 </>
                               )}
                             </Button>
+                            <Button type="button" variant="ghost" className="min-h-11 text-xs text-slate-300 whitespace-normal" disabled={creatingPasskey || passkeys.length>=MAX_PASSKEYS} onClick={()=>handleInitiatePasskeyCreation('any')}>جهاز آخر أو مفتاح أمان</Button>
                           </div>
                         </div>
+                        <p className="text-xs text-slate-400 leading-6">إذا لم يظهر خيار الحفظ على جهازك، افتح الموقع مباشرة في متصفح محدث، وفعّل مدير كلمات المرور وقفل الشاشة من إعدادات الجهاز.</p>
                       </CardContent>
                     </Card>
                   </TabsContent>
@@ -1110,10 +1114,10 @@ export default function ProfilePage() {
             </div>
             <div>
               <DialogTitle className="text-lg font-bold text-white flex items-center gap-2">
-                تأكيد أمني مطلوب لإضافة بصمة
+                تأكيد إضافة مفتاح الدخول
               </DialogTitle>
               <DialogDescription className="text-xs text-slate-300 mt-1 leading-relaxed">
-                لحماية حسابك ومنع أي شخص متطفل من إضافة بصمته لجهازك، يرجى تأكيد كلمة مرور حسابك أولاً:
+                {passkeyDestination==='device' ? 'سيُحفظ المفتاح على جهازك الحالي أو في مدير كلمات المرور المتاح عليه.' : 'ستختار مكان حفظ المفتاح من خيارات المتصفح، بما فيها جهاز آخر أو مفتاح أمان.'} أكّد كلمة مرور حسابك للمتابعة.
               </DialogDescription>
             </div>
           </DialogHeader>

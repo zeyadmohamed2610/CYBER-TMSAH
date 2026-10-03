@@ -20,7 +20,7 @@ for (const [role, destination] of [['student', 'student-panel'], ['doctor', 'doc
     }
     await page.goto('/profile', { waitUntil: "domcontentloaded" });
     await page.getByRole('tab', { name: /الدخول بالبصمة/ }).click();
-    await page.getByRole('button', { name: 'إضافة جهاز للدخول بالبصمة' }).click();
+    await page.getByRole('button', { name: process.env.E2E_PASSKEY_TRANSPORT==='usb' ? 'جهاز آخر أو مفتاح أمان' : 'إضافة جهاز للدخول بالبصمة' }).click();
     await page.locator('#passkey-reauth-pass').fill(password!);
     const registered = page.waitForResponse(r => r.url().includes('/passkeys/registration/verify'));
     await page.getByRole('button', { name: 'تأكيد ومتابعة البصمة' }).click();

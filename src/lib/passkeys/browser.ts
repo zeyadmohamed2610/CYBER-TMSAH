@@ -10,11 +10,15 @@ function requireBrowser() {
   if (!isWebAuthnSupported()) throw new PasskeyError('الدخول بالبصمة غير متاح في هذا المتصفح.','UNSUPPORTED_BROWSER');
 }
 
-export async function createPasskey(options: unknown) {
+export type PasskeyDestination = 'device' | 'any';
+export async function createPasskey(options: unknown, destination: PasskeyDestination = 'device') {
   requireBrowser();
   const json = options as PublicKeyCredentialCreationOptionsJSON;
   if (!json?.challenge || !json.user?.id || !json.rp?.name) throw new PasskeyError('تعذر بدء إضافة مفتاح الدخول. أعد المحاولة.','INVALID_OPTIONS');
-  return startRegistration({optionsJSON:{...json,authenticatorSelection:{...json.authenticatorSelection,residentKey:'required',requireResidentKey:true,userVerification:'required'}}});
+  const {authenticatorAttachment: _attachment, ...selection} = json.authenticatorSelection ?? {};
+  const {hints: _hints, ...base} = json;
+  // The explicit alternative permits roaming keys; the primary action stays on this device.
+  return startRegistration({optionsJSON:{...base,...(destination==='device' ? {hints:['client-device']} : {}),authenticatorSelection:{...selection,...(destination==='device' ? {authenticatorAttachment:'platform'} : {}),residentKey:'required',requireResidentKey:true,userVerification:'required'}}});
 }
 
 export async function getPasskeyAssertion(options: unknown) {
