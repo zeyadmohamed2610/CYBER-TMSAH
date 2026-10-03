@@ -1,6 +1,5 @@
-// src/features/auth/components/CustomRoleSelect.tsx
-import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Tag } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 export interface RoleOption {
   value: string;
@@ -84,7 +83,9 @@ export function CustomRoleSelect({
           background: isOpen ? "rgba(147, 51, 234, 0.12)" : fieldBg,
           border: `1.5px solid ${isOpen ? "#A855F7" : fieldBorder}`,
           color: textColor,
-          boxShadow: isOpen ? "0 0 0 3.5px rgba(147, 51, 234, 0.25), 0 2px 8px rgba(0,0,0,0.3)" : "0 1px 2px rgba(0,0,0,0.15)",
+          boxShadow: isOpen
+            ? "0 0 0 3.5px rgba(147, 51, 234, 0.25), 0 2px 8px rgba(0,0,0,0.3)"
+            : "0 1px 2px rgba(0,0,0,0.15)",
         }}
         className="w-full h-[46px] px-3.5 rounded-xl text-sm font-semibold flex items-center justify-between transition-all duration-200 cursor-pointer select-none group outline-none"
       >

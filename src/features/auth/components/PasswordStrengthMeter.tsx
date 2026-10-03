@@ -1,6 +1,3 @@
-// src/features/auth/components/PasswordStrengthMeter.tsx
-
-
 interface PasswordStrengthMeterProps {
   password: string;
   lang: string;
@@ -16,10 +13,26 @@ export function PasswordStrengthMeter({ password, lang }: PasswordStrengthMeterP
   if (/[^A-Za-z0-9]/.test(password) || (/[A-Z]/.test(password) && /[a-z]/.test(password))) score++;
 
   const config = [
-    { label: lang === "ar" ? "ضعيفة" : "Weak", color: "bg-red-500", glow: "shadow-[0_0_8px_rgba(239,68,68,0.5)]" },
-    { label: lang === "ar" ? "مقبولة" : "Fair", color: "bg-amber-500", glow: "shadow-[0_0_8px_rgba(245,158,11,0.5)]" },
-    { label: lang === "ar" ? "جيدة" : "Good", color: "bg-purple-500", glow: "shadow-[0_0_8px_rgba(147,51,234,0.5)]" },
-    { label: lang === "ar" ? "قوية جداً 🛡️" : "Very Strong 🛡️", color: "bg-emerald-500", glow: "shadow-[0_0_8px_rgba(16,185,129,0.5)]" },
+    {
+      label: lang === "ar" ? "ضعيفة" : "Weak",
+      color: "bg-red-500",
+      glow: "shadow-[0_0_8px_rgba(239,68,68,0.5)]",
+    },
+    {
+      label: lang === "ar" ? "مقبولة" : "Fair",
+      color: "bg-amber-500",
+      glow: "shadow-[0_0_8px_rgba(245,158,11,0.5)]",
+    },
+    {
+      label: lang === "ar" ? "جيدة" : "Good",
+      color: "bg-purple-500",
+      glow: "shadow-[0_0_8px_rgba(147,51,234,0.5)]",
+    },
+    {
+      label: lang === "ar" ? "قوية جداً 🛡️" : "Very Strong 🛡️",
+      color: "bg-emerald-500",
+      glow: "shadow-[0_0_8px_rgba(16,185,129,0.5)]",
+    },
   ] as const;
 
   const current = config[Math.max(0, score - 1)] ?? config[0];
@@ -27,8 +40,12 @@ export function PasswordStrengthMeter({ password, lang }: PasswordStrengthMeterP
   return (
     <div className="space-y-1.5 pt-1 animate-fade-up">
       <div className="flex items-center justify-between text-[10px] font-bold">
-        <span className="text-muted-foreground">{lang === "ar" ? "قوة كلمة المرور:" : "Password Strength:"}</span>
-        <span className={score >= 3 ? "text-primary" : score === 2 ? "text-amber-500" : "text-red-500"}>
+        <span className="text-muted-foreground">
+          {lang === "ar" ? "قوة كلمة المرور:" : "Password Strength:"}
+        </span>
+        <span
+          className={score >= 3 ? "text-primary" : score === 2 ? "text-amber-500" : "text-red-500"}
+        >
           {current.label}
         </span>
       </div>

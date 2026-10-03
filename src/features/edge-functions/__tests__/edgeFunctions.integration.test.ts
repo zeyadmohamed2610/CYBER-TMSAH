@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock environment storage
 const mockEnvStore: Record<string, string> = {
@@ -11,8 +11,12 @@ const mockEnvStore: Record<string, string> = {
 // Mock Deno.env
 const mockDenoEnv = {
   get: vi.fn((key: string) => mockEnvStore[key]),
-  set: vi.fn((key: string, value: string) => { mockEnvStore[key] = value; }),
-  delete: vi.fn((key: string) => { delete mockEnvStore[key]; }),
+  set: vi.fn((key: string, value: string) => {
+    mockEnvStore[key] = value;
+  }),
+  delete: vi.fn((key: string) => {
+    delete mockEnvStore[key];
+  }),
   toObject: vi.fn(() => ({ ...mockEnvStore })),
 };
 
@@ -29,7 +33,7 @@ vi.stubGlobal("Deno", {
 describe("Edge Functions Integration Tests", () => {
   beforeEach(() => {
     // Reset mock env store
-    Object.keys(mockEnvStore).forEach(key => delete mockEnvStore[key]);
+    Object.keys(mockEnvStore).forEach((key) => delete mockEnvStore[key]);
     Object.assign(mockEnvStore, {
       SUPABASE_URL: "https://test.supabase.co",
       SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
@@ -39,8 +43,12 @@ describe("Edge Functions Integration Tests", () => {
     vi.clearAllMocks();
     mockFetch.mockReset();
     mockDenoEnv.get.mockImplementation((key: string) => mockEnvStore[key]);
-    mockDenoEnv.set.mockImplementation((key: string, value: string) => { mockEnvStore[key] = value; });
-    mockDenoEnv.delete.mockImplementation((key: string) => { delete mockEnvStore[key]; });
+    mockDenoEnv.set.mockImplementation((key: string, value: string) => {
+      mockEnvStore[key] = value;
+    });
+    mockDenoEnv.delete.mockImplementation((key: string) => {
+      delete mockEnvStore[key];
+    });
     mockDenoEnv.toObject.mockImplementation(() => ({ ...mockEnvStore }));
   });
 
@@ -51,10 +59,26 @@ describe("Edge Functions Integration Tests", () => {
   describe("createUser - Validation Logic", () => {
     it("should validate required fields: name, password, role", () => {
       const testCases = [
-        { body: { name: "", password: "password123", role: "student" }, valid: false, error: "Missing required fields" },
-        { body: { name: "Test", password: "", role: "student" }, valid: false, error: "Missing required fields" },
-        { body: { name: "Test", password: "password123", role: "" }, valid: false, error: "Missing required fields" },
-        { body: { name: "Test", password: "password123", role: "student" }, valid: true, error: null },
+        {
+          body: { name: "", password: "password123", role: "student" },
+          valid: false,
+          error: "Missing required fields",
+        },
+        {
+          body: { name: "Test", password: "", role: "student" },
+          valid: false,
+          error: "Missing required fields",
+        },
+        {
+          body: { name: "Test", password: "password123", role: "" },
+          valid: false,
+          error: "Missing required fields",
+        },
+        {
+          body: { name: "Test", password: "password123", role: "student" },
+          valid: true,
+          error: null,
+        },
       ];
 
       for (const tc of testCases) {
@@ -110,7 +134,8 @@ describe("Edge Functions Integration Tests", () => {
       ];
 
       for (const tc of testCases) {
-        const isValid = !!tc.national_id && tc.national_id.length === 14 && /^\d+$/.test(tc.national_id);
+        const isValid =
+          !!tc.national_id && tc.national_id.length === 14 && /^\d+$/.test(tc.national_id);
         expect(isValid).toBe(tc.valid);
       }
     });
@@ -134,9 +159,24 @@ describe("Edge Functions Integration Tests", () => {
 
     it("should build correct auth email based on role", () => {
       const testCases = [
-        { role: "student", national_id: "12345678901234", email: undefined, expected: "12345678901234@nid.local" },
-        { role: "doctor", national_id: undefined, email: "DOCTOR@UNIVERSITY.EDU", expected: "doctor@university.edu" },
-        { role: "ta", national_id: undefined, email: "TA@UNIVERSITY.EDU", expected: "ta@university.edu" },
+        {
+          role: "student",
+          national_id: "12345678901234",
+          email: undefined,
+          expected: "12345678901234@nid.local",
+        },
+        {
+          role: "doctor",
+          national_id: undefined,
+          email: "DOCTOR@UNIVERSITY.EDU",
+          expected: "doctor@university.edu",
+        },
+        {
+          role: "ta",
+          national_id: undefined,
+          email: "TA@UNIVERSITY.EDU",
+          expected: "ta@university.edu",
+        },
       ];
 
       for (const tc of testCases) {

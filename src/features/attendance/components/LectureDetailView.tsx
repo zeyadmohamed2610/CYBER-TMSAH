@@ -1,22 +1,41 @@
-import { getFriendlyErrorMessage } from "@/lib/academicCopy";
+import { lectureService } from "@/features/attendance/services/lectureService";
+import { sessionService } from "@/features/attendance/services/sessionService";
+import { supabase } from "@/shared/api/supabaseClient";
+import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { ConfirmAction } from "@/shared/components/ui/confirm-action";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
+import { useToast } from "@/shared/hooks/use-toast";
+import { getFriendlyErrorMessage } from "@/shared/lib/academicCopy";
+import {
+  ArrowRight,
+  Clock,
+  Download,
+  Hash,
+  History,
+  MapPin,
+  RefreshCw,
+  StopCircle,
+  ToggleLeft,
+  ToggleRight,
+  Users,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowRight, Download, RefreshCw, Users, Clock, Hash, StopCircle, MapPin, History, ToggleLeft, ToggleRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ConfirmAction } from "@/components/ui/confirm-action";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { attendanceService } from "../services/attendanceService";
-import { reportService } from "../services/reportService";
-import { DataTable, type DataTableColumn } from "./DataTable";
-import { LiveSessionPanel } from "./LiveSessionPanel";
-import { AttendanceRegisterPanel } from "./AttendanceRegisterPanel";
+import { DataTable, type DataTableColumn } from "../../../shared/components/DataTable";
+import { reportService } from "../../reports/services/reportService";
 import { useSessionManager } from "../hooks/useSessionManager";
-import { supabase } from "@/lib/supabaseClient";
-import type { Lecture, LectureAttendee } from "../types";
+import { type Lecture, type LectureAttendee } from "../types";
+import { AttendanceRegisterPanel } from "./AttendanceRegisterPanel";
+import { LiveSessionPanel } from "./LiveSessionPanel";
 
 interface Props {
   lecture: Lecture;
@@ -51,17 +70,28 @@ export function LectureDetailView({ lecture, onBack }: Props) {
   const [ending, setEnding] = useState(false);
   const [sessionDuration, setSessionDuration] = useState(60);
   const [sessionRadius, setSessionRadius] = useState(50);
-  const [selectedSection, setSelectedSection] = useState<string>(lecture.section ?? '1');
-  const sessionType = lecture.kind ?? 'lecture';
+  const [selectedSection, setSelectedSection] = useState<string>(lecture.section ?? "1");
+  const sessionType = lecture.kind ?? "lecture";
   const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const { activeSession, creating, error, createSession, stopSession, updateDuration, restoreActiveSession } =
-    useSessionManager();
+  const {
+    activeSession,
+    creating,
+    error,
+    createSession,
+    stopSession,
+    updateDuration,
+    restoreActiveSession,
+  } = useSessionManager();
 
   const load = useCallback(async () => {
     setLoading(true);
-    const result = await attendanceService.getLectureAttendees(lecture.id);
+    const result = await lectureService.getLectureAttendees(lecture.id);
     if (result.error) {
-      toast({ variant: "destructive", title: "خطأ", description: getFriendlyErrorMessage(result.error) });
+      toast({
+        variant: "destructive",
+        title: "خطأ",
+        description: getFriendlyErrorMessage(result.error),
+      });
     } else {
       setAttendees(result.data ?? []);
     }
@@ -71,12 +101,14 @@ export function LectureDetailView({ lecture, onBack }: Props) {
   // Load session history for this lecture with enhanced details
   const loadSessionHistory = useCallback(async () => {
     try {
-        const { data: sessions } = await supabase
+      const { data: sessions } = await supabase
         .from("sessions")
         .select("id, created_at, expires_at, section, radius_meters")
         .eq("lecture_id", lecture.id);
 
-      const sortedSessions = (sessions ?? []).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      const sortedSessions = (sessions ?? []).sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
 
       const history: SessionHistoryItem[] = [];
       for (const s of sortedSessions as SessionDbRow[]) {
@@ -128,47 +160,69 @@ export function LectureDetailView({ lecture, onBack }: Props) {
   }, [sessionType, lecture.section]);
 
   // Load attendees and session history
-  useEffect(() => { void load(); void loadSessionHistory(); }, [load, loadSessionHistory]);
+  useEffect(() => {
+    void load();
+    void loadSessionHistory();
+  }, [load, loadSessionHistory]);
 
   // Auto-refresh every 10 seconds when session is active
   useEffect(() => {
     if (!activeSession?.is_active) return;
-    const timer = setInterval(() => { void load(); void loadSessionHistory(); }, 10_000);
+    const timer = setInterval(() => {
+      void load();
+      void loadSessionHistory();
+    }, 10_000);
     return () => clearInterval(timer);
   }, [activeSession?.is_active, load, loadSessionHistory]);
 
-  const handleToggleSession = useCallback(async (sessionId: string, activate: boolean) => {
-    const expiresAt = activate 
-      ? new Date(Date.now() + 15 * 60 * 1000).toISOString() // Open for 15 mins
-      : new Date().toISOString();
-    
-    const result = await attendanceService.updateSessionExpiry(sessionId, expiresAt);
-    if (result.error) {
-      toast({ variant: "destructive", title: "فشل التعديل", description: getFriendlyErrorMessage(result.error) });
-    } else {
-      toast({ title: activate ? "تم فتح الجلسة" : "تم غلق الجلسة", description: activate ? "الجلسة متاحة الآن لمدة 15 دقيقة." : "تم إيقاف استقبال الحضور لهذه الجلسة." });
-      void loadSessionHistory();
-    }
-  }, [toast, loadSessionHistory]);
+  const handleToggleSession = useCallback(
+    async (sessionId: string, activate: boolean) => {
+      const expiresAt = activate
+        ? new Date(Date.now() + 15 * 60 * 1000).toISOString() // Open for 15 mins
+        : new Date().toISOString();
+
+      const result = await sessionService.updateSessionExpiry(sessionId, expiresAt);
+      if (result.error) {
+        toast({
+          variant: "destructive",
+          title: "فشل التعديل",
+          description: getFriendlyErrorMessage(result.error),
+        });
+      } else {
+        toast({
+          title: activate ? "تم فتح الجلسة" : "تم غلق الجلسة",
+          description: activate
+            ? "الجلسة متاحة الآن لمدة 15 دقيقة."
+            : "تم إيقاف استقبال الحضور لهذه الجلسة.",
+        });
+        void loadSessionHistory();
+      }
+    },
+    [toast, loadSessionHistory],
+  );
 
   const handleCreateSession = async () => {
     await createSession(
-      lecture.subject_id, 
-      sessionDuration, 
-      gpsCoords?.lat, 
-      gpsCoords?.lng, 
-      sessionRadius, 
-      lecture.id, 
-      sessionType === "section" ? selectedSection : null
+      lecture.subject_id,
+      sessionDuration,
+      gpsCoords?.lat,
+      gpsCoords?.lng,
+      sessionRadius,
+      lecture.id,
+      sessionType === "section" ? selectedSection : null,
     );
     setTimeout(() => void loadSessionHistory(), 2000);
   };
 
   const handleEndLecture = async () => {
     setEnding(true);
-    const result = await attendanceService.endLecture(lecture.id);
+    const result = await lectureService.endLecture(lecture.id);
     if (result.error) {
-      toast({ variant: "destructive", title: "خطأ", description: getFriendlyErrorMessage(result.error) });
+      toast({
+        variant: "destructive",
+        title: "خطأ",
+        description: getFriendlyErrorMessage(result.error),
+      });
     } else {
       toast({ title: "تم إنهاء المحاضرة", description: "تم إيقاف جميع الجلسات." });
       onBack();
@@ -179,7 +233,11 @@ export function LectureDetailView({ lecture, onBack }: Props) {
   const handleExportAll = async (format: "csv" | "xlsx" | "pdf") => {
     const result = await reportService.exportLecture(attendees, lecture, format);
     if (result.error) {
-      toast({ variant: "destructive", title: "فشل التصدير", description: getFriendlyErrorMessage(result.error) });
+      toast({
+        variant: "destructive",
+        title: "فشل التصدير",
+        description: getFriendlyErrorMessage(result.error),
+      });
     } else {
       toast({ title: "تم التصدير", description: "تم تصدير جميع حضور المحاضرة." });
     }
@@ -188,56 +246,76 @@ export function LectureDetailView({ lecture, onBack }: Props) {
   const handleExportSession = async (sessionId: string, format: "csv" | "xlsx") => {
     const sessionAttendees = attendees.filter((a) => a.session_id === sessionId);
     if (sessionAttendees.length === 0) {
-      toast({ variant: "destructive", title: "لا يوجد حضور", description: "لا يوجد سجلات حضور لهذه الجلسة." });
+      toast({
+        variant: "destructive",
+        title: "لا يوجد حضور",
+        description: "لا يوجد سجلات حضور لهذه الجلسة.",
+      });
       return;
     }
-    const result = await reportService.exportLecture(sessionAttendees, { ...lecture, title: `${lecture.title} - جلسة` }, format);
+    const result = await reportService.exportLecture(
+      sessionAttendees,
+      { ...lecture, title: `${lecture.title} - جلسة` },
+      format,
+    );
     if (result.error) {
-      toast({ variant: "destructive", title: "فشل التصدير", description: getFriendlyErrorMessage(result.error) });
+      toast({
+        variant: "destructive",
+        title: "فشل التصدير",
+        description: getFriendlyErrorMessage(result.error),
+      });
     } else {
       toast({ title: "تم التصدير", description: `تم تصدير حضور الجلسة.` });
     }
   };
 
-  const columns = useMemo<DataTableColumn<LectureAttendee>[]>(() => [
-    { id: "num", header: "#", cell: (_row, index) => String((index ?? 0) + 1) },
-    {
-      id: "name",
-      header: "اسم الطالب",
-      cell: (row) => <span className="font-medium">{row.student_name}</span>,
-    },
-    {
-      id: "nid",
-      header: "الرقم القومي",
-      cell: (row) => (
-        <span className="font-mono text-xs text-muted-foreground">{row.national_id ?? "\u2014"}</span>
-      ),
-    },
-    {
-      id: "code",
-      header: "رمز الجلسة",
-      cell: (row) => (
-        <Badge variant="outline" className="font-mono">{row.short_code ?? "\u2014"}</Badge>
-      ),
-    },
-    {
-      id: "time",
-      header: "الوقت",
-      cell: (row) => (
-        <span className="text-xs text-muted-foreground" dir="ltr">
-          {new Date(row.submitted_at).toLocaleString("en-GB")}
-        </span>
-      ),
-    },
-    {
-      id: "ip",
-      header: "عنوان IP",
-      cell: (row) => (
-        <span className="font-mono text-xs text-muted-foreground" dir="ltr">
-          {row.ip_address ?? "\u2014"}</span>
-      ),
-    },
-  ], []);
+  const columns = useMemo<DataTableColumn<LectureAttendee>[]>(
+    () => [
+      { id: "num", header: "#", cell: (_row, index) => String((index ?? 0) + 1) },
+      {
+        id: "name",
+        header: "اسم الطالب",
+        cell: (row) => <span className="font-medium">{row.student_name}</span>,
+      },
+      {
+        id: "nid",
+        header: "الرقم القومي",
+        cell: (row) => (
+          <span className="font-mono text-xs text-muted-foreground">
+            {row.national_id ?? "\u2014"}
+          </span>
+        ),
+      },
+      {
+        id: "code",
+        header: "رمز الجلسة",
+        cell: (row) => (
+          <Badge variant="outline" className="font-mono">
+            {row.short_code ?? "\u2014"}
+          </Badge>
+        ),
+      },
+      {
+        id: "time",
+        header: "الوقت",
+        cell: (row) => (
+          <span className="text-xs text-muted-foreground" dir="ltr">
+            {new Date(row.submitted_at).toLocaleString("en-GB")}
+          </span>
+        ),
+      },
+      {
+        id: "ip",
+        header: "عنوان IP",
+        cell: (row) => (
+          <span className="font-mono text-xs text-muted-foreground" dir="ltr">
+            {row.ip_address ?? "\u2014"}
+          </span>
+        ),
+      },
+    ],
+    [],
+  );
 
   return (
     <div className="space-y-4">
@@ -251,13 +329,32 @@ export function LectureDetailView({ lecture, onBack }: Props) {
           <div className="min-w-0">
             <h2 className="text-lg font-bold truncate">{lecture.title}</h2>
             <p className="text-xs text-muted-foreground truncate">
-              {lecture.subject_name} — {new Date(lecture.lecture_date).toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-              {activeSession?.section && <Badge variant="secondary" className="mr-2">قيد التنفيذ: {activeSession.section}</Badge>}
+              {lecture.subject_name} —{" "}
+              {new Date(lecture.lecture_date).toLocaleDateString("ar-EG", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
+              {activeSession?.section && (
+                <Badge variant="secondary" className="mr-2">
+                  قيد التنفيذ: {activeSession.section}
+                </Badge>
+              )}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Button variant="outline" size="sm" onClick={() => { void load(); void loadSessionHistory(); }} disabled={loading} aria-label="تحديث البيانات">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              void load();
+              void loadSessionHistory();
+            }}
+            disabled={loading}
+            aria-label="تحديث البيانات"
+          >
             <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
           </Button>
           <ConfirmAction
@@ -267,9 +364,18 @@ export function LectureDetailView({ lecture, onBack }: Props) {
             onConfirm={handleEndLecture}
           >
             {(trigger) => (
-              <Button variant="destructive" size="sm" disabled={ending} className="gap-1 min-h-11" aria-label="إنهاء المحاضرة" onClick={trigger}>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={ending}
+                className="gap-1 min-h-11"
+                aria-label="إنهاء المحاضرة"
+                onClick={trigger}
+              >
                 <StopCircle className="h-3 w-3" />
-                <span className="hidden sm:inline">{ending ? "جاري الإنهاء..." : "إنهاء المحاضرة"}</span>
+                <span className="hidden sm:inline">
+                  {ending ? "جاري الإنهاء..." : "إنهاء المحاضرة"}
+                </span>
               </Button>
             )}
           </ConfirmAction>
@@ -306,7 +412,9 @@ export function LectureDetailView({ lecture, onBack }: Props) {
               <Clock className="h-5 w-5 text-green-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{sessionHistory.filter(s => s.is_active).length}</p>
+              <p className="text-2xl font-bold">
+                {sessionHistory.filter((s) => s.is_active).length}
+              </p>
               <p className="text-xs text-muted-foreground">جلسات نشطة</p>
             </div>
           </CardContent>
@@ -317,7 +425,11 @@ export function LectureDetailView({ lecture, onBack }: Props) {
               <Users className="h-5 w-5 text-amber-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{sessionHistory.length > 0 ? Math.round(attendees.length / sessionHistory.length) : 0}</p>
+              <p className="text-2xl font-bold">
+                {sessionHistory.length > 0
+                  ? Math.round(attendees.length / sessionHistory.length)
+                  : 0}
+              </p>
               <p className="text-xs text-muted-foreground">متوسط الحضور/جلسة</p>
             </div>
           </CardContent>
@@ -332,37 +444,44 @@ export function LectureDetailView({ lecture, onBack }: Props) {
               <History className="h-4 w-4" />
               إدارة الجلسات ({sessionHistory.length})
               <span className="text-xs text-muted-foreground mr-auto">
-                · {sessionHistory.filter(s => s.is_active).length} نشطة
+                · {sessionHistory.filter((s) => s.is_active).length} نشطة
               </span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {sessionHistory.map((session, idx) => (
-              <div key={session.session_id} className={`flex items-center justify-between gap-3 rounded-lg border p-4 transition-all ${
-                session.is_active 
-                  ? "bg-green-500/5 border-green-500/30" 
-                  : "bg-muted/30 border-border/50"
-              }`}>
+              <div
+                key={session.session_id}
+                className={`flex items-center justify-between gap-3 rounded-lg border p-4 transition-all ${
+                  session.is_active
+                    ? "bg-green-500/5 border-green-500/30"
+                    : "bg-muted/30 border-border/50"
+                }`}
+              >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold ${
-                    session.is_active 
-                      ? "bg-green-500/20 text-green-500" 
-                      : "bg-muted text-muted-foreground"
-                  }`}>
+                  <div
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold ${
+                      session.is_active
+                        ? "bg-green-500/20 text-green-500"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
                     {idx + 1}
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-medium">
-                        {new Date(session.created_at).toLocaleString("ar-EG", { 
-                          day: "numeric", 
-                          month: "short", 
-                          hour: "2-digit", 
-                          minute: "2-digit" 
+                        {new Date(session.created_at).toLocaleString("ar-EG", {
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
                         })}
                       </p>
                       {session.is_active && (
-                        <Badge className="bg-green-500/20 text-green-500 border-green-500/30 text-[10px]">نشطة</Badge>
+                        <Badge className="bg-green-500/20 text-green-500 border-green-500/30 text-[10px]">
+                          نشطة
+                        </Badge>
                       )}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1 flex-wrap">
@@ -392,11 +511,11 @@ export function LectureDetailView({ lecture, onBack }: Props) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    title="تصدير CSV" 
-                    className="h-8 w-8 p-0 hover:bg-primary/10" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    title="تصدير CSV"
+                    className="h-8 w-8 p-0 hover:bg-primary/10"
                     onClick={() => void handleExportSession(session.session_id, "csv")}
                   >
                     <Download className="h-4 w-4 text-primary" />
@@ -410,10 +529,10 @@ export function LectureDetailView({ lecture, onBack }: Props) {
                       onConfirm={() => void handleToggleSession(session.session_id, false)}
                     >
                       {(trigger) => (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-8 px-3 text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive" 
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-3 text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
                           onClick={trigger}
                         >
                           <ToggleRight className="h-4 w-4" />
@@ -430,10 +549,10 @@ export function LectureDetailView({ lecture, onBack }: Props) {
                       onConfirm={() => void handleToggleSession(session.session_id, true)}
                     >
                       {(trigger) => (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-8 px-3 text-xs gap-1 text-green-600 border-green-600/30 hover:bg-green-500/10" 
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-3 text-xs gap-1 text-green-600 border-green-600/30 hover:bg-green-500/10"
                           onClick={trigger}
                         >
                           <ToggleLeft className="h-4 w-4" />
@@ -459,7 +578,14 @@ export function LectureDetailView({ lecture, onBack }: Props) {
         </CardHeader>
         <CardContent className="flex gap-2">
           {(["csv", "xlsx", "pdf"] as const).map((fmt) => (
-            <Button key={fmt} variant="outline" size="sm" onClick={() => void handleExportAll(fmt)} disabled={attendees.length === 0} className="gap-1">
+            <Button
+              key={fmt}
+              variant="outline"
+              size="sm"
+              onClick={() => void handleExportAll(fmt)}
+              disabled={attendees.length === 0}
+              className="gap-1"
+            >
               <Download className="h-3 w-3" /> {fmt.toUpperCase()}
             </Button>
           ))}
@@ -487,9 +613,16 @@ export function LectureDetailView({ lecture, onBack }: Props) {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               <div className="space-y-1">
                 <Label className="text-xs">فترة تسجيل الحضور (دقائق)</Label>
-                <Input id="session-duration" type="number" min={5} max={180} value={sessionDuration}
+                <Input
+                  id="session-duration"
+                  type="number"
+                  min={5}
+                  max={180}
+                  value={sessionDuration}
                   onChange={(e) => setSessionDuration(Number(e.target.value))}
-                  className="h-8 text-sm" dir="ltr" />
+                  className="h-8 text-sm"
+                  dir="ltr"
+                />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">نوع الجلسة</Label>
@@ -506,13 +639,19 @@ export function LectureDetailView({ lecture, onBack }: Props) {
               {sessionType === "section" ? (
                 <div className="space-y-1">
                   <Label className="text-xs">رقم السكشن</Label>
-                  <Select value={selectedSection} onValueChange={setSelectedSection} disabled={Boolean(lecture.section)}>
+                  <Select
+                    value={selectedSection}
+                    onValueChange={setSelectedSection}
+                    disabled={Boolean(lecture.section)}
+                  >
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue placeholder="اختر السكشن..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 15 }, (_, i) => i + 1).map(n => (
-                        <SelectItem key={n} value={String(n)}>سكشن {n}</SelectItem>
+                      {Array.from({ length: 15 }, (_, i) => i + 1).map((n) => (
+                        <SelectItem key={n} value={String(n)}>
+                          سكشن {n}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -522,9 +661,16 @@ export function LectureDetailView({ lecture, onBack }: Props) {
                   <Label className="text-xs">نطاق الحضور حول القاعة (متر)</Label>
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <Input id="session-radius" type="number" min={10} max={500} value={sessionRadius}
+                    <Input
+                      id="session-radius"
+                      type="number"
+                      min={10}
+                      max={500}
+                      value={sessionRadius}
                       onChange={(e) => setSessionRadius(Number(e.target.value))}
-                      className="h-8 text-sm" dir="ltr" />
+                      className="h-8 text-sm"
+                      dir="ltr"
+                    />
                   </div>
                   {gpsCoords && <p className="text-xs text-green-500">تم تحديد الموقع</p>}
                 </div>
@@ -544,7 +690,9 @@ export function LectureDetailView({ lecture, onBack }: Props) {
       <AttendanceRegisterPanel lectureId={lecture.id} />
       <DataTable
         title={`قائمة الحضور (${attendees.length})`}
-        caption={loading ? "جاري التحميل..." : attendees.length === 0 ? "لا يوجد سجلات حضور بعد." : ""}
+        caption={
+          loading ? "جاري التحميل..." : attendees.length === 0 ? "لا يوجد سجلات حضور بعد." : ""
+        }
         columns={columns}
         rows={attendees}
         getRowId={(row) => row.attendance_id}

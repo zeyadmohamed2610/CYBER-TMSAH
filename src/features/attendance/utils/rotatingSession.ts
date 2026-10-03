@@ -1,4 +1,4 @@
-import { sha256Hash } from "./fingerprint";
+import { sha256Hash } from "../../../shared/lib/deviceFingerprint";
 
 export const ROTATING_WINDOW_SECONDS = 10;
 
@@ -12,7 +12,10 @@ export const getSecondsUntilNextWindow = (date: Date = new Date()): number => {
   return ROTATING_WINDOW_SECONDS - elapsedInWindow;
 };
 
-export const generateTOTPCode = async (secret: string | null | undefined, date: Date = new Date()): Promise<string> => {
+export const generateTOTPCode = async (
+  secret: string | null | undefined,
+  date: Date = new Date(),
+): Promise<string> => {
   if (!secret) return "000000";
   const window = getTimeWindow(date);
   const input = secret + window.toString();

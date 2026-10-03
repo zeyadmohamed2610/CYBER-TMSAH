@@ -1,11 +1,19 @@
-import { getFriendlyErrorMessage } from "@/lib/academicCopy";
-// src/features/auth/pages/ResetPasswordPage.tsx
-import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { KeyRound, Lock, Eye, EyeOff, CheckCircle2, ArrowRight, ShieldCheck, Loader2 } from "lucide-react";
+import { supabase } from "@/shared/api/supabaseClient";
+import { useLang } from "@/shared/i18n";
+import { getFriendlyErrorMessage } from "@/shared/lib/academicCopy";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Loader2,
+  Lock,
+  ShieldCheck,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabaseClient";
-import { useLang } from "@/i18n";
 import { PasswordStrengthMeter } from "../components/PasswordStrengthMeter";
 
 export default function ResetPasswordPage() {
@@ -30,19 +38,30 @@ export default function ResetPasswordPage() {
         return;
       }
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         if (!active) return;
-        if (session) { setValidSession(true); return; }
+        if (session) {
+          setValidSession(true);
+          return;
+        }
         subscription = supabase.auth.onAuthStateChange((event, s) => {
           if (active && (event === "PASSWORD_RECOVERY" || s)) setValidSession(true);
         }).data.subscription;
         timer = setTimeout(() => {
-          if (active) setValidSession(prev => prev === null ? false : prev);
+          if (active) setValidSession((prev) => (prev === null ? false : prev));
         }, 1500);
-      } catch { if (active) setValidSession(false); }
+      } catch {
+        if (active) setValidSession(false);
+      }
     };
     void checkSession();
-    return () => { active = false; subscription?.unsubscribe(); clearTimeout(timer); };
+    return () => {
+      active = false;
+      subscription?.unsubscribe();
+      clearTimeout(timer);
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -52,17 +71,13 @@ export default function ResetPasswordPage() {
       toast.error(
         lang === "ar"
           ? "يجب أن لا تقل كلمة المرور عن 6 خانات"
-          : "Password must be at least 6 characters"
+          : "Password must be at least 6 characters",
       );
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      toast.error(
-        lang === "ar"
-          ? "كلمتا المرور غير متطابقتين"
-          : "Passwords do not match"
-      );
+      toast.error(lang === "ar" ? "كلمتا المرور غير متطابقتين" : "Passwords do not match");
       return;
     }
 
@@ -78,7 +93,7 @@ export default function ResetPasswordPage() {
       toast.success(
         lang === "ar"
           ? "تم تحديث كلمة المرور بنجاح! يمكنك الآن تسجيل الدخول."
-          : "Password updated successfully! You can now log in."
+          : "Password updated successfully! You can now log in.",
       );
 
       // Auto redirect to login after 3 seconds
@@ -88,9 +103,12 @@ export default function ResetPasswordPage() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to update password";
       toast.error(
-        getFriendlyErrorMessage(lang === "ar"
-          ? `فشل تعيين كلمة المرور: ${msg}`
-          : `Failed to update password: ${msg}`, lang === "ar" ? "تعذر إكمال الطلب. أعد المحاولة." : "Could not complete your request. Please try again.")
+        getFriendlyErrorMessage(
+          lang === "ar" ? `فشل تعيين كلمة المرور: ${msg}` : `Failed to update password: ${msg}`,
+          lang === "ar"
+            ? "تعذر إكمال الطلب. أعد المحاولة."
+            : "Could not complete your request. Please try again.",
+        ),
       );
     } finally {
       setSubmitting(false);
@@ -129,7 +147,9 @@ export default function ResetPasswordPage() {
             <div className="text-center py-10 space-y-4">
               <Loader2 className="w-8 h-8 mx-auto animate-spin text-purple-400" />
               <p className="text-xs text-slate-300">
-                {lang === "ar" ? "جارٍ التحقق من صلاحية رابط الاستعادة..." : "Verifying recovery link..."}
+                {lang === "ar"
+                  ? "جارٍ التحقق من صلاحية رابط الاستعادة..."
+                  : "Verifying recovery link..."}
               </p>
             </div>
           ) : success ? (
@@ -162,7 +182,9 @@ export default function ResetPasswordPage() {
               </div>
               <div className="space-y-1.5">
                 <h2 className="text-sm font-bold text-white">
-                  {lang === "ar" ? "رابط الاستعادة غير متوفر أو منتهي الصلاحية" : "Reset Link Expired or Invalid"}
+                  {lang === "ar"
+                    ? "رابط الاستعادة غير متوفر أو منتهي الصلاحية"
+                    : "Reset Link Expired or Invalid"}
                 </h2>
                 <p className="text-xs text-slate-400 leading-relaxed">
                   {lang === "ar"

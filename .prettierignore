@@ -1,0 +1,11 @@
+node_modules
+dist
+.private
+.agents
+.codex
+coverage
+playwright-report
+test-results
+supabase/migrations
+supabase/tests
+pnpm-lock.yaml

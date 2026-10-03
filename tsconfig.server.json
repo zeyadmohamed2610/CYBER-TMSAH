@@ -1,9 +1,17 @@
 {
   "compilerOptions": {
-    "target": "ES2022", "lib": ["ES2023", "DOM"], "module": "ESNext",
-    "moduleResolution": "bundler", "allowImportingTsExtensions": true,
-    "strict": true, "noEmit": true, "skipLibCheck": true,
-    "types": ["node", "vitest/globals"], "baseUrl": ".",
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["node", "vitest/globals"],
+    "baseUrl": ".",
     "paths": {
       "npm:@supabase/server@1.8.0": ["node_modules/@supabase/server/dist/index.d.mts"],
       "npm:@supabase/server@1.8.0/core": ["node_modules/@supabase/server/dist/core/index.d.mts"],

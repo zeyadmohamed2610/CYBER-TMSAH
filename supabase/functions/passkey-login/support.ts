@@ -24,10 +24,18 @@ export function isAllowedOrigin(origin: string): boolean {
   try {
     const url = new URL(origin);
     if (url.origin !== origin) return false;
-    if (['localhost','127.0.0.1'].includes(url.hostname)) return url.protocol === 'http:' || url.protocol === 'https:';
-    return url.protocol === 'https:' && [
-      'https://www.cyber-tmsah.site','https://cyber-tmsah.site','https://cyber-tmsah.vercel.app',
-      Deno.env.get('WEBAUTHN_ORIGIN'),
-    ].includes(origin);
-  } catch { return false; }
+    if (["localhost", "127.0.0.1"].includes(url.hostname))
+      return url.protocol === "http:" || url.protocol === "https:";
+    return (
+      url.protocol === "https:" &&
+      [
+        "https://www.cyber-tmsah.site",
+        "https://cyber-tmsah.site",
+        "https://cyber-tmsah.vercel.app",
+        Deno.env.get("WEBAUTHN_ORIGIN"),
+      ].includes(origin)
+    );
+  } catch {
+    return false;
+  }
 }

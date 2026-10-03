@@ -1,28 +1,43 @@
 /* Cairo Variable Font — consolidated from 24 @font-face rules to 3.
    Google Fonts serves the same variable font file for all weights (300–800). */
 @font-face {
-  font-family: 'Cairo';
+  font-family: "Cairo";
   font-style: normal;
   font-weight: 300 800;
   font-display: swap;
-  src: url(https://fonts.gstatic.com/s/cairo/v31/SLXVc1nY6HkvangtZmpQdkhzfH5lkSscQyyS4J0.woff2) format('woff2');
-  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+102E0-102FB, U+10E60-10E7E, U+10EC2-10EC4, U+10EFC-10EFF, U+1EE00-1EE03, U+1EE05-1EE1F, U+1EE21-1EE22, U+1EE24, U+1EE27, U+1EE29-1EE32, U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42, U+1EE47, U+1EE49, U+1EE4B, U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B, U+1EE5D, U+1EE5F, U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77, U+1EE79-1EE7C, U+1EE7E, U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3, U+1EEA5-1EEA9, U+1EEAB-1EEBB, U+1EEF0-1EEF1;
+  src: url(https://fonts.gstatic.com/s/cairo/v31/SLXVc1nY6HkvangtZmpQdkhzfH5lkSscQyyS4J0.woff2)
+    format("woff2");
+  unicode-range:
+    U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E,
+    U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+102E0-102FB,
+    U+10E60-10E7E, U+10EC2-10EC4, U+10EFC-10EFF, U+1EE00-1EE03, U+1EE05-1EE1F, U+1EE21-1EE22,
+    U+1EE24, U+1EE27, U+1EE29-1EE32, U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42, U+1EE47, U+1EE49,
+    U+1EE4B, U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B, U+1EE5D, U+1EE5F,
+    U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77, U+1EE79-1EE7C, U+1EE7E,
+    U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3, U+1EEA5-1EEA9, U+1EEAB-1EEBB, U+1EEF0-1EEF1;
 }
 @font-face {
-  font-family: 'Cairo';
+  font-family: "Cairo";
   font-style: normal;
   font-weight: 300 800;
   font-display: swap;
-  src: url(https://fonts.gstatic.com/s/cairo/v31/SLXVc1nY6HkvangtZmpQdkhzfH5lkSscSCyS4J0.woff2) format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  src: url(https://fonts.gstatic.com/s/cairo/v31/SLXVc1nY6HkvangtZmpQdkhzfH5lkSscSCyS4J0.woff2)
+    format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
 }
 @font-face {
-  font-family: 'Cairo';
+  font-family: "Cairo";
   font-style: normal;
   font-weight: 300 800;
   font-display: swap;
-  src: url(https://fonts.gstatic.com/s/cairo/v31/SLXVc1nY6HkvangtZmpQdkhzfH5lkSscRiyS.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url(https://fonts.gstatic.com/s/cairo/v31/SLXVc1nY6HkvangtZmpQdkhzfH5lkSscRiyS.woff2)
+    format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 @tailwind base;
@@ -79,7 +94,7 @@
     --cyber-glow: 270 91% 65%;
     --cyber-glow-dim: 258 65% 50%;
     --text-secondary: 215 15% 65%;
-    --gradient-hero: linear-gradient(180deg, #060813 0%, #0A0F1D 100%);
+    --gradient-hero: linear-gradient(180deg, #060813 0%, #0a0f1d 100%);
   }
 
   /* ── Light Mode (Soft off-white, non-glaring, elegant cards) ── */
@@ -135,7 +150,7 @@
 
   html {
     /* direction is set dynamically by LanguageProvider */
-    font-family: 'Cairo', sans-serif;
+    font-family: "Cairo", sans-serif;
     scroll-behavior: smooth;
     overflow-x: hidden;
   }
@@ -154,13 +169,15 @@
   }
 
   .cyber-glow {
-    box-shadow: 0 0 20px hsl(var(--cyber-glow) / 0.15),
-                0 0 40px hsl(var(--cyber-glow) / 0.05);
+    box-shadow:
+      0 0 20px hsl(var(--cyber-glow) / 0.15),
+      0 0 40px hsl(var(--cyber-glow) / 0.05);
   }
 
   .cyber-glow-strong {
-    box-shadow: 0 0 20px hsl(var(--cyber-glow) / 0.3),
-                0 0 60px hsl(var(--cyber-glow) / 0.1);
+    box-shadow:
+      0 0 20px hsl(var(--cyber-glow) / 0.3),
+      0 0 60px hsl(var(--cyber-glow) / 0.1);
   }
 
   .cyber-border {
@@ -215,7 +232,9 @@
     background: rgba(10, 15, 29, 0.85);
     backdrop-filter: blur(24px);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 40px rgba(147, 51, 234, 0.06);
+    box-shadow:
+      0 24px 60px rgba(0, 0, 0, 0.55),
+      0 0 40px rgba(147, 51, 234, 0.06);
   }
 
   .glass-card {
@@ -225,11 +244,13 @@
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  
+
   .glass-card:hover {
     border-color: rgba(168, 85, 247, 0.4);
     background: rgba(15, 23, 42, 0.88);
-    box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.7), 0 0 28px rgba(147, 51, 234, 0.2);
+    box-shadow:
+      0 20px 45px -10px rgba(0, 0, 0, 0.7),
+      0 0 28px rgba(147, 51, 234, 0.2);
     transform: translateY(-2px);
   }
 
@@ -248,7 +269,7 @@
   /* Custom minimal scrollbar */
   .custom-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--primary)/0.3) transparent;
+    scrollbar-color: hsl(var(--primary) / 0.3) transparent;
   }
   .custom-scrollbar::-webkit-scrollbar {
     height: 4px;
@@ -258,11 +279,11 @@
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: hsl(var(--primary)/0.3);
+    background: hsl(var(--primary) / 0.3);
     border-radius: 999px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--primary)/0.5);
+    background: hsl(var(--primary) / 0.5);
   }
 
   /* iOS momentum scroll for horizontal/overflow containers */
@@ -288,7 +309,8 @@
 }
 
 @keyframes pulseAccent {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 0 0 hsl(var(--cyber-glow) / 0.4);
   }
   50% {
@@ -339,7 +361,9 @@
   }
 
   /* Page breaks */
-  h1, h2, h3 {
+  h1,
+  h2,
+  h3 {
     page-break-after: avoid;
   }
 
@@ -457,7 +481,7 @@ textarea:focus-visible {
     --muted-foreground: 215 20% 70%;
     --border: 220 20% 30%;
   }
-  
+
   .border-border {
     border-color: hsl(220 20% 40%);
   }
@@ -480,7 +504,10 @@ textarea:focus-visible {
     padding-right: 0.5rem;
   }
 
-  h1, .text-2xl, .text-3xl, .text-4xl {
+  h1,
+  .text-2xl,
+  .text-3xl,
+  .text-4xl {
     font-size: clamp(1.25rem, 4vw, 1.5rem) !important;
   }
 
@@ -530,7 +557,8 @@ textarea:focus-visible {
 }
 
 /* Prevent horizontal scroll on all screens */
-html, body {
+html,
+body {
   overflow-x: hidden;
   width: 100%;
 }
@@ -545,7 +573,11 @@ html, body {
   a.glow-hover:hover {
     filter: brightness(1.1);
     box-shadow: 0 0 20px rgba(147, 51, 234, 0.28);
-    transition: filter 0.18s ease, box-shadow 0.22s ease, transform 0.18s ease, border-color 0.22s ease;
+    transition:
+      filter 0.18s ease,
+      box-shadow 0.22s ease,
+      transform 0.18s ease,
+      border-color 0.22s ease;
   }
 
   /* Inputs, selects, and textareas react to cursor hover */
@@ -554,7 +586,9 @@ html, body {
   textarea:hover {
     border-color: rgba(147, 51, 234, 0.5) !important;
     box-shadow: 0 0 16px rgba(147, 51, 234, 0.14);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
   }
 
   /* Cards and floating panels reflect subtle interactive ambient lighting */
@@ -562,12 +596,20 @@ html, body {
   .glass-card:hover,
   .glass-panel:hover {
     border-color: rgba(147, 51, 234, 0.35) !important;
-    box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.7), 0 0 28px rgba(147, 51, 234, 0.16) !important;
-    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    box-shadow:
+      0 20px 45px -10px rgba(0, 0, 0, 0.7),
+      0 0 28px rgba(147, 51, 234, 0.16) !important;
+    transition:
+      border-color 0.25s ease,
+      box-shadow 0.25s ease;
   }
 }
 
 /* Keep mobile form text readable and avoid focus zoom on iOS. */
 @media (max-width: 767px) {
-  input:not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: 16px !important; }
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }

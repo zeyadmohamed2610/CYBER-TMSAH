@@ -1,21 +1,18 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  validateRpcInput,
-  generateRotatingHashSchema,
-  submitAttendanceSchema,
-  createUserSchema,
-  createLectureSchema,
-  updateSessionExpirySchema,
-  fetchLecturesSchema,
-  getLectureAttendeesSchema,
-  endLectureSchema,
-  deleteLectureSchema,
   addManualAttendanceSchema,
-  updateUserSchema,
-  deleteStudentDeviceSchema,
-  setSessionDurationSchema,
+  createLectureSchema,
+  deleteLectureSchema,
+  endLectureSchema,
+  fetchLecturesSchema,
+  generateRotatingHashSchema,
+  getLectureAttendeesSchema,
   refreshSessionHashSchema,
+  setSessionDurationSchema,
   stopSessionSchema,
+  submitAttendanceSchema,
+  updateSessionExpirySchema,
+  validateRpcInput,
 } from "../utils/rpcValidation";
 
 describe("rpcValidation", () => {
@@ -132,54 +129,6 @@ describe("rpcValidation", () => {
       const result = validateRpcInput(submitAttendanceSchema, {
         p_hash: "abc123",
         p_student_longitude: -200,
-      });
-      expect(result.success).toBe(false);
-    });
-  });
-
-  describe("createUserSchema", () => {
-    it("should validate valid input for owner", () => {
-      const result = validateRpcInput(createUserSchema, {
-        p_auth_id: "123e4567-e89b-12d3-a456-426614174000",
-        p_full_name: "John Doe",
-        p_role: "owner",
-      });
-      expect(result.success).toBe(true);
-    });
-
-    it("should validate valid input for doctor with subject", () => {
-      const result = validateRpcInput(createUserSchema, {
-        p_auth_id: "123e4567-e89b-12d3-a456-426614174000",
-        p_full_name: "Dr. Smith",
-        p_role: "doctor",
-        p_subject_id: "123e4567-e89b-12d3-a456-426614174001",
-      });
-      expect(result.success).toBe(true);
-    });
-
-    it("should reject empty name", () => {
-      const result = validateRpcInput(createUserSchema, {
-        p_auth_id: "123e4567-e89b-12d3-a456-426614174000",
-        p_full_name: "",
-        p_role: "owner",
-      });
-      expect(result.success).toBe(false);
-    });
-
-    it("should reject invalid role", () => {
-      const result = validateRpcInput(createUserSchema, {
-        p_auth_id: "123e4567-e89b-12d3-a456-426614174000",
-        p_full_name: "John Doe",
-        p_role: "admin",
-      });
-      expect(result.success).toBe(false);
-    });
-
-    it("should reject invalid auth_id", () => {
-      const result = validateRpcInput(createUserSchema, {
-        p_auth_id: "not-a-uuid",
-        p_full_name: "John Doe",
-        p_role: "owner",
       });
       expect(result.success).toBe(false);
     });
@@ -330,60 +279,6 @@ describe("rpcValidation", () => {
       const result = validateRpcInput(addManualAttendanceSchema, {
         p_student_id: "123e4567-e89b-12d3-a456-426614174000",
         p_session_id: "not-a-uuid",
-      });
-      expect(result.success).toBe(false);
-    });
-  });
-
-  describe("updateUserSchema", () => {
-    it("should validate valid input", () => {
-      const result = validateRpcInput(updateUserSchema, {
-        p_user_id: "123e4567-e89b-12d3-a456-426614174000",
-        p_full_name: "Updated Name",
-        p_national_id: "12345678901234",
-        p_subject_id: "123e4567-e89b-12d3-a456-426614174001",
-      });
-      expect(result.success).toBe(true);
-    });
-
-    it("should reject name too short", () => {
-      const result = validateRpcInput(updateUserSchema, {
-        p_user_id: "123e4567-e89b-12d3-a456-426614174000",
-        p_full_name: "John",
-      });
-      expect(result.success).toBe(false);
-    });
-
-    it("should reject invalid national_id format", () => {
-      const result = validateRpcInput(updateUserSchema, {
-        p_user_id: "123e4567-e89b-12d3-a456-426614174000",
-        p_full_name: "Updated Name",
-        p_national_id: "12345",
-      });
-      expect(result.success).toBe(false);
-    });
-
-    it("should allow null national_id", () => {
-      const result = validateRpcInput(updateUserSchema, {
-        p_user_id: "123e4567-e89b-12d3-a456-426614174000",
-        p_full_name: "Updated Name",
-        p_national_id: null,
-      });
-      expect(result.success).toBe(true);
-    });
-  });
-
-  describe("deleteStudentDeviceSchema", () => {
-    it("should validate valid input", () => {
-      const result = validateRpcInput(deleteStudentDeviceSchema, {
-        p_student_id: "123e4567-e89b-12d3-a456-426614174000",
-      });
-      expect(result.success).toBe(true);
-    });
-
-    it("should reject invalid UUID", () => {
-      const result = validateRpcInput(deleteStudentDeviceSchema, {
-        p_student_id: "not-a-uuid",
       });
       expect(result.success).toBe(false);
     });

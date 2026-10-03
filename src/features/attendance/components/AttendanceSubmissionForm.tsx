@@ -1,16 +1,22 @@
-import { getFriendlyErrorMessage } from "@/lib/academicCopy";
-import { useEffect, useRef, useState } from "react";
+import { Button } from "@/shared/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/ui/card";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
+import { useToast } from "@/shared/hooks/use-toast";
+import { getFriendlyErrorMessage } from "@/shared/lib/academicCopy";
 import jsQR from "jsqr";
 import { Camera, Clipboard, Loader2, Lock, MapPin, Send } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { offlineAttendanceService } from "../services/offlineAttendanceService";
+import { useEffect, useRef, useState } from "react";
 import { useGps } from "../context/GpsContext";
+import { offlineAttendanceService } from "../services/offlineAttendanceService";
+import { type SessionSummary } from "../types";
 import { AttendanceBiometricGate } from "./AttendanceBiometricGate";
-import type { SessionSummary } from "../types";
 
 interface Props {
   sessions: SessionSummary[];
@@ -21,7 +27,9 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
   const { toast } = useToast();
   const { coords } = useGps();
   const [code, setCode] = useState("");
-  useEffect(() => { setVerifiedCredentialId(null); }, [code]);
+  useEffect(() => {
+    setVerifiedCredentialId(null);
+  }, [code]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [verifiedCredentialId, setVerifiedCredentialId] = useState<string | null>(null);
@@ -46,10 +54,14 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
       const img = new Image();
       const url = URL.createObjectURL(file);
       img.src = url;
-      await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = rej; });
+      await new Promise<void>((res, rej) => {
+        img.onload = () => res();
+        img.onerror = rej;
+      });
 
       const canvas = document.createElement("canvas");
-      canvas.width = img.width; canvas.height = img.height;
+      canvas.width = img.width;
+      canvas.height = img.height;
       const ctx = canvas.getContext("2d")!;
       ctx.drawImage(img, 0, 0);
       URL.revokeObjectURL(url);
@@ -62,7 +74,11 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
         setCode(digits);
         toast({ title: "تمت قراءة رمز الحضور", description: "الرمز جاهز — اضغط تسجيل الحضور." });
       } else {
-        toast({ variant: "destructive", title: "لم يظهر رمز الحضور", description: "تأكد من وضوح الصورة." });
+        toast({
+          variant: "destructive",
+          title: "لم يظهر رمز الحضور",
+          description: "تأكد من وضوح الصورة.",
+        });
       }
     } catch {
       toast({ variant: "destructive", title: "خطأ", description: "فشل قراءة الصورة." });
@@ -80,7 +96,11 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
         setCode(digits);
         toast({ title: "تم اللصق", description: "تم لصق الرمز بنجاح." });
       } else {
-        toast({ variant: "destructive", title: "خطأ", description: "لا يوجد رمز صالح في الحافظة." });
+        toast({
+          variant: "destructive",
+          title: "خطأ",
+          description: "لا يوجد رمز صالح في الحافظة.",
+        });
       }
     } catch {
       toast({ variant: "destructive", title: "خطأ", description: "فشل القراءة من الحافظة." });
@@ -96,35 +116,46 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
     }
 
     if (!verifiedCredentialId) {
-      toast({ variant: 'destructive', title: 'أكمل التحقق أولًا', description: 'تحقق بالبصمة لهذا الرمز قبل تسجيل الحضور.' });
+      toast({
+        variant: "destructive",
+        title: "أكمل التحقق أولًا",
+        description: "تحقق بالبصمة لهذا الرمز قبل تسجيل الحضور.",
+      });
       return;
     }
     setIsSubmitting(true);
     // The server validates fresh coordinates against the session belonging to the entered code.
     try {
-    // Submit the one-use receipt returned by server verification.
-    const result = await offlineAttendanceService.queueSubmission(
-      trimmedCode,
-      verifiedCredentialId ?? undefined,
-    );
+      // Submit the one-use receipt returned by server verification.
+      const result = await offlineAttendanceService.queueSubmission(
+        trimmedCode,
+        verifiedCredentialId ?? undefined,
+      );
 
-    if (result.success) {
-      toast({
-        title: result.offline ? "تم حفظ الحضور" : "تم تسجيل الحضور",
-        description: result.offline
-          ? "التسجيل قيد الإرسال ويحتاج تأكيدًا عند عودة الاتصال."
-          : "تم تسجيل حضورك بنجاح.",
-      });
-      setCode("");
-      // Reset biometric gate after successful submission (require re-verify for next session)
-      setVerifiedCredentialId(null);
-      onSubmitSuccess?.();
-    } else {
-      toast({ variant: "destructive", title: "فشل تسجيل الحضور", description: getFriendlyErrorMessage(result.error ?? "حدث خطأ.") });
-    }
-
+      if (result.success) {
+        toast({
+          title: result.offline ? "تم حفظ الحضور" : "تم تسجيل الحضور",
+          description: result.offline
+            ? "التسجيل قيد الإرسال ويحتاج تأكيدًا عند عودة الاتصال."
+            : "تم تسجيل حضورك بنجاح.",
+        });
+        setCode("");
+        // Reset biometric gate after successful submission (require re-verify for next session)
+        setVerifiedCredentialId(null);
+        onSubmitSuccess?.();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "فشل تسجيل الحضور",
+          description: getFriendlyErrorMessage(result.error ?? "حدث خطأ."),
+        });
+      }
     } catch {
-      toast({ variant: "destructive", title: "تعذر تسجيل الحضور", description: "تحقق من الاتصال ثم أعد المحاولة." });
+      toast({
+        variant: "destructive",
+        title: "تعذر تسجيل الحضور",
+        description: "تحقق من الاتصال ثم أعد المحاولة.",
+      });
     } finally {
       setVerifiedCredentialId(null);
       setIsSubmitting(false);
@@ -141,7 +172,6 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
         <CardDescription>أدخل رمز المحاضرة أو اقرأ صورة الرمز بالكاميرا</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">
-
         {/* Active sessions info */}
         {activeSessions.length > 0 ? (
           <div className="rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 text-sm">
@@ -158,88 +188,103 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
           <p className="text-sm text-muted-foreground">لا توجد جلسات نشطة حالياً في نطاقك.</p>
         )}
 
-            {/* QR Camera */}
-            <div>
-              <input
-                ref={fileRef}
-                id="qr-camera-input"
-                name="qr-camera"
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={handleQrCapture}
-              />
+        {/* QR Camera */}
+        <div>
+          <input
+            ref={fileRef}
+            id="qr-camera-input"
+            name="qr-camera"
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={handleQrCapture}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full gap-2"
+            onClick={() => fileRef.current?.click()}
+            disabled={scanning || isSubmitting}
+            aria-label="قراءة رمز الحضور بالكاميرا"
+          >
+            {scanning ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Camera className="h-4 w-4" />
+            )}
+            {scanning ? "جاري القراءة..." : "قراءة الرمز بالكاميرا"}
+          </Button>
+        </div>
+
+        {/* Code input with paste */}
+        <form onSubmit={handleSubmit} className="grid gap-4">
+          <div className="grid gap-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="attendance-code">أو الصق الرمز (6 أرقام)</Label>
               <Button
                 type="button"
-                variant="outline"
-                className="w-full gap-2"
-                onClick={() => fileRef.current?.click()}
-                disabled={scanning || isSubmitting}
-                aria-label="قراءة رمز الحضور بالكاميرا"
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-1 text-xs text-muted-foreground"
+                onClick={handlePaste}
+                disabled={isSubmitting}
+                aria-label="لصق الرمز من الحافظة"
               >
-                {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-                {scanning ? "جاري القراءة..." : "قراءة الرمز بالكاميرا"}
+                <Clipboard className="h-3 w-3" />
+                لصق
               </Button>
             </div>
+            <Input
+              id="attendance-code"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              onPaste={(e) => {
+                e.preventDefault();
+                const pastedText = e.clipboardData.getData("text");
+                const digits = pastedText.replace(/\D/g, "").slice(0, 6);
+                setCode(digits);
+              }}
+              placeholder="000000"
+              dir="ltr"
+              className="font-mono text-2xl text-center tracking-[0.5em] h-14"
+              disabled={isSubmitting}
+              autoComplete="off"
+              inputMode="numeric"
+              pattern="[0-9]*"
+            />
+          </div>
 
-            {/* Code input with paste */}
-            <form onSubmit={handleSubmit} className="grid gap-4">
-              <div className="grid gap-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="attendance-code">أو الصق الرمز (6 أرقام)</Label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 gap-1 text-xs text-muted-foreground"
-                    onClick={handlePaste}
-                    disabled={isSubmitting}
-                    aria-label="لصق الرمز من الحافظة"
-                  >
-                    <Clipboard className="h-3 w-3" />
-                    لصق
-                  </Button>
-                </div>
-                <Input
-                  id="attendance-code"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  onPaste={(e) => {
-                    e.preventDefault();
-                    const pastedText = e.clipboardData.getData("text");
-                    const digits = pastedText.replace(/\D/g, "").slice(0, 6);
-                    setCode(digits);
-                  }}
-                  placeholder="000000"
-                  dir="ltr"
-                  className="font-mono text-2xl text-center tracking-[0.5em] h-14"
-                  disabled={isSubmitting}
-                  autoComplete="off"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                />
-              </div>
+          {/* GPS indicator */}
+          {coords && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <MapPin className="h-3 w-3 text-green-500" />
+              تم تحديد موقعك
+            </div>
+          )}
 
-              {/* GPS indicator */}
-              {coords && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <MapPin className="h-3 w-3 text-green-500" />
-                  تم تحديد موقعك
-                </div>
-              )}
-
-              {!isBiometricReady && <AttendanceBiometricGate key={code} attendanceHash={code.trim()} onVerified={receipt => { if (latestCode.current === code) setVerifiedCredentialId(receipt); }} />}
-              <Button
-                type="submit"
-                className="w-full h-12 rounded-xl text-base font-semibold btn-cyber shadow-lg"
-                disabled={isSubmitting || !code.trim() || !isBiometricReady}
-              >
-                {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                تسجيل الحضور الآن
-              </Button>
-            </form>
-
+          {!isBiometricReady && (
+            <AttendanceBiometricGate
+              key={code}
+              attendanceHash={code.trim()}
+              onVerified={(receipt) => {
+                if (latestCode.current === code) setVerifiedCredentialId(receipt);
+              }}
+            />
+          )}
+          <Button
+            type="submit"
+            className="w-full h-12 rounded-xl text-base font-semibold btn-cyber shadow-lg"
+            disabled={isSubmitting || !code.trim() || !isBiometricReady}
+          >
+            {isSubmitting ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Send className="h-5 w-5" />
+            )}
+            تسجيل الحضور الآن
+          </Button>
+        </form>
       </CardContent>
     </Card>
   );

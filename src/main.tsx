@@ -1,7 +1,7 @@
 import * as Sentry from "@sentry/react";
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App.tsx";
+import App from "./app/App.tsx";
 import "./index.css";
 
 // Initialize Sentry error tracking
@@ -10,10 +10,7 @@ const dsn = import.meta.env.VITE_SENTRY_DSN;
 if (dsn) {
   Sentry.init({
     dsn,
-    integrations: [
-      Sentry.browserTracingIntegration(),
-      Sentry.replayIntegration(),
-    ],
+    integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
     tracesSampleRate: 1.0,
     replaysSessionSampleRate: 0.1,
     replaysOnErrorSampleRate: 1.0,
@@ -25,7 +22,10 @@ if (dsn) {
       if (error instanceof Error) {
         const message = error.message;
         // Skip chunk load errors (handled by auto-reload)
-        if (message.includes("Failed to fetch dynamically imported module") || message.includes("error loading dynamically imported module")) {
+        if (
+          message.includes("Failed to fetch dynamically imported module") ||
+          message.includes("error loading dynamically imported module")
+        ) {
           return null;
         }
         // Skip network errors from user's offline mode
@@ -68,5 +68,5 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <Sentry.ErrorBoundary fallback={<div>Something went wrong. Please refresh the page.</div>}>
       <App />
     </Sentry.ErrorBoundary>
-  </React.StrictMode>
+  </React.StrictMode>,
 );

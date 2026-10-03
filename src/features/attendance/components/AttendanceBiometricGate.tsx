@@ -1,17 +1,16 @@
-import { getFriendlyErrorMessage } from "@/lib/academicCopy";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { isWebAuthnSupported, verifyPasskeyForCurrentUser } from "@/features/auth/passkeys";
+import { Button } from "@/shared/components/ui/button";
+import { getFriendlyErrorMessage } from "@/shared/lib/academicCopy";
 import {
+  AlertTriangle,
+  ArrowRight,
   Fingerprint,
   Loader2,
   ShieldAlert,
   ShieldCheck,
-  ArrowRight,
-  AlertTriangle,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { verifyPasskeyForCurrentUser } from "@/lib/webauthn";
-import { isWebAuthnSupported } from "@/lib/webauthn";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface AttendanceBiometricGateProps {
   /** Called when biometric verification succeeds */
@@ -26,15 +25,21 @@ type GateState = "idle" | "loading" | "verified" | "error" | "no_passkey" | "uns
  * account and device, and is consumed once by the attendance procedure.
  * Device verification may use a fingerprint, face or device PIN.
  */
-export const AttendanceBiometricGate = ({ onVerified, attendanceHash }: AttendanceBiometricGateProps) => {
-  const navigate   = useNavigate();
-  const [state, setState]     = useState<GateState>("idle");
+export const AttendanceBiometricGate = ({
+  onVerified,
+  attendanceHash,
+}: AttendanceBiometricGateProps) => {
+  const navigate = useNavigate();
+  const [state, setState] = useState<GateState>("idle");
   const [errorMsg, setErrorMsg] = useState<string>("");
 
   const isSupported = isWebAuthnSupported();
 
   const handleVerify = async () => {
-    if (!isSupported) { setState("unsupported"); return; }
+    if (!isSupported) {
+      setState("unsupported");
+      return;
+    }
     setState("loading");
     setErrorMsg("");
 
@@ -78,7 +83,10 @@ export const AttendanceBiometricGate = ({ onVerified, attendanceHash }: Attendan
   // ── No passkey — MUST register (MANDATORY — no bypass) ───────────────────
   if (state === "no_passkey") {
     return (
-      <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-5 space-y-4" dir="rtl">
+      <div
+        className="rounded-2xl border border-destructive/40 bg-destructive/5 p-5 space-y-4"
+        dir="rtl"
+      >
         <div className="flex items-start gap-3">
           <div className="w-11 h-11 rounded-full bg-destructive/15 flex items-center justify-center shrink-0 mt-0.5">
             <AlertTriangle className="h-5 w-5 text-destructive" />
@@ -94,8 +102,12 @@ export const AttendanceBiometricGate = ({ onVerified, attendanceHash }: Attendan
         <div className="rounded-xl border border-destructive/20 bg-background/50 p-3 text-xs text-muted-foreground space-y-1.5">
           <p className="font-semibold text-foreground">لتسجيل بصمتك:</p>
           <ol className="list-decimal list-inside space-y-1 marker:text-destructive">
-            <li>اذهب إلى <strong className="text-foreground">الملف الشخصي</strong></li>
-            <li>افتح قسم <strong className="text-foreground">الدخول بالبصمة</strong></li>
+            <li>
+              اذهب إلى <strong className="text-foreground">الملف الشخصي</strong>
+            </li>
+            <li>
+              افتح قسم <strong className="text-foreground">الدخول بالبصمة</strong>
+            </li>
             <li>اضغط "إضافة جهاز للدخول بالبصمة"</li>
             <li>اتبع التعليمات على جهازك</li>
             <li>عد هنا وسجل حضورك</li>
@@ -117,14 +129,17 @@ export const AttendanceBiometricGate = ({ onVerified, attendanceHash }: Attendan
   // ── Browser doesn't support WebAuthn ─────────────────────────────────────
   if (state === "unsupported" || !isSupported) {
     return (
-      <div className="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-5 space-y-3" dir="rtl">
+      <div
+        className="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-5 space-y-3"
+        dir="rtl"
+      >
         <div className="flex items-start gap-3">
           <ShieldAlert className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
           <div>
             <p className="font-bold text-amber-400 text-sm">المتصفح لا يدعم التحقق بالبصمة</p>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              يجب استخدام Chrome أو Safari أو Edge لتسجيل الحضور عبر البصمة.
-              جرّب جهازاً أو متصفحاً يدعم الدخول بالبصمة لتسجيل حضورك.
+              يجب استخدام Chrome أو Safari أو Edge لتسجيل الحضور عبر البصمة. جرّب جهازاً أو متصفحاً
+              يدعم الدخول بالبصمة لتسجيل حضورك.
             </p>
           </div>
         </div>
@@ -134,8 +149,10 @@ export const AttendanceBiometricGate = ({ onVerified, attendanceHash }: Attendan
 
   // ── Main gate UI ──────────────────────────────────────────────────────────
   return (
-    <div className="rounded-2xl border border-primary/25 bg-primary/5 p-5 sm:p-6 space-y-5" dir="rtl">
-
+    <div
+      className="rounded-2xl border border-primary/25 bg-primary/5 p-5 sm:p-6 space-y-5"
+      dir="rtl"
+    >
       {/* Header */}
       <div className="flex items-start gap-3">
         <div className="w-12 h-12 rounded-2xl bg-primary/15 flex items-center justify-center shrink-0 ring-1 ring-primary/30 shadow-lg shadow-primary/10">
@@ -144,7 +161,9 @@ export const AttendanceBiometricGate = ({ onVerified, attendanceHash }: Attendan
         <div>
           <p className="font-bold text-base text-foreground flex items-center gap-2">
             التحقق بالبصمة الإلزامي
-            <span className="text-[10px] bg-destructive/20 text-destructive px-2 py-0.5 rounded-full font-bold">مطلوب</span>
+            <span className="text-[10px] bg-destructive/20 text-destructive px-2 py-0.5 rounded-full font-bold">
+              مطلوب
+            </span>
           </p>
           <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
             يجب التحقق من هويتك بالبصمة أو الوجه أو رمز الجهاز — لا يمكن تخطي هذه الخطوة.
@@ -159,7 +178,10 @@ export const AttendanceBiometricGate = ({ onVerified, attendanceHash }: Attendan
           { icon: "🛡️", label: "حضور موثّق" },
           { icon: "📋", label: "مسجل للمراقب" },
         ].map(({ icon, label }) => (
-          <div key={label} className="rounded-xl border border-white/10 bg-background/40 px-2 py-2.5">
+          <div
+            key={label}
+            className="rounded-xl border border-white/10 bg-background/40 px-2 py-2.5"
+          >
             <div className="text-lg mb-1">{icon}</div>
             <p className="text-[10px] text-muted-foreground font-medium leading-tight">{label}</p>
           </div>
@@ -168,13 +190,19 @@ export const AttendanceBiometricGate = ({ onVerified, attendanceHash }: Attendan
 
       {/* Error message */}
       {errorMsg && (
-        <div className={`rounded-xl border px-3 py-2.5 flex items-start gap-2 ${
-          state === "error"
-            ? "border-destructive/30 bg-destructive/10"
-            : "border-amber-500/30 bg-amber-500/10"
-        }`}>
-          <ShieldAlert className={`h-4 w-4 shrink-0 mt-0.5 ${state === "error" ? "text-destructive" : "text-amber-400"}`} />
-          <p className={`text-xs leading-relaxed ${state === "error" ? "text-destructive" : "text-amber-300"}`}>
+        <div
+          className={`rounded-xl border px-3 py-2.5 flex items-start gap-2 ${
+            state === "error"
+              ? "border-destructive/30 bg-destructive/10"
+              : "border-amber-500/30 bg-amber-500/10"
+          }`}
+        >
+          <ShieldAlert
+            className={`h-4 w-4 shrink-0 mt-0.5 ${state === "error" ? "text-destructive" : "text-amber-400"}`}
+          />
+          <p
+            className={`text-xs leading-relaxed ${state === "error" ? "text-destructive" : "text-amber-300"}`}
+          >
             {getFriendlyErrorMessage(errorMsg)}
           </p>
         </div>
@@ -189,17 +217,27 @@ export const AttendanceBiometricGate = ({ onVerified, attendanceHash }: Attendan
         size="lg"
       >
         {state === "loading" ? (
-          <><Loader2 className="h-5 w-5 animate-spin" />جارٍ التحقق من البصمة...</>
+          <>
+            <Loader2 className="h-5 w-5 animate-spin" />
+            جارٍ التحقق من البصمة...
+          </>
         ) : (
-          <><Fingerprint className="h-5 w-5" />تحقق بالبصمة / الوجه / رمز قفل الجهاز</>
+          <>
+            <Fingerprint className="h-5 w-5" />
+            تحقق بالبصمة / الوجه / رمز قفل الجهاز
+          </>
         )}
       </Button>
 
       {state === "error" && (
         <Button
-          variant="ghost" size="sm"
+          variant="ghost"
+          size="sm"
           className="w-full text-xs text-muted-foreground"
-          onClick={() => { setState("idle"); setErrorMsg(""); }}
+          onClick={() => {
+            setState("idle");
+            setErrorMsg("");
+          }}
         >
           إعادة المحاولة
         </Button>

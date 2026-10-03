@@ -1,10 +1,10 @@
+import { getDashboardRoute } from "@/features/auth/utils/dashboardRoutes";
 import { describe, expect, it } from "vitest";
-import { getAttendanceDashboardRoute } from "@/features/attendance/utils/dashboardRoutes";
 
 describe("project smoke checks", () => {
   it("maps attendance roles to stable dashboard routes", () => {
-    expect(getAttendanceDashboardRoute("owner")).toBe("/owner-dashboard");
-    expect(getAttendanceDashboardRoute("doctor")).toBe("/doctor-dashboard");
-    expect(getAttendanceDashboardRoute("student")).toBe("/student-panel");
+    expect(getDashboardRoute("owner")).toBe("/owner-dashboard");
+    expect(getDashboardRoute("doctor")).toBe("/doctor-dashboard");
+    expect(getDashboardRoute("student")).toBe("/student-panel");
   });
 });

@@ -1,2 +1,2 @@
-import { handleAccountLogin } from './handler.ts';
+import { handleAccountLogin } from "./handler.ts";
 Deno.serve(handleAccountLogin);

@@ -1,14 +1,14 @@
-import { getFriendlyErrorMessage } from "@/lib/academicCopy";
+import { supabase } from "@/shared/api/supabaseClient";
+import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { ConfirmAction } from "@/shared/components/ui/confirm-action";
+import { Input } from "@/shared/components/ui/input";
+import { useToast } from "@/shared/hooks/use-toast";
+import { useDebounce } from "@/shared/hooks/useDebounce";
+import { getFriendlyErrorMessage } from "@/shared/lib/academicCopy";
+import { RefreshCw, Search, Shield, Smartphone, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useDebounce } from "@/hooks/useDebounce";
-import { Shield, Trash2, RefreshCw, Smartphone, Search } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ConfirmAction } from "@/components/ui/confirm-action";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabaseClient";
 
 interface StudentInfo {
   id: string;
@@ -37,29 +37,39 @@ export function DeviceLockPanel() {
       supabase.from("users").select("id, full_name, national_id, auth_id").eq("role", "student"),
       supabase.from("device_locks").select("student_auth_id, device_label, locked_at"),
     ]);
-    const sortedUsers = (usersRes.data ?? []).sort((a, b) => a.full_name.localeCompare(b.full_name, 'ar'));
+    const sortedUsers = (usersRes.data ?? []).sort((a, b) =>
+      a.full_name.localeCompare(b.full_name, "ar"),
+    );
     setStudents(sortedUsers as StudentInfo[]);
     setLocks((locksRes.data ?? []) as DeviceLock[]);
     setLoading(false);
   };
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void load();
+  }, []);
 
   const handleUnlock = async (authId: string, name: string) => {
     const { error } = await supabase.from("device_locks").delete().eq("student_auth_id", authId);
     if (error) {
-      toast({ variant: "destructive", title: "خطأ", description: getFriendlyErrorMessage(error.message) });
+      toast({
+        variant: "destructive",
+        title: "خطأ",
+        description: getFriendlyErrorMessage(error.message),
+      });
     } else {
       toast({ title: "تم الإلغاء", description: "تم إلغاء قفل جهاز " + name });
       void load();
     }
   };
 
-  const lockMap = new Map(locks.map(l => [l.student_auth_id, l]));
+  const lockMap = new Map(locks.map((l) => [l.student_auth_id, l]));
   const lockedCount = locks.length;
 
-  const filtered = students.filter(s =>
-    s.full_name.includes(debouncedSearch) || (s.national_id && s.national_id.includes(debouncedSearch))
+  const filtered = students.filter(
+    (s) =>
+      s.full_name.includes(debouncedSearch) ||
+      (s.national_id && s.national_id.includes(debouncedSearch)),
   );
 
   return (
@@ -71,8 +81,16 @@ export function DeviceLockPanel() {
             قفل الأجهزة
           </CardTitle>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">{lockedCount} مغلق</Badge>
-            <Button variant="ghost" size="sm" aria-label="تحديث قائمة الأجهزة" onClick={() => void load()} disabled={loading}>
+            <Badge variant="outline" className="text-xs">
+              {lockedCount} مغلق
+            </Badge>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="تحديث قائمة الأجهزة"
+              onClick={() => void load()}
+              disabled={loading}
+            >
               <RefreshCw className={"h-3 w-3 " + (loading ? "animate-spin" : "")} />
             </Button>
           </div>
@@ -84,29 +102,53 @@ export function DeviceLockPanel() {
       <CardContent className="space-y-4">
         <div className="relative">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input id="device-lock-search" placeholder="ابحث باسم الطالب..." value={search} onChange={e => setSearch(e.target.value)} className="pr-9" />
+          <Input
+            id="device-lock-search"
+            placeholder="ابحث باسم الطالب..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pr-9"
+          />
         </div>
 
         {loading ? (
           <p className="text-sm text-muted-foreground text-center py-6">جاري التحميل...</p>
         ) : (
           <div className="space-y-2 max-h-[500px] overflow-y-auto">
-            {filtered.map(student => {
+            {filtered.map((student) => {
               const authId = student.auth_id;
               const lock = authId ? lockMap.get(authId) : null;
               const isLocked = !!lock;
               return (
-                <div key={student.id} className={"flex items-center justify-between gap-3 rounded-xl border p-3 transition-colors " + (isLocked ? "bg-primary/5 border-primary/30" : "bg-card border-border/50")}>
+                <div
+                  key={student.id}
+                  className={
+                    "flex items-center justify-between gap-3 rounded-xl border p-3 transition-colors " +
+                    (isLocked ? "bg-primary/5 border-primary/30" : "bg-card border-border/50")
+                  }
+                >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className={"w-8 h-8 rounded-lg flex items-center justify-center shrink-0 " + (isLocked ? "bg-primary/10" : "bg-muted")}>
-                      <Smartphone className={"h-4 w-4 " + (isLocked ? "text-primary" : "text-muted-foreground")} />
+                    <div
+                      className={
+                        "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 " +
+                        (isLocked ? "bg-primary/10" : "bg-muted")
+                      }
+                    >
+                      <Smartphone
+                        className={
+                          "h-4 w-4 " + (isLocked ? "text-primary" : "text-muted-foreground")
+                        }
+                      />
                     </div>
                     <div className="min-w-0">
-                      <p className="font-bold text-sm text-foreground truncate">{student.full_name}</p>
+                      <p className="font-bold text-sm text-foreground truncate">
+                        {student.full_name}
+                      </p>
                       <p className="text-xs text-muted-foreground">{student.national_id ?? "—"}</p>
                       {isLocked && (
                         <p className="text-[10px] text-primary mt-0.5 truncate">
-                          {lock.device_label} — {new Date(lock.locked_at).toLocaleDateString("ar-EG")}
+                          {lock.device_label} —{" "}
+                          {new Date(lock.locked_at).toLocaleDateString("ar-EG")}
                         </p>
                       )}
                     </div>
@@ -117,16 +159,27 @@ export function DeviceLockPanel() {
                         title="إلغاء قفل الجهاز"
                         description={`هل تريد إلغاء قفل جهاز "${student.full_name}"؟ سيتمكن من تسجيل الحضور من أي جهاز.`}
                         confirmLabel="إلغاء القفل"
-                        onConfirm={async () => { if (student.auth_id) await handleUnlock(student.auth_id, student.full_name); }}
+                        onConfirm={async () => {
+                          if (student.auth_id)
+                            await handleUnlock(student.auth_id, student.full_name);
+                        }}
                       >
                         {(trigger) => (
-                          <Button size="sm" variant="ghost" className="text-xs text-destructive h-7" onClick={trigger}>
-                            <Trash2 className="h-3 w-3 ml-1" />إلغاء القفل
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-xs text-destructive h-7"
+                            onClick={trigger}
+                          >
+                            <Trash2 className="h-3 w-3 ml-1" />
+                            إلغاء القفل
                           </Button>
                         )}
                       </ConfirmAction>
                     ) : (
-                      <Badge variant="secondary" className="text-xs">غير مغلق</Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        غير مغلق
+                      </Badge>
                     )}
                   </div>
                 </div>

@@ -1,6 +1,5 @@
-// src/features/auth/services/auditService.ts
-import { supabase } from "@/lib/supabaseClient";
-import { computeFingerprint } from "@/features/attendance/utils/fingerprint";
+import { supabase } from "@/shared/api/supabaseClient";
+import { computeFingerprint } from "@/shared/lib/deviceFingerprint";
 
 export interface AuditLogEntry {
   action: "login_success" | "login_failed" | "join_request" | "password_reset_request";

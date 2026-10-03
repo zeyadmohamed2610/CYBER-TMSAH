@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock Supabase client
-vi.mock("@/lib/supabaseClient", () => ({
+vi.mock("@/shared/api/supabaseClient", () => ({
   supabase: {
     from: vi.fn(),
     rpc: vi.fn(),
@@ -22,8 +22,10 @@ vi.mock("@/lib/supabaseClient", () => ({
   },
 }));
 
-import { attendanceService } from "../services/attendanceService";
-import { supabase } from "@/lib/supabaseClient";
+import { attendanceRecordService } from "@/features/attendance/services/attendanceRecordService";
+import { lectureService } from "@/features/attendance/services/lectureService";
+import { sessionService } from "@/features/attendance/services/sessionService";
+import { supabase } from "@/shared/api/supabaseClient";
 
 describe("attendanceService - RPC validation", () => {
   beforeEach(() => {
@@ -32,39 +34,39 @@ describe("attendanceService - RPC validation", () => {
 
   describe("generateRotatingHash - input validation", () => {
     it("should reject invalid subject UUID", async () => {
-      const result = await attendanceService.generateRotatingHash("not-a-uuid");
+      const result = await sessionService.generateRotatingHash("not-a-uuid");
       expect(result.error).toBeTruthy();
       expect(result.error).toContain("Validation failed");
     });
 
     it("should reject duration > 180", async () => {
-      const result = await attendanceService.generateRotatingHash(
+      const result = await sessionService.generateRotatingHash(
         "123e4567-e89b-12d3-a456-426614174000",
         "Test",
-        200
+        200,
       );
       expect(result.error).toBeTruthy();
       expect(result.error).toContain("Validation failed");
     });
 
     it("should reject invalid latitude", async () => {
-      const result = await attendanceService.generateRotatingHash(
+      const result = await sessionService.generateRotatingHash(
         "123e4567-e89b-12d3-a456-426614174000",
         "Test",
         10,
-        100
+        100,
       );
       expect(result.error).toBeTruthy();
       expect(result.error).toContain("Validation failed");
     });
 
     it("should reject invalid longitude", async () => {
-      const result = await attendanceService.generateRotatingHash(
+      const result = await sessionService.generateRotatingHash(
         "123e4567-e89b-12d3-a456-426614174000",
         "Test",
         10,
         30,
-        200
+        200,
       );
       expect(result.error).toBeTruthy();
       expect(result.error).toContain("Validation failed");
@@ -73,25 +75,25 @@ describe("attendanceService - RPC validation", () => {
 
   describe("submitAttendance - input validation", () => {
     it("should reject empty hash", async () => {
-      const result = await attendanceService.submitAttendance("");
+      const result = await attendanceRecordService.submitAttendance("");
       expect(result.error).toBeTruthy();
       expect(result.error).toContain("Validation failed");
     });
 
     it("should reject hash too long", async () => {
-      const result = await attendanceService.submitAttendance("a".repeat(129));
+      const result = await attendanceRecordService.submitAttendance("a".repeat(129));
       expect(result.error).toBeTruthy();
       expect(result.error).toContain("Validation failed");
     });
 
     it("should reject invalid latitude", async () => {
-      const result = await attendanceService.submitAttendance("hash123", 100);
+      const result = await attendanceRecordService.submitAttendance("hash123", 100);
       expect(result.error).toBeTruthy();
       expect(result.error).toContain("Validation failed");
     });
 
     it("should reject invalid longitude", async () => {
-      const result = await attendanceService.submitAttendance("hash123", 30, -200);
+      const result = await attendanceRecordService.submitAttendance("hash123", 30, -200);
       expect(result.error).toBeTruthy();
       expect(result.error).toContain("Validation failed");
     });
@@ -99,7 +101,7 @@ describe("attendanceService - RPC validation", () => {
 
   describe("createLecture - input validation", () => {
     it("should reject invalid subject UUID", async () => {
-      const result = await attendanceService.createLecture("not-a-uuid", "Lecture");
+      const result = await lectureService.createLecture("not-a-uuid", "Lecture");
       expect(result.error).toBeTruthy();
       expect(result.error).toContain("Validation failed");
     });
@@ -107,13 +109,16 @@ describe("attendanceService - RPC validation", () => {
 
   describe("updateSessionExpiry - input validation", () => {
     it("should reject invalid session UUID", async () => {
-      const result = await attendanceService.updateSessionExpiry("not-a-uuid", "2026-03-27T14:30:00Z");
+      const result = await sessionService.updateSessionExpiry("not-a-uuid", "2026-03-27T14:30:00Z");
       expect(result.error).toBeTruthy();
       expect(result.error).toContain("Validation failed");
     });
 
     it("should reject invalid datetime", async () => {
-      const result = await attendanceService.updateSessionExpiry("123e4567-e89b-12d3-a456-426614174000", "not-a-date");
+      const result = await sessionService.updateSessionExpiry(
+        "123e4567-e89b-12d3-a456-426614174000",
+        "not-a-date",
+      );
       expect(result.error).toBeTruthy();
       expect(result.error).toContain("Validation failed");
     });
@@ -121,7 +126,7 @@ describe("attendanceService - RPC validation", () => {
 
   describe("fetchLectures - input validation", () => {
     it("should reject invalid subject UUID", async () => {
-      const result = await attendanceService.fetchLectures("not-a-uuid");
+      const result = await lectureService.fetchLectures("not-a-uuid");
       expect(result.error).toBeTruthy();
       expect(result.error).toContain("Validation failed");
     });
@@ -129,7 +134,7 @@ describe("attendanceService - RPC validation", () => {
 
   describe("getLectureAttendees - input validation", () => {
     it("should reject invalid lecture UUID", async () => {
-      const result = await attendanceService.getLectureAttendees("not-a-uuid");
+      const result = await lectureService.getLectureAttendees("not-a-uuid");
       expect(result.error).toBeTruthy();
       expect(result.error).toContain("Validation failed");
     });
@@ -137,7 +142,7 @@ describe("attendanceService - RPC validation", () => {
 
   describe("endLecture - input validation", () => {
     it("should reject invalid lecture UUID", async () => {
-      const result = await attendanceService.endLecture("not-a-uuid");
+      const result = await lectureService.endLecture("not-a-uuid");
       expect(result.error).toBeTruthy();
       expect(result.error).toContain("Validation failed");
     });
@@ -145,7 +150,7 @@ describe("attendanceService - RPC validation", () => {
 
   describe("deleteLecture - input validation", () => {
     it("should reject invalid lecture UUID", async () => {
-      const result = await attendanceService.deleteLecture("not-a-uuid");
+      const result = await lectureService.deleteLecture("not-a-uuid");
       expect(result.error).toBeTruthy();
       expect(result.error).toContain("Validation failed");
     });
@@ -153,41 +158,19 @@ describe("attendanceService - RPC validation", () => {
 
   describe("addManualAttendance - input validation", () => {
     it("should reject invalid student UUID", async () => {
-      const result = await attendanceService.addManualAttendance("not-a-uuid", "123e4567-e89b-12d3-a456-426614174001");
+      const result = await attendanceRecordService.addManualAttendance(
+        "not-a-uuid",
+        "123e4567-e89b-12d3-a456-426614174001",
+      );
       expect(result.error).toBeTruthy();
       expect(result.error).toContain("Validation failed");
     });
 
     it("should reject invalid session UUID", async () => {
-      const result = await attendanceService.addManualAttendance("123e4567-e89b-12d3-a456-426614174000", "not-a-uuid");
-      expect(result.error).toBeTruthy();
-      expect(result.error).toContain("Validation failed");
-    });
-  });
-
-  describe("updateUser - input validation", () => {
-    it("should reject invalid user UUID", async () => {
-      const result = await attendanceService.updateUser("not-a-uuid", "John Doe");
-      expect(result.error).toBeTruthy();
-      expect(result.error).toContain("Validation failed");
-    });
-
-    it("should reject name too short", async () => {
-      const result = await attendanceService.updateUser("123e4567-e89b-12d3-a456-426614174000", "Jo");
-      expect(result.error).toBeTruthy();
-      expect(result.error).toContain("Validation failed");
-    });
-
-    it("should reject invalid national ID format", async () => {
-      const result = await attendanceService.updateUser("123e4567-e89b-12d3-a456-426614174000", "John Doe", "123");
-      expect(result.error).toBeTruthy();
-      expect(result.error).toContain("Validation failed");
-    });
-  });
-
-  describe("deleteStudentDevice - input validation", () => {
-    it("should reject invalid student UUID", async () => {
-      const result = await attendanceService.deleteStudentDevice("not-a-uuid");
+      const result = await attendanceRecordService.addManualAttendance(
+        "123e4567-e89b-12d3-a456-426614174000",
+        "not-a-uuid",
+      );
       expect(result.error).toBeTruthy();
       expect(result.error).toContain("Validation failed");
     });
@@ -195,19 +178,25 @@ describe("attendanceService - RPC validation", () => {
 
   describe("setSessionDuration - input validation", () => {
     it("should reject invalid session UUID", async () => {
-      const result = await attendanceService.setSessionDuration("not-a-uuid", 30);
+      const result = await sessionService.setSessionDuration("not-a-uuid", 30);
       expect(result.error).toBeTruthy();
       expect(result.error).toContain("Validation failed");
     });
 
     it("should reject duration > 180", async () => {
-      const result = await attendanceService.setSessionDuration("123e4567-e89b-12d3-a456-426614174000", 200);
+      const result = await sessionService.setSessionDuration(
+        "123e4567-e89b-12d3-a456-426614174000",
+        200,
+      );
       expect(result.error).toBeTruthy();
       expect(result.error).toContain("Validation failed");
     });
 
     it("should reject duration < 1", async () => {
-      const result = await attendanceService.setSessionDuration("123e4567-e89b-12d3-a456-426614174000", 0);
+      const result = await sessionService.setSessionDuration(
+        "123e4567-e89b-12d3-a456-426614174000",
+        0,
+      );
       expect(result.error).toBeTruthy();
       expect(result.error).toContain("Validation failed");
     });
@@ -215,7 +204,7 @@ describe("attendanceService - RPC validation", () => {
 
   describe("refreshSessionHash - input validation", () => {
     it("should reject invalid session UUID", async () => {
-      const result = await attendanceService.refreshSessionHash("not-a-uuid");
+      const result = await sessionService.refreshSessionHash("not-a-uuid");
       expect(result.error).toBeTruthy();
       expect(result.error).toContain("Validation failed");
     });
@@ -223,7 +212,7 @@ describe("attendanceService - RPC validation", () => {
 
   describe("stopSession - input validation", () => {
     it("should reject invalid session UUID", async () => {
-      const result = await attendanceService.stopSession("not-a-uuid");
+      const result = await sessionService.stopSession("not-a-uuid");
       expect(result.error).toBeTruthy();
       expect(result.error).toContain("Validation failed");
     });
@@ -242,8 +231,8 @@ describe("attendanceService - RPC success/error handling", () => {
         error: { message: "Permission denied" },
       });
 
-      const result = await attendanceService.generateRotatingHash(
-        "123e4567-e89b-12d3-a456-426614174000"
+      const result = await sessionService.generateRotatingHash(
+        "123e4567-e89b-12d3-a456-426614174000",
       );
       expect(result.error).toBeTruthy();
       expect(result.data).toBeNull();
@@ -270,9 +259,9 @@ describe("attendanceService - RPC success/error handling", () => {
         error: null,
       });
 
-      const result = await attendanceService.generateRotatingHash(
+      const result = await sessionService.generateRotatingHash(
         "123e4567-e89b-12d3-a456-426614174000",
-        "Test Subject"
+        "Test Subject",
       );
       expect(result.error).toBeNull();
       expect(result.data).toBeTruthy();
@@ -290,7 +279,7 @@ describe("attendanceService - RPC success/error handling", () => {
         error: { message: "Invalid hash" },
       });
 
-      const result = await attendanceService.submitAttendance("invalid-hash");
+      const result = await attendanceRecordService.submitAttendance("invalid-hash");
       expect(result.error).toBeTruthy();
       expect(result.data).toBeNull();
     });
@@ -306,7 +295,7 @@ describe("attendanceService - RPC success/error handling", () => {
         error: null,
       });
 
-      const result = await attendanceService.submitAttendance("valid-hash");
+      const result = await attendanceRecordService.submitAttendance("valid-hash");
       expect(result.error).toBeNull();
       expect(result.data).toBeTruthy();
       if (result.data) {
@@ -322,7 +311,7 @@ describe("attendanceService - RPC success/error handling", () => {
         error: { message: "Database error" },
       });
 
-      const result = await attendanceService.fetchLectures();
+      const result = await lectureService.fetchLectures();
       expect(result.error).toBeTruthy();
       expect(result.data).toBeNull();
     });
@@ -348,7 +337,7 @@ describe("attendanceService - RPC success/error handling", () => {
         error: null,
       });
 
-      const result = await attendanceService.fetchLectures();
+      const result = await lectureService.fetchLectures();
       expect(result.error).toBeNull();
       expect(result.data).toHaveLength(1);
       if (result.data) {
@@ -364,9 +353,9 @@ describe("attendanceService - RPC success/error handling", () => {
         error: { message: "Permission denied" },
       });
 
-      const result = await attendanceService.createLecture(
+      const result = await lectureService.createLecture(
         "123e4567-e89b-12d3-a456-426614174000",
-        "New Lecture"
+        "New Lecture",
       );
       expect(result.error).toBeTruthy();
       expect(result.data).toBeNull();
@@ -387,9 +376,9 @@ describe("attendanceService - RPC success/error handling", () => {
         error: null,
       });
 
-      const result = await attendanceService.createLecture(
+      const result = await lectureService.createLecture(
         "123e4567-e89b-12d3-a456-426614174000",
-        "New Lecture"
+        "New Lecture",
       );
       expect(result.error).toBeNull();
       expect(result.data).toBeTruthy();

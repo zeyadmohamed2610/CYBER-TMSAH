@@ -45,10 +45,12 @@ export default defineConfig({
         : devices["Pixel 5"],
     },
   ],
-  webServer: remoteBaseUrl ? undefined : {
-    command: `node node_modules/vite/bin/vite.js --port ${testPort} --strictPort`,
-    url: `http://localhost:${testPort}`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 180000,
-  },
+  webServer: remoteBaseUrl
+    ? undefined
+    : {
+        command: `node node_modules/vite/bin/vite.js --port ${testPort} --strictPort`,
+        url: `http://localhost:${testPort}`,
+        reuseExistingServer: !process.env.CI,
+        timeout: 180000,
+      },
 });

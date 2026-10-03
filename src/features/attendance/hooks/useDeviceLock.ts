@@ -1,7 +1,7 @@
+import { supabase } from "@/shared/api/supabaseClient";
 import { useCallback, useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
-import { computeFingerprint } from "../utils/fingerprint";
 import { toast } from "sonner";
+import { computeFingerprint } from "../../../shared/lib/deviceFingerprint";
 
 export function useDeviceLock(userId: string | undefined) {
   const [isDeviceLocked, setIsDeviceLocked] = useState(false);
@@ -40,7 +40,10 @@ export function useDeviceLock(userId: string | undefined) {
     try {
       const fp = await computeFingerprint();
       const ua = navigator.userAgent;
-      const label = (ua.includes("Mobile") ? "هاتف محمول" : "جهاز كمبيوتر") + " - " + new Date().toLocaleDateString("ar-EG");
+      const label =
+        (ua.includes("Mobile") ? "هاتف محمول" : "جهاز كمبيوتر") +
+        " - " +
+        new Date().toLocaleDateString("ar-EG");
 
       // 1. Try secure RPC function first (bypasses RLS / permission edge-cases)
       const { data: rpcData, error: rpcError } = await supabase.rpc("lock_student_device", {

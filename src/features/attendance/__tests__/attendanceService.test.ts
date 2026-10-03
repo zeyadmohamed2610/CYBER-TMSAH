@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock Supabase client
-vi.mock("@/lib/supabaseClient", () => ({
+vi.mock("@/shared/api/supabaseClient", () => ({
   supabase: {
     from: vi.fn(),
     rpc: vi.fn(),
@@ -21,7 +21,7 @@ vi.mock("@/lib/supabaseClient", () => ({
   },
 }));
 
-import { attendanceService } from "../services/attendanceService";
+import { dashboardService } from "@/features/dashboards/services/dashboardService";
 
 describe("attendanceService", () => {
   beforeEach(() => {
@@ -30,7 +30,7 @@ describe("attendanceService", () => {
 
   describe("computeTrendData", () => {
     it("should return empty array for empty records", () => {
-      const result = attendanceService.computeTrendData([]);
+      const result = dashboardService.computeTrendData([]);
       expect(result).toEqual([]);
     });
 
@@ -40,7 +40,7 @@ describe("attendanceService", () => {
         { id: "2", sessionId: "s1", studentId: "st2", submittedAt: "2026-03-27T11:00:00Z" },
         { id: "3", sessionId: "s2", studentId: "st3", submittedAt: "2026-03-26T09:00:00Z" },
       ];
-      const result = attendanceService.computeTrendData(records);
+      const result = dashboardService.computeTrendData(records);
       expect(result.length).toBe(2);
       expect(result.find((p) => p.date === "2026-03-27")?.count).toBe(2);
       expect(result.find((p) => p.date === "2026-03-26")?.count).toBe(1);
@@ -51,7 +51,7 @@ describe("attendanceService", () => {
         { id: "1", sessionId: "s1", studentId: "st1", submittedAt: "2026-03-27T10:00:00Z" },
         { id: "2", sessionId: "s1", studentId: "st2", submittedAt: "2026-03-25T10:00:00Z" },
       ];
-      const result = attendanceService.computeTrendData(records);
+      const result = dashboardService.computeTrendData(records);
       expect(result[0]?.date).toBe("2026-03-25");
       expect(result[1]?.date).toBe("2026-03-27");
     });
@@ -63,21 +63,21 @@ describe("attendanceService", () => {
         studentId: "st1",
         submittedAt: `2026-0${(i % 9) + 1}-${String((i % 28) + 1).padStart(2, "0")}T10:00:00Z`,
       }));
-      const result = attendanceService.computeTrendData(records);
+      const result = dashboardService.computeTrendData(records);
       expect(result.length).toBeGreaterThan(0);
     });
   });
 
   describe("fetchDashboardMetrics", () => {
     it("should return error on database failure", async () => {
-      const { supabase } = await import("@/lib/supabaseClient");
+      const { supabase } = await import("@/shared/api/supabaseClient");
       (supabase.from as ReturnType<typeof vi.fn>).mockReturnValue({
         select: vi.fn().mockReturnValue({
           count: vi.fn().mockResolvedValue({ error: { message: "DB error" } }),
         }),
       });
 
-      const result = await attendanceService.fetchDashboardMetrics("owner");
+      const result = await dashboardService.fetchDashboardMetrics("owner");
       expect(result.error).toBeTruthy();
       expect(result.data).toBeNull();
     });

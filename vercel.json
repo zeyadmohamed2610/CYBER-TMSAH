@@ -4,7 +4,12 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "redirects": [
-    { "source": "/:path*", "has": [{ "type": "host", "value": "cyber-tmsah.vercel.app" }], "destination": "https://www.cyber-tmsah.site/:path*", "permanent": true }
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "cyber-tmsah.vercel.app" }],
+      "destination": "https://www.cyber-tmsah.site/:path*",
+      "permanent": true
+    }
   ],
   "rewrites": [
     { "source": "/login", "destination": "/login/index.html" },
@@ -30,11 +35,17 @@
       "source": "/:page(owner-dashboard|doctor-dashboard|ta-dashboard|coordinator-dashboard|student-panel|profile|attendance|reset-password|schedule)",
       "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }]
     },
-    { "source": "/attendance/:path*", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
+    {
+      "source": "/attendance/:path*",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }]
+    },
     {
       "source": "/:path*",
       "headers": [
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://ssl.google-analytics.com https://tagmanager.google.com https://fonts.googleapis.com https://fonts.gstatic.com https://*.supabase.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://tagmanager.google.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://*.google-analytics.com https://fonts.googleapis.com https://fonts.gstatic.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://ssl.google-analytics.com https://tagmanager.google.com https://fonts.googleapis.com https://fonts.gstatic.com https://*.supabase.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://tagmanager.google.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://*.google-analytics.com https://fonts.googleapis.com https://fonts.gstatic.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        },
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "X-Frame-Options", "value": "DENY" },
         { "key": "X-XSS-Protection", "value": "1; mode=block" },
@@ -72,27 +83,19 @@
     },
     {
       "source": "/browserconfig.xml",
-      "headers": [
-        { "key": "Content-Type", "value": "application/xml; charset=utf-8" }
-      ]
+      "headers": [{ "key": "Content-Type", "value": "application/xml; charset=utf-8" }]
     },
     {
       "source": "/assets/:match*",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
     },
     {
       "source": "/:match*.js",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000" }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000" }]
     },
     {
       "source": "/:match*.css",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000" }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000" }]
     }
   ]
 }

@@ -1,8 +1,8 @@
+import { supabase } from "@/shared/api/supabaseClient";
+import { Button } from "@/shared/components/ui/button";
+import { Check, Clock, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Clock, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { supabase } from "@/lib/supabaseClient";
 
 interface ActiveSession {
   session_id: string;
@@ -25,17 +25,21 @@ export function ActiveSessionsBar() {
     try {
       const { data } = await supabase
         .from("sessions")
-        .select(`id, created_at, short_code, rotating_hash, expires_at, latitude, longitude, radius_meters, subject_id, subjects(name, doctor_name)`)
+        .select(
+          `id, created_at, short_code, rotating_hash, expires_at, latitude, longitude, radius_meters, subject_id, subjects(name, doctor_name)`,
+        )
         .gt("expires_at", new Date().toISOString());
 
-      const sortedData = (data ?? []).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      const sortedData = (data ?? []).sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
 
       const mapped: ActiveSession[] = sortedData.map((row: Record<string, unknown>) => {
         const subj = Array.isArray(row.subjects) ? row.subjects[0] : row.subjects;
         return {
           session_id: row.id as string,
-          subject_name: (subj as Record<string, unknown>)?.name as string ?? "—",
-          doctor_name: (subj as Record<string, unknown>)?.doctor_name as string ?? "",
+          subject_name: ((subj as Record<string, unknown>)?.name as string) ?? "—",
+          doctor_name: ((subj as Record<string, unknown>)?.doctor_name as string) ?? "",
           short_code: (row.short_code as string) ?? "",
           rotating_hash: (row.rotating_hash as string) ?? "",
           expires_at: row.expires_at as string,
@@ -45,7 +49,9 @@ export function ActiveSessionsBar() {
         };
       });
       setSessions(mapped);
-    } catch { /* silently fail */ }
+    } catch {
+      /* silently fail */
+    }
   };
 
   // Load on mount + refresh every 10 seconds
@@ -84,7 +90,9 @@ export function ActiveSessionsBar() {
           <Clock className="h-8 w-8 text-muted-foreground/50" />
         </div>
         <p className="text-sm font-medium text-muted-foreground">لا توجد جلسات نشطة حالياً.</p>
-        <p className="text-xs text-muted-foreground/60">سيظهر رمز الحضور تلقائياً عند بدء الجلسة.</p>
+        <p className="text-xs text-muted-foreground/60">
+          سيظهر رمز الحضور تلقائياً عند بدء الجلسة.
+        </p>
       </div>
     );
   }
@@ -104,15 +112,19 @@ export function ActiveSessionsBar() {
             )}
             <div className="flex items-center gap-1.5 mt-1">
               <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
-              <span className="text-xs text-green-500 font-mono font-bold">{getRemaining(s.expires_at)}</span>
+              <span className="text-xs text-green-500 font-mono font-bold">
+                {getRemaining(s.expires_at)}
+              </span>
             </div>
           </div>
 
           {/* Code + Copy */}
           <div className="flex items-center gap-2 shrink-0">
             <div className="bg-background/80 border border-primary/20 rounded-xl px-4 py-2 text-center">
-              <p className="font-mono text-xl font-black text-foreground tracking-[0.3em] select-all"
-                style={{ textShadow: "0 0 15px hsl(var(--primary)/0.3)" }}>
+              <p
+                className="font-mono text-xl font-black text-foreground tracking-[0.3em] select-all"
+                style={{ textShadow: "0 0 15px hsl(var(--primary)/0.3)" }}
+              >
                 {s.short_code}
               </p>
             </div>
@@ -123,7 +135,11 @@ export function ActiveSessionsBar() {
               onClick={() => handleCopy(s.session_id, s.short_code)}
               aria-label={`نسخ رمز ${s.subject_name}`}
             >
-              {copiedId === s.session_id ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+              {copiedId === s.session_id ? (
+                <Check className="h-4 w-4 text-green-500" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
             </Button>
           </div>
         </div>

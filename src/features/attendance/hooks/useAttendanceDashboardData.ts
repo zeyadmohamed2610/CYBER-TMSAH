@@ -1,13 +1,15 @@
+import { attendanceRecordService } from "@/features/attendance/services/attendanceRecordService";
+import { sessionService } from "@/features/attendance/services/sessionService";
+import { type AppRole } from "@/features/auth/types";
+import { dashboardService } from "@/features/dashboards/services/dashboardService";
+import { supabase } from "@/shared/api/supabaseClient";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
-import { attendanceService } from "../services/attendanceService";
-import type {
-  AttendanceRecord,
-  AttendanceRole,
-  AttendanceTrendPoint,
-  DashboardMetrics,
-  SessionSummary,
-  SubjectAttendanceMetric,
+import {
+  type AttendanceRecord,
+  type AttendanceTrendPoint,
+  type DashboardMetrics,
+  type SessionSummary,
+  type SubjectAttendanceMetric,
 } from "../types";
 
 const EMPTY_METRICS: DashboardMetrics = {
@@ -18,7 +20,7 @@ const EMPTY_METRICS: DashboardMetrics = {
   pendingSubmissions: 0,
 };
 
-export const useAttendanceDashboardData = (role: AttendanceRole, sectionFilter?: string[]) => {
+export const useAttendanceDashboardData = (role: AppRole, sectionFilter?: string[]) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<DashboardMetrics>(EMPTY_METRICS);
@@ -31,10 +33,10 @@ export const useAttendanceDashboardData = (role: AttendanceRole, sectionFilter?:
   /** Core fetch — updates state silently (no loading spinner) */
   const fetchData = useCallback(async () => {
     const [metricsResult, sessionsResult, recordsResult, subjectResult] = await Promise.all([
-      attendanceService.fetchDashboardMetrics(role, sectionFilter),
-      attendanceService.fetchSessionsByRole(role, sectionFilter),
-      attendanceService.fetchAttendanceRecords(role, undefined, sectionFilter),
-      attendanceService.fetchSubjectMetrics(role, sectionFilter),
+      dashboardService.fetchDashboardMetrics(role, sectionFilter),
+      sessionService.fetchSessionsByRole(role, sectionFilter),
+      attendanceRecordService.fetchAttendanceRecords(role, undefined, sectionFilter),
+      dashboardService.fetchSubjectMetrics(role, sectionFilter),
     ]);
 
     if (!mountedRef.current) return;
@@ -43,11 +45,15 @@ export const useAttendanceDashboardData = (role: AttendanceRole, sectionFilter?:
     setMetrics(metricsResult.data ?? EMPTY_METRICS);
     setSessions(sessionsResult.data ?? []);
     setRecords(fetchedRecords);
-    setTrendPoints(attendanceService.computeTrendData(fetchedRecords));
+    setTrendPoints(dashboardService.computeTrendData(fetchedRecords));
     setSubjectMetrics(subjectResult.data ?? []);
 
     const firstError =
-      metricsResult.error || sessionsResult.error || recordsResult.error || subjectResult.error || null;
+      metricsResult.error ||
+      sessionsResult.error ||
+      recordsResult.error ||
+      subjectResult.error ||
+      null;
     setError(firstError);
   }, [role, sectionFilter]);
 
@@ -62,26 +68,26 @@ export const useAttendanceDashboardData = (role: AttendanceRole, sectionFilter?:
   useEffect(() => {
     mountedRef.current = true;
     void initialFetch();
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+    };
   }, [initialFetch]);
 
   // Realtime subscriptions — silent refresh, NO loading state
   useEffect(() => {
     const channel = supabase
       .channel(`dashboard-${role}-${Date.now()}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "sessions" },
-        () => { void fetchData(); },
-      )
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "attendance" },
-        () => { void fetchData(); },
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "sessions" }, () => {
+        void fetchData();
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "attendance" }, () => {
+        void fetchData();
+      })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchData, role]);
 
   return {

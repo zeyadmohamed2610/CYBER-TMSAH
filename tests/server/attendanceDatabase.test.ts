@@ -1,15 +1,20 @@
 // @vitest-environment node
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { PGlite } from "@electric-sql/pglite";
 import { readFileSync } from "node:fs";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 const auth = "10000000-0000-0000-0000-000000000001";
 const student = "20000000-0000-0000-0000-000000000001";
 const session = "30000000-0000-0000-0000-000000000001";
 const receipt = "40000000-0000-0000-0000-000000000001";
 const db = new PGlite();
-const migration = readFileSync("supabase/migrations/20261002033935_verified_attendance_and_trusted_roles.sql", "utf8");
-const submit = migration.slice(migration.indexOf("CREATE OR REPLACE FUNCTION public.submit_attendance"));
+const migration = readFileSync(
+  "supabase/migrations/20261002033935_verified_attendance_and_trusted_roles.sql",
+  "utf8",
+);
+const submit = migration.slice(
+  migration.indexOf("CREATE OR REPLACE FUNCTION public.submit_attendance"),
+);
 
 beforeAll(async () => {
   await db.exec(`
@@ -34,8 +39,18 @@ beforeAll(async () => {
     CREATE FUNCTION public.gps_distance_meters(double precision,double precision,double precision,double precision) RETURNS double precision LANGUAGE sql AS $$ SELECT 0::double precision $$;
   `);
   // Execute the exact new receipt schema and submission procedure from the migration.
-  await db.exec(migration.slice(0, migration.indexOf("CREATE OR REPLACE FUNCTION public.add_manual_attendance")));
-  await db.exec(migration.slice(migration.indexOf("CREATE OR REPLACE FUNCTION public.add_manual_attendance"), migration.indexOf("CREATE OR REPLACE FUNCTION public.submit_attendance")));
+  await db.exec(
+    migration.slice(
+      0,
+      migration.indexOf("CREATE OR REPLACE FUNCTION public.add_manual_attendance"),
+    ),
+  );
+  await db.exec(
+    migration.slice(
+      migration.indexOf("CREATE OR REPLACE FUNCTION public.add_manual_attendance"),
+      migration.indexOf("CREATE OR REPLACE FUNCTION public.submit_attendance"),
+    ),
+  );
   await db.exec(submit);
 }, 30000);
 
@@ -49,25 +64,36 @@ beforeEach(async () => {
   `);
 });
 afterAll(() => db.close());
-const call = (proof: string | null = receipt, hash = "123456", fingerprint = "device") => db.query(
-  "SELECT public.submit_attendance($1,$2,NULL,NULL,$3)", [hash, fingerprint, proof],
-);
+const call = (proof: string | null = receipt, hash = "123456", fingerprint = "device") =>
+  db.query("SELECT public.submit_attendance($1,$2,NULL,NULL,$3)", [hash, fingerprint, proof]);
 
 describe("database-enforced attendance receipts", () => {
   it("does not authorize manual attendance from editable owner metadata", async () => {
-    await db.exec("DELETE FROM users; SELECT set_config('test.jwt', '{\"user_metadata\":{\"role\":\"owner\"}}', false)");
-    await expect(db.query("SELECT public.add_manual_attendance($1,$2)", [student,session])).rejects.toThrow("permission_denied");
+    await db.exec(
+      'DELETE FROM users; SELECT set_config(\'test.jwt\', \'{"user_metadata":{"role":"owner"}}\', false)',
+    );
+    await expect(
+      db.query("SELECT public.add_manual_attendance($1,$2)", [student, session]),
+    ).rejects.toThrow("permission_denied");
   });
   it("records attendance with the verified credential and atomically consumes the receipt", async () => {
     await call();
-    expect((await db.query<{ biometric_credential_id: string }>("SELECT biometric_credential_id FROM attendance")).rows[0]?.biometric_credential_id).toBe("verified-credential");
+    expect(
+      (
+        await db.query<{ biometric_credential_id: string }>(
+          "SELECT biometric_credential_id FROM attendance",
+        )
+      ).rows[0]?.biometric_credential_id,
+    ).toBe("verified-credential");
     expect((await db.query("SELECT id FROM attendance_biometric_proofs")).rows).toHaveLength(0);
   });
   it("rejects a client-supplied credential identifier", async () => {
     await expect(call("verified-credential")).rejects.toThrow("biometric_required");
     expect((await db.query("SELECT id FROM attendance")).rows).toHaveLength(0);
   });
-  it("rejects a missing receipt", async () => { await expect(call(null)).rejects.toThrow("biometric_required"); });
+  it("rejects a missing receipt", async () => {
+    await expect(call(null)).rejects.toThrow("biometric_required");
+  });
   it("rejects an expired receipt", async () => {
     await db.exec("UPDATE attendance_biometric_proofs SET expires_at=now()-interval '1 second'");
     await expect(call()).rejects.toThrow("biometric_required");
@@ -81,7 +107,9 @@ describe("database-enforced attendance receipts", () => {
     expect((await db.query("SELECT * FROM device_locks")).rows).toHaveLength(0);
   });
   it("rejects a receipt issued to another account", async () => {
-    await db.exec("INSERT INTO auth.users VALUES('10000000-0000-0000-0000-000000000002'); UPDATE attendance_biometric_proofs SET auth_id='10000000-0000-0000-0000-000000000002'");
+    await db.exec(
+      "INSERT INTO auth.users VALUES('10000000-0000-0000-0000-000000000002'); UPDATE attendance_biometric_proofs SET auth_id='10000000-0000-0000-0000-000000000002'",
+    );
     await expect(call()).rejects.toThrow("biometric_required");
   });
   it("rejects replay even if the original attendance row is removed", async () => {
@@ -91,8 +119,17 @@ describe("database-enforced attendance receipts", () => {
   });
   it("does not let authenticated clients manufacture receipts", async () => {
     await db.exec("SET ROLE authenticated");
-    try { await expect(db.exec("INSERT INTO attendance_biometric_proofs(auth_id,attendance_hash,device_fingerprint,credential_id) VALUES('" + auth + "','123456','device','forged')")).rejects.toThrow("permission denied"); }
-    finally { await db.exec("RESET ROLE"); }
+    try {
+      await expect(
+        db.exec(
+          "INSERT INTO attendance_biometric_proofs(auth_id,attendance_hash,device_fingerprint,credential_id) VALUES('" +
+            auth +
+            "','123456','device','forged')",
+        ),
+      ).rejects.toThrow("permission denied");
+    } finally {
+      await db.exec("RESET ROLE");
+    }
   });
   it("rejects an unauthenticated caller", async () => {
     await db.exec("SELECT set_config('test.auth_id','',false)");

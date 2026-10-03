@@ -9,13 +9,21 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
   fetchMock.mockReset().mockImplementation(async () => new Response(null, { status: 200 }));
 });
-const handler = async (method = "GET") => (await import("../../api/health")).GET(new Request("https://example.test/api/health", { method }));
+const handler = async (method = "GET") =>
+  (await import("../../api/health")).GET(
+    new Request("https://example.test/api/health", { method }),
+  );
 it("checks the remote database and authentication endpoints", async () => {
   expect((await handler()).status).toBe(200);
-  expect(fetchMock.mock.calls.map(call => call[0])).toEqual(["https://example.supabase.co/rest/v1/subjects?select=id&limit=1", "https://example.supabase.co/auth/v1/health"]);
+  expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
+    "https://example.supabase.co/rest/v1/subjects?select=id&limit=1",
+    "https://example.supabase.co/auth/v1/health",
+  ]);
 });
 it("returns 503 when authentication service is unavailable", async () => {
-  fetchMock.mockResolvedValueOnce(new Response(null, { status: 200 })).mockResolvedValueOnce(new Response(null, { status: 503 }));
+  fetchMock
+    .mockResolvedValueOnce(new Response(null, { status: 200 }))
+    .mockResolvedValueOnce(new Response(null, { status: 503 }));
   const result = await handler();
   expect(result.status).toBe(503);
   expect((await result.json()).checks.auth.status).toBe("down");

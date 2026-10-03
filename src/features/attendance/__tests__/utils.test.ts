@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { formatDateTime } from "../utils/rotatingSession";
 
 describe("formatDateTime", () => {
@@ -17,9 +17,9 @@ describe("formatDateTime", () => {
 
 describe("dashboardRoutes", () => {
   it("should return correct route for each role", async () => {
-    const { getAttendanceDashboardRoute } = await import("../utils/dashboardRoutes");
-    expect(getAttendanceDashboardRoute("owner")).toBe("/owner-dashboard");
-    expect(getAttendanceDashboardRoute("doctor")).toBe("/doctor-dashboard");
-    expect(getAttendanceDashboardRoute("student")).toBe("/student-panel");
+    const { getDashboardRoute } = await import("../../auth/utils/dashboardRoutes");
+    expect(getDashboardRoute("owner")).toBe("/owner-dashboard");
+    expect(getDashboardRoute("doctor")).toBe("/doctor-dashboard");
+    expect(getDashboardRoute("student")).toBe("/student-panel");
   });
 });

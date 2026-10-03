@@ -13,8 +13,8 @@ interface UseRotatingHashParams {
 }
 
 export const useRotatingHash = ({ rotatingHash, expiresAt }: UseRotatingHashParams) => {
-  const [secondsUntilExpiry, setSecondsUntilExpiry] = useState<number | null>(
-    () => getSecondsRemaining(expiresAt),
+  const [secondsUntilExpiry, setSecondsUntilExpiry] = useState<number | null>(() =>
+    getSecondsRemaining(expiresAt),
   );
 
   useEffect(() => {

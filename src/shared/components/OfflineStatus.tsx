@@ -1,0 +1,168 @@
+/* eslint-disable react-refresh/only-export-components */
+import { CloudOff, RefreshCw, Wifi, WifiOff } from "lucide-react";
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { toast } from "sonner";
+
+interface OfflineStatusContextType {
+  isOnline: boolean;
+  pendingCount: number;
+  isSyncing: boolean;
+  syncNow: () => Promise<void>;
+}
+
+const OfflineStatusContext = createContext<OfflineStatusContextType>({
+  isOnline: true,
+  pendingCount: 0,
+  isSyncing: false,
+  syncNow: async () => {},
+});
+
+interface OfflineStatusProviderProps {
+  children: ReactNode;
+  syncFunction?: () => Promise<{ synced: number; failed: number }>;
+  getPendingCountFunction?: () => number;
+}
+
+const useOfflineStatusContext = () => useContext(OfflineStatusContext);
+
+export const OfflineStatusProvider = ({
+  children,
+  syncFunction,
+  getPendingCountFunction,
+}: OfflineStatusProviderProps) => {
+  const [isOnline, setIsOnline] = useState(true);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const lastAutoSync = useRef<string | null>(null);
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+
+    const handleOnline = () => {
+      setIsOnline(true);
+      toast.success("تم استعادة الاتصال بالإنترنت", {
+        icon: <Wifi className="h-4 w-4 text-green-500" />,
+      });
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      toast.warning("أنت الآن غير متصل بالإنترنت", {
+        icon: <WifiOff className="h-4 w-4 text-yellow-500" />,
+      });
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (getPendingCountFunction) {
+      const updatePendingCount = () => {
+        setPendingCount(getPendingCountFunction());
+      };
+
+      updatePendingCount();
+      const interval = setInterval(updatePendingCount, 5000);
+
+      return () => clearInterval(interval);
+    }
+    return undefined;
+  }, [getPendingCountFunction]);
+
+  const syncNow = useCallback(async (): Promise<void> => {
+    if (!syncFunction || isSyncing || !isOnline) return;
+
+    setIsSyncing(true);
+    try {
+      const result = await syncFunction();
+      if (result.synced > 0) {
+        toast.success(`تم تحديث ${result.synced} حضور`, {
+          icon: <RefreshCw className="h-4 w-4" />,
+        });
+      }
+      if (result.failed > 0) {
+        toast.error(`تعذر إرسال ${result.failed} تسجيل حضور`, {
+          icon: <CloudOff className="h-4 w-4" />,
+        });
+      }
+    } catch {
+      toast.error("تعذر تحديث تسجيلات الحضور");
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [syncFunction, isSyncing, isOnline]);
+
+  useEffect(() => {
+    if (!isOnline) lastAutoSync.current = null;
+    if (isOnline && pendingCount > 0 && !isSyncing) {
+      const attempt = `${isOnline}:${pendingCount}`;
+      if (lastAutoSync.current === attempt) return;
+      const autoSync = setTimeout(() => {
+        lastAutoSync.current = attempt;
+        syncNow();
+      }, 2000);
+
+      return () => clearTimeout(autoSync);
+    }
+    return undefined;
+  }, [isOnline, pendingCount, isSyncing, syncNow]);
+
+  return (
+    <OfflineStatusContext.Provider value={{ isOnline, pendingCount, isSyncing, syncNow }}>
+      {children}
+    </OfflineStatusContext.Provider>
+  );
+};
+
+export const OfflineIndicator = () => {
+  const { isOnline, pendingCount, isSyncing, syncNow } = useOfflineStatusContext();
+
+  if (isOnline && pendingCount === 0) return null;
+
+  return (
+    <div
+      className={`fixed bottom-4 left-4 z-50 flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-all duration-300 ${
+        isOnline
+          ? "bg-green-500/20 border border-green-500/30 text-green-400"
+          : "bg-yellow-500/20 border border-yellow-500/30 text-yellow-400"
+      }`}
+    >
+      {isSyncing ? (
+        <RefreshCw className="h-4 w-4 animate-spin" />
+      ) : isOnline ? (
+        <Wifi className="h-4 w-4" />
+      ) : (
+        <WifiOff className="h-4 w-4" />
+      )}
+
+      <span className="text-sm font-medium">
+        {!isOnline ? "غير متصل" : pendingCount > 0 ? `${pendingCount} في الانتظار` : "متصل"}
+      </span>
+
+      {pendingCount > 0 && isOnline && !isSyncing && (
+        <button
+          onClick={syncNow}
+          className="ml-1 px-2 py-0.5 text-xs bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+        >
+          تحديث
+        </button>
+      )}
+    </div>
+  );
+};
+
+export const useOfflineStatus = useOfflineStatusContext;

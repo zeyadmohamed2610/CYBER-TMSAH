@@ -1,31 +1,45 @@
-import { chromium } from '@playwright/test';
-import { readFile, writeFile } from 'node:fs/promises';
+import { chromium } from "@playwright/test";
+import { readFile, writeFile } from "node:fs/promises";
 
 // Export the approved master mark at exact browser/app dimensions.
-const mark = `data:image/png;base64,${(await readFile('public/brand/mark.png')).toString('base64')}`;
-const browser = await chromium.launch({ headless: true, ...(process.platform === 'win32' ? { channel: 'chrome' } : {}) });
+const mark = `data:image/png;base64,${(await readFile("public/brand/mark.png")).toString("base64")}`;
+const browser = await chromium.launch({
+  headless: true,
+  ...(process.platform === "win32" ? { channel: "chrome" } : {}),
+});
 try {
-  const page = await browser.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 });
+  const page = await browser.newPage({
+    viewport: { width: 1200, height: 630 },
+    deviceScaleFactor: 1,
+  });
   for (const [path, size, background, scale] of [
-    ['public/logo.png', 512, null, 0.92],
-    ['public/favicon.png', 64, '#060813', 0.92],
-    ['public/brand/icon-192.png', 192, '#060813', 0.78],
-    ['public/brand/icon-512.png', 512, '#060813', 0.78],
-    ['public/brand/apple-touch-icon.png', 180, '#060813', 0.78],
-    ['public/brand/tile-150.png', 150, '#060813', 0.78],
+    ["public/logo.png", 512, null, 0.92],
+    ["public/favicon.png", 64, "#060813", 0.92],
+    ["public/brand/icon-192.png", 192, "#060813", 0.78],
+    ["public/brand/icon-512.png", 512, "#060813", 0.78],
+    ["public/brand/apple-touch-icon.png", 180, "#060813", 0.78],
+    ["public/brand/tile-150.png", 150, "#060813", 0.78],
   ]) {
-    const data = await page.evaluate(async ({ mark, size, background, scale }) => {
-      const canvas = document.createElement('canvas');
-      canvas.width = canvas.height = size;
-      const context = canvas.getContext('2d');
-      if (background) { context.fillStyle = background; context.fillRect(0, 0, size, size); }
-      const img = new Image(); img.src = mark; await img.decode();
-      context.imageSmoothingQuality = 'high';
-      const inset = size * (1 - scale) / 2;
-      context.drawImage(img, inset, inset, size * scale, size * scale);
-      return canvas.toDataURL('image/png').split(',')[1];
-    }, { mark, size, background, scale });
-    await writeFile(path, Buffer.from(data, 'base64'));
+    const data = await page.evaluate(
+      async ({ mark, size, background, scale }) => {
+        const canvas = document.createElement("canvas");
+        canvas.width = canvas.height = size;
+        const context = canvas.getContext("2d");
+        if (background) {
+          context.fillStyle = background;
+          context.fillRect(0, 0, size, size);
+        }
+        const img = new Image();
+        img.src = mark;
+        await img.decode();
+        context.imageSmoothingQuality = "high";
+        const inset = (size * (1 - scale)) / 2;
+        context.drawImage(img, inset, inset, size * scale, size * scale);
+        return canvas.toDataURL("image/png").split(",")[1];
+      },
+      { mark, size, background, scale },
+    );
+    await writeFile(path, Buffer.from(data, "base64"));
     console.log(`${path}: ${size}x${size}`);
   }
   await page.setContent(`<!doctype html><html><head><meta charset="utf-8"><style>
@@ -48,9 +62,9 @@ try {
     <div class="sub">One platform. Every academic day.</div></div>
     <div class="bottom"><span>ATTENDANCE <span class="dot">/</span> LECTURES <span class="dot">/</span> INSIGHTS</span><span>CYBER TMSAH</span></div>
   </main></body></html>`);
-  await page.locator('.mark').evaluate(img => img.decode());
-  await page.screenshot({ path: 'public/og-image.png' });
-  console.log('public/og-image.png: 1200x630');
+  await page.locator(".mark").evaluate((img) => img.decode());
+  await page.screenshot({ path: "public/og-image.png" });
+  console.log("public/og-image.png: 1200x630");
 } finally {
   await browser.close();
 }

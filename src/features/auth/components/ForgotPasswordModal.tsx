@@ -1,14 +1,25 @@
-import { useState } from "react";
-import { X, KeyRound, Mail, Phone, Send, CheckCircle2, MessageCircle, Copy, Loader2, ExternalLink } from "lucide-react";
+import { supabase } from "@/shared/api/supabaseClient";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+} from "@/shared/components/ui/dialog";
+import {
+  CheckCircle2,
+  Copy,
+  ExternalLink,
+  KeyRound,
+  Loader2,
+  Mail,
+  MessageCircle,
+  Phone,
+  Send,
+  X,
+} from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabaseClient";
 import { recordAuditLog } from "../services/auditService";
 
 interface ForgotPasswordModalProps {
@@ -40,7 +51,7 @@ export function ForgotPasswordModal({ isOpen, onClose, lang }: ForgotPasswordMod
       toast.error(
         lang === "ar"
           ? "شرط الاستعادة: يجب كتابة بريد Gmail صالح ينتهي بـ @gmail.com"
-          : "A valid Gmail address ending with @gmail.com is strictly required."
+          : "A valid Gmail address ending with @gmail.com is strictly required.",
       );
       return;
     }
@@ -50,7 +61,7 @@ export function ForgotPasswordModal({ isOpen, onClose, lang }: ForgotPasswordMod
       toast.error(
         lang === "ar"
           ? "يرجى كتابة رقم الواتساب الخاص بك لاستلام البيانات الجديدة"
-          : "Please enter your WhatsApp phone number to receive your new credentials."
+          : "Please enter your WhatsApp phone number to receive your new credentials.",
       );
       return;
     }
@@ -97,11 +108,15 @@ export function ForgotPasswordModal({ isOpen, onClose, lang }: ForgotPasswordMod
       toast.success(
         lang === "ar"
           ? "تم إرسال طلب استعادة كلمة المرور للمشرفين بنجاح."
-          : "Password reset request submitted successfully."
+          : "Password reset request submitted successfully.",
       );
     } catch (err: unknown) {
       console.error("Password reset request failed:", err);
-      toast.error(lang === "ar" ? "تعذر إرسال الطلب، تأكد من الاتصال وحاول مجدداً." : "Could not send your request. Check your connection and try again.");
+      toast.error(
+        lang === "ar"
+          ? "تعذر إرسال الطلب، تأكد من الاتصال وحاول مجدداً."
+          : "Could not send your request. Check your connection and try again.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -109,7 +124,11 @@ export function ForgotPasswordModal({ isOpen, onClose, lang }: ForgotPasswordMod
 
   const copyWhatsApp = () => {
     navigator.clipboard.writeText(SUPPORT_WHATSAPP);
-    toast.success(lang === "ar" ? "تم نسخ رقم الواتساب: " + SUPPORT_WHATSAPP : "WhatsApp number copied: " + SUPPORT_WHATSAPP);
+    toast.success(
+      lang === "ar"
+        ? "تم نسخ رقم الواتساب: " + SUPPORT_WHATSAPP
+        : "WhatsApp number copied: " + SUPPORT_WHATSAPP,
+    );
   };
 
   return (
@@ -170,7 +189,9 @@ export function ForgotPasswordModal({ isOpen, onClose, lang }: ForgotPasswordMod
                 className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-emerald-500/20 text-emerald-300 text-xs font-bold hover:bg-emerald-500/30 transition-all cursor-pointer border border-emerald-500/30"
               >
                 <MessageCircle className="w-4 h-4 text-emerald-400" />
-                <span>{lang === "ar" ? "متابعة فورية مع الإدارة عبر واتساب" : "Follow up via WhatsApp"}</span>
+                <span>
+                  {lang === "ar" ? "متابعة فورية مع الإدارة عبر واتساب" : "Follow up via WhatsApp"}
+                </span>
                 <ExternalLink className="w-3 h-3 opacity-70" />
               </a>
             </div>
@@ -189,7 +210,9 @@ export function ForgotPasswordModal({ isOpen, onClose, lang }: ForgotPasswordMod
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-[11.5px] font-semibold text-slate-300 tracking-wide">
-                  {lang === "ar" ? "بريد Gmail المسجل (شرط الاستعادة)" : "Registered Gmail (Required)"}
+                  {lang === "ar"
+                    ? "بريد Gmail المسجل (شرط الاستعادة)"
+                    : "Registered Gmail (Required)"}
                 </label>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30">
                   @gmail.com
@@ -213,7 +236,9 @@ export function ForgotPasswordModal({ isOpen, onClose, lang }: ForgotPasswordMod
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-[11.5px] font-semibold text-slate-300 tracking-wide">
-                  {lang === "ar" ? "رقم الواتساب (لاستلام كلمة المرور الجديدة)" : "WhatsApp Number (To receive credentials)"}
+                  {lang === "ar"
+                    ? "رقم الواتساب (لاستلام كلمة المرور الجديدة)"
+                    : "WhatsApp Number (To receive credentials)"}
                 </label>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                   WhatsApp

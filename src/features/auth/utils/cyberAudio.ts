@@ -1,9 +1,10 @@
-// src/features/auth/utils/cyberAudio.ts
 // Synthesizes a subtle, pleasant high-tech audio chime using Web Audio API
 
 export const playCyberSuccessChime = () => {
   try {
-    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
 
