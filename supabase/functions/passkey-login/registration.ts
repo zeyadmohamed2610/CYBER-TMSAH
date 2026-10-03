@@ -21,16 +21,17 @@ export async function handleRegistration({req,body,action,admin,serverEnv}:Passk
       }
 
       // Fetch existing credentials to exclude (prevent re-registration)
-      const { data: existingCreds } = await admin
+      const { data: existingCreds, error: credentialsError } = await admin
         .from("webauthn_credentials")
         .select("credential_id")
         .eq("auth_id", user.id);
 
-      // Enforce limit of 2 passkeys per student/user
-      if ((existingCreds?.length ?? 0) >= 2) {
+      if (credentialsError) return json({success:false,error:'تعذر تحميل مفاتيح الدخول. أعد المحاولة.'},503);
+      // The database also enforces this limit atomically for concurrent registrations.
+      if ((existingCreds?.length ?? 0) >= 10) {
         return json({
           success: false,
-          error: "لقد وصلت للحد الأقصى المسموح به لمفاتيح المرور (جهازين فقط). يرجى حذف أحد الأجهزة القديمة لإضافة جهاز جديد.",
+          error: "يمكنك حفظ 10 مفاتيح دخول. احذف مفتاحًا قديمًا لإضافة آخر.",
         });
       }
 
@@ -54,7 +55,7 @@ export async function handleRegistration({req,body,action,admin,serverEnv}:Passk
         excludeCredentials,
         authenticatorSelection: {
           residentKey: "required",
-          userVerification: "required",        // Force fingerprint / face ID prompt
+          userVerification: "required", // The provider chooses biometrics, PIN or another supported verification method.
         },
         supportedAlgorithmIDs: [-7, -257], // ES256, RS256
       });

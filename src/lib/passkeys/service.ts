@@ -1,7 +1,7 @@
 import { supabase } from '../supabaseClient';
 import { PasskeyError } from './errors';
 
-export type PasskeyAction = 'register-start'|'register-finish'|'auth-start'|'auth-finish'|'verify-start'|'verify-finish'|'attendance-start'|'attendance-finish';
+export type PasskeyAction = 'register-start'|'register-finish'|'auth-start'|'auth-finish'|'verify-start'|'verify-finish'|'attendance-start'|'attendance-finish'|'rename';
 export interface PasskeyResponse {
   success: boolean;
   options?: unknown;

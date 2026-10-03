@@ -1,5 +1,4 @@
 import { getFriendlyErrorMessage } from "@/lib/academicCopy";
-import { getDeviceDisplayName } from "@/lib/academicCopy";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { User, KeyRound, Shield, Mail, CheckCircle2, Eye, EyeOff, ArrowLeft, Loader2, Calendar, Lock, Fingerprint, Trash2, Key, Camera, Copy, Check, LogOut, IdCard } from "lucide-react";
@@ -19,6 +18,7 @@ import Footer from "@/components/Footer";
 import AvatarStudioDialog from "@/components/AvatarStudioDialog";
 import { deleteUserAvatar } from "@/lib/avatarUtils";
 import { registerPasskey, authenticateWithPasskey, isWebAuthnSupported } from "@/lib/webauthn";
+import { currentPasskeySession, passkeyRequest } from "@/lib/passkeys/service";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
+interface ManagedPasskey { id:string; rawId:string; label:string; createdAt:string; lastUsedAt?:string|null }
+const MAX_PASSKEYS = 10;
 interface UserProfileDetails {
   id: string;
   auth_id: string;
@@ -69,7 +71,10 @@ export default function ProfilePage() {
   const [savingPassword, setSavingPassword] = useState(false);
 
   // Passkey (WebAuthn) State
-  const [passkeys, setPasskeys] = useState<{ id: string; rawId: string; label: string; createdAt: string }[]>([]);
+  const [passkeys, setPasskeys] = useState<ManagedPasskey[]>([]);
+  const [renamingPasskey, setRenamingPasskey] = useState<ManagedPasskey|null>(null);
+  const [passkeyName, setPasskeyName] = useState('');
+  const [savingPasskeyName, setSavingPasskeyName] = useState(false);
   const [creatingPasskey, setCreatingPasskey] = useState(false);
   const [testingPasskeyId, setTestingPasskeyId] = useState<string | null>(null);
 
@@ -106,12 +111,12 @@ export default function ProfilePage() {
       try {
         const { data, error } = await supabase
           .from("webauthn_credentials")
-          .select("id, credential_id, device_name, created_at")
+          .select("id, credential_id, device_name, created_at, last_used_at")
           .eq("auth_id", user?.id);
 
         if (error) throw error;
         if (!isMounted) return;
-        const mapped = (data ?? []).map(item => ({ id: item.credential_id, rawId: item.credential_id, label: item.device_name || "جهاز للدخول بالبصمة", createdAt: item.created_at }));
+        const mapped = (data ?? []).map(item => ({ id: item.credential_id, rawId: item.credential_id, label: item.device_name || "مفتاح دخول", createdAt: item.created_at, lastUsedAt:item.last_used_at }));
         setPasskeys(mapped);
       } catch (err) {
         console.error("Failed to load verified passkeys", err);
@@ -125,7 +130,7 @@ export default function ProfilePage() {
     };
   }, [user]);
 
-  const savePasskeys = (items: { id: string; rawId: string; label: string; createdAt: string }[]) => {
+  const savePasskeys = (items: ManagedPasskey[]) => {
     if (!user?.id) return;
     setPasskeys(items);
   };
@@ -136,9 +141,8 @@ export default function ProfilePage() {
       return;
     }
 
-    // Enforce 2-passkeys limit per user
-    if (passkeys.length >= 2) {
-      toast.error("لقد وصلت للحد الأقصى المسموح به لأجهزة الدخول (جهازين فقط). يرجى حذف أحد الأجهزة القديمة لإضافة جهاز جديد.");
+    if (passkeys.length >= MAX_PASSKEYS) {
+      toast.error("يمكنك حفظ 10 مفاتيح دخول. احذف مفتاحًا قديمًا لإضافة آخر.");
       return;
     }
 
@@ -186,30 +190,16 @@ export default function ProfilePage() {
   };
 
   const executePasskeyCreation = async () => {
-    if (passkeys.length >= 2) {
-      toast.error("لقد وصلت للحد الأقصى المسموح به لأجهزة الدخول (جهازين فقط).");
+    if (passkeys.length >= MAX_PASSKEYS) {
+      toast.error("يمكنك حفظ 10 مفاتيح دخول. احذف مفتاحًا قديمًا لإضافة آخر.");
       return;
     }
 
     try {
       setCreatingPasskey(true);
 
-      const ua = navigator.userAgent;
-      const deviceLabel = /iPhone/i.test(ua)
-        ? "هاتف"
-        : /iPad/i.test(ua)
-        ? "جهاز لوحي"
-        : /Samsung/i.test(ua)
-        ? "هاتف"
-        : /Xiaomi|Redmi|POCO/i.test(ua)
-        ? "هاتف"
-        : /Android/i.test(ua)
-        ? "هاتف"
-        : /Windows/i.test(ua)
-        ? "كمبيوتر"
-        : /Mac/i.test(ua)
-        ? "كمبيوتر"
-        : "جهاز للدخول بالبصمة";
+      // A phone may create a security key or cloud credential; do not infer its provider from this browser.
+      const deviceLabel = "مفتاح دخول";
 
       const formattedLabel = `${deviceLabel} - ${new Date().toLocaleDateString("ar-EG")}`;
       const result = await registerPasskey(formattedLabel);
@@ -228,7 +218,7 @@ export default function ProfilePage() {
       if (user?.id) {
         const { data: dbData } = await supabase
           .from("webauthn_credentials")
-          .select("id, credential_id, device_name, created_at")
+          .select("id, credential_id, device_name, created_at, last_used_at")
           .eq("auth_id", user.id);
 
         if (dbData && dbData.length > 0) {
@@ -237,6 +227,7 @@ export default function ProfilePage() {
             rawId: item.credential_id,
             label: item.device_name || deviceLabel,
             createdAt: item.created_at || new Date().toISOString(),
+            lastUsedAt:item.last_used_at,
           }));
           savePasskeys(mapped);
         } else {
@@ -272,6 +263,7 @@ export default function ProfilePage() {
       const result = await authenticateWithPasskey(undefined, passkeyId);
       if (!result.success) { toast.error(getFriendlyErrorMessage(result.error || "تعذر تأكيد مفتاح الدخول")); return; }
       toast.success("تم تأكيد جهاز الدخول بنجاح.");
+      setPasskeys(items=>items.map(item=>item.id===passkeyId ? {...item,lastUsedAt:new Date().toISOString()} : item));
     } catch (err: unknown) {
       console.error("Passkey test error:", err);
       if (err instanceof Error && err.name === "NotAllowedError") {
@@ -290,6 +282,19 @@ export default function ProfilePage() {
     if (result.error || result.data?.length !== 1) { toast.error("تعذر حذف جهاز الدخول. لم يتغير المفتاح المعتمد."); return; }
     savePasskeys(passkeys.filter(p => p.id !== passkeyId));
     toast.success("تم إلغاء اعتماد المفتاح على المنصة. يمكنك حذفه من مدير مفاتيح جهازك أيضًا.");
+  };
+
+  const handleRenamePasskey = async (event:React.FormEvent) => {
+    event.preventDefault();
+    if (!renamingPasskey || savingPasskeyName) return;
+    setSavingPasskeyName(true);
+    try {
+      await passkeyRequest('rename',{credentialId:renamingPasskey.id,deviceName:passkeyName},await currentPasskeySession());
+      setPasskeys(items=>items.map(item=>item.id===renamingPasskey.id ? {...item,label:passkeyName.trim()} : item));
+      setRenamingPasskey(null);
+      toast.success('تم حفظ اسم مفتاح الدخول.');
+    } catch(error) { toast.error(error instanceof Error ? error.message : 'تعذر حفظ الاسم.'); }
+    finally { setSavingPasskeyName(false); }
   };
 
   // Fetch full user profile
@@ -964,11 +969,11 @@ export default function ProfilePage() {
                               دخول سهل
                             </span>
                             <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-bold ${
-                              passkeys.length >= 2
+                              passkeys.length >= MAX_PASSKEYS
                                 ? "border-amber-500/40 bg-amber-500/15 text-amber-300"
                                 : "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
                             }`}>
-                              {passkeys.length} من 2 أجهزة مسجلة
+                              {passkeys.length} من {MAX_PASSKEYS} مفاتيح مسجلة
                             </span>
                           </div>
                         </div>
@@ -999,14 +1004,16 @@ export default function ProfilePage() {
                                     <Key className="w-5 h-5" />
                                   </div>
                                   <div className="min-w-0">
-                                    <p className="text-sm font-bold text-white truncate">{getDeviceDisplayName(pk.label)}</p>
+                                    <p className="text-sm font-bold text-white truncate">{pk.label}</p>
                                     <p className="text-[11px] text-slate-400 font-mono mt-0.5" dir="ltr">
                                       {new Date(pk.createdAt).toLocaleString("ar-EG")}
                                     </p>
+                                    <p className="text-xs text-slate-400 mt-1">آخر استخدام: {pk.lastUsedAt ? new Date(pk.lastUsedAt).toLocaleString('ar-EG') : 'لم يُستخدم بعد'}</p>
                                   </div>
                                 </div>
 
                                 <div className="flex items-center gap-2 shrink-0 mr-auto sm:mr-0">
+                                  <Button size="sm" variant="ghost" className="min-h-11 text-xs" onClick={()=>{setRenamingPasskey(pk);setPasskeyName(pk.label);}}>تعديل الاسم</Button>
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -1041,7 +1048,7 @@ export default function ProfilePage() {
                         <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-white/5">
                           <div className="flex items-center gap-2 text-xs text-slate-400">
                             <Shield className="w-4 h-4 text-purple-400 shrink-0" />
-                            <span>يمكنك إضافة جهازين للدخول بالبصمة.</span>
+                            <span>يمكنك إضافة 10 مفاتيح. يختار جهازك طريقة التأكيد ومكان الحفظ، ويمكنك استخدام هاتفك عبر خيارات المتصفح.</span>
                           </div>
 
                           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -1050,9 +1057,9 @@ export default function ProfilePage() {
                             <Button
                               type="button"
                               onClick={handleInitiatePasskeyCreation}
-                              disabled={creatingPasskey || passkeys.length >= 2}
+                              disabled={creatingPasskey || passkeys.length >= MAX_PASSKEYS}
                               className={`flex-1 sm:flex-initial text-white font-bold rounded-2xl h-10 px-6 text-xs gap-2 shrink-0 transition-all ${
-                                passkeys.length >= 2
+                                passkeys.length >= MAX_PASSKEYS
                                   ? "bg-slate-800 text-slate-400 border border-white/10 cursor-not-allowed"
                                   : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-[0_4px_20px_rgba(124,58,237,0.35)] hover:scale-[1.02]"
                               }`}
@@ -1062,10 +1069,10 @@ export default function ProfilePage() {
                                   <Loader2 className="w-4 h-4 animate-spin" />
                                   <span>جاري إضافة الجهاز...</span>
                                 </>
-                              ) : passkeys.length >= 2 ? (
+                              ) : passkeys.length >= MAX_PASSKEYS ? (
                                 <>
                                   <Lock className="w-4 h-4" />
-                                  <span>الحد الأقصى مكتمل (2/2)</span>
+                                  <span>الحد الأقصى مكتمل (10/10)</span>
                                 </>
                               ) : (
                                 <>
@@ -1185,6 +1192,16 @@ export default function ProfilePage() {
                 إلغاء
               </Button>
             </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={Boolean(renamingPasskey)} onOpenChange={open=>{if(!open && !savingPasskeyName)setRenamingPasskey(null);}}>
+        <DialogContent dir="rtl">
+          <DialogHeader><DialogTitle>اسم مفتاح الدخول</DialogTitle><DialogDescription>اختر اسمًا يساعدك على تمييز هذا المفتاح.</DialogDescription></DialogHeader>
+          <form onSubmit={handleRenamePasskey} className="space-y-4">
+            <Label htmlFor="passkey-name">الاسم</Label>
+            <Input id="passkey-name" value={passkeyName} onChange={event=>setPasskeyName(event.target.value)} maxLength={80} required autoFocus />
+            <Button type="submit" disabled={savingPasskeyName || !passkeyName.trim()}>{savingPasskeyName ? 'جارٍ الحفظ…' : 'حفظ الاسم'}</Button>
           </form>
         </DialogContent>
       </Dialog>

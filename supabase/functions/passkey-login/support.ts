@@ -20,6 +20,18 @@ export function json(data: unknown, status = 200) {
   });
 }
 
+export function isAllowedOrigin(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    if (url.origin !== origin) return false;
+    if (['localhost','127.0.0.1'].includes(url.hostname)) return url.protocol === 'http:' || url.protocol === 'https:';
+    return url.protocol === 'https:' && [
+      'https://www.cyber-tmsah.site','https://cyber-tmsah.site','https://cyber-tmsah.vercel.app',
+      Deno.env.get('WEBAUTHN_ORIGIN'),
+    ].includes(origin);
+  } catch { return false; }
+}
+
 export function getOrigin(req?: Request): string | string[] {
   const envOrigin = Deno.env.get("WEBAUTHN_ORIGIN");
   const requestOrigin = req?.headers.get("origin") ?? "";
@@ -61,6 +73,7 @@ export function getRpId(req?: Request): string {
   const envRpId = Deno.env.get("WEBAUTHN_RP_ID");
   if (envRpId) return envRpId;
   const requestOrigin = req?.headers.get("origin") ?? "";
+  if (requestOrigin && !isAllowedOrigin(requestOrigin)) throw new Error('Unapproved origin');
   if (requestOrigin) {
     try {
       const u = new URL(requestOrigin);
@@ -75,13 +88,8 @@ export function getRpId(req?: Request): string {
 
 export function getExpectedRpIds(req?: Request): string[] {
   const current = getRpId(req);
-  return Array.from(new Set([
-    current,
-    "cyber-tmsah.site",
-    "www.cyber-tmsah.site",
-    "cyber-tmsah.vercel.app",
-    "localhost",
-  ]));
+  // Retain the valid parent-domain credentials on www, without accepting unrelated RPs.
+  return current === 'www.cyber-tmsah.site' ? [current,'cyber-tmsah.site'] : [current];
 }
 
 export function getRpName(): string {

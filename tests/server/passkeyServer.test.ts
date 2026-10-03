@@ -60,6 +60,7 @@ const request = (credential = assertion(), action = "attendance-finish") => new 
 
 describe("actual server verification of attendance assertions", () => {
   beforeEach(() => {
+    mocks.context.mockClear();
     vi.stubGlobal("Deno", { env: { get: () => undefined } });
     rows.webauthn_credentials = [{ id: "cred-row", auth_id: "student-a", credential_id: "Y3JlZA", public_key: Buffer.from(cose).toString("base64url"), sign_count: 0 }];
     rows.webauthn_challenges = [
@@ -158,5 +159,26 @@ describe("actual server verification of attendance assertions", () => {
   it("rejects a different signed-in account", async () => {
     mocks.context.mockResolvedValue({ error: null, data: { supabase: { auth: { getUser: async () => ({ data: { user: { id: "student-b" } }, error: null }) } } } });
     expect((await handlePasskeyRequest(request())).status).toBe(403);
+  });
+  it('rejects an unapproved request origin before any authentication or database operation',async()=>{
+    const req = new Request('https://backend.example/?action=auth-start',{method:'POST',headers:{origin:'https://attacker.example'},body:'{}'});
+    expect((await handlePasskeyRequest(req)).status).toBe(403);
+    expect(mocks.context).not.toHaveBeenCalled();
+    expect(rows.webauthn_challenges).toHaveLength(2);
+  });
+  it('renames only the authenticated account key without modifying its public key or counter',async()=>{
+    const req = new Request('http://localhost:8080/?action=rename',{method:'POST',headers:{origin:'http://localhost:8080'},body:JSON.stringify({credentialId:'Y3JlZA',deviceName:'  هاتف الاحتياط  ',public_key:'forged',auth_id:'other',sign_count:999})});
+    expect((await (await handlePasskeyRequest(req)).json()).success).toBe(true);
+    expect(rows.webauthn_credentials![0]).toMatchObject({device_name:'هاتف الاحتياط',auth_id:'student-a',sign_count:0,public_key:Buffer.from(cose).toString('base64url')});
+  });
+  it('rejects renaming a key owned by another account',async()=>{
+    rows.webauthn_credentials![0]!.auth_id='other';
+    const req=new Request('http://localhost:8080/?action=rename',{method:'POST',headers:{origin:'http://localhost:8080'},body:JSON.stringify({credentialId:'Y3JlZA',deviceName:'هاتف'})});
+    expect((await handlePasskeyRequest(req)).status).toBe(404);
+    expect(rows.webauthn_credentials![0]!.device_name).toBeUndefined();
+  });
+  it.each(['','x'.repeat(81),'bad\u0000name'])('rejects an invalid credential label',async name=>{
+    const req=new Request('http://localhost:8080/?action=rename',{method:'POST',headers:{origin:'http://localhost:8080'},body:JSON.stringify({credentialId:'Y3JlZA',deviceName:name})});
+    expect((await handlePasskeyRequest(req)).status).toBe(400);
   });
 });

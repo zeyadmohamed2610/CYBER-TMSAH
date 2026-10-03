@@ -64,6 +64,8 @@
 
 [إعداد الجدول ومفاتيح الدخول والامتحانات](docs/academic-schedule-and-passkeys.md)
 
+[بنية مفاتيح الدخول واختبارات التوافق](docs/universal-passkeys.md)
+
 ## الهوية البصرية
 
 <div align="center">

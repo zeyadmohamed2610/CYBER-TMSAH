@@ -2,12 +2,14 @@
 import { passkeyAdmin } from "./context.ts";
 import { handleRegistration } from "./registration.ts";
 import { handleAuthentication } from "./authentication.ts";
-import { corsHeaders, json } from "./support.ts";
+import { handleManagement } from "./management.ts";
+import { corsHeaders, json, isAllowedOrigin } from "./support.ts";
 
-const actions = new Set(['register-start','register-finish','auth-start','auth-finish','verify-start','verify-finish','attendance-start','attendance-finish']);
+const actions = new Set(['register-start','register-finish','auth-start','auth-finish','verify-start','verify-finish','attendance-start','attendance-finish','rename']);
 export async function handlePasskeyRequest(req:Request):Promise<Response> {
   if (req.method === 'OPTIONS') return new Response(null,{headers:corsHeaders});
   if (req.method !== 'POST') return json({success:false,error:'Method not allowed'},405);
+  if (!isAllowedOrigin(req.headers.get('origin') ?? '')) return json({success:false,error:'نطاق الموقع غير معتمد.',code:'INVALID_ORIGIN'},403);
   try {
     const body:unknown = await req.json().catch(()=>null);
     if (!body || typeof body !== 'object' || Array.isArray(body)) return json({success:false,error:'Invalid request'},400);
@@ -19,6 +21,7 @@ export async function handlePasskeyRequest(req:Request):Promise<Response> {
       ...(Deno.env.get('APP_SUPABASE_SECRET_KEY') ? {secretKeys:{default:Deno.env.get('APP_SUPABASE_SECRET_KEY')!}} : {}),
     };
     const context={req,body:payload,action,admin:passkeyAdmin(serverEnv),serverEnv};
+    if (action === 'rename') return await handleManagement(context);
     return await (action.startsWith('register-') ? handleRegistration(context) : handleAuthentication(context)) ?? json({success:false,error:'Unknown action'},400);
   } catch(error) {
     console.error('[passkey-login] request failed:',error instanceof Error ? error.message : 'Unknown error');
