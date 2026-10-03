@@ -1,184 +1,77 @@
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createHash, generateKeyPairSync, sign } from "node:crypto";
-import { isoCBOR } from "@simplewebauthn/server/helpers";
-
-const mocks = vi.hoisted(() => ({ admin: vi.fn(), context: vi.fn() }));
-vi.mock("@supabase/server/core", () => ({ createAdminClient: mocks.admin }));
-vi.mock("@supabase/server", () => ({ createSupabaseContext: mocks.context }));
-import { handlePasskeyRequest } from "../../supabase/functions/passkey-login/index";
-
-type Row = Record<string, unknown>;
-const rows: Record<string, Row[]> = {};
-const challenge = "c".repeat(43);
-const otherChallenge = "d".repeat(43);
-const { publicKey, privateKey } = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
-const jwk = publicKey.export({ format: "jwk" });
-const cose = isoCBOR.encode(new Map<number, number | Uint8Array>([
-  [1, 2], [3, -7], [-1, 1], [-2, Buffer.from(jwk.x!, "base64url")], [-3, Buffer.from(jwk.y!, "base64url")],
-]));
-function assertion(flags = 5, origin = "http://localhost:8080", rpId = "localhost", assertionChallenge = challenge, counter = 1) {
-  const clientData = Buffer.from(JSON.stringify({ type: "webauthn.get", challenge: assertionChallenge, origin }));
-  const authData = Buffer.concat([createHash("sha256").update(rpId).digest(), Buffer.from([flags, 0, 0, 0, counter])]);
-  const signed = Buffer.concat([authData, createHash("sha256").update(clientData).digest()]);
-  return {
-    id: "Y3JlZA", rawId: "Y3JlZA", type: "public-key", clientExtensionResults: {},
-    response: { clientDataJSON: clientData.toString("base64url"), authenticatorData: authData.toString("base64url"), signature: sign("sha256", signed, privateKey).toString("base64url"), userHandle: null },
-  };
+import {beforeEach,describe,expect,it,vi} from 'vitest';
+const mocks=vi.hoisted(()=>({admin:vi.fn(),native:vi.fn(),context:vi.fn(),verify:vi.fn(),signOut:vi.fn(),rpc:vi.fn()}));
+vi.mock('@supabase/server/core',()=>({createAdminClient:mocks.admin,createContextClient:mocks.native}));
+vi.mock('@supabase/server',()=>({createSupabaseContext:mocks.context}));
+import {handlePasskeyRequest} from '../../supabase/functions/passkey-login/index';
+type Row=Record<string,unknown>;
+let binding:Row|undefined,proofs:Row[];
+function query(table:string) {
+ const filters:((r:Row)=>boolean)[]=[];let insert:Row|undefined,remove=false;
+ const b={select:()=>b,eq:(k:string,v:unknown)=>{filters.push(r=>r[k]===v);return b;},gt:(k:string,v:string)=>{filters.push(r=>String(r[k])>v);return b;},lt:()=>b,delete:()=>{remove=true;return b;},insert:(r:Row)=>{insert=r;return b;},single:()=>b,maybeSingle:()=>b,then:(resolve:(value:unknown)=>unknown)=>{
+  if(table==='users')return Promise.resolve(resolve({data:{role:'student'},error:null}));
+  if(table==='attendance_biometric_proofs'){proofs.push(insert!);return Promise.resolve(resolve({data:{id:'proof'},error:null}));}
+  const found=binding&&filters.every(f=>f(binding!))?[binding]:[];
+  if(remove&&found.length)binding=undefined;
+  return Promise.resolve(resolve({data:found,error:null}));
+ }};return b;
 }
-function query(table: string) {
-  const filters: ((row: Row) => boolean)[] = [];
-  let operation = "select";
-  let value: Row = {};
-  let single = false;
-  const builder = {
-    select: () => builder,
-    eq: (key: string, target: unknown) => { filters.push(r => r[key] === target); return builder; },
-    gt: (key: string, target: string) => { filters.push(r => String(r[key]) > target); return builder; },
-    lt: (key: string, target: string) => { filters.push(r => String(r[key]) < target); return builder; },
-    in: (key: string, targets: unknown[]) => { filters.push(r => targets.includes(r[key])); return builder; },
-    limit: () => builder,
-    delete: () => { operation = "delete"; return builder; },
-    insert: (row: Row) => { operation = "insert"; value = row; return builder; },
-    update: (row: Row) => { operation = "update"; value = row; return builder; },
-    maybeSingle: () => { single = true; return builder; },
-    single: () => { single = true; return builder; },
-    then: (resolve: (result: { data: Row | Row[] | null; error: null }) => unknown) => {
-      const matching = (rows[table] ?? []).filter(r => filters.every(f => f(r)));
-      if (operation === "delete") rows[table] = (rows[table] ?? []).filter(r => !matching.includes(r));
-      if (operation === "update") matching.forEach(r => Object.assign(r, value));
-      if (operation === "insert") { const row = { id: "proof", ...value }; (rows[table] ??= []).push(row); matching.push(row); }
-      return Promise.resolve(resolve({ data: single ? matching[0] ?? null : matching, error: null }));
-    },
-  };
-  return builder;
+function request(action='attendance-finish',flags=5,overrides:Row={}) {
+ const bytes=Buffer.alloc(37);bytes[32]=flags;
+ return new Request('https://backend/?action='+action,{method:'POST',headers:{origin:'https://www.cyber-tmsah.site'},body:JSON.stringify({challengeId:'challenge',credential:{id:'key',response:{authenticatorData:bytes.toString('base64url')}},attendanceHash:'123456',deviceFingerprint:'a'.repeat(64),...overrides})});
 }
-const request = (credential = assertion(), action = "attendance-finish") => new Request("http://localhost:8080/?action=" + action, {
-  method: "POST", headers: { origin: "http://localhost:8080", "Content-Type": "application/json" },
-  body: JSON.stringify({ credential, attendanceHash: "123456", deviceFingerprint: "a".repeat(64) }),
+beforeEach(()=>{
+ vi.clearAllMocks();vi.stubGlobal('Deno',{env:{get:()=>undefined}});
+ binding={challenge_id:'challenge',auth_id:'user-a',purpose:'attendance',attendance_hash:'123456',device_fingerprint:'a'.repeat(64),expires_at:'2099-01-01',selected_key:null};proofs=[];
+ mocks.context.mockResolvedValue({data:{supabase:{auth:{getUser:async()=>({data:{user:{id:'user-a'}},error:null})}}},error:null});
+ mocks.verify.mockResolvedValue({data:{session:{access_token:'fresh',refresh_token:'refresh'},user:{id:'user-a'}},error:null});
+ mocks.signOut.mockResolvedValue({error:null});mocks.rpc.mockResolvedValue({data:'native-key',error:null});
+ mocks.admin.mockReturnValue({from:query,rpc:mocks.rpc});
+ mocks.native.mockReturnValue({auth:{passkey:{verifyAuthentication:mocks.verify},signOut:mocks.signOut}});
 });
-
-describe("actual server verification of attendance assertions", () => {
-  beforeEach(() => {
-    mocks.context.mockClear();
-    vi.stubGlobal("Deno", { env: { get: () => undefined } });
-    rows.webauthn_credentials = [{ id: "cred-row", auth_id: "student-a", credential_id: "Y3JlZA", public_key: Buffer.from(cose).toString("base64url"), sign_count: 0 }];
-    rows.webauthn_challenges = [
-      { id: "challenge-a", challenge, type: "authentication", auth_id: "student-a", attendance_hash: "123456", expires_at: "2099-01-01" },
-      { id: "challenge-b", challenge: otherChallenge, type: "authentication", auth_id: "student-b", attendance_hash: "654321", expires_at: "2099-01-01" },
-    ];
-    rows.attendance_biometric_proofs = [];
-    mocks.admin.mockReturnValue({ from: query });
-    mocks.context.mockResolvedValue({ data: { supabase: { auth: { getUser: async () => ({ data: { user: { id: "student-a", last_sign_in_at: new Date().toISOString() } }, error: null }) } } }, error: null });
-  });
-  it.each([5, 29])("verifies a real signature with device or synced-key flags %i and issues a bound receipt", async flags => {
-    const response = await handlePasskeyRequest(request(assertion(flags)));
-    expect(await response.json()).toEqual({ success: true, proofId: "proof" });
-    expect(rows.webauthn_challenges?.map(r => r.id)).toEqual(["challenge-b"]);
-    expect(rows.attendance_biometric_proofs?.[0]).toMatchObject({ auth_id: "student-a", attendance_hash: "123456", device_fingerprint: "a".repeat(64) });
-  });
-  it('verifies a settings test on the server without creating an attendance receipt or login token', async () => {
-    Object.assign(rows.webauthn_challenges?.[0] ?? {}, { purpose: 'verify', attendance_hash: null });
-    const response = await handlePasskeyRequest(request(assertion(), 'verify-finish'));
-    expect(await response.json()).toEqual({ success: true, credentialId: 'Y3JlZA' });
-    expect(rows.attendance_biometric_proofs).toHaveLength(0);
-  });
-  it('does not turn a settings verification into a login or attendance ceremony', async () => {
-    Object.assign(rows.webauthn_challenges?.[0] ?? {}, { purpose: 'verify', attendance_hash: null });
-    expect((await (await handlePasskeyRequest(request(assertion(), 'auth-finish'))).json()).success).toBe(false);
-    expect((await (await handlePasskeyRequest(request())).json()).success).toBe(false);
-    expect(rows.webauthn_challenges).toHaveLength(2);
-  });
-  it('rejects another account testing a credential it does not own', async () => {
-    Object.assign(rows.webauthn_challenges?.[0] ?? {}, { purpose: 'verify', attendance_hash: null });
-    mocks.context.mockResolvedValue({ data: { supabase: { auth: { getUser: async () => ({ data: { user: { id: 'student-b' } }, error: null }) } } }, error: null });
-    expect((await (await handlePasskeyRequest(request(assertion(), 'verify-finish'))).json()).success).toBe(false);
-    expect(rows.webauthn_challenges).toHaveLength(2);
-  });
-  it.each([
-    ['wrong origin', assertion(5,'https://attacker.example')],
-    ['wrong relying party', assertion(5,'http://localhost:8080','attacker.example')],
-    ['unissued challenge', assertion(5,'http://localhost:8080','localhost','unissued')],
-    ['counter rollback', assertion(5,'http://localhost:8080','localhost',challenge,0)],
-  ])('rejects %s despite a valid cryptographic signature',async(_label,credential)=>{
-    rows.webauthn_credentials![0]!.sign_count=1;
-    expect((await (await handlePasskeyRequest(request(credential))).json()).success).toBe(false);
-    expect(rows.attendance_biometric_proofs).toHaveLength(0);
-  });
-  it('rejects expired challenges and a different attendance code',async()=>{
-    rows.webauthn_challenges![0]!.expires_at='2000-01-01';
-    expect((await (await handlePasskeyRequest(request())).json()).success).toBe(false);
-    rows.webauthn_challenges![0]!.expires_at='2099-01-01';
-    rows.webauthn_challenges![0]!.attendance_hash='999999';
-    expect((await (await handlePasskeyRequest(request())).json()).success).toBe(false);
-  });
-  it('requires a recent account verification before adding a new key',async()=>{
-    mocks.context.mockResolvedValue({data:{jwtClaims:{amr:[{method:'password',timestamp:1}]},supabase:{auth:{getUser:async()=>({data:{user:{id:'student-a',last_sign_in_at:new Date().toISOString()}},error:null})}}},error:null});
-    expect((await handlePasskeyRequest(request(assertion(),'register-start'))).status).toBe(403);
-    expect(rows.webauthn_credentials).toHaveLength(1);
-  });
-  it('supports the numeric local loopback origin without issuing the wrong relying party',async()=>{
-    const credential=assertion(5,'http://127.0.0.1:8080','127.0.0.1');
-    const req=new Request('http://127.0.0.1:8080/?action=attendance-finish',{method:'POST',headers:{origin:'http://127.0.0.1:8080','Content-Type':'application/json'},body:JSON.stringify({credential,attendanceHash:'123456',deviceFingerprint:'a'.repeat(64)})});
-    expect((await (await handlePasskeyRequest(req)).json()).success).toBe(true);
-  });
-  it("rejects a forged signature without deleting challenges", async () => {
-    const forged = assertion();
-    forged.response.signature = Buffer.alloc(70, 9).toString("base64url");
-    expect((await (await handlePasskeyRequest(request(forged))).json()).success).toBe(false);
-    expect(rows.webauthn_challenges).toHaveLength(2);
-    expect(rows.attendance_biometric_proofs).toHaveLength(0);
-  });
-  it.each([1, 25])("rejects user presence without user verification for flags %i", async flags => {
-    const result = await (await handlePasskeyRequest(request(assertion(flags)))).json();
-    expect(result).toMatchObject({ success: false, code: 'USER_VERIFICATION_REQUIRED' });
-    expect(result.error).toContain('رمز قفل الجهاز');
-    expect(rows.attendance_biometric_proofs).toHaveLength(0);
-    expect(rows.webauthn_challenges).toHaveLength(2);
-    expect(rows.webauthn_credentials![0]!.sign_count).toBe(0);
-  });
-  it("rejects a replay", async () => {
-    const credential = assertion();
-    await handlePasskeyRequest(request(credential));
-    expect((await (await handlePasskeyRequest(request(credential))).json()).success).toBe(false);
-    expect(rows.attendance_biometric_proofs).toHaveLength(1);
-  });
-  it("issues only one receipt for concurrent copies of the same assertion", async () => {
-    const credential = assertion();
-    const results = await Promise.all([handlePasskeyRequest(request(credential)), handlePasskeyRequest(request(credential))]);
-    const responses = await Promise.all(results.map(result => result.json()));
-    expect(responses.filter(result => result.success)).toHaveLength(1);
-    expect(rows.attendance_biometric_proofs).toHaveLength(1);
-  });
-  it("does not let an attendance assertion create a login session", async () => {
-    expect((await handlePasskeyRequest(request(assertion(), "auth-finish"))).status).toBe(403);
-  });
-  it("rejects the unsigned legacy login endpoint", async () => {
-    expect((await handlePasskeyRequest(request(assertion(), "legacy"))).status).toBe(400);
-  });
-  it("rejects a different signed-in account", async () => {
-    mocks.context.mockResolvedValue({ error: null, data: { supabase: { auth: { getUser: async () => ({ data: { user: { id: "student-b" } }, error: null }) } } } });
-    expect((await handlePasskeyRequest(request())).status).toBe(403);
-  });
-  it('rejects an unapproved request origin before any authentication or database operation',async()=>{
-    const req = new Request('https://backend.example/?action=auth-start',{method:'POST',headers:{origin:'https://attacker.example'},body:'{}'});
-    expect((await handlePasskeyRequest(req)).status).toBe(403);
-    expect(mocks.context).not.toHaveBeenCalled();
-    expect(rows.webauthn_challenges).toHaveLength(2);
-  });
-  it('renames only the authenticated account key without modifying its public key or counter',async()=>{
-    const req = new Request('http://localhost:8080/?action=rename',{method:'POST',headers:{origin:'http://localhost:8080'},body:JSON.stringify({credentialId:'Y3JlZA',deviceName:'  هاتف الاحتياط  ',public_key:'forged',auth_id:'other',sign_count:999})});
-    expect((await (await handlePasskeyRequest(req)).json()).success).toBe(true);
-    expect(rows.webauthn_credentials![0]).toMatchObject({device_name:'هاتف الاحتياط',auth_id:'student-a',sign_count:0,public_key:Buffer.from(cose).toString('base64url')});
-  });
-  it('rejects renaming a key owned by another account',async()=>{
-    rows.webauthn_credentials![0]!.auth_id='other';
-    const req=new Request('http://localhost:8080/?action=rename',{method:'POST',headers:{origin:'http://localhost:8080'},body:JSON.stringify({credentialId:'Y3JlZA',deviceName:'هاتف'})});
-    expect((await handlePasskeyRequest(req)).status).toBe(404);
-    expect(rows.webauthn_credentials![0]!.device_name).toBeUndefined();
-  });
-  it.each(['','x'.repeat(81),'bad\u0000name'])('rejects an invalid credential label',async name=>{
-    const req=new Request('http://localhost:8080/?action=rename',{method:'POST',headers:{origin:'http://localhost:8080'},body:JSON.stringify({credentialId:'Y3JlZA',deviceName:name})});
-    expect((await handlePasskeyRequest(req)).status).toBe(400);
-  });
+describe('Supabase native verification boundary',()=>{
+ it.each([5,29])('accepts verified device/synced flags %i and binds a one-use receipt',async flags=>{
+  expect(await (await handlePasskeyRequest(request('attendance-finish',flags))).json()).toEqual({success:true,proofId:'proof'});
+  expect(binding).toBeUndefined();expect(proofs[0]).toMatchObject({auth_id:'user-a',attendance_hash:'123456',credential_id:'key'});
+  expect(mocks.signOut).toHaveBeenCalledWith({scope:'local'});
+ });
+ it.each([1,25,0])('refuses missing UV before asking Supabase to verify flags %i',async flags=>{
+  expect(await (await handlePasskeyRequest(request('auth-finish',flags))).json()).toMatchObject({success:false,code:'USER_VERIFICATION_REQUIRED'});
+  expect(mocks.verify).not.toHaveBeenCalled();expect(proofs).toHaveLength(0);
+ });
+ it('returns a session only from successful Supabase cryptographic verification',async()=>{
+  mocks.verify.mockResolvedValueOnce({data:null,error:new Error('forged signature')});
+  expect((await handlePasskeyRequest(request('auth-finish'))).status).toBe(403);
+  const result=await (await handlePasskeyRequest(request('auth-finish'))).json();
+  expect(result.session.access_token).toBe('fresh');expect(result.role).toBe('student');
+ });
+ it.each([{attendanceHash:'654321'},{deviceFingerprint:'b'.repeat(64)},{challengeId:'other'}])('rejects changed request binding %j',async overrides=>{
+  expect((await handlePasskeyRequest(request('attendance-finish',5,overrides))).status).toBeGreaterThanOrEqual(400);
+  expect(mocks.verify).not.toHaveBeenCalled();expect(proofs).toHaveLength(0);
+ });
+ it('refuses another account even after a valid native verification and revokes the temporary session',async()=>{
+  mocks.verify.mockResolvedValue({data:{session:{access_token:'fresh'},user:{id:'user-b'}},error:null});
+  expect((await handlePasskeyRequest(request())).status).toBe(403);expect(proofs).toHaveLength(0);expect(mocks.signOut).toHaveBeenCalled();
+ });
+ it('refuses replay and an expired request',async()=>{
+  await handlePasskeyRequest(request());expect((await handlePasskeyRequest(request())).status).toBe(409);
+  binding={challenge_id:'challenge',auth_id:'user-a',purpose:'attendance',expires_at:'2000-01-01'};
+  expect((await handlePasskeyRequest(request())).status).toBe(409);
+ });
+ it('never converts a settings challenge into attendance',async()=>{
+  binding!.purpose='verify';expect((await handlePasskeyRequest(request())).status).toBe(409);
+ });
+ it('binds a settings test to the selected native credential and returns no session',async()=>{
+  Object.assign(binding!,{purpose:'verify',selected_key:'native-key'});
+  expect(await (await handlePasskeyRequest(request('verify-finish'))).json()).toEqual({success:true,credentialId:'native-key'});
+  expect(proofs).toHaveLength(0);
+ });
+ it('refuses a different selected key',async()=>{
+  Object.assign(binding!,{purpose:'verify',selected_key:'another-key'});
+  expect((await handlePasskeyRequest(request('verify-finish'))).status).toBe(403);
+ });
+ it('refuses an untrusted HTTP origin',async()=>{
+  const req=new Request('https://backend/?action=auth-finish',{method:'POST',headers:{origin:'https://attacker.test'},body:'{}'});
+  expect((await handlePasskeyRequest(req)).status).toBe(403);expect(mocks.verify).not.toHaveBeenCalled();
+ });
 });

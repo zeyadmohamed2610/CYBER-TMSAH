@@ -1,13 +1,16 @@
 import { supabase } from '../supabaseClient';
 import { PasskeyError } from './errors';
+import type { Session, User } from '@supabase/supabase-js';
 
-export type PasskeyAction = 'register-start'|'register-finish'|'auth-start'|'auth-finish'|'verify-start'|'verify-finish'|'attendance-start'|'attendance-finish'|'rename';
+export type PasskeyAction = 'auth-finish'|'verify-start'|'verify-finish'|'attendance-start'|'attendance-finish';
 export interface PasskeyResponse {
   success: boolean;
+  session?:Session;
+  user?:User;
+  challengeId?:string;
   options?: unknown;
   credentialId?: string;
   proofId?: string;
-  hashed_token?: string;
   role?: string;
   error?: string;
   code?: string;

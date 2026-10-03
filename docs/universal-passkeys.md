@@ -1,49 +1,37 @@
-# Passkey implementation and acceptance
+# Supabase Native Passkeys
 
-## Architecture inspected before implementation
+## Current architecture — 3 October 2026
 
-The application is a React 18/Vite SPA, served over HTTPS by Vercel at `https://www.cyber-tmsah.site`. Supabase Auth manages password sign-in, sign-out, JWT refresh and browser sessions. The browser uses `@simplewebauthn/browser` 13.3.0. The Supabase `passkey-login` Edge Function uses `@simplewebauthn/server` 13.3.2 and `@supabase/server` 1.8.0. Credentials, expiring challenges and short-lived attendance receipts live in separate Postgres tables.
+React/Vite uses `@supabase/supabase-js` 2.116 with `auth.experimental.passkey: true`. Supabase Auth owns registration challenges, credential storage, cryptographic verification and sessions. `@simplewebauthn/browser` presents the native browser ceremony without choosing an authenticator or password manager. The old custom registration, signature verifier, session exchange and credential-management endpoints have been removed.
 
-Supabase's SPA session storage is browser-accessible, not an HttpOnly cookie. No private key or biometric is stored there. An HttpOnly session architecture would require a same-origin backend/session proxy and corresponding API authorization changes; this release does not pretend to implement one. Requests use bearer tokens rather than automatically attached authentication cookies. Verified authentication assertions create a new Supabase session via a server-generated one-time token exchange.
+The hosted project's native passkey API is enabled. Its RP ID is `www.cyber-tmsah.site`; the production origin is `https://www.cyber-tmsah.site`. Configure native passkeys in the Supabase Auth settings using these exact values. Do not change the RP ID casually: existing provider credentials are bound to it. Native passkeys are experimental; see [Supabase's official guide](https://supabase.com/docs/guides/auth/passkeys). Localhost and preview domains need their own compatible development Auth configuration; the production RP cannot register on localhost.
 
-## Implementation plan and resulting changes
+## Registration and management
 
-- Preserve the shared registration/authentication adapter and mature cryptographic library; add no vendor-specific authentication branches or dependencies.
-- Expand account capacity from two to ten keys in `registration.ts`, the profile UI and the advisory-lock-protected database trigger. The migration replaces only the limit function; existing keys and attendance remain intact.
-- Create `management.ts` for authenticated, ownership-bound display-name changes. Direct client insertion or cryptographic-column updates remain forbidden. Only `device_name` can change through this endpoint.
-- Extend the profile with rename, creation date and last-used date. Labels do not infer the credential's provider from the current browser's user agent.
-- Reject unapproved HTTP request origins before generating challenges. Limit verification RP IDs to the current site's valid identity, retaining parent-domain credentials on the www domain. Local development remains explicitly restricted to loopback origins.
-- Extend cryptographic tests, a database capacity test and browser tests for metadata, storage deletion and fresh-session creation after browser restart.
+A confirmed, signed-in account starts native registration. The browser adapter requires a discoverable credential and user verification, without forcing a platform attachment. Supabase verifies and stores the registration. Profile management uses native `auth.passkey.list`, `update` and `delete`, including friendly names and last-used dates. Native metadata UUIDs are distinct from WebAuthn credential IDs. Multiple keys belong to each account; no private keys or biometric information enter the application database.
 
-## Registration, authentication and attendance
+The profile still asks for password confirmation before adding a key. This is an application UI check; Supabase's native registration endpoint independently requires an authenticated, confirmed account. Do not describe the UI check as a server-enforced recent-password policy.
 
-Registration requires an authenticated account and a recent password verification in the same signed session. The server generates a random, expiring registration challenge and discoverable-credential options with user verification required. No authenticator attachment or vendor is forced. The native provider can offer a local authenticator, synced manager, another device or compatible security key. The server independently verifies registration, consumes the exact challenge once and stores the public key, credential ID, counter, transports and metadata.
+## Login and verification
 
-Login accepts a discoverable credential without requiring an identifier or password. An optional identifier restricts account selection. The server checks the issued challenge, origin, RP ID, credential ownership, signed authenticator data, signature, user verification and applicable counter state. A verified login issues a one-time Supabase session exchange token. No cached token is accepted as evidence of passkey authentication.
+Login starts a native discoverable authentication challenge without requiring an email. The browser requests user verification as `required`. The `passkey-login` bridge rejects assertions without signed user-presence and user-verification flags, then forwards the unchanged assertion to Supabase Auth for challenge, origin, RP ID, public-key signature and credential/account verification. Only Supabase's freshly verified session is returned and installed in the browser.
 
-Settings verification returns only confirmation of the account's key. Attendance requires the signed-in account and attendance-code-specific challenge, and issues a short-lived receipt bound to the account, code and device fingerprint. The attendance RPC consumes it once with its other attendance rules. Challenges from one purpose cannot be used for another. Removing a credential revokes outstanding attendance receipts for that credential and does not delete historical attendance.
+The native service currently generates options with user verification `preferred`. The application's bridge enforces `required` for its login and attendance paths; this does not imply that every direct Supabase Auth endpoint globally rejects presence-only authentication. The bridge never alters signed flags or bypasses cryptographic verification.
 
-Clearing website cookies, storage, IndexedDB or caches removes session data, not credentials in the provider or database. Normal sign-out does not revoke a passkey. Explicit removal from the platform is different: it disables acceptance of that key here, even if the provider still lists it.
+Settings and attendance use separate, two-minute, single-use bindings to the signed-in account and ceremony purpose. Settings additionally bind the selected native key. Attendance binds the six-digit attendance code and device fingerprint. A verified native assertion for another account is refused. Temporary verification sessions are signed out locally on the server and never replace the browser's original session.
 
-## Verification evidence and limits
+Attendance receives a short-lived receipt consumed once by the existing attendance rules. A foreign key to the native Auth credential revokes unused receipts when that key is deleted. The service-only lookup maps a WebAuthn ID to its owner's native key; clients cannot call it or write request bindings. Historical attendance is retained.
 
-On 3 October 2026, lint, TypeScript checks, production build and all 242 unit/integration tests passed. Twelve live-backend browser cases passed: ten role/viewport cases and two browser-restart cases. The live database limit function was checked after deployment, and Supabase's error-level security advisors reported no issues. Initial browser-test failures were caused by a too-short network wait and an incorrect expected sign-out route; the corrected cases were rerun successfully.
+## Sessions and migration
 
-Automated unit/integration checks cover authentic signatures, synced flags, missing user verification, incorrect challenge/origin/RP/signature, wrong accounts, wrong ceremony purpose, expiry, replay, concurrent consumption, counters, recent registration reauthentication, revocation, invalid names and account-wide capacity. The PGlite capacity check accepts ten keys, rejects the eleventh and verifies that removing a key frees capacity.
+The SPA uses Supabase's browser session storage, not HttpOnly cookies. Bearer tokens authorize backend requests. Browser storage holds session data; credentials remain in Supabase Auth and the OS/provider. Clearing cookies or website data logs the user out without removing the provider's passkey. Sign-out does not delete credentials.
 
-Browser tests run against the live Supabase service with dedicated QA accounts for all five roles, desktop and mobile viewports, including registration, verification, rename, storage deletion, login and student attendance. A separate test registers a key, logs in, logs out, clears cookies and all origin storage, closes Chrome, reopens Chrome and logs in again. CDP virtual-authenticator state is exported/imported outside website storage to simulate a persistent OS/provider vault. This demonstrates website-storage independence; it is not a physical provider/hardware certification.
+The migration adds native attendance bindings and receipt revocation. Legacy tables remain as migration history, with client privileges revoked; live custom credential and pending-proof data are cleared during the authorized reset. Accounts and recorded attendance must remain unchanged. Every affected user must sign in with a password and add a new passkey. Removing a server credential does not remove its copy from a device/password manager.
 
-The following physical acceptance checks remain required and must not be reported as passed without device evidence:
+## Verification and remaining device checks
 
-- Android Chrome with Google Password Manager, fingerprint, available face verification, PIN/screen lock and an alternate supported provider.
-- iPhone/iPad Safari with Apple Passwords/iCloud Keychain, Face ID, Touch ID where available and device passcode.
-- Windows Chrome and Edge with Windows Hello fingerprint, supported face verification and PIN, including a machine without biometric hardware.
-- Supported desktop Google Password Manager, Microsoft Password Manager and Apple Passwords environments.
-- Native computer-to-phone and phone-to-computer flows where the browser supports them.
-- The full cookie/site-data deletion and browser-restart sequence with a physical provider that retains the key.
+Automated tests cover required verification, account/key/purpose binding, challenge expiry/replay, changed attendance code/device, server errors, fresh sessions and native-key receipt revocation. A live ES256 registration/assertion test verifies actual Supabase registration, login, settings confirmation, presence-only rejection and deletion of outstanding attendance receipts.
 
-Do not disable user verification, modify authenticator flags or substitute a client-side success flag to make a failing device appear compatible. The reported real-device response with flags `25` contains presence/backup flags but lacks user verification; it must still be rejected. A provider identifier is diagnostic metadata, not proof that a specific vendor is defective. This release does not claim that the reported physical-device issue is resolved.
+The live browser suite covers the five roles on desktop/mobile viewports, native registration and metadata, settings verification, fresh login and student attendance. Browser-restart cases clear cookies and origin storage, close Chrome, restore only the virtual provider vault and authenticate again. Record the final run results after deployment; virtual authenticators are not physical device certification.
 
-## Reproducing automated checks
-
-Run `pnpm lint`, `pnpm typecheck`, `pnpm test` and `pnpm build`. With dedicated QA credentials and a local, ignored admin-key file configured as in the existing live runner, set `E2E_LIVE_SUITE=passkeys` and run `node scripts/run-live-role-tests.mjs`. For an additional security-key simulation set `E2E_PASSKEY_TRANSPORT=usb`. The runner removes only the known QA credentials, attendance fixtures and device locks. Never substitute a real account for a QA account.
+Physical acceptance remains necessary on Android providers, iPhone/iPad Safari, Windows Hello fingerprint/face/PIN, desktop password managers and browser-managed cross-device flows. A device returning flags `25` still lacks signed user verification and is refused even if it displayed a fingerprint prompt. Registering a replacement key is necessary after the reset; migration alone cannot guarantee that a provider will return the required signed verification flag.

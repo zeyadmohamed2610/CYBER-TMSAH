@@ -210,7 +210,7 @@ importers:
         specifier: ^1.8.0
         version: 1.8.0(@supabase/supabase-js@2.116.0)(typescript@5.9.3)
       '@supabase/supabase-js':
-        specifier: ^2.100.0
+        specifier: ^2.116.0
         version: 2.116.0
       '@types/qrcode':
         specifier: ^1.5.6

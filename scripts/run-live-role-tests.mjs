@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { createClient } from '@supabase/supabase-js';
 const accounts=JSON.parse(await readFile('.private/test-accounts.json','utf8'));
 const keys=JSON.parse(await readFile('.private/api-keys.json','utf8'));
-const admin=createClient('https://clfhllujvxhfvhenvwfz.supabase.co',keys.find(k=>k.type==='secret').api_key,{auth:{persistSession:false}});
+const admin=createClient('https://clfhllujvxhfvhenvwfz.supabase.co',keys.find(k=>k.type==='secret').api_key,{auth:{persistSession:false,experimental:{passkey:true}}});
 const student=accounts.find(a=>a.role==='student');
 const env={...process.env,E2E_ALLOW_LIVE_AUTH:'1',E2E_PORT:process.env.E2E_PORT??'8085'};
 for(const account of accounts){env[`E2E_${account.role.toUpperCase()}_IDENTIFIER`]=account.email;env[`E2E_${account.role.toUpperCase()}_PASSWORD`]=account.password;}
@@ -26,7 +26,7 @@ const prepareAttendance=async()=>{
  fixtureSessions.push(session.data.id);
  env.E2E_ATTENDANCE_CODE=session.data.short_code;
 };
-const clearPasskeys=async()=>{for(const account of accounts){const result=await admin.from('webauthn_credentials').delete().eq('auth_id',account.authId);if(result.error)throw result.error;}};
+const clearPasskeys=async()=>{for(const account of accounts){const listed=await admin.auth.admin.passkey.listPasskeys({userId:account.authId});if(listed.error)throw listed.error;for(const key of listed.data??[]){const result=await admin.auth.admin.passkey.deletePasskey({userId:account.authId,passkeyId:key.id});if(result.error)throw result.error;}}};
 try{
  if(sessionSuite){
   const owner=accounts.find(account=>account.role==='owner');

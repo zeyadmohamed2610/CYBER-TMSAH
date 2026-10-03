@@ -27,11 +27,14 @@ async function ceremony(work:()=>Promise<PasskeyResult>):Promise<PasskeyResult> 
 export function registerPasskey(deviceName?:string) {
   return ceremony(async()=>{
     const token = await currentPasskeySession();
-    const start = await passkeyRequest('register-start',{},token);
-    const credential = await createPasskey(start.options);
-    const finish = await passkeyRequest('register-finish',{credential,deviceName:deviceName ?? 'جهاز للدخول بالبصمة'},token);
-    if (!finish.credentialId) throw new PasskeyError('تعذر تأكيد إضافة مفتاح الدخول.','INVALID_RESPONSE');
-    return {success:true as const,credentialId:finish.credentialId};
+    if (!token) throw new PasskeyError('يرجى تسجيل الدخول مجددًا.');
+    const start = await supabase.auth.passkey.startRegistration();
+    if(start.error || !start.data)throw new PasskeyError('تعذر إضافة مفتاح الدخول. تأكد من تسجيل الدخول وتأكيد بريدك الإلكتروني.');
+    const credential = await createPasskey(start.data.options);
+    const finish = await supabase.auth.passkey.verifyRegistration({challengeId:start.data.challenge_id,credential});
+    if(finish.error || !finish.data?.id)throw new PasskeyError('تعذر حفظ مفتاح الدخول. قد يكون مسجلًا من قبل أو وصلت للحد المسموح.');
+    if(deviceName) await supabase.auth.passkey.update({passkeyId:finish.data.id,friendlyName:deviceName});
+    return {success:true as const,credentialId:finish.data.id};
   });
 }
 
@@ -39,16 +42,19 @@ type Purpose = 'login'|'verify'|'attendance';
 async function assertionCeremony(purpose: Purpose, input: {identifier?:string;credentialId?:string;attendanceHash?:string}) {
   const token = purpose === 'login' ? undefined : await currentPasskeySession();
   const prefix = purpose === 'login' ? 'auth' : purpose === 'verify' ? 'verify' : 'attendance';
-  const start = await passkeyRequest(`${prefix}-start`,{
-    ...(purpose === 'login' ? {identifier:input.identifier?.trim() ?? ''} : {}),
+  const fingerprint=purpose==='attendance' ? await computeFingerprint() : undefined;
+  const nativeStart=purpose==='login' ? await supabase.auth.passkey.startAuthentication() : null;
+  if(nativeStart?.error)throw new PasskeyError('تعذر بدء الدخول بمفتاحك. أعد المحاولة.');
+  const start = purpose==='login' ? {options:nativeStart?.data?.options,challengeId:nativeStart?.data?.challenge_id} : await passkeyRequest(purpose==='verify' ? 'verify-start' : 'attendance-start',{
     ...(purpose === 'verify' ? {credentialId:input.credentialId} : {}),
-    ...(purpose === 'attendance' ? {attendanceHash:input.attendanceHash} : {}),
+    ...(purpose === 'attendance' ? {attendanceHash:input.attendanceHash,deviceFingerprint:fingerprint} : {}),
   },token);
   const credential = await getPasskeyAssertion(start.options);
   try {
     const finish = await passkeyRequest(`${prefix}-finish`,{
       credential,
-      ...(purpose === 'attendance' ? {attendanceHash:input.attendanceHash,deviceFingerprint:await computeFingerprint()} : {}),
+      challengeId:start.challengeId,
+      ...(purpose === 'attendance' ? {attendanceHash:input.attendanceHash,deviceFingerprint:fingerprint} : {}),
     },token);
     return finish;
   } catch(error) {
@@ -64,8 +70,8 @@ export function authenticateWithPasskey(identifier?:string,verificationCredentia
       return {success:true as const};
     }
     const finish = await assertionCeremony('login',{...(identifier ? {identifier} : {})});
-    if (!finish.hashed_token) throw new PasskeyError('تعذر إنشاء جلسة الدخول. أعد المحاولة.','INVALID_RESPONSE');
-    const {data,error} = await supabase.auth.verifyOtp({token_hash:finish.hashed_token,type:'magiclink'});
+    if (!finish.session?.access_token || !finish.session.refresh_token) throw new PasskeyError('تعذر إنشاء جلسة الدخول. أعد المحاولة.','INVALID_RESPONSE');
+    const {data,error} = await supabase.auth.setSession({access_token:finish.session.access_token,refresh_token:finish.session.refresh_token});
     if (error || !data.session || !data.user) throw new PasskeyError('تعذر إكمال تسجيل الدخول. أعد المحاولة.','SESSION_EXCHANGE_FAILED');
     return {success:true as const,user:data.user,role:finish.role ?? null};
   });

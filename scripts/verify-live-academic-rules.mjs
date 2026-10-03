@@ -34,8 +34,8 @@ ${expectDenied(`PERFORM public.create_lecture('${subject}','غير مصرح','le
 ${auth('student')} ${expectDenied(`PERFORM public.create_lecture('${subject}','غير مصرح','lecture',null)`)}
 ${expectDenied(`INSERT INTO public.academic_schedule_entries(section,day_index,period,department,academic_year,subject_id,kind) VALUES(1,1,1,'cybersecurity','1','${subject}','lecture')`)}
 ${expectDenied(`INSERT INTO public.webauthn_credentials(auth_id,credential_id,public_key) VALUES('${byRole.student.authId}','fake','fake')`)}
+${expectDenied('PERFORM 1 FROM public.webauthn_credentials')}
 DO $test$ BEGIN
- IF EXISTS(SELECT 1 FROM public.webauthn_credentials WHERE auth_id<>auth.uid()) THEN RAISE EXCEPTION 'PASSKEY_VISIBILITY_FAILED'; END IF;
  IF (public.get_academic_schedule('cybersecurity','1')->'settings'->>'week_start_day')::int<>5 THEN RAISE EXCEPTION 'WEEK_START_FAILED'; END IF;
 END $test$;
 ${auth('coordinator')}

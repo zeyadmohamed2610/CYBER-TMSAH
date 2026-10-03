@@ -40,7 +40,7 @@
     "@sentry/vite-plugin": "^2.14.0",
     "@simplewebauthn/browser": "13.3.0",
     "@supabase/server": "^1.8.0",
-    "@supabase/supabase-js": "^2.100.0",
+    "@supabase/supabase-js": "^2.116.0",
     "@types/qrcode": "^1.5.6",
     "chart.js": "^4.4.1",
     "class-variance-authority": "^0.7.1",

@@ -13,7 +13,7 @@ if (!supabaseAnonKey) {
   throw new Error("Missing VITE_SUPABASE_ANON_KEY environment variable.");
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {auth:{experimental:{passkey:true}}});
 
 type ValidatedRpcNames = keyof typeof import("./validation").rpcSchemas;
 

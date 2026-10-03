@@ -22,17 +22,17 @@ for (const [role, destination] of [['student', 'student-panel'], ['doctor', 'doc
     await page.getByRole('tab', { name: /الدخول بالبصمة/ }).click();
     await page.getByRole('button', { name: 'إضافة جهاز للدخول بالبصمة' }).click();
     await page.locator('#passkey-reauth-pass').fill(password!);
-    const registered = page.waitForResponse(r => r.url().includes('passkey-login?action=register-finish'));
+    const registered = page.waitForResponse(r => r.url().includes('/passkeys/registration/verify'));
     await page.getByRole('button', { name: 'تأكيد ومتابعة البصمة' }).click();
-    expect((await (await registered).json()).success).toBe(true);
+    expect((await (await registered).json()).id).toBeTruthy();
     const verified = page.waitForResponse(r => r.url().includes('passkey-login?action=verify-finish'));
     await page.getByRole('button', { name: 'تجربة الدخول' }).click();
     expect((await (await verified).json()).success).toBe(true);
     await page.getByRole('button',{name:'تعديل الاسم'}).click();
     await page.locator('#passkey-name').fill('مفتاح اختبار الدخول');
-    const renamed=page.waitForResponse(r=>r.url().includes('passkey-login?action=rename'));
+    const renamed=page.waitForResponse(r=>r.url().includes('/auth/v1/passkeys/') && r.request().method()==='PATCH');
     await page.getByRole('button',{name:'حفظ الاسم',exact:true}).click();
-    expect((await (await renamed).json()).success).toBe(true);
+    expect((await (await renamed).json()).friendly_name).toBe('مفتاح اختبار الدخول');
     await expect(page.getByText('مفتاح اختبار الدخول',{exact:true})).toBeVisible();
     await expect(page.getByText(/آخر استخدام:/)).toBeVisible();
     // Remove only this browser session; the virtual authenticator retains its passkey.
@@ -83,9 +83,9 @@ test('@passkey a stored credential creates a fresh session after site-data delet
     await page.goto('/profile?section=passkeys');
     await page.getByRole('button',{name:'إضافة جهاز للدخول بالبصمة'}).click();
     await page.locator('#passkey-reauth-pass').fill(password!);
-    const registered=page.waitForResponse(r=>r.url().includes('action=register-finish'));
+    const registered=page.waitForResponse(r=>r.url().includes('/passkeys/registration/verify'));
     await page.getByRole('button',{name:'تأكيد ومتابعة البصمة'}).click();
-    expect((await (await registered).json()).success).toBe(true);
+    expect((await (await registered).json()).id).toBeTruthy();
     await page.getByRole('button',{name:'تسجيل الخروج',exact:true}).click();
     await expect(page).toHaveURL(/login/,{timeout:30000});
     await page.goto('/login');

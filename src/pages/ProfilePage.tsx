@@ -18,7 +18,6 @@ import Footer from "@/components/Footer";
 import AvatarStudioDialog from "@/components/AvatarStudioDialog";
 import { deleteUserAvatar } from "@/lib/avatarUtils";
 import { registerPasskey, authenticateWithPasskey, isWebAuthnSupported } from "@/lib/webauthn";
-import { currentPasskeySession, passkeyRequest } from "@/lib/passkeys/service";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +27,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-interface ManagedPasskey { id:string; rawId:string; label:string; createdAt:string; lastUsedAt?:string|null }
+interface ManagedPasskey { id:string; rawId:string; label:string; createdAt:string; lastUsedAt?:string|null|undefined }
 const MAX_PASSKEYS = 10;
 interface UserProfileDetails {
   id: string;
@@ -109,14 +108,11 @@ export default function ProfilePage() {
     let isMounted = true;
     async function loadUserPasskeys() {
       try {
-        const { data, error } = await supabase
-          .from("webauthn_credentials")
-          .select("id, credential_id, device_name, created_at, last_used_at")
-          .eq("auth_id", user?.id);
+        const { data, error } = await supabase.auth.passkey.list();
 
         if (error) throw error;
         if (!isMounted) return;
-        const mapped = (data ?? []).map(item => ({ id: item.credential_id, rawId: item.credential_id, label: item.device_name || "مفتاح دخول", createdAt: item.created_at, lastUsedAt:item.last_used_at }));
+        const mapped = (data ?? []).map(item => ({ id: item.id, rawId: item.id, label: item.friendly_name || "مفتاح دخول", createdAt: item.created_at, lastUsedAt:item.last_used_at }));
         setPasskeys(mapped);
       } catch (err) {
         console.error("Failed to load verified passkeys", err);
@@ -216,16 +212,13 @@ export default function ProfilePage() {
 
       // Refresh passkeys list from database (server-verified credentials)
       if (user?.id) {
-        const { data: dbData } = await supabase
-          .from("webauthn_credentials")
-          .select("id, credential_id, device_name, created_at, last_used_at")
-          .eq("auth_id", user.id);
+        const { data: dbData } = await supabase.auth.passkey.list();
 
         if (dbData && dbData.length > 0) {
           const mapped = dbData.map((item) => ({
-            id: item.credential_id,
-            rawId: item.credential_id,
-            label: item.device_name || deviceLabel,
+            id: item.id,
+            rawId: item.id,
+            label: item.friendly_name || deviceLabel,
             createdAt: item.created_at || new Date().toISOString(),
             lastUsedAt:item.last_used_at,
           }));
@@ -278,8 +271,8 @@ export default function ProfilePage() {
 
   const handleDeletePasskey = async (passkeyId: string) => {
     if (!user?.id) return;
-    const result = await supabase.from("webauthn_credentials").delete().eq("auth_id", user.id).eq("credential_id", passkeyId).select("credential_id");
-    if (result.error || result.data?.length !== 1) { toast.error("تعذر حذف جهاز الدخول. لم يتغير المفتاح المعتمد."); return; }
+    const result = await supabase.auth.passkey.delete({passkeyId});
+    if (result.error) { toast.error("تعذر حذف جهاز الدخول. لم يتغير المفتاح المعتمد."); return; }
     savePasskeys(passkeys.filter(p => p.id !== passkeyId));
     toast.success("تم إلغاء اعتماد المفتاح على المنصة. يمكنك حذفه من مدير مفاتيح جهازك أيضًا.");
   };
@@ -289,7 +282,8 @@ export default function ProfilePage() {
     if (!renamingPasskey || savingPasskeyName) return;
     setSavingPasskeyName(true);
     try {
-      await passkeyRequest('rename',{credentialId:renamingPasskey.id,deviceName:passkeyName},await currentPasskeySession());
+      const renamed=await supabase.auth.passkey.update({passkeyId:renamingPasskey.id,friendlyName:passkeyName.trim()});
+      if(renamed.error)throw renamed.error;
       setPasskeys(items=>items.map(item=>item.id===renamingPasskey.id ? {...item,label:passkeyName.trim()} : item));
       setRenamingPasskey(null);
       toast.success('تم حفظ اسم مفتاح الدخول.');

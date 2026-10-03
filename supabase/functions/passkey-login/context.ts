@@ -1,10 +1,4 @@
-import { createAdminClient } from "npm:@supabase/server@1.8.0/core";
+import { createAdminClient, createContextClient } from "npm:@supabase/server@1.8.0/core";
 export interface PasskeyEnvironment {publishableKeys?:Record<string,string>;secretKeys?:Record<string,string>}
-export function passkeyAdmin(env:PasskeyEnvironment) { return createAdminClient({env}); }
-export interface PasskeyContext {
-  req: Request;
-  body: Record<string,unknown>;
-  action: string;
-  admin: ReturnType<typeof passkeyAdmin>;
-  serverEnv: PasskeyEnvironment;
-}
+export function passkeyAdmin(env:PasskeyEnvironment) { return createAdminClient({env,supabaseOptions:{auth:{experimental:{passkey:true}}}}); }
+export function nativePasskeyClient(env:PasskeyEnvironment) {return createContextClient({env,supabaseOptions:{auth:{experimental:{passkey:true}}}});}
