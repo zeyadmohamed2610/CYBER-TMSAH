@@ -17,11 +17,11 @@ export function ProfileAvatar({ model }: { model: ReturnType<typeof useProfile> 
         <CardHeader className="p-0 pb-5 border-b border-white/5">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
-              <CardTitle className="text-lg font-black text-white flex items-center gap-2.5">
+              <CardTitle className="text-lg font-bold text-white flex items-center gap-2.5">
                 <Camera className="w-5 h-5 text-cyan-400" />
                 <span>الصورة الشخصية</span>
               </CardTitle>
-              <CardDescription className="text-xs text-slate-400 mt-1">
+              <CardDescription className="text-sm text-muted-foreground mt-1">
                 اختر صورتك المخصصة من جهازك أو اختر إحدى الشخصيات الرمزية الجاهزة
               </CardDescription>
             </div>
@@ -69,7 +69,7 @@ export function ProfileAvatar({ model }: { model: ReturnType<typeof useProfile> 
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-400">
+              <p className="text-sm text-muted-foreground">
                 تظهر صورتك الشخصية لزملائك والمحاضرين في كشوفات الحضور والتقارير.
               </p>
               <div className="flex items-center justify-center sm:justify-start gap-3 pt-1 flex-wrap">

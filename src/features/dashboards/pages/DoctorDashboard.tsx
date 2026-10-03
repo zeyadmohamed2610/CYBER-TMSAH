@@ -304,23 +304,23 @@ export const DoctorDashboard = () => {
           { value: "profile", label: "بياناتي الشخصية", icon: Info },
         ]}
       >
-        <TabsContent value="lectures" className="mt-4">
+        <TabsContent aria-label="الجلسات الدراسية" value="lectures" className="mt-4">
           <LectureManagementPanel
             fixedSubjectId={doctorSubjectId}
             onSelectLecture={setSelectedLecture}
           />
         </TabsContent>
 
-        <TabsContent value="records" className="mt-4">
+        <TabsContent aria-label="سجلات الحضور" value="records" className="mt-4">
           <DoctorAttendanceRecords subjectId={undefined} />
           <AttendanceRegisterPanel />
         </TabsContent>
 
-        <TabsContent value="schedule" className="mt-4">
+        <TabsContent aria-label="الجدول والامتحانات" value="schedule" className="mt-4">
           <QuickScheduleEditor />
         </TabsContent>
 
-        <TabsContent value="stats" className="mt-4">
+        <TabsContent aria-label="الإحصائيات" value="stats" className="mt-4">
           <Card className="bg-card/80">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
@@ -355,7 +355,7 @@ export const DoctorDashboard = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="profile" className="mt-4">
+        <TabsContent aria-label="بياناتي الشخصية" value="profile" className="mt-4">
           <DoctorInfoCard subjectId={doctorSubjectId} />
         </TabsContent>
       </DashboardWorkspace>

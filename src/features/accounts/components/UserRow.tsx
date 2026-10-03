@@ -56,10 +56,10 @@ export function UserRow({ model, user, idx }: Props) {
     <div
       key={user.id}
       data-user-id={user.id}
-      className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border p-4 transition-all ${
+      className={`user-row flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl sm:rounded-none border sm:border-x-0 sm:border-t-0 p-4 transition-colors ${
         editingId === user.id
-          ? "bg-purple-950/40 border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.2)]"
-          : "bg-card/50 hover:bg-card/80 border-white/10"
+          ? "bg-primary/5 border-primary/40"
+          : "bg-card hover:bg-muted/30 border-border"
       }`}
     >
       {editingId === user.id ? (
@@ -223,7 +223,7 @@ export function UserRow({ model, user, idx }: Props) {
               <button
                 type="button"
                 onClick={() => setSelectedUserForDetails(user)}
-                className="font-bold text-white text-sm hover:text-purple-300 hover:underline transition-colors text-start cursor-pointer inline-flex items-center gap-1.5 group"
+                className="font-bold text-white text-sm break-words hover:text-purple-300 hover:underline transition-colors text-start cursor-pointer inline-flex items-center gap-1.5 group"
                 title="عرض الملف والتفاصيل الكاملة لهذا الحساب"
               >
                 <span>{user.full_name}</span>
@@ -246,14 +246,17 @@ export function UserRow({ model, user, idx }: Props) {
             </div>
 
             {/* Sub-info: Username, email, academic info */}
-            <div className="flex items-center gap-3 text-xs text-slate-400 flex-wrap">
+            <div className="flex items-center gap-x-3 gap-y-1 text-sm text-muted-foreground flex-wrap">
               {user.username && (
                 <span className="text-slate-300 font-mono text-[11px]" dir="ltr">
                   @{user.username}
                 </span>
               )}
               {user.email && (
-                <span className="text-slate-400 flex items-center gap-1 text-[11px]" dir="ltr">
+                <span
+                  className="text-muted-foreground flex items-center gap-1 text-xs break-all"
+                  dir="ltr"
+                >
                   <Mail className="w-3 h-3 text-slate-500" />
                   {user.email}
                 </span>

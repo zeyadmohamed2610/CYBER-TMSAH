@@ -29,15 +29,15 @@ export function ProfileOverview({ model }: { model: ReturnType<typeof useProfile
   return (
     <TabsContent value="overview" className="space-y-6 mt-6">
       {/* 1. Name & Display Setting */}
-      <Card className="border border-white/10 bg-[#090D21]/80 backdrop-blur-xl rounded-3xl p-6 sm:p-7 shadow-lg">
+      <Card className="border border-white/10 bg-[#090D21]/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 shadow-sm">
         <CardHeader className="p-0 pb-5 border-b border-white/5">
           <div className="flex flex-wrap gap-3 items-center justify-between">
             <div>
-              <CardTitle className="text-lg font-black text-white flex items-center gap-2.5">
+              <CardTitle className="text-lg font-bold text-white flex items-center gap-2.5">
                 <IdCard className="w-5 h-5 text-purple-400" />
                 <span>الاسم والبيانات المعروضة</span>
               </CardTitle>
-              <CardDescription className="text-xs text-slate-400 mt-1">
+              <CardDescription className="text-sm text-muted-foreground mt-1">
                 اسمك الكامل كما يظهر في التقارير الأكاديمية وكشوف الحضور
               </CardDescription>
             </div>
@@ -101,7 +101,7 @@ export function ProfileOverview({ model }: { model: ReturnType<typeof useProfile
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Full Name Card */}
-              <div className="p-4 rounded-2xl bg-gradient-to-b from-white/[0.04] to-black/50 border border-white/10 hover:border-purple-500/40 transition-all duration-300 shadow-sm space-y-2 group">
+              <div className="p-4 rounded-2xl bg-muted/20 border border-white/10 transition-colors space-y-2 group">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] text-purple-300/90 font-medium flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-purple-400" />
@@ -111,13 +111,13 @@ export function ProfileOverview({ model }: { model: ReturnType<typeof useProfile
                     معتمد
                   </span>
                 </div>
-                <span className="text-base font-bold text-white block truncate">
+                <span className="text-base font-bold text-white block break-words">
                   {profile?.full_name || fullName || "—"}
                 </span>
               </div>
 
               {/* Username Card */}
-              <div className="p-4 rounded-2xl bg-gradient-to-b from-white/[0.04] to-black/50 border border-white/10 hover:border-cyan-500/40 transition-all duration-300 shadow-sm space-y-2 group">
+              <div className="p-4 rounded-2xl bg-muted/20 border border-white/10 transition-colors space-y-2 group">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] text-cyan-300/90 font-medium flex items-center gap-1.5">
                     <IdCard className="w-3.5 h-3.5 text-cyan-400" />
@@ -134,7 +134,7 @@ export function ProfileOverview({ model }: { model: ReturnType<typeof useProfile
               </div>
 
               {/* Email Card (Full address & copy) */}
-              <div className="p-4 rounded-2xl bg-gradient-to-b from-white/[0.04] to-black/50 border border-white/10 hover:border-emerald-500/40 transition-all duration-300 shadow-sm space-y-2 group">
+              <div className="p-4 rounded-2xl bg-muted/20 border border-white/10 transition-colors space-y-2 group">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] text-emerald-300/90 font-medium flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5 text-emerald-400" />
@@ -157,7 +157,7 @@ export function ProfileOverview({ model }: { model: ReturnType<typeof useProfile
                   )}
                 </div>
                 <span
-                  className="text-xs font-mono font-bold text-slate-200 block truncate"
+                  className="text-xs font-mono font-semibold text-slate-200 block break-all"
                   dir="ltr"
                   title={profile?.email || user?.email || ""}
                 >

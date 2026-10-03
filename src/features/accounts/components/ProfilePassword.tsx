@@ -29,13 +29,13 @@ export function ProfilePassword({ model }: { model: ReturnType<typeof useProfile
   } = model;
   return (
     <TabsContent value="security" className="space-y-6 mt-6">
-      <Card className="border border-purple-500/20 bg-[#090D21]/80 backdrop-blur-xl rounded-3xl p-6 sm:p-7 shadow-lg">
+      <Card className="border border-purple-500/20 bg-[#090D21]/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 shadow-sm">
         <CardHeader className="p-0 pb-5 border-b border-white/5">
-          <CardTitle className="text-lg font-black text-white flex items-center gap-2.5">
+          <CardTitle className="text-lg font-bold text-white flex items-center gap-2.5">
             <KeyRound className="w-5 h-5 text-purple-400" />
             <span>تغيير كلمة المرور</span>
           </CardTitle>
-          <CardDescription className="text-xs text-slate-400 mt-1">
+          <CardDescription className="text-sm text-muted-foreground mt-1">
             قم بتحديث كلمة المرور الخاصة بك بانتظام لحماية حسابك الجامعي
           </CardDescription>
         </CardHeader>

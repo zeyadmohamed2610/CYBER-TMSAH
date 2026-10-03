@@ -245,11 +245,15 @@ export const StudentDashboard = () => {
           { value: "device", label: "أمان الجهاز", shortLabel: "الجهاز", icon: ShieldCheck },
         ]}
       >
-        <TabsContent value="schedule">
+        <TabsContent aria-label="الجدول والامتحانات" value="schedule">
           <AcademicSchedulePanel />
         </TabsContent>
         {/* ── TAB 1: Check-in ─────────────────────────────────────────────── */}
-        <TabsContent value="checkin" className="space-y-6 focus-visible:outline-none">
+        <TabsContent
+          aria-label="تسجيل الحضور"
+          value="checkin"
+          className="space-y-6 focus-visible:outline-none"
+        >
           {/* Active Sessions Panel */}
           <div className="rounded-3xl glass-card p-5 sm:p-6 border border-white/10 shadow-lg">
             <div className="flex items-center justify-between gap-3 mb-4">
@@ -275,7 +279,11 @@ export const StudentDashboard = () => {
         </TabsContent>
 
         {/* ── TAB 2: Attendance Records ───────────────────────────────────── */}
-        <TabsContent value="records" className="space-y-4 focus-visible:outline-none">
+        <TabsContent
+          aria-label="سجلات الحضور"
+          value="records"
+          className="space-y-4 focus-visible:outline-none"
+        >
           <AttendanceRegisterPanel />
           <DataTable
             title="سجل الحضور الأكاديمي"
@@ -292,7 +300,11 @@ export const StudentDashboard = () => {
         </TabsContent>
 
         {/* ── TAB 3: Analytics & Progress ─────────────────────────────────── */}
-        <TabsContent value="analytics" className="space-y-6 focus-visible:outline-none">
+        <TabsContent
+          aria-label="المواد ونسب الحضور"
+          value="analytics"
+          className="space-y-6 focus-visible:outline-none"
+        >
           <DepartmentsAndSubjectsPanel />
           <div className="grid gap-3 sm:grid-cols-2">
             <StatCard
@@ -354,7 +366,11 @@ export const StudentDashboard = () => {
         </TabsContent>
 
         {/* ── TAB 4: Device & Security ────────────────────────────────────── */}
-        <TabsContent value="device" className="space-y-4 focus-visible:outline-none">
+        <TabsContent
+          aria-label="أمان الجهاز"
+          value="device"
+          className="space-y-4 focus-visible:outline-none"
+        >
           <Card className="bg-card/70 border-white/10">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">

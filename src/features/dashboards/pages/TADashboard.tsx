@@ -360,23 +360,23 @@ export const TADashboard = () => {
           { value: "profile", label: "بياناتي الشخصية", icon: Info },
         ]}
       >
-        <TabsContent value="lectures" className="mt-4">
+        <TabsContent aria-label="الجلسات الدراسية" value="lectures" className="mt-4">
           <LectureManagementPanel
             fixedSubjectId={taSubjectId}
             onSelectLecture={setSelectedLecture}
           />
         </TabsContent>
 
-        <TabsContent value="records" className="mt-4">
+        <TabsContent aria-label="سجلات الحضور" value="records" className="mt-4">
           <TAAttendanceRecords subjectId={undefined} sections={taSections} />
           <AttendanceRegisterPanel />
         </TabsContent>
 
-        <TabsContent value="schedule" className="mt-4">
+        <TabsContent aria-label="الجدول والامتحانات" value="schedule" className="mt-4">
           <QuickScheduleEditor />
         </TabsContent>
 
-        <TabsContent value="stats" className="mt-4">
+        <TabsContent aria-label="الإحصائيات" value="stats" className="mt-4">
           <Card className="bg-card/80">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
@@ -417,7 +417,7 @@ export const TADashboard = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="profile" className="mt-4">
+        <TabsContent aria-label="بياناتي الشخصية" value="profile" className="mt-4">
           <TAInfoCard subjectId={taSubjectId} sections={taSections} />
         </TabsContent>
       </DashboardWorkspace>

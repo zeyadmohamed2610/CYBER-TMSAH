@@ -52,6 +52,31 @@ export function DashboardWorkspace({
     return () => query.removeEventListener("change", update);
   }, []);
   const selected = items.find((i) => i.value === value) ?? items[0];
+  const priority = compactMobile
+    ? items
+    : [...items].sort((a, b) => {
+        const order = ["schedule", "lectures", "users", "records", "attendance-records"];
+        const rank = (item: DashboardDestination) => {
+          const i = order.indexOf(item.value);
+          return i < 0 ? order.length : i;
+        };
+        return rank(a) - rank(b);
+      });
+  const mobileItems = priority.slice(0, 4);
+  const shortLabel = (item: DashboardDestination) =>
+    item.shortLabel ??
+    (
+      {
+        schedule: "الجدول",
+        lectures: "الجلسات",
+        users: "الحسابات",
+        records: "السجل",
+        "attendance-records": "السجل",
+        stats: "الإحصاءات",
+        profile: "بياناتي",
+      } as Record<string, string>
+    )[item.value] ??
+    item.label;
   const sections = groups ?? [{ id: "all", label: "أقسام المنصة" }];
   const select = (next: string) => {
     onValueChange(next);
@@ -123,13 +148,13 @@ export function DashboardWorkspace({
       orientation={desktop ? "vertical" : "horizontal"}
       dir="rtl"
       className={cn(
-        "grid min-w-0 gap-4 lg:gap-6",
+        "dashboard-workspace grid min-w-0 gap-4 pb-24 lg:pb-0 lg:gap-6",
         collapsed ? "lg:grid-cols-[5rem_minmax(0,1fr)]" : "lg:grid-cols-[15rem_minmax(0,1fr)]",
       )}
     >
       <aside
         aria-label="التنقل الرئيسي"
-        className="hidden lg:block sticky top-24 self-start rounded-2xl border border-white/10 bg-[#0b1020]/90 p-3 max-h-[calc(100dvh-7rem)] overflow-y-auto"
+        className="hidden lg:block sticky top-24 self-start rounded-2xl border border-border bg-card p-3 max-h-[calc(100dvh-7rem)] overflow-y-auto"
       >
         <div
           className={cn(
@@ -156,32 +181,12 @@ export function DashboardWorkspace({
           aria-label="أقسام لوحة التحكم"
           className="flex h-auto w-full flex-col items-stretch justify-start gap-1 bg-transparent p-0"
         >
-          {links(false)}
+          {desktop && links(false)}
         </TabsList>
       </aside>
       <div className="min-w-0 space-y-4">
-        {compactMobile ? (
-          <TabsList
-            aria-label="التنقل الرئيسي للطالب"
-            className="lg:hidden grid h-auto w-full grid-cols-5 gap-1 rounded-2xl border border-white/10 bg-[#0b1020] p-1.5"
-          >
-            {items.map((item) => {
-              const Icon = item.icon;
-              return (
-                <TabsTrigger
-                  key={item.value}
-                  value={item.value}
-                  aria-label={item.label}
-                  className="min-h-16 min-w-0 flex-col gap-1.5 rounded-xl px-1 py-2 text-[11px] font-bold whitespace-normal data-[state=active]:bg-purple-500/15 data-[state=active]:text-purple-200"
-                >
-                  <Icon aria-hidden="true" className="h-5 w-5 shrink-0" />
-                  <span>{item.shortLabel ?? item.label}</span>
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
-        ) : (
-          <div className="lg:hidden sticky top-20 z-20 rounded-2xl border border-white/10 bg-[#0b1020]/95 p-2 backdrop-blur-lg">
+        {!desktop && (
+          <div className="lg:hidden rounded-2xl border border-border bg-card p-2">
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
                 <button
@@ -218,6 +223,41 @@ export function DashboardWorkspace({
                   {links(true)}
                 </nav>
               </DialogContent>
+
+              <nav
+                aria-label="اختصارات لوحة التحكم"
+                className="mobile-dock grid grid-cols-5 gap-1 lg:hidden"
+              >
+                <TabsList
+                  aria-label="التنقل الرئيسي للهاتف"
+                  className="col-span-4 grid h-auto w-full grid-cols-4 gap-1 bg-transparent p-0"
+                >
+                  {mobileItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <TabsTrigger
+                        key={item.value}
+                        value={item.value}
+                        aria-label={item.label}
+                        className="min-h-14 min-w-0 flex-col gap-1 rounded-xl px-1 py-2 text-[11px] font-semibold whitespace-normal data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none"
+                      >
+                        <Icon aria-hidden="true" className="h-5 w-5" />
+                        <span>{shortLabel(item)}</span>
+                      </TabsTrigger>
+                    );
+                  })}
+                </TabsList>
+                <button
+                  type="button"
+                  onClick={() => setOpen(true)}
+                  aria-label="المزيد من الصفحات"
+                  aria-expanded={open}
+                  className="flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-semibold text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Menu aria-hidden="true" className="h-5 w-5" />
+                  <span>المزيد</span>
+                </button>
+              </nav>
             </Dialog>
           </div>
         )}

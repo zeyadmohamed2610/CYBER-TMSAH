@@ -167,7 +167,7 @@ export const OwnerDashboard = () => {
         role="region"
         aria-label="ملخص المنصة"
         tabIndex={0}
-        className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary flex overflow-x-auto gap-2 pb-2 sm:grid sm:grid-cols-3 xl:grid-cols-6 sm:gap-3 [&>div]:min-w-36 [&>div]:shrink-0 sm:[&>div]:min-w-0"
+        className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary flex overflow-x-auto gap-2 pb-2 sm:grid sm:grid-cols-3 xl:grid-cols-6 sm:gap-3 [&>*]:w-40 [&>*]:min-w-40 [&>*]:shrink-0 sm:[&>*]:w-auto sm:[&>*]:min-w-0"
       >
         <StatCard
           title="الطلاب"
@@ -244,33 +244,41 @@ export const OwnerDashboard = () => {
           { id: "system", label: "الطلبات والمتابعة" },
         ]}
       >
-        <TabsContent value="users" className="mt-4 outline-none">
+        <TabsContent aria-label="المستخدمون" value="users" className="mt-4 outline-none">
           <UserList key={requestedTab} role={legacyRoles[requestedTab] ?? "all"} />
         </TabsContent>
 
         {/* Shared tab panels */}
-        <TabsContent value="requests" className="mt-4 outline-none">
+        <TabsContent aria-label="الطلبات المعلقة" value="requests" className="mt-4 outline-none">
           <JoinRequestsPanel />
         </TabsContent>
-        <TabsContent value="devices" className="mt-4 outline-none">
+        <TabsContent aria-label="أمان الأجهزة" value="devices" className="mt-4 outline-none">
           <DeviceLockPanel />
         </TabsContent>
-        <TabsContent value="schedule" className="mt-4 outline-none">
+        <TabsContent aria-label="الجدول والامتحانات" value="schedule" className="mt-4 outline-none">
           <QuickScheduleEditor />
         </TabsContent>
-        <TabsContent value="departments" className="mt-4 outline-none">
+        <TabsContent aria-label="الأقسام والمواد" value="departments" className="mt-4 outline-none">
           <DepartmentsAndSubjectsPanel />
         </TabsContent>
-        <TabsContent value="fixes" className="mt-4 outline-none">
+        <TabsContent aria-label="بلاغات المشاكل" value="fixes" className="mt-4 outline-none">
           <FixesReportsPanel />
         </TabsContent>
-        <TabsContent value="manual-attendance" className="mt-4 outline-none">
+        <TabsContent
+          aria-label="تسجيل يدوي"
+          value="manual-attendance"
+          className="mt-4 outline-none"
+        >
           <ManualAttendancePanel />
         </TabsContent>
-        <TabsContent value="attendance-records" className="mt-4 outline-none">
+        <TabsContent
+          aria-label="سجلات الحضور"
+          value="attendance-records"
+          className="mt-4 outline-none"
+        >
           <AttendanceRecordsPanel />
         </TabsContent>
-        <TabsContent value="lectures" className="mt-4 outline-none">
+        <TabsContent aria-label="الجلسات الدراسية" value="lectures" className="mt-4 outline-none">
           {selectedLecture ? (
             <LectureDetailView lecture={selectedLecture} onBack={() => setSelectedLecture(null)} />
           ) : (

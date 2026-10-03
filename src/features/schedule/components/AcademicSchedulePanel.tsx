@@ -1,5 +1,6 @@
 import { DEPARTMENTS } from "@/features/academics/types";
 import { scheduleService } from "@/features/schedule/services/scheduleService";
+import { ScheduleSkeleton } from "@/shared/components/Loading";
 import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
@@ -67,7 +68,12 @@ export function AcademicSchedulePanel() {
         </Button>
       </div>
     );
-  if (!data) return <p className="p-6">جاري تحميل الجدول...</p>;
+  if (!data)
+    return (
+      <div role="status" aria-label="جارٍ تحميل الجدول">
+        <ScheduleSkeleton />
+      </div>
+    );
   const settings = data.settings;
   const editableSettings = settingsDraft ?? settings;
   const actualWeek = academicWeek(date, settings.semester_start, settings.week_start_day);
@@ -84,7 +90,7 @@ export function AcademicSchedulePanel() {
           <Calendar className="h-5 w-5 text-primary" />
           الجدول والامتحانات
         </h2>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {role === "owner" && (
             <select
               aria-label="قسم الجدول"
@@ -118,9 +124,13 @@ export function AcademicSchedulePanel() {
         </div>
       </div>
       <Tabs defaultValue="schedule" dir="rtl">
-        <TabsList>
-          <TabsTrigger value="schedule">الجدول</TabsTrigger>
-          <TabsTrigger value="exams">الامتحانات</TabsTrigger>
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger className="flex-1 sm:flex-none" value="schedule">
+            الجدول
+          </TabsTrigger>
+          <TabsTrigger className="flex-1 sm:flex-none" value="exams">
+            الامتحانات
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="schedule" className="space-y-5">
           {data.can_edit && (

@@ -39,15 +39,8 @@ export default function ProfilePage() {
     >
       <Navbar />
 
-      {/* Background ambient decorative glows */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-1/4 -right-40 w-96 h-96 bg-purple-600/10 rounded-full blur-[120px]" />
-        <div className="absolute top-1/2 -left-40 w-96 h-96 bg-cyan-600/10 rounded-full blur-[140px]" />
-        <div className="absolute bottom-10 right-1/3 w-80 h-80 bg-indigo-600/10 rounded-full blur-[100px]" />
-      </div>
-
-      <main id="main-content" className="flex-1 py-8 sm:py-12 section-container relative z-10">
-        <div className="max-w-4xl mx-auto space-y-5">
+      <main id="main-content" className="flex-1 py-6 sm:py-10 section-container relative z-10">
+        <div className="max-w-5xl mx-auto space-y-5">
           <header className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h1 className="text-2xl font-bold">الملف الشخصي والحساب</h1>
@@ -77,7 +70,7 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   aria-label="تغيير الصورة الشخصية"
-                  className="relative h-20 w-20 shrink-0 rounded-2xl overflow-hidden bg-primary/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                  className="relative h-16 w-16 shrink-0 rounded-2xl overflow-hidden bg-primary/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
                   onClick={() => setIsAvatarStudioOpen(true)}
                 >
                   {avatarUrl ? (
@@ -112,7 +105,7 @@ export default function ProfilePage() {
                   type="button"
                   variant="ghost"
                   onClick={handleSignOutConfirm}
-                  className="basis-full sm:basis-auto text-rose-400 min-h-11 gap-2 justify-start sm:justify-center"
+                  className="sm:basis-auto text-rose-400 min-h-11 gap-2 justify-start sm:justify-center"
                 >
                   <LogOut className="h-4 w-4" />
                   تسجيل الخروج
@@ -123,31 +116,31 @@ export default function ProfilePage() {
               <div className="space-y-6">
                 <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="w-full">
                   {/* Modern Navigation Tabs Header */}
-                  <TabsList className="w-full grid grid-cols-2 sm:grid-cols-4 bg-[#090D21]/90 p-1.5 rounded-2xl h-auto border border-purple-500/20 backdrop-blur-xl gap-1">
+                  <TabsList className="w-full grid grid-cols-2 sm:grid-cols-4 bg-card p-1.5 rounded-2xl h-auto border border-border gap-1">
                     <TabsTrigger
                       value="overview"
-                      className="rounded-xl text-xs font-bold py-2.5 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg gap-1.5"
+                      className="rounded-xl text-sm font-semibold py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none gap-1.5"
                     >
                       <User className="w-3.5 h-3.5" />
                       <span>البيانات الأساسية</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="avatar"
-                      className="rounded-xl text-xs font-bold py-2.5 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg gap-1.5"
+                      className="rounded-xl text-sm font-semibold py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none gap-1.5"
                     >
                       <Camera className="w-3.5 h-3.5" />
                       <span>الصورة الشخصية</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="security"
-                      className="rounded-xl text-xs font-bold py-2.5 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg gap-1.5"
+                      className="rounded-xl text-sm font-semibold py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none gap-1.5"
                     >
                       <KeyRound className="w-3.5 h-3.5" />
                       <span>كلمة المرور</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="passkeys"
-                      className="rounded-xl text-xs font-bold py-2.5 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg gap-1.5"
+                      className="rounded-xl text-sm font-semibold py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none gap-1.5"
                     >
                       <Fingerprint className="w-3.5 h-3.5" />
                       <span>الدخول بالبصمة</span>

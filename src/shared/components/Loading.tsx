@@ -1,4 +1,4 @@
-import { Shield } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 
 /**
  * Loading Screen Component
@@ -14,69 +14,24 @@ interface LoadingScreenProps {
  * Displayed during authentication verification, secure transitions, or lazy chunk loading.
  */
 export const LoadingScreen = ({
-  message = "جاري تأمين الاتصال والتحقق...",
-  submessage = "نظام CYBER-TMSAH لإدارة الحضور الذكي",
+  message = "جارٍ تحميل المنصة...",
+  submessage = "CYBER TMSAH · منصتك الأكاديمية",
 }: LoadingScreenProps) => {
   return (
     <div
-      className="min-h-screen bg-[#060A14] flex flex-col items-center justify-center relative overflow-hidden px-4"
+      className="min-h-screen bg-background flex flex-col items-center justify-center px-6 text-center"
       role="status"
       aria-live="polite"
       aria-label={message}
     >
-      {/* Ambient background glow */}
-      <div
-        className="absolute w-96 h-96 rounded-full bg-purple-600/10 blur-[120px] pointer-events-none"
-        style={{ top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
-      />
-      <div
-        className="absolute w-64 h-64 rounded-full bg-fuchsia-600/5 blur-[80px] pointer-events-none"
-        style={{ top: "45%", left: "50%", transform: "translate(-50%, -50%)" }}
-      />
-
-      {/* Cyber Loader Container */}
-      <div className="relative flex items-center justify-center mb-8">
-        {/* Outer Ring 1: Clockwise Dash */}
-        <div
-          className="w-24 h-24 rounded-full border-2 border-purple-500/20 border-t-purple-500 border-r-fuchsia-500 animate-spin"
-          style={{ animationDuration: "1.6s" }}
+      <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-border bg-card">
+        <LoaderCircle
+          aria-hidden="true"
+          className="h-7 w-7 animate-spin motion-reduce:animate-none text-primary"
         />
-
-        {/* Outer Ring 2: Counter-Clockwise Dash */}
-        <div
-          className="absolute w-20 h-20 rounded-full border-2 border-dashed border-purple-400/30 border-b-purple-400 animate-spin"
-          style={{ animationDuration: "2.4s", animationDirection: "reverse" }}
-        />
-
-        {/* Pulsing Core with Shield */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="relative flex items-center justify-center w-12 h-12 rounded-full bg-purple-950/60 border border-purple-500/40 shadow-[0_0_20px_rgba(147,51,234,0.35)]">
-            <Shield className="w-6 h-6 text-purple-400 animate-pulse" />
-          </div>
-        </div>
-
-        {/* Orbiting Neon Dot */}
-        <div
-          className="absolute w-28 h-28 rounded-full animate-spin"
-          style={{ animationDuration: "3s" }}
-        >
-          <div className="w-2 h-2 rounded-full bg-fuchsia-400 shadow-[0_0_8px_#e879f9]" />
-        </div>
       </div>
-
-      {/* Brand & Loading Text */}
-      <div className="text-center z-10 space-y-2">
-        <h3 className="text-white font-bold text-base tracking-wide flex items-center justify-center gap-2">
-          <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-          {message}
-        </h3>
-        <p className="text-purple-300/60 text-xs font-mono tracking-wider">{submessage}</p>
-      </div>
-
-      {/* Bottom Subtle Bar Indicator */}
-      <div className="mt-8 w-48 h-1 bg-purple-950/80 rounded-full overflow-hidden border border-purple-900/30">
-        <div className="h-full bg-gradient-to-r from-purple-600 via-fuchsia-500 to-purple-600 rounded-full w-full animate-pulse" />
-      </div>
+      <p className="font-semibold text-foreground">{message}</p>
+      <p className="mt-2 text-sm text-muted-foreground">{submessage}</p>
     </div>
   );
 };
@@ -86,7 +41,7 @@ export const LoadingScreen = ({
  */
 export const CardSkeleton = () => {
   return (
-    <div className="rounded-xl bg-card border border-border p-6 animate-pulse">
+    <div className="rounded-xl bg-card border border-border p-6 animate-pulse motion-reduce:animate-none">
       <div className="h-4 bg-muted rounded w-3/4 mb-4" />
       <div className="h-3 bg-muted rounded w-1/2" />
     </div>
@@ -100,7 +55,10 @@ export const ScheduleSkeleton = () => {
   return (
     <div className="space-y-3">
       {[1, 2, 3].map((i) => (
-        <div key={i} className="rounded-xl bg-card border border-border p-5 animate-pulse">
+        <div
+          key={i}
+          className="rounded-xl bg-card border border-border p-5 animate-pulse motion-reduce:animate-none"
+        >
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-muted rounded-xl" />
             <div className="flex-1 space-y-2">
@@ -119,7 +77,7 @@ export const ScheduleSkeleton = () => {
  */
 export const HeroSkeleton = () => {
   return (
-    <div className="relative overflow-hidden py-28 md:py-40 animate-pulse">
+    <div className="relative overflow-hidden py-28 md:py-40 animate-pulse motion-reduce:animate-none">
       <div className="section-container">
         <div className="max-w-3xl mx-auto text-center">
           <div className="h-4 bg-muted rounded w-48 mx-auto mb-8" />
@@ -141,7 +99,11 @@ export const HeroSkeleton = () => {
  */
 export const AttendanceSkeleton = () => {
   return (
-    <div className="space-y-6 animate-pulse" role="status" aria-label="جاري تحميل بيانات الحضور">
+    <div
+      className="space-y-6 animate-pulse motion-reduce:animate-none"
+      role="status"
+      aria-label="جاري تحميل بيانات الحضور"
+    >
       {/* Header skeleton */}
       <div className="flex items-center justify-between">
         <div className="space-y-3">

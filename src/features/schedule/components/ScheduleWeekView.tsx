@@ -1,3 +1,6 @@
+import { EmptyState } from "@/shared/components/EmptyState";
+import { cn } from "@/shared/lib/utils";
+import { scheduleTiming } from "../utils/scheduleTiming";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -147,32 +150,31 @@ export function ScheduleWeekView({
           </div>
         </div>
         {now && (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-muted/30 p-3">
-            <div className="space-y-1">
-              <p className="text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+              <span>
                 {new Intl.DateTimeFormat("ar-EG", {
                   timeZone: "Africa/Cairo",
                   weekday: "long",
-                  year: "numeric",
                   month: "long",
                   day: "numeric",
                 }).format(now)}
-              </p>
-              <p className="font-bold tabular-nums" dir="ltr">
-                {new Intl.DateTimeFormat("ar-EG", {
-                  timeZone: "Africa/Cairo",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  second: "2-digit",
-                }).format(now)}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                توقيت مصر{!clockSynced ? " · جارٍ ضبط الوقت" : ""}
-              </p>
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <Clock3 aria-hidden="true" className="h-4 w-4" />
+                <time className="font-semibold tabular-nums text-foreground" dir="ltr">
+                  {new Intl.DateTimeFormat("ar-EG", {
+                    timeZone: "Africa/Cairo",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  }).format(now)}
+                </time>
+              </span>
+              <span className="text-xs">توقيت مصر{!clockSynced ? " · جارٍ ضبط الوقت" : ""}</span>
             </div>
             <Button
-              variant="outline"
-              className="min-h-11"
+              variant="ghost"
               onClick={() => {
                 setSelectedDay("today");
                 onToday?.();
@@ -252,11 +254,15 @@ export function ScheduleWeekView({
           </div>
         </details>
       </div>
-      <div className="grid grid-cols-4 sm:grid-cols-8 gap-2" role="group" aria-label="أيام الجدول">
+      <div
+        className="flex gap-2 overflow-x-auto scroll-touch pb-1"
+        role="group"
+        aria-label="أيام الجدول"
+      >
         <Button
           variant={selectedDay === null ? "default" : "outline"}
           aria-pressed={selectedDay === null}
-          className="h-auto min-h-14 whitespace-normal"
+          className="h-auto min-h-14 shrink-0 whitespace-normal px-4"
           onClick={() => setSelectedDay(null)}
         >
           الأسبوع كاملًا
@@ -266,7 +272,7 @@ export function ScheduleWeekView({
             key={day}
             variant={selectedDay === day ? "default" : "outline"}
             aria-pressed={selectedDay === day}
-            className="h-auto min-h-14 flex-col gap-1 px-1"
+            className="h-auto min-h-14 min-w-[4.5rem] shrink-0 flex-col gap-1 px-3"
             onClick={() => setSelectedDay(day)}
           >
             <span>{ACADEMIC_DAYS[day]}</span>
@@ -279,13 +285,11 @@ export function ScheduleWeekView({
         ))}
       </div>
       {data.entries.length === 0 ? (
-        <div className="rounded-2xl border border-dashed p-10 text-center">
-          <CalendarDays className="h-9 w-9 text-primary mx-auto mb-3" />
-          <h3 className="font-bold">الجدول لم يُنشر بعد</h3>
-          <p className="text-sm text-muted-foreground mt-2">
-            ستظهر المواعيد هنا بمجرد اعتمادها من إدارة القسم.
-          </p>
-        </div>
+        <EmptyState
+          icon={CalendarDays}
+          title="الجدول لم يُنشر بعد"
+          description="ستظهر المواعيد هنا بمجرد اعتمادها من إدارة القسم."
+        />
       ) : (
         <div className="space-y-5">
           {days
@@ -296,6 +300,17 @@ export function ScheduleWeekView({
                 : selectedDay === day,
             )
             .map((day) => {
+              const nextPeriod = Math.min(
+                ...entries
+                  .filter(
+                    (item) =>
+                      item.day_index === day &&
+                      !/^O\.[LN]$/i.test(scheduleRoom(item, dayCycle(day)).trim()) &&
+                      scheduleTiming(now, dayDate(day), data.settings.start_time, item.period) ===
+                        "upcoming",
+                  )
+                  .map((item) => item.period),
+              );
               const groups = new Map<string, typeof entries>();
               entries
                 .filter((entry) => entry.day_index === day)
@@ -316,23 +331,45 @@ export function ScheduleWeekView({
               const content =
                 open &&
                 (data.settings.days_off.includes(day) ? (
-                  <p className="rounded-xl border p-5 text-muted-foreground">
-                    إجازة حسب الجدول المعتمد.
-                  </p>
+                  <EmptyState
+                    icon={CalendarDays}
+                    title="إجازة حسب الجدول المعتمد."
+                    description="لا توجد حصص دراسية في هذا اليوم."
+                  />
                 ) : !groups.size ? (
-                  <p className="rounded-xl border p-5 text-muted-foreground">
-                    لا توجد مواعيد لهذا اليوم في الأسبوع المختار.
-                  </p>
+                  <EmptyState
+                    icon={CalendarDays}
+                    title="لا توجد مواعيد لهذا اليوم في الأسبوع المختار."
+                    description="يمكنك اختيار يوم آخر أو الاطلاع على الأسبوع كاملًا."
+                  />
                 ) : (
                   <div className="grid gap-3 xl:grid-cols-2">
                     {[...groups.entries()].map(([key, group]) => {
                       const entry = group[0]!;
                       const room = scheduleRoom(entry, dayCycle(day));
                       const remote = /^O\.[LN]$/i.test(room.trim());
+                      const timing =
+                        previewCycle === "auto" && !remote
+                          ? scheduleTiming(
+                              now,
+                              dayDate(day),
+                              data.settings.start_time,
+                              entry.period,
+                            )
+                          : "other-day";
+                      const upcoming = timing === "upcoming" && entry.period === nextPeriod;
                       return (
                         <article
                           key={key}
-                          className="rounded-2xl border bg-card p-4 sm:p-5 space-y-3"
+                          data-timing={timing}
+                          className={cn(
+                            "rounded-2xl border bg-card p-4 sm:p-5 space-y-4",
+                            timing === "current"
+                              ? "border-emerald-400/40 bg-emerald-500/5"
+                              : upcoming
+                                ? "border-primary/35"
+                                : "border-border",
+                          )}
                         >
                           <div className="flex gap-3 items-start">
                             <div className="rounded-xl bg-primary/10 px-3 py-2 text-primary shrink-0 text-center">
@@ -345,10 +382,24 @@ export function ScheduleWeekView({
                               </p>
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs text-muted-foreground mb-1">
-                                {entry.kind === "lecture" ? "محاضرة" : "سكشن"}
-                              </p>
-                              <h4 className="font-bold break-words" dir="auto">
+                              <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                <span>{entry.kind === "lecture" ? "محاضرة" : "سكشن"}</span>
+                                {timing === "current" && (
+                                  <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 font-semibold text-emerald-300">
+                                    الآن
+                                  </span>
+                                )}
+                                {upcoming && (
+                                  <span className="rounded-full bg-primary/10 px-2 py-0.5 font-semibold text-primary">
+                                    القادمة
+                                  </span>
+                                )}
+                                {timing === "finished" && <span>انتهى موعدها</span>}
+                              </div>
+                              <h4
+                                className="text-base font-bold leading-relaxed break-words"
+                                dir="auto"
+                              >
                                 {entry.subject_name ??
                                   data.subjects.find((subject) => subject.id === entry.subject_id)
                                     ?.name}

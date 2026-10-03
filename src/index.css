@@ -563,53 +563,92 @@ body {
   width: 100%;
 }
 
-/* ── Global Interactive Cursor Glow Reaction ────────────────────────── */
-@media (hover: hover) and (pointer: fine) {
-  /* Buttons, tabs, and clickable elements react dynamically to cursor */
-  button:not(:disabled):not(.no-glow):hover,
-  [role="button"]:not(.no-glow):hover,
-  [role="tab"]:hover,
-  a.btn:hover,
-  a.glow-hover:hover {
-    filter: brightness(1.1);
-    box-shadow: 0 0 20px rgba(147, 51, 234, 0.28);
-    transition:
-      filter 0.18s ease,
-      box-shadow 0.22s ease,
-      transform 0.18s ease,
-      border-color 0.22s ease;
-  }
-
-  /* Inputs, selects, and textareas react to cursor hover */
-  input:not([type="checkbox"]):hover,
-  select:hover,
-  textarea:hover {
-    border-color: rgba(147, 51, 234, 0.5) !important;
-    box-shadow: 0 0 16px rgba(147, 51, 234, 0.14);
-    transition:
-      border-color 0.2s ease,
-      box-shadow 0.2s ease;
-  }
-
-  /* Cards and floating panels reflect subtle interactive ambient lighting */
-  .card:hover,
-  .glass-card:hover,
-  .glass-panel:hover {
-    border-color: rgba(147, 51, 234, 0.35) !important;
-    box-shadow:
-      0 20px 45px -10px rgba(0, 0, 0, 0.7),
-      0 0 28px rgba(147, 51, 234, 0.16) !important;
-    transition:
-      border-color 0.25s ease,
-      box-shadow 0.25s ease;
-  }
-}
-
 /* Keep mobile form text readable and avoid focus zoom on iOS. */
 @media (max-width: 767px) {
   input:not([type="checkbox"]):not([type="radio"]),
   select,
   textarea {
     font-size: 16px !important;
+  }
+}
+
+/* Academic surfaces: restrained contrast, consistent spacing and readable Arabic. */
+@layer components {
+  .academic-card {
+    background: hsl(var(--card)) !important;
+    border-color: hsl(var(--border)) !important;
+    box-shadow: 0 4px 20px rgb(0 0 0 / 0.08) !important;
+    backdrop-filter: none !important;
+  }
+  .mobile-dock {
+    position: fixed;
+    z-index: 40;
+    inset-inline: 0.75rem;
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
+    padding: 0.375rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: 1.25rem;
+    background: hsl(var(--card));
+    box-shadow: 0 8px 32px rgb(0 0 0 / 0.2);
+  }
+  .app-ambient {
+    background: radial-gradient(ellipse at top right, hsl(var(--primary) / 0.04), transparent 55%);
+  }
+}
+@layer base {
+  body {
+    line-height: 1.75;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    line-height: 1.5;
+  }
+  :focus-visible {
+    scroll-margin-block: 6rem;
+  }
+}
+@layer utilities {
+  .glass-card,
+  .glass-panel {
+    background: hsl(var(--card));
+    border-color: hsl(var(--border));
+    backdrop-filter: none;
+    box-shadow: 0 4px 20px rgb(0 0 0 / 0.08);
+  }
+  .glass-card:hover {
+    background: hsl(var(--card));
+    border-color: hsl(var(--border));
+    box-shadow: 0 4px 20px rgb(0 0 0 / 0.08);
+    transform: none;
+  }
+  .cyber-glow,
+  .cyber-glow-strong {
+    box-shadow: none;
+  }
+  .card-hover:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgb(0 0 0 / 0.1);
+  }
+  .btn-cyber:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+@media (max-width: 1023px) {
+  .dashboard-workspace {
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+  }
+}
+@media print {
+  .mobile-dock {
+    display: none !important;
+  }
+}
+
+@media (max-width: 1023px) {
+  body:has(.dashboard-workspace) footer {
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom));
   }
 }

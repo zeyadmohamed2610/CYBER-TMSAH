@@ -42,9 +42,19 @@ afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
 });
-function Harness({ data, student = true }: { data: AcademicSchedule; student?: boolean }) {
+function Harness({
+  data,
+  student = true,
+  now,
+  initialCycle = "1",
+}: {
+  data: AcademicSchedule;
+  student?: boolean;
+  now?: Date;
+  initialCycle?: string;
+}) {
   const [view, setView] = useState(student ? "mine" : "all");
-  const [cycle, setCycle] = useState("1");
+  const [cycle, setCycle] = useState(initialCycle);
   return (
     <ScheduleWeekView
       data={data}
@@ -52,7 +62,8 @@ function Harness({ data, student = true }: { data: AcademicSchedule; student?: b
       section={1}
       view={view}
       date="2026-10-02"
-      cycle={Number(cycle)}
+      cycle={cycle === "auto" ? 1 : Number(cycle)}
+      {...(now ? { now } : {})}
       actualWeek={null}
       previewCycle={cycle}
       onView={setView}
@@ -70,6 +81,27 @@ async function click(label: string) {
   await act(async () => button!.click());
 }
 describe("Student timetable display", () => {
+  it("highlights the current lesson and only the nearest next lesson on today's automatic view", async () => {
+    const data = schedule([entry(1), entry(1, { period: 7 }), entry(1, { period: 8 })]);
+    await act(async () =>
+      root.render(
+        <Harness data={data} initialCycle="auto" now={new Date("2026-10-02T11:00:00Z")} />,
+      ),
+    );
+    expect(container.querySelectorAll('article[data-timing="current"]')).toHaveLength(1);
+    expect(
+      [...container.querySelectorAll("article")].filter((card) =>
+        card.textContent?.includes("القادمة"),
+      ),
+    ).toHaveLength(1);
+    await click("الثاني");
+    expect(container.querySelectorAll('article[data-timing="current"]')).toHaveLength(0);
+    expect(
+      [...container.querySelectorAll("article")].filter((card) =>
+        card.textContent?.includes("القادمة"),
+      ),
+    ).toHaveLength(0);
+  });
   it("collapses the full week, opens a chosen day and finds its correct venue", async () => {
     await act(async () =>
       root.render(<Harness data={schedule([entry(1), entry(1, { day_index: 0, room: "A02" })])} />),
