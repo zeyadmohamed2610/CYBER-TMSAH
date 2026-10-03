@@ -27,14 +27,17 @@ describe("passkey sign-in safety", () => {
     const message='لم يؤكد الجهاز هويتك. أعد المحاولة باستخدام رمز قفل الجهاز.';
     mocks.invoke.mockResolvedValueOnce({data:{success:true,options:{challenge:'Y2hhbGxlbmdl',userVerification:'preferred'}},error:null})
       .mockResolvedValueOnce({data:{success:false,code:'USER_VERIFICATION_REQUIRED',error:message},error:null});
-    vi.mocked(navigator.credentials.get).mockResolvedValue({id:'key',rawId:new ArrayBuffer(1),type:'public-key',response:{clientDataJSON:new ArrayBuffer(1),authenticatorData:new ArrayBuffer(1),signature:new ArrayBuffer(1),userHandle:null},getClientExtensionResults:()=>({})} as unknown as PublicKeyCredential);
+    const authenticatorData=new Uint8Array(37);authenticatorData[32]=1;
+    vi.mocked(navigator.credentials.get).mockResolvedValue({id:'key',rawId:new ArrayBuffer(1),type:'public-key',response:{clientDataJSON:new ArrayBuffer(1),authenticatorData:authenticatorData.buffer,signature:new ArrayBuffer(1),userHandle:null},getClientExtensionResults:()=>({})} as unknown as PublicKeyCredential);
     const logged=vi.spyOn(console,'error').mockImplementation(()=>{});
+    const diagnostic=vi.spyOn(console,'warn').mockImplementation(()=>{});
     try {
       expect(await authenticateWithPasskey()).toMatchObject({success:false,error:message});
       expect(navigator.credentials.get).toHaveBeenCalledWith(expect.objectContaining({publicKey:expect.objectContaining({userVerification:'required'})}));
       expect(logged).toHaveBeenCalledWith('[WebAuthn] auth-finish failed:','USER_VERIFICATION_REQUIRED',message);
+      expect(JSON.parse(diagnostic.mock.calls[0]![1] as string)).toEqual({action:'auth-finish',requestedVerification:'required',deviceResponse:{bytes:37,flags:1,userPresent:true,userVerified:false},sentResponse:{bytes:37,flags:1,userPresent:true,userVerified:false}});
       expect(mocks.setSession).not.toHaveBeenCalled();
-    } finally { logged.mockRestore(); }
+    } finally { logged.mockRestore();diagnostic.mockRestore(); }
   });
   it("does not save an unverified credential when registration is unavailable", async () => {
     const result = await registerPasskey("my device");

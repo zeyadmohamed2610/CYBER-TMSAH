@@ -1,4 +1,5 @@
 import { computeFingerprint } from "@/features/attendance/utils/fingerprint";
+import { getPasskeyVerificationDetails } from './passkeyDiagnostics';
 /**
  * WebAuthn / Passkey client library — CYBER TMSAH
  *
@@ -374,12 +375,21 @@ export async function authenticateWithPasskey(identifier?: string, verificationC
   };
 
   // ── 6. Server verifies signature and creates session ──────────────────────
-  const { data: finishData, error: finishErr } = await callPasskeyFn(verificationCredentialId ? 'verify-finish' : "auth-finish", {
+  const finishAction = verificationCredentialId ? 'verify-finish' : 'auth-finish';
+  const { data: finishData, error: finishErr } = await callPasskeyFn(finishAction, {
     credential: serialized,
   }, token);
 
   if (finishErr || !finishData?.success) {
-    console.error("[WebAuthn] auth-finish failed:", finishData?.code ?? "VERIFICATION_FAILED", finishData?.error ?? finishErr?.message ?? "No response");
+    console.error(`[WebAuthn] ${finishAction} failed:`, finishData?.code ?? "VERIFICATION_FAILED", finishData?.error ?? finishErr?.message ?? "No response");
+    if (finishData?.code === 'USER_VERIFICATION_REQUIRED') {
+      console.warn('[WebAuthn] device verification details:', JSON.stringify({
+        action: finishAction,
+        requestedVerification: reqOptions.userVerification,
+        deviceResponse: getPasskeyVerificationDetails(assertionResp.authenticatorData),
+        sentResponse: getPasskeyVerificationDetails(base64urlToUint8Array(serialized.response.authenticatorData).buffer),
+      }));
+    }
     return { success: false, error: finishData?.error ?? "تعذر تأكيد البصمة. أعد المحاولة." };
   }
 
@@ -440,7 +450,17 @@ export async function verifyPasskeyForCurrentUser(attendanceHash: string): Promi
         clientExtensionResults: assertion.getClientExtensionResults(),
       },
     }, token);
-    if (error || !finish?.success || typeof finish.proofId !== "string") return { success: false, error: "تعذر تأكيد الحضور. أعد التحقق." };
+    if (error || !finish?.success || typeof finish.proofId !== "string") {
+      if (finish?.code === 'USER_VERIFICATION_REQUIRED') {
+        console.warn('[WebAuthn] device verification details:', JSON.stringify({
+          action: 'attendance-finish', requestedVerification: 'required',
+          deviceResponse: getPasskeyVerificationDetails(response.authenticatorData),
+          sentResponse: getPasskeyVerificationDetails(base64urlToUint8Array(bufferToBase64url(response.authenticatorData)).buffer),
+        }));
+        return { success: false, error: finish.error };
+      }
+      return { success: false, error: "تعذر تأكيد الحضور. أعد التحقق." };
+    }
     return { success: true, credentialId: finish.proofId };
   } catch (error) {
     return { success: false, cancelled: error instanceof Error && error.name === "NotAllowedError", error: "لم يكتمل التحقق بالبصمة. أعد المحاولة." };
