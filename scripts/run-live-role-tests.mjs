@@ -61,6 +61,7 @@ try{
  for(const id of fixtureSessions){const result=await admin.from('sessions').delete().eq('id',id);if(result.error)throw result.error;}
  for(const id of fixtureIds){const result=await admin.from('lectures').delete().eq('id',id);if(result.error)throw result.error;}
  if(passkeys)await clearPasskeys();
+ if(passkeys){const bindings=await admin.from('native_passkey_requests').delete().in('auth_id',accounts.map(account=>account.authId));if(bindings.error)throw bindings.error;}
  const reset=await admin.from('device_locks').delete().eq('student_auth_id',student.authId);if(reset.error)throw reset.error;
 }
 if(failed)process.exitCode=1;

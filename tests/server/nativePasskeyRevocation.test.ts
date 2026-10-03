@@ -8,6 +8,8 @@ beforeAll(async()=>{
  CREATE TABLE auth.users(id uuid PRIMARY KEY);
  CREATE TABLE auth.webauthn_credentials(id uuid PRIMARY KEY,user_id uuid,credential_id bytea);
  CREATE TABLE attendance_biometric_proofs(id uuid,auth_id uuid,credential_id text);
+ CREATE TABLE webauthn_credentials(id uuid);
+ CREATE TABLE webauthn_challenges(id uuid);
  INSERT INTO auth.users VALUES('${user}');
  INSERT INTO auth.webauthn_credentials VALUES('${key}','${user}',decode('6b6579','hex'));
  CREATE FUNCTION private.guard_passkey_receipt() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NEW;END;$$;

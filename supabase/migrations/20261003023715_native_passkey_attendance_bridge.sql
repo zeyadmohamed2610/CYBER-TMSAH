@@ -33,3 +33,4 @@ BEGIN
  RETURN NEW;
 END; $$;
 REVOKE ALL ON FUNCTION private.guard_passkey_receipt() FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON public.webauthn_credentials,public.webauthn_challenges FROM anon,authenticated;
