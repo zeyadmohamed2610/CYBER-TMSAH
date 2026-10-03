@@ -18,7 +18,7 @@ function query(table:string) {
 }
 function request(action='attendance-finish',flags=5,overrides:Row={}) {
  const bytes=Buffer.alloc(37);bytes[32]=flags;
- return new Request('https://backend/?action='+action,{method:'POST',headers:{origin:'https://www.cyber-tmsah.site'},body:JSON.stringify({challengeId:'challenge',credential:{id:'key',response:{authenticatorData:bytes.toString('base64url')}},attendanceHash:'123456',deviceFingerprint:'a'.repeat(64),...overrides})});
+ return new Request('https://backend/?action='+action,{method:'POST',headers:{origin:'https://www.cyber-tmsah.site','Content-Type':'application/json'},body:JSON.stringify({challengeId:'challenge',credential:{id:'key',response:{authenticatorData:bytes.toString('base64url')}},attendanceHash:'123456',deviceFingerprint:'a'.repeat(64),...overrides})});
 }
 beforeEach(()=>{
  vi.clearAllMocks();vi.stubGlobal('Deno',{env:{get:()=>undefined}});
@@ -30,6 +30,10 @@ beforeEach(()=>{
  mocks.native.mockReturnValue({auth:{passkey:{verifyAuthentication:mocks.verify},signOut:mocks.signOut}});
 });
 describe('Supabase native verification boundary',()=>{
+ it('rejects oversized requests before invoking authentication or issuing a receipt',async()=>{
+  const req=new Request('https://backend/?action=auth-finish',{method:'POST',headers:{origin:'https://www.cyber-tmsah.site','Content-Type':'application/json'},body:JSON.stringify({payload:'x'.repeat(66000)})});
+  expect((await handlePasskeyRequest(req)).status).toBe(413);expect(mocks.verify).not.toHaveBeenCalled();expect(proofs).toHaveLength(0);
+ });
  it.each([5,29])('accepts verified device/synced flags %i and binds a one-use receipt',async flags=>{
   expect(await (await handlePasskeyRequest(request('attendance-finish',flags))).json()).toEqual({success:true,proofId:'proof'});
   expect(binding).toBeUndefined();expect(proofs[0]).toMatchObject({auth_id:'user-a',attendance_hash:'123456',credential_id:'key'});

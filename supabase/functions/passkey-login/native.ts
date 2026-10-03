@@ -1,16 +1,20 @@
 import {createSupabaseContext} from 'npm:@supabase/server@1.8.0';
 import {passkeyAdmin,nativePasskeyClient} from './context.ts';
 import {corsHeaders,json,isAllowedOrigin} from './support.ts';
+import {readJsonObject, RequestFailure} from '../_shared/request.ts';
+interface PasskeyRequestBody {
+ action?:string; challengeId:string; credentialId?:string; attendanceHash?:string; deviceFingerprint?:string;
+ credential:Parameters<ReturnType<typeof nativePasskeyClient>['auth']['passkey']['verifyAuthentication']>[0]['credential'];
+}
 const actions=new Set(['auth-finish','verify-start','verify-finish','attendance-start','attendance-finish']);
 export async function handlePasskeyRequest(req:Request):Promise<Response> {
  if(req.method==='OPTIONS')return new Response(null,{headers:corsHeaders});
  if(req.method!=='POST')return json({success:false,error:'Method not allowed'},405);
  if(!isAllowedOrigin(req.headers.get('origin')??''))return json({success:false,error:'نطاق الموقع غير معتمد.'},403);
  try {
-  const body=await req.json().catch(()=>null);
-  if(!body || typeof body!=='object' || Array.isArray(body))return json({success:false,error:'Invalid request'},400);
+  const body=await readJsonObject(req,65_536) as unknown as PasskeyRequestBody;
   const action=new URL(req.url).searchParams.get('action')??body.action;
-  if(!actions.has(action))return json({success:false,error:'Unknown action'},400);
+  if(!action || !actions.has(action))return json({success:false,error:'Unknown action'},400);
   const env={
    ...(Deno.env.get('APP_SUPABASE_PUBLISHABLE_KEY')?{publishableKeys:{default:Deno.env.get('APP_SUPABASE_PUBLISHABLE_KEY')!}}:{}),
    ...(Deno.env.get('APP_SUPABASE_SECRET_KEY')?{secretKeys:{default:Deno.env.get('APP_SUPABASE_SECRET_KEY')!}}:{}),
@@ -46,6 +50,7 @@ export async function handlePasskeyRequest(req:Request):Promise<Response> {
    if(attendance && (binding!.attendance_hash!==body.attendanceHash || binding!.device_fingerprint!==body.deviceFingerprint))return json({success:false,error:'تغير رمز الحضور أو الجهاز. أعد التحقق.'},403);
   }
   const encoded=body.credential?.response?.authenticatorData;
+  if(typeof encoded!=='string')return json({success:false,error:'Invalid credential'},400);
   let flags=0;
   try {const bytes=Uint8Array.from(atob(encoded.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(encoded.length/4)*4,'=')),c=>c.charCodeAt(0));if(bytes.length>=37)flags=bytes[32];}catch{/* reject below */}
   if(!(flags&1)||!(flags&4))return json({success:false,code:'USER_VERIFICATION_REQUIRED',error:'لم يصل تأكيد هويتك من مفتاح الدخول. أكمل البصمة أو الوجه أو رمز قفل الجهاز.'},403);
@@ -65,5 +70,5 @@ export async function handlePasskeyRequest(req:Request):Promise<Response> {
    if(proof.error||!proof.data)return json({success:false,error:'تعذر تأكيد الحضور. أعد التحقق.'},503);
    return json({success:true,proofId:proof.data.id});
   }finally {await native.auth.signOut({scope:'local'});}
- }catch {return json({success:false,error:'تعذر إكمال التحقق. أعد المحاولة.'},500);}
+ }catch(error) {return json({success:false,error:error instanceof RequestFailure?error.message:'تعذر إكمال التحقق. أعد المحاولة.'},error instanceof RequestFailure?error.status:500);}
 }

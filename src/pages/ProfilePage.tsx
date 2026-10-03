@@ -17,9 +17,8 @@ import { checkPwnedPassword } from "@/lib/pwnedPassword";
 import Footer from "@/components/Footer";
 import AvatarStudioDialog from "@/components/AvatarStudioDialog";
 import { deleteUserAvatar } from "@/lib/avatarUtils";
-import { registerPasskey, preparePasskeyRegistration, authenticateWithPasskey, isWebAuthnSupported, checkLocalPasskeyAvailability, type PreparedPasskeyRegistration } from "@/lib/webauthn";
+import { registerPasskey, preparePasskeyRegistration, authenticateWithPasskey, isWebAuthnSupported, type PreparedPasskeyRegistration } from "@/lib/webauthn";
 import { passkeyFailure } from '@/lib/passkeys/errors';
-import type {RegistrationDiagnostic} from '@/lib/passkeys/registrationDiagnostics';
 import {
   Dialog,
   DialogContent,
@@ -73,15 +72,16 @@ export default function ProfilePage() {
 
   // Passkey (WebAuthn) State
   const [passkeys, setPasskeys] = useState<ManagedPasskey[]>([]);
+  const [loadingPasskeys, setLoadingPasskeys] = useState(true);
+  const [passkeysLoadFailed, setPasskeysLoadFailed] = useState(false);
+  const [passkeysRefresh, setPasskeysRefresh] = useState(0);
+  const [deletingPasskeyId, setDeletingPasskeyId] = useState<string | null>(null);
   const [renamingPasskey, setRenamingPasskey] = useState<ManagedPasskey|null>(null);
   const [passkeyName, setPasskeyName] = useState('');
   const [savingPasskeyName, setSavingPasskeyName] = useState(false);
   const [creatingPasskey, setCreatingPasskey] = useState(false);
   const [passkeyDestination, setPasskeyDestination] = useState<'device'|'any'>('device');
   const [preparedPasskey, setPreparedPasskey] = useState<PreparedPasskeyRegistration|null>(null);
-  const [checkingPasskeyDevice, setCheckingPasskeyDevice] = useState(false);
-  const [passkeyDeviceCheck, setPasskeyDeviceCheck] = useState<string|null>(null);
-  const [passkeyDiagnostic, setPasskeyDiagnostic] = useState<RegistrationDiagnostic|null>(null);
   const [testingPasskeyId, setTestingPasskeyId] = useState<string | null>(null);
 
   // Passkey Re-authentication State (Security enhancement)
@@ -114,6 +114,8 @@ export default function ProfilePage() {
     if (!user?.id) return;
     let isMounted = true;
     async function loadUserPasskeys() {
+      setLoadingPasskeys(true);
+      setPasskeysLoadFailed(false);
       try {
         const { data, error } = await supabase.auth.passkey.list();
 
@@ -123,7 +125,9 @@ export default function ProfilePage() {
         setPasskeys(mapped);
       } catch (err) {
         console.error("Failed to load verified passkeys", err);
-        if (isMounted) { setPasskeys([]); toast.error("تعذر تحميل أجهزة الدخول المعتمدة."); }
+        if (isMounted) setPasskeysLoadFailed(true);
+      } finally {
+        if (isMounted) setLoadingPasskeys(false);
       }
     }
 
@@ -131,7 +135,7 @@ export default function ProfilePage() {
     return () => {
       isMounted = false;
     };
-  }, [user]);
+  }, [user?.id, passkeysRefresh]);
 
   const savePasskeys = (items: ManagedPasskey[]) => {
     if (!user?.id) return;
@@ -139,6 +143,7 @@ export default function ProfilePage() {
   };
 
   const handleInitiatePasskeyCreation = (destination:'device'|'any'='device') => {
+    if (loadingPasskeys || passkeysLoadFailed || creatingPasskey || deletingPasskeyId) return;
     if (!isWebAuthnSupported()) {
       toast.error("الدخول بالبصمة غير متاح على جهازك أو متصفحك الحالي.");
       return;
@@ -152,7 +157,6 @@ export default function ProfilePage() {
     // Open security re-authentication modal
     setPasskeyDestination(destination);
     setPreparedPasskey(null);
-    setPasskeyDiagnostic(null);
     setPasskeyAuthPassword("");
     setShowPasskeyAuthPassword(false);
     setIsPasskeyAuthModalOpen(true);
@@ -212,7 +216,6 @@ export default function ProfilePage() {
 
       const formattedLabel = `${deviceLabel} - ${new Date().toLocaleDateString("ar-EG")}`;
       const result = await registerPasskey(formattedLabel,passkeyDestination,prepared);
-      setPasskeyDiagnostic(result.diagnostic ?? null);
 
       if (result.cancelled) {
         toast.info(passkeyDestination==='device' ? "لم تكتمل الإضافة على هذا الجهاز. إذا لم يظهر خيار الحفظ، راجع مدير كلمات المرور وقفل الشاشة في إعدادات جهازك." : "تم إلغاء عملية إضافة جهاز الدخول.");
@@ -226,9 +229,9 @@ export default function ProfilePage() {
 
       // Refresh passkeys list from database (server-verified credentials)
       if (user?.id) {
-        const { data: dbData } = await supabase.auth.passkey.list();
+        const { data: dbData, error: listError } = await supabase.auth.passkey.list();
 
-        if (dbData && dbData.length > 0) {
+        if (!listError && dbData) {
           const mapped = dbData.map((item) => ({
             id: item.id,
             rawId: item.id,
@@ -238,13 +241,9 @@ export default function ProfilePage() {
           }));
           savePasskeys(mapped);
         } else {
-          const newKey = {
-            id: result.credentialId,
-            rawId: result.credentialId,
-            label: formattedLabel,
-            createdAt: new Date().toISOString(),
-          };
-          savePasskeys([...passkeys, newKey]);
+          setPasskeysLoadFailed(true);
+          toast.info("تم حفظ المفتاح. أعد تحميل القائمة لعرضه.");
+          return;
         }
       }
 
@@ -257,16 +256,6 @@ export default function ProfilePage() {
       setPreparedPasskey(null);
     }
   };
-
-  const handleCheckPasskeyDevice=async()=>{
-    setCheckingPasskeyDevice(true);
-    try {
-      const available=await checkLocalPasskeyAvailability();
-      setPasskeyDeviceCheck(available===true ? 'المتصفح يكتشف وسيلة لتأكيد هويتك على هذا الجهاز. يمكنك تجربة الإضافة.' : available===false ? 'المتصفح لم يكتشف وسيلة لحفظ المفتاح مع تأكيد هويتك على هذا الجهاز. راجع قفل الشاشة ومدير كلمات المرور في إعدادات الهاتف، وحدّث المتصفح.' : 'لم يستطع المتصفح تحديد توفر الحفظ على الجهاز. يمكنك تجربة الإضافة أو اختيار مكان حفظ آخر.');
-    }finally {setCheckingPasskeyDevice(false);}
-  };
-
-
 
   const handleTestPasskey = async (passkeyId: string) => {
     if (typeof window === "undefined" || !window.PublicKeyCredential) {
@@ -293,11 +282,15 @@ export default function ProfilePage() {
   };
 
   const handleDeletePasskey = async (passkeyId: string) => {
-    if (!user?.id) return;
-    const result = await supabase.auth.passkey.delete({passkeyId});
-    if (result.error) { toast.error("تعذر حذف جهاز الدخول. لم يتغير المفتاح المعتمد."); return; }
-    savePasskeys(passkeys.filter(p => p.id !== passkeyId));
-    toast.success("تم إلغاء اعتماد المفتاح على المنصة. يمكنك حذفه من مدير مفاتيح جهازك أيضًا.");
+    if (!user?.id || deletingPasskeyId) return;
+    setDeletingPasskeyId(passkeyId);
+    try {
+      const result = await supabase.auth.passkey.delete({passkeyId});
+      if (result.error) throw result.error;
+      setPasskeys(items => items.filter(p => p.id !== passkeyId));
+      toast.success("تم حذف مفتاح الدخول من حسابك.");
+    } catch { toast.error("تعذر حذف مفتاح الدخول. أعد المحاولة."); }
+    finally { setDeletingPasskeyId(null); }
   };
 
   const handleRenamePasskey = async (event:React.FormEvent) => {
@@ -750,7 +743,7 @@ export default function ProfilePage() {
 
                   {/* TAB 2: AVATAR & APPEARANCE */}
                   <TabsContent value="avatar" className="space-y-6 mt-6">
-                    <Card className="border border-purple-500/25 bg-[#090D21]/80 backdrop-blur-xl rounded-3xl p-6 sm:p-7 shadow-lg">
+                    <Card className="border border-purple-500/25 bg-[#090D21]/80 backdrop-blur-xl rounded-3xl p-4 sm:p-7 shadow-lg">
                       <CardHeader className="p-0 pb-5 border-b border-white/5">
                         <div className="flex items-center justify-between flex-wrap gap-3">
                           <div>
@@ -973,7 +966,7 @@ export default function ProfilePage() {
 
                   {/* TAB 4: PASSKEYS / WEBAUTHN */}
                   <TabsContent value="passkeys" className="space-y-6 mt-6">
-                    <Card className="border border-purple-500/25 bg-[#090D21]/80 backdrop-blur-xl rounded-3xl p-6 sm:p-7 shadow-lg">
+                    <Card className="border border-purple-500/25 bg-[#090D21]/80 backdrop-blur-xl rounded-3xl p-4 sm:p-7 shadow-lg">
                       <CardHeader className="p-0 pb-5 border-b border-white/5">
                         <div className="flex items-center justify-between gap-3 flex-wrap">
                           <div>
@@ -986,9 +979,6 @@ export default function ProfilePage() {
                             </CardDescription>
                           </div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="inline-flex items-center rounded-full border border-purple-500/40 bg-purple-500/15 px-3 py-1 text-[11px] font-bold text-purple-300">
-                              دخول سهل
-                            </span>
                             <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-bold ${
                               passkeys.length >= MAX_PASSKEYS
                                 ? "border-amber-500/40 bg-amber-500/15 text-amber-300"
@@ -1001,15 +991,15 @@ export default function ProfilePage() {
                       </CardHeader>
 
                       <CardContent className="p-0 pt-6 space-y-5">
-                        {passkeys.length === 0 ? (
+                        {loadingPasskeys ? <p role="status" className="flex items-center gap-2 py-6 text-sm text-slate-300"><Loader2 className="h-4 w-4 animate-spin" />جارٍ تحميل مفاتيح الدخول...</p> : passkeysLoadFailed ? <div role="alert" className="space-y-3 py-4"><p className="text-sm text-slate-300">تعذر تحميل مفاتيح الدخول.</p><Button variant="outline" onClick={() => setPasskeysRefresh(value => value + 1)}>إعادة المحاولة</Button></div> : passkeys.length === 0 ? (
                           <div className="rounded-2xl border border-white/10 bg-black/40 p-8 text-center space-y-3">
                             <div className="w-14 h-14 rounded-2xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center mx-auto text-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.2)]">
                               <Fingerprint className="w-7 h-7" />
                             </div>
                             <div>
-                              <p className="text-base font-bold text-white">لم تضف جهازاً للدخول بالبصمة بعد</p>
+                              <p className="text-base font-bold text-white">لا توجد مفاتيح دخول بعد</p>
                               <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto leading-relaxed">
-                                أضف جهازك لتسجيل الدخول بسهولة باستخدام بصمة الإصبع أو الوجه.
+                                أضف مفتاحًا لتسجيل الدخول بالبصمة أو الوجه أو رمز قفل جهازك.
                               </p>
                             </div>
                           </div>
@@ -1039,7 +1029,7 @@ export default function ProfilePage() {
                                     size="sm"
                                     variant="outline"
                                     onClick={() => handleTestPasskey(pk.id)}
-                                    disabled={testingPasskeyId === pk.id}
+                                    disabled={testingPasskeyId !== null || deletingPasskeyId !== null || creatingPasskey}
                                     className="border-purple-500/30 hover:bg-purple-500/15 text-purple-300 text-xs min-h-11 rounded-xl gap-1.5 px-3"
                                   >
                                     {testingPasskeyId === pk.id ? (
@@ -1054,11 +1044,12 @@ export default function ProfilePage() {
                                     size="sm"
                                     variant="ghost"
                                     onClick={() => handleDeletePasskey(pk.id)}
+                                    disabled={deletingPasskeyId !== null || testingPasskeyId !== null || creatingPasskey}
                                     className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 text-xs min-h-11 min-w-11 rounded-xl px-2.5"
                                     title="إزالة الجهاز"
                                     aria-label="إزالة الجهاز"
                                   >
-                                    <Trash2 className="w-4 h-4" />
+                                    {deletingPasskeyId === pk.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                                   </Button>
                                 </div>
                               </div>
@@ -1069,7 +1060,7 @@ export default function ProfilePage() {
                         <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-white/5">
                           <div className="flex items-center gap-2 text-xs text-slate-400">
                             <Shield className="w-4 h-4 text-purple-400 shrink-0" />
-                            <span>الإضافة الأساسية تحفظ المفتاح على جهازك الحالي. يختار جهازك البصمة أو الوجه أو رمز القفل لتأكيد هويتك.</span>
+                            <span>يمكنك إضافة أكثر من مفتاح لحسابك.</span>
                           </div>
 
                           <div className="flex flex-col items-stretch gap-2 w-full sm:w-auto">
@@ -1078,7 +1069,7 @@ export default function ProfilePage() {
                             <Button
                               type="button"
                               onClick={()=>handleInitiatePasskeyCreation('device')}
-                              disabled={creatingPasskey || passkeys.length >= MAX_PASSKEYS}
+                              disabled={loadingPasskeys || passkeysLoadFailed || creatingPasskey || deletingPasskeyId !== null || passkeys.length >= MAX_PASSKEYS}
                               className={`flex-1 sm:flex-initial text-white font-bold rounded-2xl h-10 px-6 text-xs gap-2 shrink-0 transition-all ${
                                 passkeys.length >= MAX_PASSKEYS
                                   ? "bg-slate-800 text-slate-400 border border-white/10 cursor-not-allowed"
@@ -1098,26 +1089,13 @@ export default function ProfilePage() {
                               ) : (
                                 <>
                                   <Fingerprint className="w-4 h-4" />
-                                  <span>إضافة جهاز للدخول بالبصمة</span>
+                                  <span>إضافة مفتاح دخول</span>
                                 </>
                               )}
                             </Button>
-                            <Button type="button" variant="ghost" className="min-h-11 text-xs text-slate-300 whitespace-normal" disabled={creatingPasskey || passkeys.length>=MAX_PASSKEYS} onClick={()=>handleInitiatePasskeyCreation('any')}>جهاز آخر أو مفتاح أمان</Button>
+                            <Button type="button" variant="ghost" className="min-h-11 text-xs text-slate-300 whitespace-normal" disabled={loadingPasskeys || passkeysLoadFailed || creatingPasskey || deletingPasskeyId !== null || passkeys.length>=MAX_PASSKEYS} onClick={()=>handleInitiatePasskeyCreation('any')}>جهاز آخر أو مفتاح أمان</Button>
                           </div>
                         </div>
-                        <p className="text-xs text-slate-400 leading-6">إذا لم يظهر خيار الحفظ على جهازك، افتح الموقع مباشرة في متصفح محدث، وفعّل مدير كلمات المرور وقفل الشاشة من إعدادات الجهاز.</p>
-                        <Button type="button" variant="outline" className="min-h-11 text-xs" disabled={checkingPasskeyDevice || creatingPasskey} onClick={handleCheckPasskeyDevice}>{checkingPasskeyDevice ? 'جارٍ فحص الجهاز...' : 'فحص جاهزية الجهاز'}</Button>
-                        {passkeyDeviceCheck && <p role="status" className="text-sm leading-7 rounded-xl border border-white/10 bg-white/5 p-3 text-slate-200">{passkeyDeviceCheck}</p>}
-                        {passkeyDiagnostic && <div role="alert" className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 space-y-3">
-                          {passkeyDiagnostic.errorName==='NotReadableError' && <div className="space-y-2 text-sm leading-7 text-slate-200">
-                            <p className="font-semibold">تعذر التواصل مع مدير مفاتيح الدخول على جهازك.</p>
-                            <p>على Android، افتح إعدادات الهاتف وابحث عن «كلمات المرور» أو «مفاتيح الدخول». تأكد من اختيار وتفعيل Google Password Manager أو مدير آخر يدعم مفاتيح الدخول، ومن تفعيل قفل الشاشة.</p>
-                            <p>حدّث Chrome وخدمات Google Play، ثم أعد تشغيل الهاتف وجرب الإضافة مجددًا. إذا كنت تستخدم مديرًا آخر، يمكنك اختيار Google مؤقتًا لاختبار سبب المشكلة.</p>
-                            <a href="https://support.google.com/chrome/answer/14124480?hl=ar" target="_blank" rel="noopener noreferrer" className="inline-block underline text-purple-300">كيفية اختيار مدير مفاتيح الدخول</a>
-                          </div>}
-                          <p className="text-sm leading-7 text-slate-200">توقف طلب الإضافة عند خطوة الجهاز. يمكنك نسخ تفاصيل الخطأ للمساعدة في تحديد السبب. لا تتضمن كلمة المرور أو مفتاح الدخول.</p>
-                          <Button type="button" variant="outline" className="min-h-11 text-xs w-full sm:w-auto" onClick={async()=>{try{await navigator.clipboard.writeText(JSON.stringify(passkeyDiagnostic,null,2));toast.success('تم نسخ تفاصيل الخطأ.');}catch{toast.error('تعذر النسخ. اسم الخطأ: '+passkeyDiagnostic.errorName);}}}>نسخ تفاصيل الخطأ</Button>
-                        </div>}
                       </CardContent>
                     </Card>
                   </TabsContent>

@@ -10,5 +10,5 @@
       "npm:@simplewebauthn/server@13.3.2": ["node_modules/@simplewebauthn/server/esm/index.d.ts"]
     }
   },
-  "include": ["tests/**/*.ts", "supabase/functions/passkey-login/index.ts", "supabase/functions/_shared/passkeyChallenge.ts"]
+  "include": ["tests/**/*.ts", "supabase/functions/**/*.ts"]
 }

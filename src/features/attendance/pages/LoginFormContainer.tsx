@@ -20,7 +20,7 @@ import { checkPwnedPassword } from "@/lib/pwnedPassword";
 import { DEPARTMENTS, ACADEMIC_YEARS } from "../types";
 
 type Tab = "login" | "join";
-type JoinRole = "coordinator" | "doctor" | "ta" | "student";
+type JoinRole = "doctor" | "ta" | "student";
 
 const STORAGE_KEY = "attendance_login_attempts";
 const REMEMBER_KEY = "cyber_remember_user";
@@ -332,29 +332,17 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
       return;
     }
 
-    let email = raw;
-
-    if (!email.includes("@")) {
-      const { data } = await supabase.rpc("resolve_login_identifier", { p_identifier: email });
-      email = data || null;
-      if (!email) {
-        recordAttempt(false); setLockRemaining(getLockoutRemaining());
-        await recordAuditLog({ action: "login_failed", identifier: raw, notes: "user_not_found" });
-        setLoginError(lang === "ar"
-          ? "لم يتم العثور على حساب بهذا المعرّف."
-          : "No account found with this identifier.");
-        setLoginLoading(false); return;
-      }
-    }
-
-    const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
+    const response = await supabase.functions.invoke("account-login", { body: { identifier: raw, password } });
+    const session = response.data?.session;
+    const authenticated = !response.error && session?.access_token && session?.refresh_token
+      ? await supabase.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token })
+      : null;
+    const authData = authenticated?.data;
+    const error = response.error || authenticated?.error || (!authData?.user ? new Error('Invalid credentials') : null);
     if (error) {
       recordAttempt(false); setLockRemaining(getLockoutRemaining());
-      const isPass = error.message?.toLowerCase().includes("invalid") || error.message?.toLowerCase().includes("password");
-      await recordAuditLog({ action: "login_failed", identifier: raw, notes: isPass ? "wrong_password" : error.message });
-      setLoginError(isPass
-        ? (lang === "ar" ? "كلمة المرور غير صحيحة." : "Incorrect password.")
-        : (lang === "ar" ? "فشل تسجيل الدخول. حاول مرة أخرى." : "Sign-in failed. Try again."));
+      await recordAuditLog({ action: "login_failed", identifier: raw, notes: "authentication_rejected" });
+      setLoginError(lang === "ar" ? "بيانات الدخول غير صحيحة أو تعذر الدخول الآن. أعد المحاولة." : "Invalid sign-in details or sign-in unavailable. Try again.");
       setLoginLoading(false); return;
     }
 
@@ -491,25 +479,6 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
       return;
     }
 
-    // Check if email already exists via secure RPC
-    try {
-      const { data: emailExists } = await supabase.rpc("check_email_exists", {
-        p_email: trimmedEmail,
-      });
-
-      if (emailExists) {
-        toast.error(
-          lang === "ar"
-            ? "هذا البريد الإلكتروني مسجل بالفعل أو لديه طلب معلق."
-            : "This email is already registered or has a pending request."
-        );
-        setJoinLoading(false);
-        return;
-      }
-    } catch {
-      // Non-blocking fallback
-    }
-
     // 3. Username validation: unique, English alphanumeric
     const trimmedUsername = joinUsername.trim().toLowerCase();
     const userRegex = /^[a-zA-Z0-9_]{3,30}$/;
@@ -521,25 +490,6 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
       );
       setJoinLoading(false);
       return;
-    }
-
-    // Check if username already exists via secure RPC (no permission error in console)
-    try {
-      const { data: usernameExists } = await supabase.rpc("check_username_exists", {
-        p_username: trimmedUsername,
-      });
-
-      if (usernameExists) {
-        toast.error(
-          lang === "ar"
-            ? "اسم المستخدم هذا مسجل بالفعل، يرجى اختيار اسم مستخدم آخر."
-            : "This username is already taken. Please choose another."
-        );
-        setJoinLoading(false);
-        return;
-      }
-    } catch {
-      // Non-blocking fallback
     }
 
     // 4. Password validation
@@ -587,35 +537,12 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
         return;
       }
 
-      // Check if National ID is already registered in users table or has a pending request
-      try {
-        const { data: nidExists } = await supabase.rpc("check_national_id_exists", {
-          p_national_id: trimmedNID,
-        });
-
-        if (nidExists) {
-          toast.error(
-            lang === "ar"
-              ? "الرقم القومي هذا مسجل بالفعل أو لديه طلب انضمام معلق"
-              : "This National ID is already registered or has a pending request"
-          );
-          setJoinLoading(false);
-          return;
-        }
-      } catch {
-        // Non-blocking fallback
-      }
-
-      if (!academicYear) {
-        toast.error(lang === "ar" ? "يرجى اختيار الفرقة الدراسية" : "Please select your academic year");
+      if (!academicYear || !/^(?:[1-9]|1[0-5])$/.test(sectionNumber)) {
+        toast.error(lang === "ar" ? "اختر الفرقة الدراسية ورقم السكشن من 1 إلى 15." : "Choose an academic year and section 1–15.");
         setJoinLoading(false);
         return;
       }
-      if (!sectionNumber || isNaN(parseInt(sectionNumber))) {
-        toast.error(lang === "ar" ? "يرجى إدخال رقم السكشن" : "Please enter section number");
-        setJoinLoading(false);
-        return;
-      }
+
     }
 
     const { error } = await supabase.from("join_requests").insert({

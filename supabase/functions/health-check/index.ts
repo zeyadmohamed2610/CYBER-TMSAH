@@ -1,86 +1,17 @@
-type HealthStatus = "ok" | "degraded" | "unhealthy";
-type CheckStatus = "healthy" | "unhealthy" | "misconfigured" | "unknown";
-
-type HealthCheckResponse = {
-  status: HealthStatus;
-  timestamp: string;
-  uptime: number;
-  environment: string;
-  version: string;
-  checks: {
-    database: CheckStatus;
-    supabase: CheckStatus;
-  };
-  error?: string;
-};
-
-Deno.serve(async (req: Request) => {
-  const headers = new Headers({
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey",
-  });
-
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers, status: 200 });
-  }
-
-  const checks: HealthCheckResponse = {
-    status: "ok",
-    timestamp: new Date().toISOString(),
-    uptime: Math.floor(performance.now() / 1000),
-    environment: Deno.env.get("ENVIRONMENT") || "development",
-    version: Deno.env.get("FUNCTION_VERSION") || "1.0.0",
-    checks: {
-      database: "unknown",
-      supabase: "unknown",
-    },
-  };
-
-  try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      checks.checks.database = "misconfigured";
-      checks.checks.supabase = "misconfigured";
-      checks.status = "degraded";
-    } else {
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-      const { error: dbError } = await supabase
-        .from("subjects")
-        .select("id")
-        .limit(1);
-
-      if (dbError) {
-        checks.checks.database = "unhealthy";
-        checks.status = "unhealthy";
-      } else {
-        checks.checks.database = "healthy";
-      }
-
-      const { error: authError } = await supabase.auth.admin.listUsers({
-        page: 1,
-        perPage: 1,
-      });
-
-      if (authError) {
-        checks.checks.supabase = "unhealthy";
-        checks.status = "degraded";
-      } else {
-        checks.checks.supabase = "healthy";
-      }
-    }
-  } catch (error: unknown) {
-    checks.checks.database = "unhealthy";
-    checks.status = "unhealthy";
-    checks.error = error instanceof Error ? error.message : "Unknown health check error";
-  }
-
-  const statusCode = checks.status === "ok" ? 200 : 503;
-  return new Response(JSON.stringify(checks, null, 2), {
-    headers,
-    status: statusCode,
-  });
-});
+import { createContextClient, resolveEnv } from 'npm:@supabase/server@1.8.0/core';
+import { serverEnvironment } from '../_shared/request.ts';
+export async function handleHealthCheck(request:Request):Promise<Response> {
+ const headers={'Content-Type':'application/json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'};
+ if(request.method==='OPTIONS')return new Response(null,{headers});
+ if(!['GET','HEAD'].includes(request.method))return new Response(null,{status:405,headers:{...headers,Allow:'GET, HEAD'}});
+ try {
+  const env=serverEnvironment();const config=resolveEnv(env);
+  if(config.error||!config.data)return new Response(request.method==='HEAD'?null:JSON.stringify({status:'degraded'}),{status:503,headers});
+  const key=Object.values(config.data.publishableKeys)[0];
+  const client=createContextClient({env,supabaseOptions:{global:{fetch:(input,init)=>fetch(input,{...init,signal:AbortSignal.timeout(5000)})}}});
+  const [database,auth]=await Promise.all([client.from('subjects').select('id').limit(1),fetch(config.data.url+'/auth/v1/health',{headers:{apikey:key},signal:AbortSignal.timeout(5000)})]);
+  await auth.body?.cancel();const healthy=!database.error&&auth.ok;
+  return new Response(request.method==='HEAD'?null:JSON.stringify({status:healthy?'ok':'degraded',checks:{database:!database.error,auth:auth.ok}}),{status:healthy?200:503,headers});
+ }catch{return new Response(request.method==='HEAD'?null:JSON.stringify({status:'degraded'}),{status:503,headers});}
+}
+Deno.serve(handleHealthCheck);
