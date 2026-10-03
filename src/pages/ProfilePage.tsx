@@ -2,7 +2,7 @@ import { getFriendlyErrorMessage } from "@/lib/academicCopy";
 import { getDeviceDisplayName } from "@/lib/academicCopy";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { User, KeyRound, Shield, Mail, CheckCircle2, Eye, EyeOff, ArrowLeft, Loader2, Calendar, Lock, Fingerprint, Trash2, Key, Camera, Copy, Check, LogOut, IdCard, RotateCcw } from "lucide-react";
+import { User, KeyRound, Shield, Mail, CheckCircle2, Eye, EyeOff, ArrowLeft, Loader2, Calendar, Lock, Fingerprint, Trash2, Key, Camera, Copy, Check, LogOut, IdCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +18,7 @@ import { checkPwnedPassword } from "@/lib/pwnedPassword";
 import Footer from "@/components/Footer";
 import AvatarStudioDialog from "@/components/AvatarStudioDialog";
 import { deleteUserAvatar } from "@/lib/avatarUtils";
-import { registerPasskey, authenticateWithPasskey, isWebAuthnSupported, clearAllLocalPasskeys } from "@/lib/webauthn";
+import { registerPasskey, authenticateWithPasskey, isWebAuthnSupported } from "@/lib/webauthn";
 import {
   Dialog,
   DialogContent,
@@ -98,7 +98,7 @@ export default function ProfilePage() {
     return `@${name.replace(/^@+/, "")}`;
   };
 
-  // Load passkeys from database & local storage
+  // The verified server list is the only source of registered devices.
   useEffect(() => {
     if (!user?.id) return;
     let isMounted = true;
@@ -113,7 +113,6 @@ export default function ProfilePage() {
         if (!isMounted) return;
         const mapped = (data ?? []).map(item => ({ id: item.credential_id, rawId: item.credential_id, label: item.device_name || "جهاز للدخول بالبصمة", createdAt: item.created_at }));
         setPasskeys(mapped);
-        localStorage.setItem(`cyber_passkeys_${user?.id}`, JSON.stringify(mapped));
       } catch (err) {
         console.error("Failed to load verified passkeys", err);
         if (isMounted) { setPasskeys([]); toast.error("تعذر تحميل أجهزة الدخول المعتمدة."); }
@@ -129,12 +128,6 @@ export default function ProfilePage() {
   const savePasskeys = (items: { id: string; rawId: string; label: string; createdAt: string }[]) => {
     if (!user?.id) return;
     setPasskeys(items);
-    try {
-      localStorage.setItem(`cyber_passkeys_${user.id}`, JSON.stringify(items));
-
-    } catch (e) {
-      console.error("Failed to persist passkeys:", e);
-    }
   };
 
   const handleInitiatePasskeyCreation = () => {
@@ -296,8 +289,6 @@ export default function ProfilePage() {
     const result = await supabase.from("webauthn_credentials").delete().eq("auth_id", user.id).eq("credential_id", passkeyId).select("credential_id");
     if (result.error || result.data?.length !== 1) { toast.error("تعذر حذف جهاز الدخول. لم يتغير المفتاح المعتمد."); return; }
     savePasskeys(passkeys.filter(p => p.id !== passkeyId));
-    localStorage.removeItem(`cyber_device_passkey_${passkeyId}`);
-    if (localStorage.getItem("cyber_latest_passkey") === passkeyId) localStorage.removeItem("cyber_latest_passkey");
     toast.success("تم إلغاء اعتماد المفتاح على المنصة. يمكنك حذفه من مدير مفاتيح جهازك أيضًا.");
   };
 
@@ -1054,22 +1045,7 @@ export default function ProfilePage() {
                           </div>
 
                           <div className="flex items-center gap-2 w-full sm:w-auto">
-                            {/* ── Reset local cache button (useful on mobile where DevTools is unavailable) ── */}
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              title="تحديث إعدادات الدخول على هذا الجهاز دون حذف البصمة"
-                              onClick={() => {
-                                clearAllLocalPasskeys();
-                                toast.success("✅ تم تحديث إعدادات الدخول. أعد تسجيل الدخول بالبصمة.");
-                              }}
-                              className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 text-xs h-10 rounded-xl gap-1.5 px-3 shrink-0"
-                            >
-                              <RotateCcw className="w-3.5 h-3.5" />
-                              <span className="hidden sm:inline">تحديث إعدادات الدخول</span>
-                              <span className="sm:hidden">إعادة ضبط</span>
-                            </Button>
+
 
                             <Button
                               type="button"
