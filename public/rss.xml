@@ -1,49 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" 
-     xmlns:content="http://purl.org/rss/1.0/modules/content/"
-     xmlns:atom="http://www.w3.org/2005/Atom">
-  <channel>
-    <title>CYBER TMSAH | منصة الحضور والتحقق الأكاديمي</title>
-    <link>https://www.cyber-tmsah.site</link>
-    <description>منصة CYBER TMSAH لمتابعة الدراسة والحضور للطلاب بجامعة حلوان التكنولوجية الدولية.</description>
-    <language>ar</language>
-    <lastBuildDate>Thu, 01 Oct 2026 15:00:00 GMT</lastBuildDate>
-    <atom:link href="https://www.cyber-tmsah.site/rss.xml" rel="self" type="application/rss+xml"/>
-    <image>
-      <url>https://www.cyber-tmsah.site/favicon.png</url>
-      <title>CYBER TMSAH</title>
-      <link>https://www.cyber-tmsah.site</link>
-    </image>
-    
-    <item>
-      <title>منصة CYBER TMSAH - تسجيل الدخول</title>
-      <link>https://www.cyber-tmsah.site/login</link>
-      <guid isPermaLink="true">https://www.cyber-tmsah.site/login</guid>
-      <pubDate>Thu, 01 Oct 2026 15:00:00 GMT</pubDate>
-      <description>بوابة تسجيل الدخول لمنصة CYBER TMSAH الأكاديمية باستخدام كلمة المرور أو إعدادات الدخول بالبصمة.</description>
-      <category>Authentication</category>
-      <category>التعليم</category>
-    </item>
-    
-    <item>
-      <title>طلب الانضمام للمنصة الأكاديمية</title>
-      <link>https://www.cyber-tmsah.site/join</link>
-      <guid isPermaLink="true">https://www.cyber-tmsah.site/join</guid>
-      <pubDate>Thu, 01 Oct 2026 15:00:00 GMT</pubDate>
-      <description>تقديم طلبات الانضمام واعتماد حسابات الطلاب وأعضاء هيئة التدريس في منصة CYBER TMSAH.</description>
-      <category>Registration</category>
-      <category>التعليم</category>
-    </item>
-    
-    <item>
-      <title>الملف الشخصي وإعدادات الدخول</title>
-      <link>https://www.cyber-tmsah.site/profile</link>
-      <guid isPermaLink="true">https://www.cyber-tmsah.site/profile</guid>
-      <pubDate>Thu, 01 Oct 2026 15:00:00 GMT</pubDate>
-      <description>إدارة الحساب الشخصي وتفعيل الدخول بالبصمة للبصمة وقفل الشاشة.</description>
-      <category>Security</category>
-      <category>الحساب الشخصي</category>
-    </item>
-    
-  </channel>
-</rss>
+<rss version="2.0"><channel>
+<title>CYBER TMSAH — سايبر تمساح، المنصة الأكاديمية</title>
+<link>https://www.cyber-tmsah.site/</link>
+<description>متابعة الجدول الدراسي والمحاضرات والسكاشن والحضور والغياب.</description>
+<language>ar</language>
+<item><title>طلب الانضمام إلى CYBER TMSAH</title><link>https://www.cyber-tmsah.site/join</link><guid>https://www.cyber-tmsah.site/join</guid><description>قدّم بياناتك لاعتماد حسابك في المنصة الأكاديمية.</description></item>
+</channel></rss>

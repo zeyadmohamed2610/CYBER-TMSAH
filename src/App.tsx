@@ -17,6 +17,7 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import { LanguageProvider } from "@/i18n";
 import { GlobalCursorGlow } from "@/components/GlobalCursorGlow";
 import { ErrorModal } from "@/components/ErrorModal";
+import SEO from '@/components/SEO';
 
 // ── Auth Entrypoint (Eagerly loaded for instant root page rendering) ──────────
 import LoginPage from "./features/auth/pages/LoginPage";
@@ -56,6 +57,7 @@ const App = () => (
               getPendingCountFunction={offlineAttendanceService.getPendingCount}
             >
               <BrowserRouter>
+                <SEO />
                 <GlobalCursorGlow />
                 <ErrorModal />
                 <ErrorBoundary>
@@ -65,7 +67,7 @@ const App = () => (
                       <PageTransition>
                         <Routes>
                           {/* ── Public Auth Routes ───────────────────────────── */}
-                          <Route path="/" element={<Navigate to="/login" replace />} />
+                          <Route path="/" element={<LoginPage />} />
                           <Route path="/login" element={<LoginPage />} />
                           <Route path="/join" element={<LoginPage initialTab="join" />} />
                           <Route path="/reset-password" element={<ResetPasswordPage />} />

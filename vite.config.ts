@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 import compression from "vite-plugin-compression";
+import {seoPages} from './scripts/seo-pages.ts';
 
 type NextFn = () => void;
 
@@ -74,6 +75,7 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
+    seoPages(),
     e2eSupportPlugin(),
     compression({ algorithm: 'gzip', ext: '.gz' }),
     VitePWA({

@@ -3,7 +3,13 @@
   "buildCommand": "pnpm build",
   "outputDirectory": "dist",
   "framework": "vite",
+  "redirects": [
+    { "source": "/:path*", "has": [{ "type": "host", "value": "cyber-tmsah.vercel.app" }], "destination": "https://www.cyber-tmsah.site/:path*", "permanent": true }
+  ],
   "rewrites": [
+    { "source": "/login", "destination": "/login/index.html" },
+    { "source": "/join", "destination": "/join/index.html" },
+    { "source": "/reset-password", "destination": "/reset-password/index.html" },
     { "source": "/api/:path*", "destination": "/api/:path*" },
     { "source": "/sitemap.xml", "destination": "/sitemap.xml" },
     { "source": "/robots.txt", "destination": "/robots.txt" },
@@ -19,6 +25,11 @@
     { "source": "/:match*", "destination": "/index.html" }
   ],
   "headers": [
+    {
+      "source": "/:page(owner-dashboard|doctor-dashboard|ta-dashboard|coordinator-dashboard|student-panel|profile|attendance|reset-password|schedule)",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }]
+    },
+    { "source": "/attendance/:path*", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
     {
       "source": "/:path*",
       "headers": [

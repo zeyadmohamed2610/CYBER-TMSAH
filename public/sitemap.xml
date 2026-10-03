@@ -1,52 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
-        xmlns:xhtml="http://www.w3.org/1999/xhtml">
-  
-  <!-- الرئيسية / تسجيل الدخول -->
-  <url>
-    <loc>https://www.cyber-tmsah.site/</loc>
-    <lastmod>2026-10-01</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-    <image:image>
-      <image:loc>https://www.cyber-tmsah.site/og-image.png</image:loc>
-      <image:title>CYBER TMSAH - منظومة الحضور والتحقق الأكاديمي</image:title>
-    </image:image>
-  </url>
-
-  <!-- بوابة تسجيل الدخول -->
-  <url>
-    <loc>https://www.cyber-tmsah.site/login</loc>
-    <lastmod>2026-10-01</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://www.cyber-tmsah.site/login"/>
-  </url>
-
-  <!-- طلب الانضمام -->
-  <url>
-    <loc>https://www.cyber-tmsah.site/join</loc>
-    <lastmod>2026-10-01</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://www.cyber-tmsah.site/join"/>
-  </url>
-
-  <!-- الملف الشخصي -->
-  <url>
-    <loc>https://www.cyber-tmsah.site/profile</loc>
-    <lastmod>2026-10-01</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-
-  <!-- بوابة الطالب -->
-  <url>
-    <loc>https://www.cyber-tmsah.site/student-panel</loc>
-    <lastmod>2026-10-01</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://www.cyber-tmsah.site/</loc><lastmod>2026-10-03</lastmod></url>
+  <url><loc>https://www.cyber-tmsah.site/join</loc><lastmod>2026-10-03</lastmod></url>
 </urlset>
