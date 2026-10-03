@@ -1,3 +1,3 @@
 /** Compatibility entry point; every ceremony uses the same verified controller. */
-export { registerPasskey, authenticateWithPasskey, verifyPasskeyForCurrentUser } from './passkeys/controller';
-export { isWebAuthnSupported } from './passkeys/browser';
+export { registerPasskey, preparePasskeyRegistration, authenticateWithPasskey, verifyPasskeyForCurrentUser, type PreparedPasskeyRegistration } from './passkeys/controller';
+export { isWebAuthnSupported, checkLocalPasskeyAvailability } from './passkeys/browser';

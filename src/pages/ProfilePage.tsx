@@ -17,7 +17,8 @@ import { checkPwnedPassword } from "@/lib/pwnedPassword";
 import Footer from "@/components/Footer";
 import AvatarStudioDialog from "@/components/AvatarStudioDialog";
 import { deleteUserAvatar } from "@/lib/avatarUtils";
-import { registerPasskey, authenticateWithPasskey, isWebAuthnSupported } from "@/lib/webauthn";
+import { registerPasskey, preparePasskeyRegistration, authenticateWithPasskey, isWebAuthnSupported, checkLocalPasskeyAvailability, type PreparedPasskeyRegistration } from "@/lib/webauthn";
+import { passkeyFailure } from '@/lib/passkeys/errors';
 import {
   Dialog,
   DialogContent,
@@ -76,6 +77,9 @@ export default function ProfilePage() {
   const [savingPasskeyName, setSavingPasskeyName] = useState(false);
   const [creatingPasskey, setCreatingPasskey] = useState(false);
   const [passkeyDestination, setPasskeyDestination] = useState<'device'|'any'>('device');
+  const [preparedPasskey, setPreparedPasskey] = useState<PreparedPasskeyRegistration|null>(null);
+  const [checkingPasskeyDevice, setCheckingPasskeyDevice] = useState(false);
+  const [passkeyDeviceCheck, setPasskeyDeviceCheck] = useState<string|null>(null);
   const [testingPasskeyId, setTestingPasskeyId] = useState<string | null>(null);
 
   // Passkey Re-authentication State (Security enhancement)
@@ -145,6 +149,7 @@ export default function ProfilePage() {
 
     // Open security re-authentication modal
     setPasskeyDestination(destination);
+    setPreparedPasskey(null);
     setPasskeyAuthPassword("");
     setShowPasskeyAuthPassword(false);
     setIsPasskeyAuthModalOpen(true);
@@ -152,6 +157,7 @@ export default function ProfilePage() {
 
   const handleVerifyPasswordAndCreatePasskey = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if(preparedPasskey){await executePasskeyCreation();return;}
     if (!passkeyAuthPassword.trim()) {
       toast.error("يرجى إدخال كلمة مرور حسابك للمتابعة.");
       return;
@@ -175,19 +181,20 @@ export default function ProfilePage() {
         return;
       }
 
-      // Password verified! Close dialog and trigger WebAuthn ceremony
-      setIsPasskeyAuthModalOpen(false);
+      // Prepare the server request, then wait for a fresh click to open the native prompt.
+      const prepared=await preparePasskeyRegistration();
+      setPreparedPasskey(prepared);
       setPasskeyAuthPassword("");
-      await executePasskeyCreation();
     } catch (err: unknown) {
-      console.error("Passkey re-auth verification failed:", err);
-      toast.error("حدث خطأ أثناء التحقق من كلمة المرور.");
+      toast.error(passkeyFailure(err).error ?? 'تعذر تجهيز طلب الإضافة. أعد المحاولة.');
     } finally {
       setVerifyingPasskeyPassword(false);
     }
   };
 
   const executePasskeyCreation = async () => {
+    const prepared=preparedPasskey;
+    if(!prepared)return;
     if (passkeys.length >= MAX_PASSKEYS) {
       toast.error("يمكنك حفظ 10 مفاتيح دخول. احذف مفتاحًا قديمًا لإضافة آخر.");
       return;
@@ -195,12 +202,13 @@ export default function ProfilePage() {
 
     try {
       setCreatingPasskey(true);
+      setIsPasskeyAuthModalOpen(false);
 
       // A phone may create a security key or cloud credential; do not infer its provider from this browser.
       const deviceLabel = "مفتاح دخول";
 
       const formattedLabel = `${deviceLabel} - ${new Date().toLocaleDateString("ar-EG")}`;
-      const result = await registerPasskey(formattedLabel,passkeyDestination);
+      const result = await registerPasskey(formattedLabel,passkeyDestination,prepared);
 
       if (result.cancelled) {
         toast.info(passkeyDestination==='device' ? "لم تكتمل الإضافة على هذا الجهاز. إذا لم يظهر خيار الحفظ، راجع مدير كلمات المرور وقفل الشاشة في إعدادات جهازك." : "تم إلغاء عملية إضافة جهاز الدخول.");
@@ -242,7 +250,16 @@ export default function ProfilePage() {
       toast.error("خطأ غير متوقع. الرجاء المحاولة مرة أخرى.");
     } finally {
       setCreatingPasskey(false);
+      setPreparedPasskey(null);
     }
+  };
+
+  const handleCheckPasskeyDevice=async()=>{
+    setCheckingPasskeyDevice(true);
+    try {
+      const available=await checkLocalPasskeyAvailability();
+      setPasskeyDeviceCheck(available===true ? 'المتصفح يكتشف وسيلة لتأكيد هويتك على هذا الجهاز. يمكنك تجربة الإضافة.' : available===false ? 'المتصفح لم يكتشف وسيلة لحفظ المفتاح مع تأكيد هويتك على هذا الجهاز. راجع قفل الشاشة ومدير كلمات المرور في إعدادات الهاتف، وحدّث المتصفح.' : 'لم يستطع المتصفح تحديد توفر الحفظ على الجهاز. يمكنك تجربة الإضافة أو اختيار مكان حفظ آخر.');
+    }finally {setCheckingPasskeyDevice(false);}
   };
 
 
@@ -1081,6 +1098,8 @@ export default function ProfilePage() {
                           </div>
                         </div>
                         <p className="text-xs text-slate-400 leading-6">إذا لم يظهر خيار الحفظ على جهازك، افتح الموقع مباشرة في متصفح محدث، وفعّل مدير كلمات المرور وقفل الشاشة من إعدادات الجهاز.</p>
+                        <Button type="button" variant="outline" className="min-h-11 text-xs" disabled={checkingPasskeyDevice || creatingPasskey} onClick={handleCheckPasskeyDevice}>{checkingPasskeyDevice ? 'جارٍ فحص الجهاز...' : 'فحص جاهزية الجهاز'}</Button>
+                        {passkeyDeviceCheck && <p role="status" className="text-sm leading-7 rounded-xl border border-white/10 bg-white/5 p-3 text-slate-200">{passkeyDeviceCheck}</p>}
                       </CardContent>
                     </Card>
                   </TabsContent>
@@ -1135,7 +1154,7 @@ export default function ProfilePage() {
               tabIndex={-1}
             />
 
-            <div className="space-y-2">
+            {!preparedPasskey ? <div className="space-y-2">
               <Label htmlFor="passkey-reauth-pass" className="text-xs text-slate-300 font-medium">
                 كلمة مرور حسابك الحالية
               </Label>
@@ -1160,12 +1179,12 @@ export default function ProfilePage() {
                   {showPasskeyAuthPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-            </div>
+            </div> : <p role="status" className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm leading-7 text-emerald-200">تم تأكيد كلمة المرور. اضغط الآن لفتح نافذة جهازك وحفظ مفتاح الدخول.</p>}
 
             <DialogFooter className="flex-col sm:flex-row-reverse gap-2 sm:gap-0 pt-2">
               <Button
                 type="submit"
-                disabled={verifyingPasskeyPassword || !passkeyAuthPassword.trim()}
+                disabled={verifyingPasskeyPassword || creatingPasskey || (!preparedPasskey && !passkeyAuthPassword.trim())}
                 className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl h-10 px-5 text-xs gap-2 shadow-lg"
               >
                 {verifyingPasskeyPassword ? (
@@ -1176,7 +1195,7 @@ export default function ProfilePage() {
                 ) : (
                   <>
                     <Lock className="w-4 h-4" />
-                    <span>تأكيد ومتابعة البصمة</span>
+                    <span>{preparedPasskey ? passkeyDestination==='device' ? 'حفظ على هذا الجهاز' : 'اختيار مكان الحفظ' : 'تأكيد ومتابعة البصمة'}</span>
                   </>
                 )}
               </Button>

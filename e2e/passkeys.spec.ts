@@ -24,6 +24,7 @@ for (const [role, destination] of [['student', 'student-panel'], ['doctor', 'doc
     await page.locator('#passkey-reauth-pass').fill(password!);
     const registered = page.waitForResponse(r => r.url().includes('/passkeys/registration/verify'));
     await page.getByRole('button', { name: 'تأكيد ومتابعة البصمة' }).click();
+    await page.getByRole('button', { name: process.env.E2E_PASSKEY_TRANSPORT==='usb' ? 'اختيار مكان الحفظ' : 'حفظ على هذا الجهاز',exact:true }).click();
     expect((await (await registered).json()).id).toBeTruthy();
     const verified = page.waitForResponse(r => r.url().includes('passkey-login?action=verify-finish'));
     await page.getByRole('button', { name: 'تجربة الدخول' }).click();
@@ -85,6 +86,7 @@ test('@passkey a stored credential creates a fresh session after site-data delet
     await page.locator('#passkey-reauth-pass').fill(password!);
     const registered=page.waitForResponse(r=>r.url().includes('/passkeys/registration/verify'));
     await page.getByRole('button',{name:'تأكيد ومتابعة البصمة'}).click();
+    await page.getByRole('button',{name:'حفظ على هذا الجهاز',exact:true}).click();
     expect((await (await registered).json()).id).toBeTruthy();
     await page.getByRole('button',{name:'تسجيل الخروج',exact:true}).click();
     await expect(page).toHaveURL(/login/,{timeout:30000});

@@ -36,3 +36,17 @@ it('keeps attendance without a registered native key out of the native prompt',a
  mocks.invoke.mockResolvedValue({data:{success:false,noPasskeyRegistered:true,error:'أضف مفتاحًا'},error:null});
  expect(await verifyPasskeyForCurrentUser('123456')).toMatchObject({success:false,noPasskeyRegistered:true});expect(navigator.credentials.get).not.toHaveBeenCalled();
 });
+it('opens a prepared registration directly from the click without session or challenge fetches',async()=>{
+ const nativeOptions={challenge:'Y2hhbGxlbmdl',rp:{name:'CYBER TMSAH'},user:{id:'dXNlcg',name:'student',displayName:'Student'},pubKeyCredParams:[{alg:-7,type:'public-key'}]};
+ vi.mocked(navigator.credentials.create).mockResolvedValue({id:'key',rawId:new ArrayBuffer(1),type:'public-key',response:{clientDataJSON:new ArrayBuffer(1),attestationObject:new ArrayBuffer(1),getTransports:()=>['internal']},getClientExtensionResults:()=>({})} as unknown as PublicKeyCredential);
+ mocks.verifyRegistration.mockResolvedValue({data:{id:'native-key'},error:null});
+ const result=registerPasskey(undefined,'device',{challengeId:'prepared-challenge',options:nativeOptions,expiresAt:Date.now()+60000});
+ expect(navigator.credentials.create).toHaveBeenCalledTimes(1);
+ expect(mocks.session).not.toHaveBeenCalled();expect(mocks.register).not.toHaveBeenCalled();
+ expect(await result).toMatchObject({success:true,credentialId:'native-key'});
+ expect(mocks.verifyRegistration).toHaveBeenCalledWith(expect.objectContaining({challengeId:'prepared-challenge'}));
+});
+it('refuses an expired prepared request before opening the device prompt',async()=>{
+ expect(await registerPasskey(undefined,'device',{challengeId:'expired',options:{},expiresAt:Date.now()-1000})).toMatchObject({success:false,code:'REGISTRATION_EXPIRED'});
+ expect(navigator.credentials.create).not.toHaveBeenCalled();expect(mocks.verifyRegistration).not.toHaveBeenCalled();
+});

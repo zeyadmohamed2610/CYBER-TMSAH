@@ -11,6 +11,13 @@ function requireBrowser() {
 }
 
 export type PasskeyDestination = 'device' | 'any';
+export async function checkLocalPasskeyAvailability():Promise<boolean|null> {
+  if(!isWebAuthnSupported())return false;
+  try {
+    if(typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable==='function')return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  }catch {/* An unavailable capability check is not proof that registration is unsupported. */}
+  return null;
+}
 export async function createPasskey(options: unknown, destination: PasskeyDestination = 'device') {
   requireBrowser();
   const json = options as PublicKeyCredentialCreationOptionsJSON;

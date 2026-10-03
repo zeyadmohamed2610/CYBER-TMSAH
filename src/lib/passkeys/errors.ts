@@ -7,10 +7,13 @@ export class PasskeyError extends Error {
 
 export function passkeyFailure(error: unknown) {
   if (error instanceof PasskeyError) return {success:false as const,error:error.message,code:error.code,cancelled:error.cancelled,noPasskeyRegistered:error.noPasskeyRegistered};
-  const cause = error instanceof Error && 'cause' in error ? error.cause : null;
-  const name = cause instanceof Error ? cause.name : error instanceof Error ? error.name : '';
+  const detail = error && typeof error==='object' ? error as {name?:unknown;cause?:unknown;code?:unknown} : {};
+  const cause = detail.cause && typeof detail.cause==='object' ? detail.cause as {name?:unknown} : {};
+  const name = typeof cause.name==='string' ? cause.name : typeof detail.name==='string' ? detail.name : '';
+  if (name==='ConstraintError' || name==='NotSupportedError') return {success:false as const,code:'DEVICE_REQUIREMENTS_UNAVAILABLE',error:'لم يجد المتصفح وسيلة لحفظ مفتاح الدخول مع تأكيد هويتك. فعّل قفل الشاشة ومدير كلمات المرور، ثم أعد المحاولة.'};
+  if (name==='UnknownError') return {success:false as const,code:'DEVICE_CREATION_FAILED',error:'تعذر على الجهاز إنشاء مفتاح الدخول. راجع مدير كلمات المرور وقفل الشاشة، ثم أعد المحاولة.'};
   if (name === 'NotAllowedError' || name === 'AbortError') return {success:false as const,cancelled:true,error:'لم يكتمل التحقق من الجهاز. أعد المحاولة وأكمل البصمة أو رمز القفل.'};
   if (name === 'InvalidStateError') return {success:false as const,error:'مفتاح الدخول مسجل بالفعل لهذا الحساب.'};
   if (name === 'SecurityError') return {success:false as const,error:'افتح الموقع من رابطه الرسمي لإكمال الدخول بالبصمة.'};
-  return {success:false as const,error:'تعذر إكمال التحقق. راجع اتصالك وأعد المحاولة.'};
+  return {success:false as const,error:'تعذر إكمال هذه الخطوة. أعد المحاولة أو استخدم خيار حفظ آخر.'};
 }

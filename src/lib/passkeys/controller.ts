@@ -24,14 +24,23 @@ async function ceremony(work:()=>Promise<PasskeyResult>):Promise<PasskeyResult> 
   try { return await work(); } catch(error) { return passkeyFailure(error); } finally { inProgress = false; }
 }
 
-export function registerPasskey(deviceName?:string, destination:PasskeyDestination='device') {
-  return ceremony(async()=>{
+export interface PreparedPasskeyRegistration {challengeId:string;options:unknown;expiresAt:number}
+export async function preparePasskeyRegistration():Promise<PreparedPasskeyRegistration> {
     const token = await currentPasskeySession();
     if (!token) throw new PasskeyError('يرجى تسجيل الدخول مجددًا.');
     const start = await supabase.auth.passkey.startRegistration();
     if(start.error || !start.data)throw new PasskeyError('تعذر إضافة مفتاح الدخول. تأكد من تسجيل الدخول وتأكيد بريدك الإلكتروني.');
-    const credential = await createPasskey(start.data.options,destination);
-    const finish = await supabase.auth.passkey.verifyRegistration({challengeId:start.data.challenge_id,credential});
+    return {challengeId:start.data.challenge_id,options:start.data.options,expiresAt:Date.now()+120000};
+}
+export function registerPasskey(deviceName?:string, destination:PasskeyDestination='device', prepared?:PreparedPasskeyRegistration) {
+  return ceremony(async()=>{
+    const registration=prepared ?? await preparePasskeyRegistration();
+    if(registration.expiresAt<Date.now())throw new PasskeyError('انتهى طلب الإضافة. أكّد كلمة المرور مجددًا.','REGISTRATION_EXPIRED');
+    // Prepared options let the native prompt run directly from the final user click.
+    let credential;
+    try {credential=await createPasskey(registration.options,destination);}
+    catch(error){const failure=passkeyFailure(error);console.warn('[Passkey] registration device failed',{code:'code' in failure ? failure.code : 'DEVICE_PROMPT_FAILED'});throw error;}
+    const finish = await supabase.auth.passkey.verifyRegistration({challengeId:registration.challengeId,credential});
     if(finish.error || !finish.data?.id)throw new PasskeyError('تعذر حفظ مفتاح الدخول. قد يكون مسجلًا من قبل أو وصلت للحد المسموح.');
     if(deviceName) await supabase.auth.passkey.update({passkeyId:finish.data.id,friendlyName:deviceName});
     return {success:true as const,credentialId:finish.data.id};
