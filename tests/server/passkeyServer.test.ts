@@ -70,8 +70,8 @@ describe("actual server verification of attendance assertions", () => {
     mocks.admin.mockReturnValue({ from: query });
     mocks.context.mockResolvedValue({ data: { supabase: { auth: { getUser: async () => ({ data: { user: { id: "student-a", last_sign_in_at: new Date().toISOString() } }, error: null }) } } }, error: null });
   });
-  it("verifies a real signature, consumes only its challenge and issues a bound receipt", async () => {
-    const response = await handlePasskeyRequest(request());
+  it.each([5, 29])("verifies a real signature with device or synced-key flags %i and issues a bound receipt", async flags => {
+    const response = await handlePasskeyRequest(request(assertion(flags)));
     expect(await response.json()).toEqual({ success: true, proofId: "proof" });
     expect(rows.webauthn_challenges?.map(r => r.id)).toEqual(["challenge-b"]);
     expect(rows.attendance_biometric_proofs?.[0]).toMatchObject({ auth_id: "student-a", attendance_hash: "123456", device_fingerprint: "a".repeat(64) });
@@ -128,8 +128,8 @@ describe("actual server verification of attendance assertions", () => {
     expect(rows.webauthn_challenges).toHaveLength(2);
     expect(rows.attendance_biometric_proofs).toHaveLength(0);
   });
-  it("rejects user presence without user verification", async () => {
-    const result = await (await handlePasskeyRequest(request(assertion(1)))).json();
+  it.each([1, 25])("rejects user presence without user verification for flags %i", async flags => {
+    const result = await (await handlePasskeyRequest(request(assertion(flags)))).json();
     expect(result).toMatchObject({ success: false, code: 'USER_VERIFICATION_REQUIRED' });
     expect(result.error).toContain('رمز قفل الجهاز');
     expect(rows.attendance_biometric_proofs).toHaveLength(0);
