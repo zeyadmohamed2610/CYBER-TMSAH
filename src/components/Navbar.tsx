@@ -105,7 +105,7 @@ export const Navbar = () => {
               {/* Soft ambient backlight glow on hover */}
               <div className="absolute -inset-x-3 -inset-y-1.5 rounded-full bg-gradient-to-r from-purple-600/0 via-purple-600/25 to-indigo-600/0 opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-500 pointer-events-none" />
 
-              <img src="/logo.png" alt="" width="36" height="36" className="relative h-8 w-8 sm:h-9 sm:w-9 shrink-0 object-contain" />
+              <img src="/brand/logo-small.webp" alt="" width="36" height="36" className="relative h-8 w-8 sm:h-9 sm:w-9 shrink-0 object-contain" />
               {/* Wordmark Logo */}
               <div className="relative flex items-center tracking-[0.14em] font-sans drop-shadow-[0_0_15px_rgba(168,85,247,0.35)]">
                 {/* CYBER in pure neon white with ambient glow */}

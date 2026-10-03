@@ -19,6 +19,24 @@ async function click(label: string) {
   expect(button,`button ${label}`).toBeDefined();await act(async()=>button!.click());
 }
 describe('Student timetable display', () => {
+  it('collapses the full week, opens a chosen day and finds its correct venue', async () => {
+    await act(async () => root.render(<Harness data={schedule([entry(1), entry(1, {day_index: 0, room: 'A02'})])} />));
+    await click('الأسبوع كاملًا');
+    expect(container.querySelectorAll('article')).toHaveLength(0);
+    const day = [...container.querySelectorAll('details')].find(element => element.querySelector('summary')?.textContent?.includes('الجمعة'))!;
+    await act(async () => { day.open = true; day.dispatchEvent(new Event('toggle')); });
+    expect(container.querySelectorAll('article')).toHaveLength(1);
+    const input = container.querySelector<HTMLInputElement>('#schedule-search')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'a02');
+      input.dispatchEvent(new Event('input', {bubbles: true}));
+    });
+    expect(container.querySelectorAll('article')).toHaveLength(1);
+    expect(container.textContent).toContain('A02');
+    expect(container.textContent).not.toContain('G203');
+    await click('مسح');
+    expect(input.value).toBe('');
+  });
   it('opens own section, switches to all sections and combines a shared lecture without duplicate cards',async()=>{
     await act(async()=>root.render(<Harness data={schedule([entry(1),entry(2)])}/>));
     expect(container.querySelectorAll('article')).toHaveLength(1);expect(container.textContent).toContain('جدول اليوم · سكشن 1');

@@ -72,7 +72,7 @@ export function DeviceLockPanel() {
           </CardTitle>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs">{lockedCount} مغلق</Badge>
-            <Button variant="ghost" size="sm" onClick={() => void load()} disabled={loading}>
+            <Button variant="ghost" size="sm" aria-label="تحديث قائمة الأجهزة" onClick={() => void load()} disabled={loading}>
               <RefreshCw className={"h-3 w-3 " + (loading ? "animate-spin" : "")} />
             </Button>
           </div>

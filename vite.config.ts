@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
-import type { ViteDevServer, PreviewServer } from "vite";
+import type { ViteDevServer, PreviewServer, Plugin } from "vite";
 import type { ServerResponse, IncomingMessage } from "http";
 import react from "@vitejs/plugin-react";
 import path from "path";
@@ -8,6 +8,24 @@ import compression from "vite-plugin-compression";
 import {seoPages} from './scripts/seo-pages.ts';
 
 type NextFn = () => void;
+
+const initialScripts = new Set<string>();
+const initialAssetsPlugin: Plugin = {
+  name: 'initial-offline-assets',
+  generateBundle(_, bundle) {
+    initialScripts.clear();
+    const visit = (name: string) => {
+      if (initialScripts.has(name)) return;
+      const chunk = bundle[name];
+      if (!chunk || chunk.type !== 'chunk') return;
+      initialScripts.add(name);
+      chunk.imports.forEach(visit);
+    };
+    Object.values(bundle).forEach(chunk => {
+      if (chunk.type === 'chunk' && chunk.isEntry) visit(chunk.fileName);
+    });
+  },
+};
 
 let sentryVitePlugin: typeof import("@sentry/vite-plugin").sentryVitePlugin | null = null;
 try {
@@ -76,17 +94,23 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     seoPages(),
+    initialAssetsPlugin,
     e2eSupportPlugin(),
     compression({ algorithm: 'gzip', ext: '.gz' }),
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: false,
-      includeAssets: ['manifest.json', 'favicon.png', 'logo.png'],
+      includeAssets: ['manifest.json', 'favicon.png', 'brand/logo-small.webp'],
       manifest: false,
       workbox: {
         cleanupOutdatedCaches: true,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globPatterns: ['index.html', 'assets/*.{js,css}', 'favicon.png', 'brand/logo-small.webp'],
+        manifestTransforms: [async entries => ({
+          manifest: entries.filter(entry => !entry.url.endsWith('.js') || initialScripts.has(entry.url)),
+          warnings: [],
+        })],
         runtimeCaching: [
+          { urlPattern: ({url, sameOrigin}) => sameOrigin && /\/assets\/.*\.(js|css)$/.test(url.pathname), handler: 'CacheFirst', options: { cacheName: 'app-assets', expiration: { maxEntries: 80, maxAgeSeconds: 60 * 60 * 24 * 30 }, cacheableResponse: { statuses: [200] } } },
           { urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i, handler: 'CacheFirst', options: { cacheName: 'google-fonts-cache', expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 }, cacheableResponse: { statuses: [0, 200] } } },
           { urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i, handler: 'CacheFirst', options: { cacheName: 'gstatic-fonts-cache', expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 }, cacheableResponse: { statuses: [0, 200] } } }
         ]
@@ -118,16 +142,6 @@ export default defineConfig(({ mode }) => ({
     sourcemap: true,
     rollupOptions: {
       output: {
-        manualChunks: (id: string) => {
-          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') || id.includes('node_modules/react-router-dom/') || id.includes('node_modules/scheduler/')) return 'react-vendor';
-          if (id.includes('node_modules/@radix-ui/')) return 'radix-ui';
-          if (id.includes('node_modules/@supabase/')) return 'supabase';
-          if (id.includes('node_modules/qrcode')) return 'qrcode';
-          if (id.includes('node_modules/lucide-react')) return 'icons';
-          if (id.includes('node_modules/html2canvas') || id.includes('node_modules/html2canvas-pro')) return 'export-image';
-          if (id.includes('node_modules/jspdf')) return 'export-pdf';
-          if (id.includes('node_modules/chart.js') || id.includes('node_modules/react-chartjs')) return 'charts';
-        },
         chunkFileNames: () => mode === 'production' ? 'assets/[hash].js' : 'assets/[name]-[hash].js',
         entryFileNames: (chunkInfo) => mode === 'production' ? 'assets/[hash].js' : 'assets/[name]-[hash].js',
       },

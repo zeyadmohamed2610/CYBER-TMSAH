@@ -42,7 +42,7 @@ export const DataTable = <T,>({
         <CardTitle className="text-lg sm:text-xl font-bold">{title}</CardTitle>
       </CardHeader>
       <CardContent className="pt-0 px-2 sm:px-6">
-        <div className="w-full overflow-x-auto pb-4 custom-scrollbar scroll-touch">
+        <div role="region" aria-label={title} tabIndex={0} className="w-full overflow-x-auto pb-4 custom-scrollbar scroll-touch">
           <Table className="whitespace-nowrap sm:whitespace-normal">
           {caption ? <TableCaption>{caption}</TableCaption> : null}
           <TableHeader>

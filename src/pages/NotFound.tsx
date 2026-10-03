@@ -24,7 +24,7 @@ const NotFound = () => {
         title="404 - الصفحة غير موجودة"
         description="عذراً، الصفحة المطلوبة غير موجودة. الرجاء التحقق من الرابط أو العودة للصفحة الرئيسية."
       />
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <main className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="max-w-md w-full text-center">
           {/* Error Icon */}
           <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-destructive/10 border border-destructive/20 flex items-center justify-center">
@@ -52,7 +52,7 @@ const NotFound = () => {
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               to="/"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium transition-all hover:bg-primary/90 hover:scale-105"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary-solid text-primary-foreground font-medium transition-all hover:bg-primary-solid/90 hover:scale-105"
             >
               <Home className="w-4 h-4" />
               العودة للرئيسية
@@ -72,7 +72,7 @@ const NotFound = () => {
             المسار: <code className="bg-muted px-2 py-1 rounded text-xs">{location.pathname}</code>
           </p>
         </div>
-      </div>
+      </main>
     </>
   );
 };

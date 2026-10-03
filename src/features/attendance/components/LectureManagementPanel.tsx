@@ -189,7 +189,7 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
             {lectures.map((lec) => (
               <div
                 key={lec.id}
-                className={"flex w-full items-center gap-4 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-muted/50 " + (lec.is_ended ? "opacity-60" : "")}
+                className={"flex w-full items-center gap-4 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-muted/50 " + (lec.is_ended ? "border-dashed" : "")}
               >
                 <button type="button" onClick={() => onSelectLecture(lec)} className="flex min-w-0 flex-1 items-center gap-4 text-right" aria-label={`عرض المحاضرة ${lec.title}`}>
                 <div className={"flex h-10 w-10 items-center justify-center rounded-lg " + (lec.is_ended ? "bg-muted" : "bg-primary/10")}>
@@ -238,7 +238,7 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
                       onConfirm={() => handleDeleteLecture(lec.id, lec.title, {} as React.MouseEvent)}
                     >
                       {(trigger) => (
-                        <Button variant="ghost" size="sm" className="h-7 gap-1 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); trigger(); }}>
+                        <Button variant="ghost" size="sm" className="h-7 gap-1 text-rose-400 hover:text-rose-400 hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); trigger(); }}>
                           <Trash2 className="h-3 w-3" />
                           حذف
                         </Button>

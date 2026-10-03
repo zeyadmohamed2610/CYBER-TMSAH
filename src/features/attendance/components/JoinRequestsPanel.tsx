@@ -310,9 +310,9 @@ export function JoinRequestsPanel() {
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-purple-400" />
-              <h3 className="text-sm font-bold text-white">
+              <h2 className="text-sm font-bold text-white">
                 {lang === "ar" ? "قائمة طلبات إنشاء الحسابات" : "Account Creation Requests"}
-              </h3>
+              </h2>
             </div>
 
             <div className="flex items-center gap-2">
@@ -472,9 +472,9 @@ export function JoinRequestsPanel() {
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2">
               <KeyRound className="w-4 h-4 text-purple-400" />
-              <h3 className="text-sm font-bold text-white">
+              <h2 className="text-sm font-bold text-white">
                 {lang === "ar" ? "طلبات استعادة كلمة المرور عبر Gmail" : "Gmail Password Recovery Requests"}
-              </h3>
+              </h2>
             </div>
 
             <div className="flex items-center gap-2">

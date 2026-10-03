@@ -883,8 +883,10 @@ export default function ProfilePage() {
                               />
                               <button
                                 type="button"
+                                aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+                                aria-pressed={showPassword}
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                                className="absolute left-1 top-1/2 -translate-y-1/2 h-11 w-11 flex items-center justify-center rounded-lg text-slate-400 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary transition-colors"
                               >
                                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                               </button>
@@ -924,8 +926,10 @@ export default function ProfilePage() {
                               />
                               <button
                                 type="button"
+                                aria-label={showConfirmPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+                                aria-pressed={showConfirmPassword}
                                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                                className="absolute left-1 top-1/2 -translate-y-1/2 h-11 w-11 flex items-center justify-center rounded-lg text-slate-400 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary transition-colors"
                               >
                                 {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                               </button>

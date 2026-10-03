@@ -35,10 +35,11 @@ export const SubjectProgressCard = ({ metric }: SubjectProgressCardProps) => {
             <div className="space-y-2">
                 <Progress
                     value={rate}
+                    aria-label={`نسبة الحضور في ${metric.subjectName}`}
                     className="h-3 bg-slate-100 dark:bg-slate-800"
                     indicatorClassName={cn("transition-all duration-1000 ease-out", getGradientClass())}
                 />
-                <div className="flex justify-between text-[10px] tracking-wider font-semibold text-slate-400 dark:text-slate-500">
+                <div className="flex justify-between text-xs tracking-wider font-semibold text-slate-400 dark:text-slate-400">
                     <span>{metric.totalSessions} محاضرة</span>
                     <span>{isGood ? "على المسار الصحيح" : "يحتاج اهتمام"}</span>
                 </div>

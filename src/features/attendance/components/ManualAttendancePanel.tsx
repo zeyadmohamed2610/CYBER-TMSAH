@@ -122,13 +122,14 @@ export function ManualAttendancePanel() {
               <Input
                 id="manual-attendance-search"
                 name="manual-attendance-search"
+                aria-label="بحث عن طالب"
                 placeholder="بحث عن طالب..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="h-9 text-xs"
               />
               <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-                <SelectTrigger className="h-12 rounded-xl border-primary/20 bg-background/50">
+                <SelectTrigger aria-label="اختيار الطالب" className="h-12 rounded-xl border-primary/20 bg-background/50">
                   <SelectValue placeholder="اختر الطالب من القائمة..." />
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
@@ -150,7 +151,7 @@ export function ManualAttendancePanel() {
           <div className="space-y-2">
             <Label className="text-sm font-semibold">الجلسة</Label>
             <Select value={selectedSession} onValueChange={setSelectedSession}>
-              <SelectTrigger className="h-12 rounded-xl border-primary/20 bg-background/50">
+              <SelectTrigger aria-label="اختيار الجلسة" className="h-12 rounded-xl border-primary/20 bg-background/50">
                 <SelectValue placeholder="اختر جلسة..." />
               </SelectTrigger>
               <SelectContent className="max-h-[300px]">

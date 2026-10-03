@@ -192,10 +192,10 @@ export const StudentDashboard = () => {
           {/* Active Sessions Panel */}
           <div className="rounded-3xl glass-card p-5 sm:p-6 border border-white/10 shadow-lg">
             <div className="flex items-center justify-between gap-3 mb-4">
-              <h3 className="text-lg font-bold flex items-center gap-2">
+              <h2 className="text-lg font-bold flex items-center gap-2">
                 <Activity className="h-5 w-5 text-primary animate-pulse" />
                 الجلسات النشطة الآن
-              </h3>
+              </h2>
               <Button
                 variant="ghost"
                 size="sm"
@@ -275,10 +275,10 @@ export const StudentDashboard = () => {
 
           {subjectMetrics.length > 0 && (
             <div className="space-y-4">
-              <h3 className="text-lg font-bold flex items-center gap-2">
+              <h2 className="text-lg font-bold flex items-center gap-2">
                 <BookOpen className="h-5 w-5 text-primary" />
                 تفاصيل المواد الدراسية والغياب
-              </h3>
+              </h2>
               <div className="grid gap-3 sm:grid-cols-2">
                 {subjectMetrics.map((subject) => (
                   <SubjectProgressCard key={subject.subjectName} metric={subject} />

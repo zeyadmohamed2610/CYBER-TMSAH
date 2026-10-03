@@ -98,7 +98,7 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div
+    <main
       className="min-h-screen w-full flex items-center justify-center p-4 bg-[#07090E] relative overflow-hidden"
       dir={isRTL ? "rtl" : "ltr"}
     >
@@ -138,9 +138,9 @@ export default function ResetPasswordPage() {
                 <CheckCircle2 className="w-8 h-8" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-lg font-bold text-emerald-400">
+                <h2 className="text-lg font-bold text-emerald-400">
                   {lang === "ar" ? "تم تغيير كلمة المرور بنجاح" : "Password Changed"}
-                </h3>
+                </h2>
                 <p className="text-xs text-slate-300">
                   {lang === "ar"
                     ? "جارٍ تحويلك تلقائياً لصفحة تسجيل الدخول..."
@@ -161,9 +161,9 @@ export default function ResetPasswordPage() {
                 <ShieldCheck className="w-7 h-7" />
               </div>
               <div className="space-y-1.5">
-                <h3 className="text-sm font-bold text-white">
+                <h2 className="text-sm font-bold text-white">
                   {lang === "ar" ? "رابط الاستعادة غير متوفر أو منتهي الصلاحية" : "Reset Link Expired or Invalid"}
-                </h3>
+                </h2>
                 <p className="text-xs text-slate-400 leading-relaxed">
                   {lang === "ar"
                     ? "إذا انتهت صلاحية الرابط، يمكنك طلب رابط جديد من صفحة تسجيل الدخول أو مراسلة المشرف عبر واتساب."
@@ -197,8 +197,10 @@ export default function ResetPasswordPage() {
                   />
                   <button
                     type="button"
+                    aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+                    aria-pressed={showPassword}
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1 cursor-pointer transition-colors"
+                    className="absolute end-0 top-1/2 -translate-y-1/2 flex items-center justify-center h-11 w-11 rounded-lg text-slate-400 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -257,6 +259,6 @@ export default function ResetPasswordPage() {
           )}
         </div>
       </div>
-    </div>
+    </main>
   );
 }

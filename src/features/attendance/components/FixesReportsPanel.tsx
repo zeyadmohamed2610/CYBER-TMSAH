@@ -287,7 +287,7 @@ export function FixesReportsPanel() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="بحث باسم الطالب أو صاحب الحساب أو نوع المشكلة..."
-          className="pr-10 bg-card/60 border-white/10 text-white placeholder:text-slate-500 rounded-xl h-11"
+          className="pr-10 bg-card/60 border-white/10 text-white placeholder:text-slate-400 rounded-xl h-11"
         />
       </div>
 
@@ -301,7 +301,7 @@ export function FixesReportsPanel() {
         <div className="p-12 text-center rounded-2xl bg-card/30 border border-white/5 text-slate-400 space-y-2">
           <CheckCircle2 className="w-12 h-12 text-emerald-400/60 mx-auto" />
           <h3 className="text-base font-bold text-white">لا توجد بلاغات تطابق الفلتر الحالي</h3>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-400">
             {filter === "pending"
               ? "لا توجد مشاكل معلقة قيد المراجعة. يمكنك الضغط على 'تم الإصلاح' أو 'جميع البلاغات' لعرض تاريخ المشاكل السابقة."
               : "لا توجد سجلات أخطاء مسجلة تطابق عملية البحث."}
@@ -345,13 +345,13 @@ export function FixesReportsPanel() {
                       <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
                         {report.department && (
                           <span className="flex items-center gap-1">
-                            <Building2 className="w-3 h-3 text-slate-500" />
+                            <Building2 className="w-3 h-3 text-slate-400" />
                             {report.department}
                           </span>
                         )}
                         {report.academic_year && (
                           <span className="flex items-center gap-1">
-                            <GraduationCap className="w-3 h-3 text-slate-500" />
+                            <GraduationCap className="w-3 h-3 text-slate-400" />
                             {report.academic_year}
                           </span>
                         )}
@@ -374,7 +374,7 @@ export function FixesReportsPanel() {
                       {report.status === "pending" ? "قيد المراجعة" : "تم الإصلاح"}
                     </span>
                     <span className="text-[11px] text-slate-400 flex items-center gap-1" title="تاريخ ووقت حدوث المشكلة">
-                      <Clock className="w-3 h-3 text-slate-500" />
+                      <Clock className="w-3 h-3 text-slate-400" />
                       {new Date(report.created_at).toLocaleString("ar-EG", {
                         month: "short",
                         day: "numeric",
@@ -392,7 +392,7 @@ export function FixesReportsPanel() {
                     {getFriendlyErrorMessage(report.error_message, "واجه المستخدم مشكلة أثناء استخدام المنصة.")}
                   </div>
                   {report.page_url && (
-                    <div className="text-[11px] text-slate-500 flex items-center gap-1.5 pt-1 truncate">
+                    <div className="text-[11px] text-slate-400 flex items-center gap-1.5 pt-1 truncate">
                       <ExternalLink className="w-3 h-3 shrink-0 text-slate-400" />
                       <span>الصفحة: {report.page_url}</span>
                     </div>

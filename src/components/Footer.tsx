@@ -4,7 +4,7 @@ import { Github, Facebook, Linkedin, MessageCircle } from "lucide-react";
 const Footer = () => {
 
   return (
-    <footer className="relative z-0 border-t border-border/50 mt-20 overflow-hidden">
+    <footer className="relative z-0 border-t border-border/50 mt-8 sm:mt-12 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-t from-primary/5 via-transparent to-transparent" />
       <div
         className="absolute inset-0 opacity-5"
@@ -15,11 +15,11 @@ const Footer = () => {
         }}
       />
 
-      <div className="section-container relative py-12">
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
-          <div className="flex flex-col items-center lg:items-start gap-4 order-2 lg:order-1">
+      <div className="section-container relative py-6 sm:py-10">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-4 sm:gap-8">
+          <div className="flex flex-col items-center lg:items-start gap-2 sm:gap-4 order-2 lg:order-1">
             <Link to="/" className="group flex items-center select-none" dir="ltr" aria-label="CYBER TMSAH Home">
-              <img src="/logo.png" alt="" width="40" height="40" className="h-10 w-10 mr-2 shrink-0 object-contain" />
+              <img src="/brand/logo-small.webp" alt="" width="40" height="40" className="h-10 w-10 mr-2 shrink-0 object-contain" />
               <span className="font-black text-2xl text-white tracking-[0.14em] drop-shadow-[0_2px_12px_rgba(255,255,255,0.3)]">
                 CYBER
               </span>
@@ -48,7 +48,7 @@ const Footer = () => {
 
 
 
-          <div className="flex flex-col items-center lg:items-end gap-4 order-3">
+          <div className="flex flex-col items-center lg:items-end gap-2 sm:gap-4 order-3">
             <span className="text-xs font-bold text-primary uppercase tracking-wider">تواصل معنا</span>
             <div className="flex items-center gap-3">
               {[
@@ -62,7 +62,7 @@ const Footer = () => {
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group w-10 h-10 rounded-xl bg-card border border-border/50 flex items-center justify-center transition-all duration-300 hover:border-primary hover:bg-primary/10 hover:shadow-[0_0_15px_hsl(var(--primary)/0.3)]"
+                  className="group w-11 h-11 rounded-xl bg-card border border-border/50 flex items-center justify-center transition-all duration-300 hover:border-primary hover:bg-primary/10 hover:shadow-[0_0_15px_hsl(var(--primary)/0.3)]"
                   aria-label={social.label}
                 >
                   <social.icon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -72,7 +72,7 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="my-8 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+        <div className="my-4 sm:my-8 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
         <div className="text-center">
           <span className="text-xs text-muted-foreground">© 2026 CYBER TMSAH - جميع الحقوق محفوظة</span>

@@ -10,7 +10,7 @@ for (const route of ["/", "/login", "/attendance/login", "/schedule"]) {
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
     await page.goto(route, { waitUntil: "domcontentloaded" });
-    await expect(page).toHaveURL(/\/login$/);
+    await expect(page).toHaveURL(route === '/' ? /\/$/ : /\/login$/);
     await expect(page.locator('input[type="password"]').first()).toBeVisible();
     await expect(page.locator('button[type="submit"]').first()).toBeVisible();
     await expect(page.locator("#root")).not.toBeEmpty();

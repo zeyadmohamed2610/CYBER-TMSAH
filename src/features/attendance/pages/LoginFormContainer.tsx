@@ -689,7 +689,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
   );
 
   return (
-    <div
+    <main
       className="min-h-[100dvh] w-full flex flex-col items-center justify-center relative overflow-x-hidden overflow-y-auto px-4 py-10"
       dir={isRTL ? "rtl" : "ltr"}
       style={{ background: "#02060F" }}>
@@ -736,7 +736,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
 
         {/* Hero Wordmark */}
         <div className="flex items-center justify-center gap-2.5" dir="ltr">
-          <img src="/logo.png" alt="" width="44" height="44" className="h-9 w-9 md:h-11 md:w-11 shrink-0 object-contain" />
+          <img src="/brand/logo-small.webp" alt="" width="44" height="44" className="h-9 w-9 md:h-11 md:w-11 shrink-0 object-contain" />
           <span
             className="font-black text-white text-[28px] md:text-[34px] tracking-[0.14em]"
             style={{
@@ -929,8 +929,8 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
                       if (e.getModifierState) setIsCapsLockOn(e.getModifierState("CapsLock"));
                     }}
                     suffix={
-                      <button type="button" onClick={() => setShowPass(v => !v)}
-                        className="flex items-center justify-center w-8 h-8 rounded-md cursor-pointer transition-colors text-slate-400 hover:text-white">
+                      <button type="button" aria-label={showPass ? (lang === 'ar' ? 'إخفاء كلمة المرور' : 'Hide password') : (lang === 'ar' ? 'إظهار كلمة المرور' : 'Show password')} aria-pressed={showPass} onClick={() => setShowPass(v => !v)}
+                        className="flex items-center justify-center w-11 h-11 rounded-md cursor-pointer transition-colors text-slate-400 hover:text-white">
                         <Icon.Eye off={showPass}/>
                       </button>
                     }/>
@@ -1090,8 +1090,8 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
                         autoComplete="new-password"
                         icon={<Icon.Lock/>}
                         suffix={
-                          <button type="button" onClick={() => setShowJoinPass(v => !v)}
-                            className="flex items-center justify-center w-8 h-8 rounded-md cursor-pointer transition-colors text-slate-400 hover:text-white">
+                          <button type="button" aria-label={showJoinPass ? (lang === 'ar' ? 'إخفاء كلمة المرور' : 'Hide password') : (lang === 'ar' ? 'إظهار كلمة المرور' : 'Show password')} aria-pressed={showJoinPass} onClick={() => setShowJoinPass(v => !v)}
+                            className="flex items-center justify-center w-11 h-11 rounded-md cursor-pointer transition-colors text-slate-400 hover:text-white">
                             <Icon.Eye off={showJoinPass}/>
                           </button>
                         }
@@ -1110,8 +1110,8 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
                         autoComplete="new-password"
                         icon={<Icon.Lock/>}
                         suffix={
-                          <button type="button" onClick={() => setShowConfirmPass(v => !v)}
-                            className="flex items-center justify-center w-8 h-8 rounded-md cursor-pointer transition-colors text-slate-400 hover:text-white">
+                          <button type="button" aria-label={showConfirmPass ? (lang === 'ar' ? 'إخفاء كلمة المرور' : 'Hide password') : (lang === 'ar' ? 'إظهار كلمة المرور' : 'Show password')} aria-pressed={showConfirmPass} onClick={() => setShowConfirmPass(v => !v)}
+                            className="flex items-center justify-center w-11 h-11 rounded-md cursor-pointer transition-colors text-slate-400 hover:text-white">
                             <Icon.Eye off={showConfirmPass}/>
                           </button>
                         }
@@ -1275,7 +1275,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button { opacity: 0; }
       `}</style>
-    </div>
+    </main>
   );
 };
 

@@ -25,6 +25,7 @@ export default {
         foreground: "hsl(var(--foreground))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
+          solid: "hsl(var(--primary-solid))",
           foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
@@ -33,6 +34,7 @@ export default {
         },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
+          solid: "hsl(var(--destructive-solid))",
           foreground: "hsl(var(--destructive-foreground))",
         },
         muted: {

@@ -129,8 +129,8 @@ export const OwnerDashboard = () => {
         </div>
       </div>
 
-      {/* Stat Cards - Vertical grid (3 rows of 2 on phones, 6 cols on XL) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3">
+      {/* Compact, scrollable summary on phones; full grid on larger screens. */}
+      <div role="region" aria-label="ملخص المنصة" tabIndex={0} className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary flex overflow-x-auto gap-2 pb-2 sm:grid sm:grid-cols-3 xl:grid-cols-6 sm:gap-3 [&>div]:min-w-36 [&>div]:shrink-0 sm:[&>div]:min-w-0">
         <StatCard
           title="الطلاب"
           value={metrics.totalStudents}

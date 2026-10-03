@@ -205,7 +205,7 @@ export const AttendanceBiometricGate = ({ onVerified, attendanceHash }: Attendan
         </Button>
       )}
 
-      <p className="text-center text-[11px] text-muted-foreground/50 leading-relaxed">
+      <p className="text-center text-xs text-muted-foreground leading-relaxed">
         كل محاولة تحقق مسجلة في سجل النشاط ويراها المراقب
       </p>
     </div>

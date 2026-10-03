@@ -22,6 +22,7 @@
     { "source": "/hero-bg.jpg", "destination": "/hero-bg.jpg" },
     { "source": "/placeholder.svg", "destination": "/placeholder.svg" },
     { "source": "/assets/:match*", "destination": "/assets/:match*" },
+    { "source": "/brand/:match*", "destination": "/brand/:match*" },
     { "source": "/:match*", "destination": "/index.html" }
   ],
   "headers": [

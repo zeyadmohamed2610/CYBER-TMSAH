@@ -40,7 +40,8 @@
     --popover: 226 49% 8%;
     --popover-foreground: 210 20% 98%;
 
-    --primary: 270 91% 65%;
+    --primary: 270 91% 72%;
+    --primary-solid: 270 78% 43%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 226 30% 13%;
@@ -49,10 +50,11 @@
     --muted: 226 25% 13%;
     --muted-foreground: 215 15% 65%;
 
-    --accent: 258 90% 66%;
+    --accent: 258 70% 43%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 55%;
+    --destructive: 0 85% 72%;
+    --destructive-solid: 0 72% 43%;
     --destructive-foreground: 210 20% 98%;
 
     --border: 226 25% 16%;
@@ -563,4 +565,9 @@ html, body {
     box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.7), 0 0 28px rgba(147, 51, 234, 0.16) !important;
     transition: border-color 0.25s ease, box-shadow 0.25s ease;
   }
+}
+
+/* Keep mobile form text readable and avoid focus zoom on iOS. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: 16px !important; }
 }

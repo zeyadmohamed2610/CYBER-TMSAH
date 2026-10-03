@@ -9,13 +9,13 @@ const AttendanceDoctorPage = () => {
 
   return (
     <Layout>
-      <section className="section-container py-6 sm:py-10 md:py-14 animate-fade-up">
-        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+      <section className="section-container py-6 sm:py-8 md:py-10 animate-fade-up">
+        <div className="mb-6 sm:mb-5 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div className="space-y-2 min-w-0">
             <span className="inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-bold tracking-wide text-primary backdrop-blur-sm">
               لوحة تحكم الدكتور
             </span>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground md:text-4xl tracking-tight truncate">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground md:text-3xl tracking-tight truncate">
               مركز الحضور — الدكتور
             </h1>
           </div>
