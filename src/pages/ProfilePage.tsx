@@ -1105,6 +1105,12 @@ export default function ProfilePage() {
                         <Button type="button" variant="outline" className="min-h-11 text-xs" disabled={checkingPasskeyDevice || creatingPasskey} onClick={handleCheckPasskeyDevice}>{checkingPasskeyDevice ? 'جارٍ فحص الجهاز...' : 'فحص جاهزية الجهاز'}</Button>
                         {passkeyDeviceCheck && <p role="status" className="text-sm leading-7 rounded-xl border border-white/10 bg-white/5 p-3 text-slate-200">{passkeyDeviceCheck}</p>}
                         {passkeyDiagnostic && <div role="alert" className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 space-y-3">
+                          {passkeyDiagnostic.errorName==='NotReadableError' && <div className="space-y-2 text-sm leading-7 text-slate-200">
+                            <p className="font-semibold">تعذر التواصل مع مدير مفاتيح الدخول على جهازك.</p>
+                            <p>على Android، افتح إعدادات الهاتف وابحث عن «كلمات المرور» أو «مفاتيح الدخول». تأكد من اختيار وتفعيل Google Password Manager أو مدير آخر يدعم مفاتيح الدخول، ومن تفعيل قفل الشاشة.</p>
+                            <p>حدّث Chrome وخدمات Google Play، ثم أعد تشغيل الهاتف وجرب الإضافة مجددًا. إذا كنت تستخدم مديرًا آخر، يمكنك اختيار Google مؤقتًا لاختبار سبب المشكلة.</p>
+                            <a href="https://support.google.com/chrome/answer/14124480?hl=ar" target="_blank" rel="noopener noreferrer" className="inline-block underline text-purple-300">كيفية اختيار مدير مفاتيح الدخول</a>
+                          </div>}
                           <p className="text-sm leading-7 text-slate-200">توقف طلب الإضافة عند خطوة الجهاز. يمكنك نسخ تفاصيل الخطأ للمساعدة في تحديد السبب. لا تتضمن كلمة المرور أو مفتاح الدخول.</p>
                           <Button type="button" variant="outline" className="min-h-11 text-xs w-full sm:w-auto" onClick={async()=>{try{await navigator.clipboard.writeText(JSON.stringify(passkeyDiagnostic,null,2));toast.success('تم نسخ تفاصيل الخطأ.');}catch{toast.error('تعذر النسخ. اسم الخطأ: '+passkeyDiagnostic.errorName);}}}>نسخ تفاصيل الخطأ</Button>
                         </div>}
