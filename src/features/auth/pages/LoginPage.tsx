@@ -1,6 +1,5 @@
 import { ForgotPasswordModal } from "@/features/auth/components/ForgotPasswordModal";
 import { LoadingScreen } from "@/shared/components/Loading";
-import { Link } from "react-router-dom";
 import { SITE_DESCRIPTION } from "@/shared/lib/siteMetadata";
 import { AuthIcons as Icon } from "../components/AuthIcons";
 
@@ -150,12 +149,6 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
           </span>
         </div>
         <p className="mt-3 max-w-md text-xs leading-6 text-slate-400">{SITE_DESCRIPTION}</p>
-        <Link
-          to="/about"
-          className="mt-2 rounded-lg px-3 py-2 text-sm text-purple-300 hover:text-purple-200"
-        >
-          عن المنصة
-        </Link>
       </div>
 
       {/* ── Card Container with Ambient Depth ─────────────────────────── */}
