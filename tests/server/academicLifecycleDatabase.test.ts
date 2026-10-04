@@ -68,6 +68,9 @@ beforeAll(async () => {
   await db.exec(
     readFileSync("supabase/migrations/20261004201315_remove_results_and_excuses.sql", "utf8"),
   );
+  await db.exec(
+    readFileSync("supabase/migrations/20261004202704_remove_retired_department_helper.sql", "utf8"),
+  );
 }, 30000);
 beforeEach(async () => {
   await db.exec("TRUNCATE auth.users");
