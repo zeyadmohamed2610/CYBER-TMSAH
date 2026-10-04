@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { cn } from "@/shared/lib/utils";
 import { Menu, PanelRightClose, PanelRightOpen, X, type LucideIcon } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 export interface DashboardDestination {
   value: string;
@@ -224,40 +225,44 @@ export function DashboardWorkspace({
                 </nav>
               </DialogContent>
 
-              <nav
-                aria-label="اختصارات لوحة التحكم"
-                className="mobile-dock grid grid-cols-5 gap-1 lg:hidden"
-              >
-                <TabsList
-                  aria-label="التنقل الرئيسي للهاتف"
-                  className="col-span-4 grid h-auto w-full grid-cols-4 gap-1 bg-transparent p-0"
+              {/* Keep the dock relative to the viewport, outside animated page containers. */}
+              {createPortal(
+                <nav
+                  aria-label="اختصارات لوحة التحكم"
+                  className="mobile-dock grid grid-cols-5 gap-1 lg:hidden"
                 >
-                  {mobileItems.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <TabsTrigger
-                        key={item.value}
-                        value={item.value}
-                        aria-label={item.label}
-                        className="min-h-14 min-w-0 flex-col gap-1 rounded-xl px-1 py-2 text-[11px] font-semibold whitespace-normal data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none"
-                      >
-                        <Icon aria-hidden="true" className="h-5 w-5" />
-                        <span>{shortLabel(item)}</span>
-                      </TabsTrigger>
-                    );
-                  })}
-                </TabsList>
-                <button
-                  type="button"
-                  onClick={() => setOpen(true)}
-                  aria-label="المزيد من الصفحات"
-                  aria-expanded={open}
-                  className="flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-semibold text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <Menu aria-hidden="true" className="h-5 w-5" />
-                  <span>المزيد</span>
-                </button>
-              </nav>
+                  <TabsList
+                    aria-label="التنقل الرئيسي للهاتف"
+                    className="col-span-4 grid h-auto w-full grid-cols-4 gap-1 bg-transparent p-0"
+                  >
+                    {mobileItems.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <TabsTrigger
+                          key={item.value}
+                          value={item.value}
+                          aria-label={item.label}
+                          className="min-h-14 min-w-0 flex-col gap-1 rounded-xl px-1 py-2 text-[11px] font-semibold whitespace-normal data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none"
+                        >
+                          <Icon aria-hidden="true" className="h-5 w-5" />
+                          <span>{shortLabel(item)}</span>
+                        </TabsTrigger>
+                      );
+                    })}
+                  </TabsList>
+                  <button
+                    type="button"
+                    onClick={() => setOpen(true)}
+                    aria-label="المزيد من الصفحات"
+                    aria-expanded={open}
+                    className="flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-semibold text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Menu aria-hidden="true" className="h-5 w-5" />
+                    <span>المزيد</span>
+                  </button>
+                </nav>,
+                document.body,
+              )}
             </Dialog>
           </div>
         )}

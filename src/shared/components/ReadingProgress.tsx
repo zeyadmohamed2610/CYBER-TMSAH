@@ -22,7 +22,10 @@ export const ReadingProgress = () => {
   }, []);
 
   return (
-    <div className="fixed top-0 left-0 right-0 h-1 z-[100] bg-transparent" aria-hidden="true">
+    <div
+      className="fixed top-0 left-0 right-0 h-1 z-[100] bg-transparent pointer-events-none"
+      aria-hidden="true"
+    >
       <div
         className="h-full bg-gradient-to-r from-primary to-violet-400 transition-all duration-150 ease-out"
         style={{ width: `${progress}%` }}

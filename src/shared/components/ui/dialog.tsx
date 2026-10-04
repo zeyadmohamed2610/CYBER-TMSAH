@@ -47,7 +47,11 @@ const DialogContent = React.forwardRef<
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
-      className={cn(dialogContentVariants({ dir }), className)}
+      className={cn(
+        dialogContentVariants({ dir }),
+        "w-[calc(100%-1.5rem)] max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain",
+        className,
+      )}
       {...props}
     >
       {children}

@@ -41,11 +41,22 @@ export const Navbar = () => {
 
   // Prevent scroll when mobile menu is open
   useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = previous;
     };
   }, [open]);
+
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 768px)");
+    const close = () => {
+      if (query.matches) setOpen(false);
+    };
+    query.addEventListener("change", close);
+    return () => query.removeEventListener("change", close);
+  }, []);
 
   // Close on Escape
   useEffect(() => {
@@ -90,7 +101,7 @@ export const Navbar = () => {
       >
         <div className="section-container flex items-center justify-between py-2.5">
           {/* Glowing Wordmark Logo (Shield & Role Badge removed as requested) */}
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <Link
               to={dashboardPath}
               className="group relative flex items-center gap-2 select-none py-1 transition-transform duration-300 active:scale-95 no-glow !outline-none !ring-0 !border-0 !shadow-none"
@@ -111,7 +122,7 @@ export const Navbar = () => {
               <div className="relative flex items-center tracking-[0.14em] font-sans drop-shadow-[0_0_15px_rgba(168,85,247,0.35)]">
                 {/* CYBER in pure neon white with ambient glow */}
                 <span
-                  className="font-black text-xl sm:text-2xl text-white tracking-[0.14em] transition-all duration-300"
+                  className="font-black text-base min-[400px]:text-xl sm:text-2xl text-white tracking-[0.08em] sm:tracking-[0.14em] transition-all duration-300"
                   style={{
                     fontFamily: "'Inter', sans-serif",
                     textShadow: "0 0 20px rgba(255,255,255,0.4)",
@@ -122,7 +133,7 @@ export const Navbar = () => {
 
                 {/* TMSAH in smooth gradient */}
                 <span
-                  className="font-black text-xl sm:text-2xl tracking-[0.14em] ml-2 transition-all duration-300 group-hover:scale-105 bg-gradient-to-r from-[#F3E8FF] via-[#C084FC] to-[#9333EA] bg-clip-text text-transparent"
+                  className="font-black text-base min-[400px]:text-xl sm:text-2xl tracking-[0.08em] sm:tracking-[0.14em] ml-1 sm:ml-2 transition-all duration-300 group-hover:scale-105 bg-gradient-to-r from-[#F3E8FF] via-[#C084FC] to-[#9333EA] bg-clip-text text-transparent"
                   style={{
                     fontFamily: "'Inter', sans-serif",
                   }}
@@ -139,106 +150,107 @@ export const Navbar = () => {
             </Link>
           </div>
 
-          {/* Desktop Right Controls: User Account Popup (Language switcher removed) */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2">
             {user && role && <NotificationShortcut destination={dashboardPath} />}
-            {user ? (
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setUserDropdownOpen((v) => !v)}
-                  className={`flex items-center gap-2.5 h-10 px-3.5 rounded-2xl border transition-all duration-200 select-none shadow-sm ${
-                    userDropdownOpen
-                      ? "border-purple-500/70 bg-purple-600/15 shadow-[0_0_24px_rgba(168,85,247,0.3)]"
-                      : "border-white/10 bg-[#0A0F1D]/80 hover:bg-[#0E1528] hover:border-purple-500/40 hover:shadow-[0_0_18px_rgba(168,85,247,0.18)]"
-                  }`}
-                  aria-expanded={userDropdownOpen}
-                  aria-haspopup="true"
-                >
-                  {/* Avatar Circle */}
-                  {avatarUrl ? (
-                    <img
-                      src={avatarUrl}
-                      alt={displayName}
-                      className="w-6 h-6 rounded-lg object-cover border border-purple-400/40 shadow-inner shrink-0"
+            {/* Desktop Right Controls: User Account Popup (Language switcher removed) */}
+            <div className="hidden md:flex items-center gap-3">
+              {user ? (
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    onClick={() => setUserDropdownOpen((v) => !v)}
+                    className={`flex items-center gap-2.5 h-10 px-3.5 rounded-2xl border transition-all duration-200 select-none shadow-sm ${
+                      userDropdownOpen
+                        ? "border-purple-500/70 bg-purple-600/15 shadow-[0_0_24px_rgba(168,85,247,0.3)]"
+                        : "border-white/10 bg-[#0A0F1D]/80 hover:bg-[#0E1528] hover:border-purple-500/40 hover:shadow-[0_0_18px_rgba(168,85,247,0.18)]"
+                    }`}
+                    aria-expanded={userDropdownOpen}
+                    aria-haspopup="true"
+                  >
+                    {/* Avatar Circle */}
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt={displayName}
+                        className="w-6 h-6 rounded-lg object-cover border border-purple-400/40 shadow-inner shrink-0"
+                      />
+                    ) : (
+                      <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-white font-black text-xs shadow-inner shrink-0">
+                        {userInitial}
+                      </div>
+                    )}
+
+                    {/* Name */}
+                    <span className="max-w-[140px] truncate text-xs font-bold text-slate-100">
+                      {displayName}
+                    </span>
+
+                    {/* Arrow Icon */}
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                        userDropdownOpen ? "rotate-180 text-purple-400" : ""
+                      }`}
                     />
-                  ) : (
-                    <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-white font-black text-xs shadow-inner shrink-0">
-                      {userInitial}
+                  </button>
+
+                  {/* Dropdown Popup Card */}
+                  {userDropdownOpen && (
+                    <div
+                      className="absolute end-0 top-full mt-2 w-48 rounded-2xl border border-purple-500/25 bg-[#0B0F1D]/95 backdrop-blur-2xl p-1.5 shadow-[0_20px_60px_rgba(0,0,0,0.8)] z-50 animate-fade-up"
+                      dir="rtl"
+                    >
+                      <div className="space-y-1">
+                        {/* Button 0: Profile Page */}
+                        <Link
+                          to="/profile"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-200 hover:bg-purple-600/15 hover:text-purple-300 transition-all text-start"
+                        >
+                          <User className="w-4 h-4 text-purple-400" />
+                          <span>الملف الشخصي</span>
+                        </Link>
+
+                        {/* Divider */}
+                        <div className="my-1 h-px bg-white/10 mx-1" />
+
+                        {/* Button 2: Sign Out */}
+                        <button
+                          onClick={handleSignOut}
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-rose-400 hover:bg-rose-500/10 transition-all text-start"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          <span>تسجيل الخروج</span>
+                        </button>
+                      </div>
                     </div>
                   )}
+                </div>
+              ) : (
+                <Link
+                  to="/"
+                  className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-xs shadow-[0_4px_20px_rgba(124,58,237,0.35)] hover:shadow-[0_6px_28px_rgba(124,58,237,0.5)] hover:scale-[1.02] active:scale-95 transition-all"
+                >
+                  <span>تسجيل الدخول</span>
+                </Link>
+              )}
+            </div>
 
-                  {/* Name */}
-                  <span className="max-w-[140px] truncate text-xs font-bold text-slate-100">
-                    {displayName}
-                  </span>
-
-                  {/* Arrow Icon */}
-                  <ChevronDown
-                    className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
-                      userDropdownOpen ? "rotate-180 text-purple-400" : ""
-                    }`}
-                  />
-                </button>
-
-                {/* Dropdown Popup Card */}
-                {userDropdownOpen && (
-                  <div
-                    className="absolute end-0 top-full mt-2 w-48 rounded-2xl border border-purple-500/25 bg-[#0B0F1D]/95 backdrop-blur-2xl p-1.5 shadow-[0_20px_60px_rgba(0,0,0,0.8)] z-50 animate-fade-up"
-                    dir="rtl"
-                  >
-                    <div className="space-y-1">
-                      {/* Button 0: Profile Page */}
-                      <Link
-                        to="/profile"
-                        onClick={() => setUserDropdownOpen(false)}
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-200 hover:bg-purple-600/15 hover:text-purple-300 transition-all text-start"
-                      >
-                        <User className="w-4 h-4 text-purple-400" />
-                        <span>الملف الشخصي</span>
-                      </Link>
-
-                      {/* Divider */}
-                      <div className="my-1 h-px bg-white/10 mx-1" />
-
-                      {/* Button 2: Sign Out */}
-                      <button
-                        onClick={handleSignOut}
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-rose-400 hover:bg-rose-500/10 transition-all text-start"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        <span>تسجيل الخروج</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Link
-                to="/"
-                className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-xs shadow-[0_4px_20px_rgba(124,58,237,0.35)] hover:shadow-[0_6px_28px_rgba(124,58,237,0.5)] hover:scale-[1.02] active:scale-95 transition-all"
+            {/* Mobile Menu Button */}
+            <div className="flex md:hidden items-center gap-2">
+              <button
+                className="flex items-center justify-center text-slate-200 p-2 rounded-xl hover:bg-purple-600/15 transition-colors"
+                onClick={() => setOpen((v) => !v)}
+                aria-label={open ? "إغلاق القائمة" : "فتح القائمة"}
+                aria-expanded={open}
               >
-                <span>تسجيل الدخول</span>
-              </Link>
-            )}
-          </div>
-
-          {/* Mobile Menu Button */}
-          <div className="flex md:hidden items-center gap-2">
-            {user && role && <NotificationShortcut destination={dashboardPath} />}
-            <button
-              className="flex items-center justify-center text-slate-200 p-2 rounded-xl hover:bg-purple-600/15 transition-colors"
-              onClick={() => setOpen((v) => !v)}
-              aria-label={open ? "إغلاق القائمة" : "فتح القائمة"}
-              aria-expanded={open}
-            >
-              {open ? <X className="h-6 w-6 text-purple-400" /> : <Menu className="h-6 w-6" />}
-            </button>
+                {open ? <X className="h-6 w-6 text-purple-400" /> : <Menu className="h-6 w-6" />}
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Mobile menu drawer */}
         {open && (
-          <div className="md:hidden border-t border-white/10 bg-[#060813]/95 backdrop-blur-2xl px-4 py-4 space-y-2 animate-fade-up">
+          <div className="md:hidden max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain border-t border-white/10 bg-[#060813]/95 backdrop-blur-2xl px-4 py-4 space-y-2 animate-fade-up">
             {user ? (
               <>
                 <div className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-purple-950/40 to-indigo-950/30 border border-purple-500/20 mb-2">

@@ -111,22 +111,36 @@ export function DepartmentsAndSubjectsPanel() {
     }
   };
   const remove = async (subject: SubjectItem) => {
-    if (!canEdit || !confirm(`حذف مادة «${subject.name}»؟`)) return;
+    if (!canEdit || !department || busy || !confirm(`حذف مادة «${subject.name}»؟`)) return;
     setBusy(true);
-    const result = await supabase
-      .from("subjects")
-      .delete()
-      .eq("id", subject.id)
-      .eq("department", department!)
-      .select("id")
-      .single();
-    if (result.error)
-      toast.error(getFriendlyErrorMessage(result.error.message, "تعذر حذف المادة."));
-    else {
+    try {
+      const { data, error: failure } = await supabase.rpc("remove_academic_subject", {
+        p_subject_id: subject.id,
+        p_department: department,
+      });
+      if (failure) throw failure;
+      const result = data as { deleted: boolean; reason?: string };
+      if (!result.deleted) {
+        toast.error(
+          result.reason === "in_use"
+            ? "لا يمكن حذف مادة مرتبطة بالجدول أو بحسابات أو بسجلات دراسية. يمكنك تعديل اسمها."
+            : "المادة لم تعد موجودة. تم تحديث القائمة.",
+        );
+        if (result.reason === "not_found") await load();
+        return;
+      }
       await load();
       toast.success("تم حذف المادة");
+    } catch (failure) {
+      toast.error(
+        getFriendlyErrorMessage(
+          (failure as { message?: string })?.message,
+          "تعذر حذف المادة. أعد المحاولة.",
+        ),
+      );
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   };
   const displayed = subjects.filter((subject) =>
     subject.name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()),

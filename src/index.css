@@ -152,14 +152,14 @@
     /* direction is set dynamically by LanguageProvider */
     font-family: "Cairo", sans-serif;
     scroll-behavior: smooth;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   body {
     @apply bg-background text-foreground;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 }
 
@@ -559,7 +559,7 @@ textarea:focus-visible {
 /* Prevent horizontal scroll on all screens */
 html,
 body {
-  overflow-x: hidden;
+  overflow-x: clip;
   width: 100%;
 }
 

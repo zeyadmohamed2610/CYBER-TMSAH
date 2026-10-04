@@ -36,6 +36,31 @@ for (const [role, destination] of [
       await expect(page.getByRole("tab").first()).toBeVisible();
     }
     const errors: string[] = [];
+    if ((page.viewportSize()?.width ?? 1280) < 1024) {
+      const dock = page.locator(".mobile-dock");
+      await expect(dock).toBeVisible();
+      // Check viewport coordinates, not only visibility: transformed ancestors can
+      // put a supposedly fixed bar thousands of pixels below the screen.
+      for (const position of [0, 1000]) {
+        await page.evaluate((y) => window.scrollTo({ top: y, behavior: "instant" }), position);
+        await expect
+          .poll(async () =>
+            dock.evaluate((element) => {
+              const rect = element.getBoundingClientRect();
+              return rect.top >= 0 && rect.bottom <= innerHeight && innerHeight - rect.bottom < 40;
+            }),
+          )
+          .toBe(true);
+        await expect
+          .poll(async () =>
+            page
+              .locator('nav[aria-label="التنقل الرئيسي"]')
+              .evaluate((element) => Math.abs(element.getBoundingClientRect().top)),
+          )
+          .toBeLessThan(2);
+      }
+      await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    }
     await page.screenshot({
       path: `.private/screenshots/${role}-${testInfo.project.name}.png`,
       fullPage: true,
@@ -99,6 +124,41 @@ for (const [role, destination] of [
     await page.goto("/profile", { waitUntil: "domcontentloaded" });
     await expect(page.getByText("الملف الشخصي والحساب", { exact: true })).toBeVisible();
     await expect(page.getByRole("tab", { name: "البيانات الأساسية" })).toBeVisible();
+    if (role === "owner" && testInfo.project.name === "mobile-chrome") {
+      const originalViewport = page.viewportSize()!;
+      for (const viewport of [
+        { width: 320, height: 480 },
+        { width: 780, height: 360 },
+      ]) {
+        await page.setViewportSize(viewport);
+        await page.getByRole("button", { name: "تغيير الصورة الشخصية", exact: true }).click();
+        const dialog = page.getByRole("dialog");
+        await expect
+          .poll(() =>
+            dialog.evaluate((element) => {
+              const rect = element.getBoundingClientRect();
+              return (
+                rect.top >= 0 &&
+                rect.bottom <= innerHeight &&
+                rect.left >= 0 &&
+                rect.right <= innerWidth
+              );
+            }),
+          )
+          .toBe(true);
+        await page.keyboard.press("Escape");
+        await expect(dialog).toHaveCount(0);
+      }
+      await page.setViewportSize({ width: 320, height: 480 });
+      const menu = page.getByRole("button", { name: "فتح القائمة", exact: true });
+      await expect
+        .poll(() => menu.evaluate((element) => element.getBoundingClientRect().left))
+        .toBeGreaterThanOrEqual(0);
+      await menu.click();
+      await page.setViewportSize({ width: 1280, height: 720 });
+      await expect.poll(() => page.evaluate(() => document.body.style.overflow)).not.toBe("hidden");
+      await page.setViewportSize(originalViewport);
+    }
     await page.screenshot({
       path: `.private/screenshots/${role}-profile-${testInfo.project.name}.png`,
       fullPage: true,

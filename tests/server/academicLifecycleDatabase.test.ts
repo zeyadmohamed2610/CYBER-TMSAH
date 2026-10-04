@@ -45,6 +45,9 @@ beforeAll(async () => {
       "utf8",
     ),
   );
+  await db.exec(
+    readFileSync("supabase/migrations/20261004004615_safe_subject_removal.sql", "utf8"),
+  );
 }, 30000);
 beforeEach(async () => {
   await db.exec(`TRUNCATE private.attendance_cases,private.academic_notifications,private.notification_preferences,private.attendance_rules,private.term_results,private.term_schedule_archives,public.attendance,public.session_roster,public.sessions,public.lectures,public.users,public.subjects CASCADE;
@@ -263,5 +266,38 @@ describe("academic lifecycle authorization and historical integrity", () => {
         )
       ).rows[0].allowed,
     ).toBe(false);
+  });
+});
+
+describe("safe subject removal", () => {
+  const empty = "20000000-0000-0000-0000-000000000009";
+  const remove = (id: string, department = "cybersecurity") =>
+    db.query<{ result: { deleted: boolean; reason?: string } }>(
+      "SELECT public.remove_academic_subject($1,$2) result",
+      [id, department],
+    );
+  it("preserves subjects with attendance history without an HTTP error", async () => {
+    expect((await remove(subject)).rows[0].result).toEqual({ deleted: false, reason: "in_use" });
+    expect((await db.query("SELECT id FROM lectures WHERE id=$1", [lecture])).rows).toHaveLength(1);
+  });
+  it("removes an unused subject and handles a repeated request", async () => {
+    await db.query("INSERT INTO subjects VALUES($1,'Unused','cybersecurity','2')", [empty]);
+    expect((await remove(empty)).rows[0].result).toEqual({ deleted: true });
+    expect((await remove(empty)).rows[0].result).toEqual({ deleted: false, reason: "not_found" });
+  });
+  it("preserves assigned subjects even without sessions", async () => {
+    await db.query("INSERT INTO subjects VALUES($1,'Assigned','cybersecurity','2')", [empty]);
+    await db.query("INSERT INTO user_subjects VALUES($1,$2)", [owner, empty]);
+    expect((await remove(empty)).rows[0].result.reason).toBe("in_use");
+  });
+  it("denies students, another coordinator department, and direct deletion", async () => {
+    await db.query("SELECT set_config('test.auth',$1,false)", [student]);
+    await expect(remove(subject)).rejects.toThrow("permission_denied");
+    await db.query("UPDATE users SET role='coordinator' WHERE id=$1", [student]);
+    await expect(remove(subject, "other-department")).rejects.toThrow("permission_denied");
+    const grants = await db.query<{ allowed: boolean }>(
+      "SELECT has_table_privilege('authenticated','public.subjects','DELETE') allowed UNION ALL SELECT has_function_privilege('anon','public.remove_academic_subject(uuid,text)','EXECUTE')",
+    );
+    expect(grants.rows.every((row) => !row.allowed)).toBe(true);
   });
 });
