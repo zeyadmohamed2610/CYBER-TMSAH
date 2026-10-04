@@ -37,6 +37,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://clfhllujvxhfvhenvwfz.supabase.co" />
   <script>
+    if (location.pathname !== '/reset-password') {
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
@@ -53,6 +54,7 @@
         else loadAnalytics();
       }, 5000);
     }, {once: true});
+    }
   </script>
 </head>
 <body>

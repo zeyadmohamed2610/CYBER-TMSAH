@@ -2,7 +2,7 @@ import { supabase } from "@/shared/api/supabaseClient";
 import { computeFingerprint } from "@/shared/lib/deviceFingerprint";
 
 export interface AuditLogEntry {
-  action: "login_success" | "login_failed" | "join_request" | "password_reset_request";
+  action: "login_success" | "login_failed" | "join_request";
   identifier: string;
   role?: string;
   /** Human-readable reason for the outcome, e.g. "user_not_found" | "wrong_password" */

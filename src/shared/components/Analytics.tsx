@@ -23,6 +23,7 @@ export const Analytics = () => {
   const isFirstRender = useRef(true);
 
   useEffect(() => {
+    if (location.pathname === "/reset-password") return;
     // Skip the very first render — gtag in index.html already sent this page view
     if (isFirstRender.current) {
       isFirstRender.current = false;

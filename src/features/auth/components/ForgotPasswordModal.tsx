@@ -6,115 +6,85 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
-import { CheckCircle2, KeyRound, Loader2, Mail, Phone } from "lucide-react";
+import {
+  readRecoveryCooldown,
+  recoveryEmailError,
+  startRecoveryCooldown,
+} from "@/shared/lib/recoveryEmail";
+import { CheckCircle2, KeyRound, Loader2, Mail } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { recordAuditLog } from "../services/auditService";
-import { normalizeDigits } from "../utils/loginInput";
 import { Field } from "./AuthFormControls";
 
 interface ForgotPasswordModalProps {
   isOpen: boolean;
   onClose: () => void;
-  lang: string;
-  isRTL: boolean;
-}
-const COOLDOWN_KEY = "cyber_reset_retry_at";
-function savedCooldown(): number {
-  try {
-    return Number(sessionStorage.getItem(COOLDOWN_KEY)) || 0;
-  } catch {
-    return 0;
-  }
 }
 
 export function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordModalProps) {
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [requestRegistered, setRequestRegistered] = useState(false);
-  const [emailAccepted, setEmailAccepted] = useState(false);
+  const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [errorField, setErrorField] = useState<"email" | "phone" | null>(null);
-  const [retryAt, setRetryAt] = useState(savedCooldown);
+  const [emailError, setEmailError] = useState(false);
+  const [retryAt, setRetryAt] = useState(readRecoveryCooldown);
   const [now, setNow] = useState(Date.now);
-  const emailRef = useRef<HTMLInputElement>(null);
-  const phoneRef = useRef<HTMLInputElement>(null);
   const pending = useRef(false);
-  const registeredRequest = useRef<{ email: string; phone: string } | null>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
   const remaining = Math.max(0, Math.ceil((retryAt - now) / 1000));
+
   useEffect(() => {
     if (!isOpen) return;
     setNow(Date.now());
+    setRetryAt(readRecoveryCooldown());
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [isOpen]);
-  const fail = (message: string, field: "email" | "phone" | null = null) => {
-    setError(message);
-    setErrorField(field);
-    if (field === "email") emailRef.current?.focus();
-    if (field === "phone") phoneRef.current?.focus();
-  };
-  const handleResetRequest = async (event: React.FormEvent) => {
+
+  const requestLink = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (pending.current || Date.now() < retryAt || emailAccepted) return;
-    const request = registeredRequest.current ?? {
-      email: email.trim().toLowerCase(),
-      phone: normalizeDigits(phone).replace(/[\s()-]/g, ""),
-    };
-    if (!/^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(request.email)) {
-      fail("أدخل بريد Gmail المسجل في حسابك.", "email");
+    if (pending.current) return;
+    const deadline = Math.max(retryAt, readRecoveryCooldown());
+    if (Date.now() < deadline) {
+      setRetryAt(deadline);
+      setNow(Date.now());
       return;
     }
-    if (!/^\+?\d{8,15}$/.test(request.phone)) {
-      fail("أدخل رقم واتساب صحيحًا من 8 إلى 15 رقمًا.", "phone");
+    const address = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
+      setError("أدخل البريد الإلكتروني المسجل في حسابك.");
+      setEmailError(true);
+      emailRef.current?.focus();
       return;
     }
     if (!navigator.onLine) {
-      fail("الاتصال بالإنترنت مقطوع. اتصل ثم أعد المحاولة.");
+      setError("الاتصال بالإنترنت مقطوع. اتصل ثم أعد المحاولة.");
+      setEmailError(false);
       return;
     }
     pending.current = true;
     setSubmitting(true);
+    setAccepted(false);
     setError(null);
-    setErrorField(null);
-    const deadline = Date.now() + 60_000;
-    setRetryAt(deadline);
+    setEmailError(false);
+    setRetryAt(startRecoveryCooldown());
     setNow(Date.now());
     try {
-      sessionStorage.setItem(COOLDOWN_KEY, String(deadline));
-    } catch {
-      /* Storage is optional. */
-    }
-    try {
-      if (!registeredRequest.current) {
-        const { error: dbError } = await supabase
-          .from("password_reset_requests")
-          .insert({ ...request, status: "pending" });
-        if (dbError) throw dbError;
-        registeredRequest.current = request;
-        setRequestRegistered(true);
-        void recordAuditLog({
-          action: "password_reset_request",
-          identifier: `${request.email} | ${request.phone}`,
-        });
-      }
-      // Retrying email must not insert the accepted administrator request again.
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(request.email, {
+      const { error: requestError } = await supabase.auth.resetPasswordForEmail(address, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
-      if (resetError) throw resetError;
-      setEmailAccepted(true);
-    } catch {
-      fail(
-        registeredRequest.current
-          ? "سُجّل طلب المساعدة، لكن تعذر طلب رسالة الاستعادة. يمكنك إعادة المحاولة بعد انتهاء الانتظار أو التواصل مع الإدارة."
-          : "تعذر تسجيل الطلب. احتفظنا ببياناتك؛ تحقق من الاتصال ثم أعد المحاولة.",
+      if (requestError) throw requestError;
+      setAccepted(true);
+    } catch (requestError) {
+      setError(
+        recoveryEmailError(requestError) ??
+          "تعذر طلب رابط الاستعادة. احتفظنا ببريدك؛ تحقق من الاتصال ثم أعد المحاولة.",
       );
     } finally {
       pending.current = false;
       setSubmitting(false);
     }
   };
+
   return (
     <Dialog
       open={isOpen}
@@ -132,109 +102,66 @@ export function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordModalProp
             استعادة كلمة المرور
           </DialogTitle>
           <DialogDescription className="text-xs leading-5 text-slate-400">
-            أدخل بريد حسابك ورقم واتسابك لتسجيل طلب مساعدة وطلب رابط الاستعادة.
+            أدخل بريد حسابك لتصلك رسالة برابط مؤقت لتعيين كلمة مرور جديدة.
           </DialogDescription>
         </DialogHeader>
-        <form noValidate onSubmit={handleResetRequest} aria-busy={submitting} className="space-y-3">
-          {requestRegistered ? (
+        <form noValidate onSubmit={requestLink} aria-busy={submitting} className="space-y-3">
+          <Field
+            id="reset-email"
+            name="email"
+            label="البريد الإلكتروني المسجل"
+            type="email"
+            value={email}
+            onChange={(value) => {
+              setEmail(value);
+              setError(null);
+              setEmailError(false);
+              setAccepted(false);
+            }}
+            placeholder="example@gmail.com"
+            autoComplete="email"
+            enterKeyHint="send"
+            readOnly={submitting}
+            inputRef={emailRef}
+            error={emailError ? error : null}
+            icon={<Mail className="h-4 w-4" />}
+          />
+          {accepted && (
             <div
               role="status"
-              className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-sm text-emerald-200"
+              className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-xs leading-5 text-emerald-200"
             >
-              <p className="flex items-center gap-2 font-bold">
-                <CheckCircle2 className="h-4 w-4" />
-                سُجّل طلب المساعدة لدى الإدارة.
-              </p>
-              {emailAccepted && (
-                <p className="mt-2 text-xs leading-5">
-                  إذا كان البريد مسجلًا ويدعم الاستعادة، ستصلك رسالة برابط تغيير كلمة المرور. راجع
-                  البريد الوارد والرسائل غير المرغوب فيها.
-                </p>
-              )}
+              <CheckCircle2 className="mb-1 h-4 w-4" />
+              إذا كان البريد مسجلًا في المنصة، ستصلك رسالة برابط الاستعادة. راجع البريد الوارد
+              والرسائل غير المرغوب فيها، ثم افتح الرابط لتعيين كلمة المرور.
             </div>
-          ) : (
-            <>
-              <Field
-                id="reset-email"
-                name="email"
-                label="بريد Gmail المسجل"
-                type="email"
-                value={email}
-                onChange={(value) => {
-                  setEmail(value);
-                  setError(null);
-                }}
-                placeholder="example@gmail.com"
-                autoComplete="email"
-                enterKeyHint="next"
-                readOnly={submitting}
-                inputRef={emailRef}
-                error={errorField === "email" ? error : null}
-                icon={<Mail className="h-4 w-4" />}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    phoneRef.current?.focus();
-                  }
-                }}
-              />
-              <Field
-                id="reset-phone"
-                name="tel"
-                label="رقم واتساب للتواصل"
-                type="tel"
-                value={phone}
-                onChange={(value) => {
-                  setPhone(value);
-                  setError(null);
-                }}
-                placeholder="01xxxxxxxxx"
-                autoComplete="tel"
-                enterKeyHint="send"
-                readOnly={submitting}
-                inputRef={phoneRef}
-                error={errorField === "phone" ? error : null}
-                icon={<Phone className="h-4 w-4" />}
-              />
-            </>
           )}
-          {error && !errorField && (
+          {error && !emailError && (
             <p role="alert" className="rounded-xl bg-red-500/10 p-3 text-xs leading-5 text-red-300">
               {error}
             </p>
           )}
-          {!emailAccepted && (
-            <button
-              type="submit"
-              disabled={submitting || remaining > 0}
-              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-3 text-sm font-bold disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-purple-300"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  جاري إرسال الطلب...
-                </>
-              ) : remaining > 0 ? (
-                `أعد المحاولة بعد ${remaining} ثانية`
-              ) : requestRegistered ? (
-                "إعادة طلب رسالة الاستعادة"
-              ) : (
-                "إرسال طلب الاستعادة"
-              )}
-            </button>
-          )}
-          <p className="text-xs leading-5 text-slate-400">
-            لم تصلك الرسالة أو لا تستطيع الوصول لبريدك؟ تواصل مع الإدارة لمتابعة الطلب والتحقق من
-            ملكية الحساب.
-          </p>
-          <a
-            href="https://wa.me/201553450232"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex min-h-11 items-center justify-center rounded-xl border border-emerald-500/30 text-sm text-emerald-300 focus-visible:ring-2 focus-visible:ring-emerald-300"
+          <button
+            type="submit"
+            disabled={submitting || remaining > 0}
+            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-3 text-sm font-bold disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-purple-300"
           >
-            التواصل مع الإدارة عبر واتساب
-          </a>
+            {submitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                جاري طلب الرابط...
+              </>
+            ) : remaining > 0 ? (
+              `أعد المحاولة بعد ${remaining} ثانية`
+            ) : accepted ? (
+              "إعادة إرسال رابط الاستعادة"
+            ) : (
+              "إرسال رابط الاستعادة"
+            )}
+          </button>
+          <p className="text-xs leading-5 text-slate-400">
+            لا تشارك الرابط مع أحد. إذا لم تطلب تغيير كلمة المرور، تجاهل الرسالة.
+          </p>
         </form>
       </DialogContent>
     </Dialog>

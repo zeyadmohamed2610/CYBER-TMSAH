@@ -1,4 +1,4 @@
-import { supabase } from "@/shared/api/supabaseClient";
+import { recoverySessionReady, supabase } from "@/shared/api/supabaseClient";
 import { useLang } from "@/shared/i18n";
 import { getFriendlyErrorMessage } from "@/shared/lib/academicCopy";
 import {
@@ -11,7 +11,8 @@ import {
   Lock,
   ShieldCheck,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { PasswordStrengthMeter } from "../components/PasswordStrengthMeter";
@@ -26,32 +27,21 @@ export default function ResetPasswordPage() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [validSession, setValidSession] = useState<boolean | null>(null);
+  const pending = useRef(false);
 
   useEffect(() => {
     let active = true;
-    let subscription: { unsubscribe: () => void } | undefined;
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timer = setTimeout(() => {
+      if (active) setValidSession(false);
+    }, 15_000);
     const checkSession = async () => {
-      const hash = window.location.hash || window.location.search;
-      if (!hash.includes("type=recovery") && !hash.includes("access_token")) {
-        if (active) setValidSession(false);
-        return;
-      }
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!active) return;
-        if (session) {
-          setValidSession(true);
-          return;
-        }
-        subscription = supabase.auth.onAuthStateChange((event, s) => {
-          if (active && (event === "PASSWORD_RECOVERY" || s)) setValidSession(true);
-        }).data.subscription;
-        timer = setTimeout(() => {
-          if (active) setValidSession((prev) => (prev === null ? false : prev));
-        }, 1500);
+        const session = await recoverySessionReady;
+        const result = session ? await supabase.auth.getUser() : null;
+        if (active)
+          setValidSession(
+            Boolean(session && !result?.error && result?.data.user?.id === session.user.id),
+          );
       } catch {
         if (active) setValidSession(false);
       }
@@ -59,13 +49,13 @@ export default function ResetPasswordPage() {
     void checkSession();
     return () => {
       active = false;
-      subscription?.unsubscribe();
       clearTimeout(timer);
     };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (pending.current || validSession !== true) return;
 
     if (!newPassword || newPassword.length < 6) {
       toast.error(
@@ -81,6 +71,11 @@ export default function ResetPasswordPage() {
       return;
     }
 
+    if (!navigator.onLine) {
+      toast.error("الاتصال بالإنترنت مقطوع. اتصل ثم أعد المحاولة.");
+      return;
+    }
+    pending.current = true;
     setSubmitting(true);
     try {
       const { error } = await supabase.auth.updateUser({
@@ -88,7 +83,9 @@ export default function ResetPasswordPage() {
       });
 
       if (error) throw error;
-
+      setNewPassword("");
+      setConfirmPassword("");
+      await supabase.auth.signOut({ scope: "global" });
       setSuccess(true);
       toast.success(
         lang === "ar"
@@ -98,7 +95,7 @@ export default function ResetPasswordPage() {
 
       // Auto redirect to login after 3 seconds
       setTimeout(() => {
-        navigate("/login");
+        navigate("/login", { replace: true });
       }, 2500);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to update password";
@@ -111,6 +108,7 @@ export default function ResetPasswordPage() {
         ),
       );
     } finally {
+      pending.current = false;
       setSubmitting(false);
     }
   };
@@ -120,6 +118,10 @@ export default function ResetPasswordPage() {
       className="min-h-screen w-full flex items-center justify-center p-4 bg-[#07090E] relative overflow-hidden"
       dir={isRTL ? "rtl" : "ltr"}
     >
+      <Helmet>
+        <meta name="referrer" content="no-referrer" />
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       {/* Background ambient mesh */}
       <div className="absolute inset-0 pointer-events-none select-none overflow-hidden">
         <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-purple-600/10 blur-[100px]" />
@@ -188,8 +190,8 @@ export default function ResetPasswordPage() {
                 </h2>
                 <p className="text-xs text-slate-400 leading-relaxed">
                   {lang === "ar"
-                    ? "إذا انتهت صلاحية الرابط، يمكنك طلب رابط جديد من صفحة تسجيل الدخول أو مراسلة المشرف عبر واتساب."
-                    : "The reset link has expired. Request a new link or contact your admin via WhatsApp."}
+                    ? "اطلب رابطًا جديدًا من «نسيت كلمة المرور» في صفحة تسجيل الدخول."
+                    : "Request a new link from Forgot Password on the login page."}
                 </p>
               </div>
               <Link
@@ -203,12 +205,19 @@ export default function ResetPasswordPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* New Password */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                <label
+                  htmlFor="new-password"
+                  className="block text-xs font-semibold text-slate-300 mb-1.5"
+                >
                   {lang === "ar" ? "كلمة المرور الجديدة" : "New Password"}
                 </label>
                 <div className="relative">
                   <Lock className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
+                    id="new-password"
+                    name="new-password"
+                    autoComplete="new-password"
+                    readOnly={submitting}
                     type={showPassword ? "text" : "password"}
                     required
                     value={newPassword}
@@ -232,12 +241,19 @@ export default function ResetPasswordPage() {
 
               {/* Confirm Password */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                <label
+                  htmlFor="confirm-password"
+                  className="block text-xs font-semibold text-slate-300 mb-1.5"
+                >
                   {lang === "ar" ? "تأكيد كلمة المرور الجديدة" : "Confirm New Password"}
                 </label>
                 <div className="relative">
                   <Lock className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
+                    id="confirm-password"
+                    name="confirm-password"
+                    autoComplete="new-password"
+                    readOnly={submitting}
                     type={showPassword ? "text" : "password"}
                     required
                     value={confirmPassword}

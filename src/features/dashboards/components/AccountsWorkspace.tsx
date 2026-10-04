@@ -14,7 +14,7 @@ export function AccountsWorkspace({
   const [params, setParams] = useSearchParams();
   const choices = [
     { id: "accounts", label: "الحسابات" },
-    { id: "requests", label: "طلبات الانضمام والاستعادة" },
+    { id: "requests", label: "طلبات الانضمام" },
     { id: "devices", label: "أجهزة الحضور" },
     { id: "fixes", label: "بلاغات المشاكل" },
   ];

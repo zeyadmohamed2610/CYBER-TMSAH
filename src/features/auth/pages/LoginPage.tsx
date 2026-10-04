@@ -359,12 +359,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
         </p>
       </div>
 
-      <ForgotPasswordModal
-        isOpen={showForgotModal}
-        onClose={() => setShowForgotModal(false)}
-        lang={lang}
-        isRTL={isRTL}
-      />
+      <ForgotPasswordModal isOpen={showForgotModal} onClose={() => setShowForgotModal(false)} />
 
       <style>{`
         @keyframes rise {

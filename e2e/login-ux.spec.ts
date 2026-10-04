@@ -122,15 +122,12 @@ test("offline sign-in preserves input and offers a connection error", async ({ p
   await context.setOffline(false);
 });
 
-test("recovery differentiates a saved request from a failed email without sending real mail", async ({
+test("recovery uses email only and blocks retries after provider rate limiting", async ({
   page,
 }) => {
   let requests = 0;
-  await page.route("**/rest/v1/password_reset_requests", async (route) => {
-    requests++;
-    await route.fulfill({ status: 201, contentType: "application/json", body: "{}" });
-  });
   await page.route("**/auth/v1/recover*", async (route) => {
+    requests++;
     await route.fulfill({
       status: 429,
       contentType: "application/json",
@@ -140,10 +137,9 @@ test("recovery differentiates a saved request from a failed email without sendin
   await page.goto("/login");
   await page.getByRole("button", { name: "نسيت كلمة المرور؟" }).click();
   await page.locator("#reset-email").fill("test@gmail.com");
-  await page.locator("#reset-phone").fill("٠١٥٥٣٤٥٠٢٣٢");
-  await page.getByRole("button", { name: "إرسال طلب الاستعادة" }).click();
-  await expect(page.getByRole("alert")).toContainText("لكن تعذر طلب رسالة الاستعادة");
+  await expect(page.locator("#reset-phone")).toHaveCount(0);
+  await page.getByRole("button", { name: "إرسال رابط الاستعادة", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("وصلت خدمة البريد إلى حد الإرسال");
   await expect(page.getByRole("button", { name: /أعد المحاولة بعد/ })).toBeDisabled();
-  await expect(page.getByRole("link", { name: "التواصل مع الإدارة عبر واتساب" })).toBeVisible();
   expect(requests).toBe(1);
 });

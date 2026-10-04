@@ -7,7 +7,7 @@ import "./index.css";
 // Initialize Sentry error tracking
 const dsn = import.meta.env.VITE_SENTRY_DSN;
 
-if (dsn) {
+if (dsn && window.location.pathname !== "/reset-password") {
   Sentry.init({
     dsn,
     integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
