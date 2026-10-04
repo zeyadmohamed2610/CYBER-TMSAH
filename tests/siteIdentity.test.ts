@@ -9,6 +9,7 @@ import { SITE_OVERVIEW, siteStructuredData, pageMetadata } from "../src/shared/l
 describe("public identity delivered to crawlers", () => {
   it("provides readable about content and noindex errors before JavaScript runs", async () => {
     const output = await mkdtemp(path.join(tmpdir(), "cyber-identity-"));
+    expect(path.dirname(path.resolve(output))).toBe(path.resolve(tmpdir()));
     try {
       await writeFile(path.join(output, "index.html"), await readFile("index.html", "utf8"));
       const plugin = seoPages();
@@ -27,9 +28,6 @@ describe("public identity delivered to crawlers", () => {
       expect(missing).toContain("<h1>الصفحة غير موجودة</h1>");
       expect(missing).not.toContain(SITE_OVERVIEW.introduction);
     } finally {
-      if (path.dirname(path.resolve(output)) !== path.resolve(tmpdir())) {
-        throw new Error("Unexpected temporary test directory");
-      }
       await rm(output, { recursive: true, force: true });
     }
   });
