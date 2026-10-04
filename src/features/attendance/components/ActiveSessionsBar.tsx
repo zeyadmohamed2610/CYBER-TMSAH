@@ -85,7 +85,7 @@ export function ActiveSessionsBar() {
 
   if (sessions.length === 0) {
     return (
-      <div className="text-center py-12 space-y-3">
+      <div className="text-center py-5 space-y-2">
         <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto">
           <Clock className="h-8 w-8 text-muted-foreground/50" />
         </div>

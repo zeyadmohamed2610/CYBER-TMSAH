@@ -43,8 +43,8 @@ for (const [role, destination] of [
     }
     const tabs =
       role === "student"
-        ? ["records", "schedule", "analytics", "followup"]
-        : ["records", "schedule", "subjects", "followup"];
+        ? ["records", "schedule", "analytics"]
+        : ["records", "schedule", "subjects"];
     for (const tab of tabs) {
       await page.goto(`/${destination}?tab=${tab}`);
       await expect(page.getByRole("tabpanel").first()).toBeVisible({ timeout: 30000 });
@@ -63,18 +63,11 @@ for (const [role, destination] of [
           true,
         );
     }
-    for (const view of ["terms", "rules", "privacy"]) {
-      await page.goto(`/${destination}?tab=followup&view=${view}`);
-      await expect(
-        page.getByRole("heading", { name: "الحضور والغياب حسب المادة", exact: true }),
-      ).toBeVisible({ timeout: 30000 });
-      await expect(page.getByRole("button", { name: "الفصول الدراسية", exact: true })).toHaveCount(
-        0,
-      );
-      await expect(
-        page.locator('[name="max_absences"], [name="location_retention_days"]'),
-      ).toHaveCount(0);
-    }
+    await page.goto(`/${destination}?tab=followup&view=cases`);
+    await expect(
+      page.getByRole("heading", { name: "الجدول والامتحانات", exact: true }),
+    ).toBeVisible({ timeout: 30000 });
+    await expect(page.getByText("النتائج والأعذار", { exact: true })).toHaveCount(0);
     for (const target of [
       "owner-dashboard",
       "coordinator-dashboard",

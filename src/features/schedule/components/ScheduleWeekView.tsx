@@ -1,3 +1,4 @@
+import { ScheduleMatrix } from "./ScheduleMatrix";
 import { EmptyState } from "@/shared/components/EmptyState";
 import { cn } from "@/shared/lib/utils";
 import { scheduleTiming } from "../utils/scheduleTiming";
@@ -8,7 +9,6 @@ import { CalendarDays, Clock3, MapPin, UserRound } from "lucide-react";
 import { useState } from "react";
 import {
   ACADEMIC_DAYS,
-  cairoDate,
   scheduleCycle,
   scheduleRoom,
   slotTime,
@@ -57,6 +57,7 @@ export function ScheduleWeekView({
   onToday,
 }: Props) {
   const [dayChoice, setSelectedDay] = useState<number | null | "today">("today");
+  const [matrix, setMatrix] = useState(false);
   const [search, setSearch] = useState("");
   const [expandedDays, setExpandedDays] = useState<number[]>([]);
   const query = search.trim().normalize("NFKC").toLocaleLowerCase();
@@ -96,143 +97,111 @@ export function ScheduleWeekView({
       scheduleRoom(entry, dayCycle(entry.day_index)),
     ]);
   return (
-    <section aria-label="مواعيد الأسبوع" className="space-y-4">
-      <div
-        className="grid grid-cols-2 gap-2 rounded-2xl border bg-card p-1.5"
-        role="group"
-        aria-label="طريقة عرض الجدول"
-      >
-        <Button
-          className="min-h-12 gap-2"
-          variant={selectedDay !== null ? "default" : "ghost"}
-          aria-pressed={selectedDay !== null}
-          onClick={() => setSelectedDay("today")}
-        >
-          <Clock3 className="h-4 w-4" />
-          الجدول اليومي
-        </Button>
-        <Button
-          className="min-h-12 gap-2"
-          variant={selectedDay === null ? "default" : "ghost"}
-          aria-pressed={selectedDay === null}
-          onClick={() => setSelectedDay(null)}
-        >
-          <CalendarDays className="h-4 w-4" />
-          الجدول الأسبوعي
-        </Button>
-      </div>
-      <div className="rounded-2xl border bg-card p-4 sm:p-5 space-y-4">
-        <div className="flex flex-wrap justify-between gap-3 items-center">
-          <div>
-            <h3 className="font-bold text-lg">
-              {selectedDay === null
-                ? "الجدول الأسبوعي"
-                : selectedDay === dateDay && (!now || cairoDate(now) === date)
-                  ? "جدول اليوم"
-                  : `جدول ${ACADEMIC_DAYS[selectedDay]}`}
-              {student && view === "mine" ? ` · سكشن ${data.student_section ?? "غير محدد"}` : ""}
-            </h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              {actualWeek && previewCycle === "auto" ? `الأسبوع الدراسي ${actualWeek} · ` : ""}
-              {(selectedDay === null
-                ? previewCycle === "auto"
-                  ? weeklyScheduleCycle(date, data)
-                  : cycle
-                : dayCycle(selectedDay)) === 1
-                ? "مواعيد الأسبوع الأول"
-                : "مواعيد الأسبوع الثاني"}{" "}
-              · كل حصة ساعة
-            </p>
-          </div>
-          <div
-            className="flex gap-1 rounded-xl border p-1"
-            role="group"
-            aria-label="اختيار الأسبوع"
-          >
-            {[
-              { value: "1", label: "الأول" },
-              { value: "2", label: "الثاني" },
-            ].map((item) => (
-              <Button
-                key={item.value}
-                variant={previewCycle === item.value ? "default" : "ghost"}
-                aria-pressed={previewCycle === item.value}
-                className="min-h-11"
-                onClick={() => onCycle(item.value)}
-              >
-                {item.label}
-              </Button>
-            ))}
-            <Button
-              variant={previewCycle === "auto" ? "default" : "ghost"}
-              aria-pressed={previewCycle === "auto"}
-              className="min-h-11"
-              onClick={() => onCycle("auto")}
-            >
-              الحالي
-            </Button>
-          </div>
-        </div>
-        {now && (
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-              <span>
+    <section aria-label="مواعيد الأسبوع" className="space-y-3">
+      <div className="rounded-xl border bg-card p-3 space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-bold">
+            {selectedDay === null
+              ? "الجدول الأسبوعي"
+              : selectedDay === dateDay
+                ? "جدول اليوم"
+                : `جدول ${ACADEMIC_DAYS[selectedDay]}`}
+            {student && view === "mine" ? ` · سكشن ${data.student_section ?? "غير محدد"}` : ""}
+          </h3>
+          {now && (
+            <span className="text-xs text-muted-foreground">
+              <time dir="ltr">
                 {new Intl.DateTimeFormat("ar-EG", {
                   timeZone: "Africa/Cairo",
-                  weekday: "long",
-                  month: "long",
-                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
                 }).format(now)}
-              </span>
-              <span className="inline-flex items-center gap-2">
-                <Clock3 aria-hidden="true" className="h-4 w-4" />
-                <time className="font-semibold tabular-nums text-foreground" dir="ltr">
-                  {new Intl.DateTimeFormat("ar-EG", {
-                    timeZone: "Africa/Cairo",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  }).format(now)}
-                </time>
-              </span>
-              <span className="text-xs">توقيت مصر{!clockSynced ? " · جارٍ ضبط الوقت" : ""}</span>
-            </div>
+              </time>{" "}
+              · توقيت مصر{!clockSynced ? " · جارٍ ضبط الوقت" : ""}
+            </span>
+          )}
+        </div>
+        <div
+          className="flex flex-wrap items-center gap-1"
+          role="group"
+          aria-label="طريقة عرض الجدول"
+        >
+          <Button
+            variant={selectedDay !== null ? "default" : "outline"}
+            aria-pressed={selectedDay !== null}
+            onClick={() => setSelectedDay("today")}
+          >
+            الجدول اليومي
+          </Button>
+          <Button
+            variant={selectedDay === null ? "default" : "outline"}
+            aria-pressed={selectedDay === null}
+            onClick={() => setSelectedDay(null)}
+          >
+            الجدول الأسبوعي
+          </Button>
+          <Button
+            variant={matrix ? "default" : "outline"}
+            aria-pressed={matrix}
+            onClick={() => setMatrix(!matrix)}
+          >
+            {matrix ? "عرض القائمة" : "عرض المصفوفة"}
+          </Button>
+          {onToday && (
             <Button
               variant="ghost"
               onClick={() => {
                 setSelectedDay("today");
-                onToday?.();
+                onToday();
               }}
             >
-              العودة لجدول اليوم
+              اليوم
             </Button>
-          </div>
-        )}
-        <div className="flex flex-wrap gap-2" role="group" aria-label="نطاق عرض الجدول">
-          <Button
-            variant={view === "mine" ? "default" : "outline"}
-            aria-pressed={view === "mine"}
-            onClick={() => onView("mine")}
+          )}
+          <span className="text-xs text-muted-foreground mr-auto">
+            {actualWeek && previewCycle === "auto" ? `الأسبوع الدراسي ${actualWeek} · ` : ""}الأسبوع{" "}
+            {selectedDay === null
+              ? previewCycle === "auto"
+                ? weeklyScheduleCycle(date, data)
+                : cycle
+              : dayCycle(selectedDay)}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-1" role="group" aria-label="اختيار الأسبوع">
+          {[
+            { value: "1", label: "الأول" },
+            { value: "2", label: "الثاني" },
+            { value: "auto", label: "الحالي" },
+          ].map((item) => (
+            <Button
+              key={item.value}
+              variant={previewCycle === item.value ? "default" : "outline"}
+              aria-pressed={previewCycle === item.value}
+              onClick={() => onCycle(item.value)}
+            >
+              {item.label}
+            </Button>
+          ))}
+          <select
+            aria-label="نطاق عرض الجدول"
+            value={view}
+            onChange={(e) => onView(e.target.value)}
+            className="h-11 min-w-0 rounded-lg border bg-background px-2 text-sm"
           >
-            {student ? "جدول سكشني" : "سكشن محدد"}
-          </Button>
-          <Button
-            variant={view === "all" ? "default" : "outline"}
-            aria-pressed={view === "all"}
-            onClick={() => onView("all")}
-          >
-            كل السكاشن
-          </Button>
+            <option value="mine">{student ? "جدول سكشني" : "سكشن محدد"}</option>
+            <option value="all">كل السكاشن</option>
+          </select>
           {!student && view === "mine" && (
             <select
               aria-label="السكشن"
-              className="h-11 rounded-lg border bg-background px-3"
               value={section}
-              onChange={(event) => onSection(Number(event.target.value))}
+              onChange={(e) => onSection(Number(e.target.value))}
+              className="h-11 rounded-lg border bg-background px-2 text-sm"
             >
-              {Array.from({ length: 15 }, (_, index) => (
-                <option key={index} value={index + 1}>
-                  سكشن {index + 1}
+              {Array.from({ length: 15 }, (_, i) => (
+                <option key={i} value={i + 1}>
+                  سكشن {i + 1}
                 </option>
               ))}
             </select>
@@ -243,8 +212,10 @@ export function ScheduleWeekView({
             لم يُحدد سكشن حسابك بعد. تواصل مع الإدارة، أو اختر كل السكاشن للاطلاع على المواعيد.
           </p>
         )}
-        <div className="space-y-2">
-          <Label htmlFor="schedule-search">ابحث في المواعيد</Label>
+        <div className="space-y-1">
+          <Label htmlFor="schedule-search" className="sr-only">
+            ابحث في المواعيد
+          </Label>
           <div className="flex gap-2">
             <Input
               id="schedule-search"
@@ -302,7 +273,7 @@ export function ScheduleWeekView({
           ))}
         </div>
       )}
-      {selectedDay === null && (
+      {selectedDay === null && !matrix && (
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm text-muted-foreground">
             مواعيد الأسبوع مرتبة يومًا بيوم. افتح اليوم لعرض تفاصيل حصصه.
@@ -321,8 +292,18 @@ export function ScheduleWeekView({
           title="الجدول لم يُنشر بعد"
           description="ستظهر المواعيد هنا بمجرد اعتمادها من إدارة القسم."
         />
+      ) : matrix ? (
+        <ScheduleMatrix
+          data={data}
+          entries={entries}
+          days={days}
+          selectedDay={selectedDay}
+          section={section}
+          allSections={view === "all"}
+          cycleForDay={dayCycle}
+        />
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-3">
           {days
             .filter((day) =>
               selectedDay === null
@@ -394,7 +375,7 @@ export function ScheduleWeekView({
                           key={key}
                           data-timing={timing}
                           className={cn(
-                            "rounded-2xl border bg-card p-4 sm:p-5 space-y-3 border-r-4",
+                            "rounded-xl border bg-card p-3 space-y-2 border-r-4",
                             timing === "current"
                               ? "border-emerald-400/40 bg-emerald-500/5"
                               : upcoming
@@ -487,7 +468,7 @@ export function ScheduleWeekView({
                     );
                   }}
                 >
-                  <summary className="min-h-14 cursor-pointer p-4 font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+                  <summary className="min-h-11 cursor-pointer p-3 font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
                     <span className="inline-flex flex-wrap gap-x-3 gap-y-1">{heading}</span>
                   </summary>
                   <div className="p-3 sm:p-4 pt-0">{content}</div>

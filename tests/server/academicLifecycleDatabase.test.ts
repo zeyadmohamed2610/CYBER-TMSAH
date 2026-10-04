@@ -65,10 +65,13 @@ beforeAll(async () => {
   await db.exec(`CREATE TRIGGER enforce_academic_unit_kind BEFORE INSERT OR UPDATE OR DELETE ON public.lectures FOR EACH ROW EXECUTE FUNCTION private.guard_academic_unit();
     CREATE TRIGGER enforce_academic_session_kind BEFORE INSERT OR UPDATE ON public.sessions FOR EACH ROW EXECUTE FUNCTION private.guard_academic_session();
     ALTER TABLE user_subjects ADD FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE;`);
+  await db.exec(
+    readFileSync("supabase/migrations/20261004201315_remove_results_and_excuses.sql", "utf8"),
+  );
 }, 30000);
 beforeEach(async () => {
   await db.exec("TRUNCATE auth.users");
-  await db.exec(`TRUNCATE private.attendance_cases,private.academic_notifications,private.notification_preferences,private.attendance_rules,private.term_results,private.term_schedule_archives,public.attendance,public.session_roster,public.sessions,public.lectures,public.users,public.subjects CASCADE;
+  await db.exec(`TRUNCATE private.term_schedule_archives,public.attendance,public.session_roster,public.sessions,public.lectures,public.users,public.subjects CASCADE;
     UPDATE private.academic_terms SET status='active',closed_at=NULL WHERE department='cybersecurity';
     INSERT INTO users VALUES('${owner}','${owner}','owner','cybersecurity','2',NULL,'مدير',NULL),('${student}','${student}','student','cybersecurity','2',1,'طالب',NULL);
     INSERT INTO subjects VALUES('${subject}','مادة','cybersecurity','2');
@@ -78,23 +81,6 @@ beforeEach(async () => {
     INSERT INTO session_roster(session_id,student_id) VALUES('${session}','${student}');`);
 });
 afterAll(() => db.close());
-async function overview() {
-  return (
-    await db.query<{
-      data: {
-        selected_term: string;
-        rules: unknown[];
-        results: {
-          absent: number;
-          excused: number;
-          present: number;
-          student_snapshot: { section: number };
-        }[];
-      };
-    }>("SELECT public.academic_overview('cybersecurity',NULL) AS data")
-  ).rows[0].data;
-}
-
 describe("academic lifecycle authorization and historical integrity", () => {
   it.each([
     ["doctor", "active"],
@@ -216,111 +202,6 @@ describe("academic lifecycle authorization and historical integrity", () => {
       `SELECT set_config('test.auth','${owner}',false); DELETE FROM academic_schedule_entries`,
     );
   });
-  it("leaves rules and retention periods unset", async () => {
-    expect((await overview()).rules).toEqual([]);
-    expect(
-      (
-        await db.query(
-          "SELECT location_retention_days,national_id_retention_days FROM private.department_data_policies WHERE department='cybersecurity'",
-        )
-      ).rows[0],
-    ).toEqual({ location_retention_days: null, national_id_retention_days: null });
-  });
-  it("does not alter an old section when the student is reassigned", async () => {
-    await db.exec(`UPDATE public.users SET section_number=9 WHERE id='${student}'`);
-    expect((await overview()).results[0].student_snapshot.section).toBe(1);
-  });
-  it("rejects student policy changes and access to another department", async () => {
-    await db.exec(`SELECT set_config('test.auth','${student}',false)`);
-    await expect(db.query("SELECT public.academic_rule('cybersecurity','{}')")).rejects.toThrow(
-      "permission_denied",
-    );
-    await expect(db.query("SELECT public.academic_overview('ai',NULL)")).rejects.toThrow(
-      "permission_denied",
-    );
-  });
-  it("an excuse stays distinct from attendance, and a decision cannot be replayed", async () => {
-    await db.exec(`SELECT set_config('test.auth','${student}',false)`);
-    const request = (
-      await db.query<{ data: { id: string } }>("SELECT public.academic_case('create',$1) AS data", [
-        JSON.stringify({
-          unit_id: lecture,
-          request_type: "excuse",
-          reason: "عذر يحتاج إلى مراجعة",
-        }),
-      ])
-    ).rows[0].data;
-    await db.exec(`SELECT set_config('test.auth','${owner}',false)`);
-    const decision = JSON.stringify({
-      id: request.id,
-      version: 1,
-      status: "approved",
-      reason: "تمت مراجعة العذر",
-    });
-    await db.query("SELECT public.academic_case('decide',$1)", [decision]);
-    expect((await overview()).results[0]).toMatchObject({ excused: 1, present: 0, absent: 0 });
-    await expect(db.query("SELECT public.academic_case('decide',$1)", [decision])).rejects.toThrow(
-      "case_changed",
-    );
-  });
-  it("a device problem requires review before recording manual attendance", async () => {
-    await db.exec(`SELECT set_config('test.auth','${student}',false)`);
-    const request = (
-      await db.query<{ data: { id: string } }>("SELECT public.academic_case('create',$1) AS data", [
-        JSON.stringify({
-          unit_id: lecture,
-          request_type: "device",
-          reason: "تعذر استخدام جهاز الدخول",
-        }),
-      ])
-    ).rows[0].data;
-    expect((await overview()).results[0].present).toBe(0);
-    await db.exec(`SELECT set_config('test.auth','${owner}',false)`);
-    await db.query("SELECT public.academic_case('decide',$1)", [
-      JSON.stringify({
-        id: request.id,
-        version: 1,
-        status: "approved",
-        reason: "راجع المسؤول حضور الطالب",
-      }),
-    ]);
-    expect((await overview()).results[0].present).toBe(1);
-  });
-  it("closes a term with immutable results and rejects late attendance", async () => {
-    const term = (await overview()).selected_term;
-    await db.query("SELECT public.academic_term('cybersecurity','close',$1)", [
-      JSON.stringify({ id: term }),
-    ]);
-    await expect(
-      db.exec(`INSERT INTO attendance(student_id,session_id) VALUES('${student}','${session}')`),
-    ).rejects.toThrow("term_closed");
-    await db.exec(`UPDATE users SET section_number=8 WHERE id='${student}'`);
-    const archive = (
-      await db.query<{ data: { results: { student_snapshot: { section: number } }[] } }>(
-        "SELECT public.academic_overview('cybersecurity',$1) data",
-        [term],
-      )
-    ).rows[0].data;
-    expect(archive.results[0].student_snapshot.section).toBe(1);
-  });
-  it("does not let the student approve their own excuse", async () => {
-    await db.exec(`SELECT set_config('test.auth','${student}',false)`);
-    const request = (
-      await db.query<{ data: { id: string } }>("SELECT public.academic_case('create',$1) data", [
-        JSON.stringify({ unit_id: lecture, request_type: "excuse", reason: "عذر للمراجعة" }),
-      ])
-    ).rows[0].data;
-    await expect(
-      db.query("SELECT public.academic_case('decide',$1)", [
-        JSON.stringify({
-          id: request.id,
-          version: 1,
-          status: "approved",
-          reason: "محاولة الطالب الموافقة",
-        }),
-      ]),
-    ).rejects.toThrow("permission_denied");
-  });
   it("limits a teaching assistant's manual correction to sections", async () => {
     const ta = "10000000-0000-0000-0000-000000000003";
     await db.exec(
@@ -333,77 +214,35 @@ describe("academic lifecycle authorization and historical integrity", () => {
       ]),
     ).rejects.toThrow("permission_denied");
   });
-  it("does not read or mark another user's notifications", async () => {
-    await db.query(
-      "SELECT private.lifecycle_notify($1,'attendance','خاص بالمدير','رسالة خاصة','/profile','owner-only')",
-      [owner],
-    );
-    await db.query(
-      "SELECT private.lifecycle_notify($1,'attendance','خاص بالطالب','رسالة خاصة','/profile','student-only')",
-      [student],
-    );
-    const privateId = (
-      await db.query<{ id: string }>(
-        "SELECT id FROM private.academic_notifications WHERE recipient_id=$1",
-        [owner],
-      )
-    ).rows[0].id;
-    await db.exec(`SELECT set_config('test.auth','${student}',false)`);
-    const inbox = (
-      await db.query<{ data: { items: { title: string }[] } }>(
-        "SELECT public.academic_inbox('read',$1) data",
-        [JSON.stringify({ id: privateId })],
-      )
-    ).rows[0].data;
-    expect(inbox.items.map((item) => item.title)).toEqual(["خاص بالطالب"]);
+  it("removes the retired APIs and keeps attendance records scoped", async () => {
+    for (const name of [
+      "attendance_cases",
+      "attendance_rules",
+      "term_results",
+      "academic_notifications",
+      "department_data_policies",
+    ]) {
+      expect(
+        (
+          await db.query<{ relation: string | null }>("SELECT to_regclass($1) relation", [
+            "private." + name,
+          ])
+        ).rows[0].relation,
+      ).toBeNull();
+    }
     expect(
       (
-        await db.query<{ read_at: string | null }>(
-          "SELECT read_at FROM private.academic_notifications WHERE id=$1",
-          [privateId],
+        await db.query(
+          "SELECT proname FROM pg_proc JOIN pg_namespace n ON n.oid=pronamespace WHERE n.nspname='public' AND proname IN ('academic_overview','academic_case','academic_inbox','academic_rule','academic_term')",
         )
-      ).rows[0].read_at,
-    ).toBeNull();
-  });
-  it("binds evidence to its request owner and hides unattached files", async () => {
+      ).rows,
+    ).toHaveLength(0);
     await db.exec(`SELECT set_config('test.auth','${student}',false)`);
-    const request = (
-      await db.query<{ data: { id: string } }>("SELECT public.academic_case('create',$1) data", [
-        JSON.stringify({ unit_id: lecture, request_type: "excuse", reason: "مستند خاص للمراجعة" }),
-      ])
-    ).rows[0].data;
-    const file = `${student}/${request.id}/evidence.pdf`;
-    await db.query("INSERT INTO storage.objects VALUES('attendance-evidence',$1)", [file]);
     expect(
-      (
-        await db.query<{ allowed: boolean }>("SELECT private.case_file_access($1,false) allowed", [
-          file,
-        ])
-      ).rows[0].allowed,
-    ).toBe(false);
-    await db.query("SELECT public.academic_case_attachment($1,$2)", [request.id, file]);
-    expect(
-      (
-        await db.query<{ allowed: boolean }>("SELECT private.case_file_access($1,false) allowed", [
-          file,
-        ])
-      ).rows[0].allowed,
-    ).toBe(true);
-    await expect(
-      db.query("SELECT public.academic_case_attachment($1,$2)", [
-        request.id,
-        `${owner}/${request.id}/evidence.pdf`,
-      ]),
-    ).rejects.toThrow("permission_denied");
-  });
-  it("denies anonymous RPC execution", async () => {
-    expect(
-      (
-        await db.query<{ allowed: boolean }>(
-          "SELECT has_function_privilege('anon','public.academic_overview(text,uuid)','EXECUTE') allowed",
-        )
-      ).rows[0].allowed,
-    ).toBe(false);
+      (await db.query<{ status: string }>("SELECT status FROM private.attendance_register()")).rows,
+    ).toEqual([{ status: "absent" }]);
+    await db.exec(`SELECT set_config('test.auth','',false)`);
+    expect((await db.query("SELECT * FROM private.attendance_register()")).rows).toHaveLength(0);
   });
 });
 

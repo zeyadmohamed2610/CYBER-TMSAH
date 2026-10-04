@@ -6,7 +6,6 @@ import { useAttendanceDashboardData } from "@/features/attendance/hooks/useAtten
 import type { Lecture } from "@/features/attendance/types";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { dashboardTabs } from "@/features/auth/utils/roleAccess";
-import { LearningCenter } from "@/features/learning/components/LearningCenter";
 import { AcademicSchedulePanel } from "@/features/schedule/components/AcademicSchedulePanel";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
 import { TabsContent } from "@/shared/components/ui/tabs";
@@ -47,7 +46,6 @@ export function FacultyDashboard({ role }: { role: "doctor" | "ta" }) {
           { value: "records", label: "سجلات الحضور", icon: ListChecks },
           { value: "schedule", label: "الجدول والامتحانات", icon: CalendarDays },
           { value: "subjects", label: "المواد المسندة إليّ", shortLabel: "موادي", icon: BookOpen },
-          { value: "followup", label: "الأعذار ومتابعة الطلاب", icon: BookOpenCheck },
         ]}
       >
         <TabsContent value="lectures" aria-label={classes}>
@@ -61,9 +59,6 @@ export function FacultyDashboard({ role }: { role: "doctor" | "ta" }) {
         </TabsContent>
         <TabsContent value="subjects" aria-label="المواد المسندة إليّ">
           <DepartmentsAndSubjectsPanel />
-        </TabsContent>
-        <TabsContent value="followup" aria-label="الأعذار ومتابعة الطلاب">
-          <LearningCenter />
         </TabsContent>
       </DashboardWorkspace>
     </div>

@@ -66,7 +66,7 @@ export const StatCard = ({
     <Element
       type={onClick ? "button" : undefined}
       onClick={onClick}
-      className={`w-full text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group relative overflow-hidden rounded-2xl border border-border bg-card p-4 sm:p-5 transition-colors ${
+      className={`w-full text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group relative overflow-hidden rounded-2xl border border-border bg-card p-3 sm:p-4 transition-colors ${
         scheme.glow
       } ${
         onClick

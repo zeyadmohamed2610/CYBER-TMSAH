@@ -1,6 +1,5 @@
 import { dashboardTabs } from "@/features/auth/utils/roleAccess";
 import { useDashboardTab } from "../hooks/useDashboardTab";
-import { LearningCenter } from "../../learning/components/LearningCenter";
 import { getFriendlyErrorMessage } from "@/shared/lib/academicCopy";
 import { DepartmentsAndSubjectsPanel } from "../../academics/components/DepartmentsAndSubjectsPanel";
 import { AttendanceRegisterPanel } from "../../attendance/components/AttendanceRegisterPanel";
@@ -12,7 +11,6 @@ import { TabsContent } from "@/shared/components/ui/tabs";
 import {
   Activity,
   BarChart3,
-  BookOpen,
   CalendarDays,
   CloudOff,
   History,
@@ -105,7 +103,7 @@ export const StudentDashboard = () => {
         onValueChange={setActiveTab}
         title="منصتي الأكاديمية"
         compactMobile
-        mobilePriority={["checkin", "schedule", "records", "followup"]}
+        mobilePriority={["checkin", "schedule", "records", "analytics"]}
         items={[
           { value: "checkin", label: "تسجيل الحضور", shortLabel: "الحضور", icon: QrCode },
           {
@@ -126,7 +124,6 @@ export const StudentDashboard = () => {
             shortLabel: "المواد",
             icon: BarChart3,
           },
-          { value: "followup", label: "نتائجي وطلباتي", icon: BookOpen },
         ]}
       >
         <TabsContent aria-label="الجدول والامتحانات" value="schedule">
@@ -182,10 +179,6 @@ export const StudentDashboard = () => {
           className="space-y-6 focus-visible:outline-none"
         >
           <DepartmentsAndSubjectsPanel />
-        </TabsContent>
-
-        <TabsContent value="followup" aria-label="متابعة الدراسة">
-          <LearningCenter />
         </TabsContent>
       </DashboardWorkspace>
     </div>

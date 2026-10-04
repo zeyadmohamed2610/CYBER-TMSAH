@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { AppRole } from "../types";
 import { RoleGate } from "../components/RoleGate";
-import { dashboardTabs, learningTabs } from "../utils/roleAccess";
+import { dashboardTabs } from "../utils/roleAccess";
 
 const state = vi.hoisted(() => ({
   user: null as { id: string } | null,
@@ -77,5 +77,5 @@ it.each(["student", "doctor", "ta"] as const)("restricts %s tabs to academic tas
   expect(dashboardTabs(role)).not.toContain("users");
   expect(dashboardTabs(role)).not.toContain("devices");
   expect(dashboardTabs(role)).not.toContain("profile");
-  expect(learningTabs(role)).toEqual(["results", "cases", "notifications"]);
+  expect(dashboardTabs(role)).not.toContain("followup");
 });

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { DEPARTMENTS } from "@/features/academics/types";
 import { scheduleService } from "@/features/schedule/services/scheduleService";
 import { ScheduleSkeleton } from "@/shared/components/Loading";
@@ -26,6 +27,7 @@ import { ScheduleVersions } from "./ScheduleVersions";
 import { useAcademicSchedule } from "../hooks/useAcademicSchedule";
 export function AcademicSchedulePanel() {
   const model = useAcademicSchedule();
+  const [activeTab, setActiveTab] = useState("schedule");
   const {
     error,
     load,
@@ -136,8 +138,8 @@ export function AcademicSchedulePanel() {
   const days = Array.from({ length: 7 }, (_, i) => (settings.week_start_day + i) % 7);
 
   return (
-    <div dir="rtl" className="space-y-5">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div dir="rtl" className="space-y-3">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="font-bold flex gap-2">
           <Calendar className="h-5 w-5 text-primary" />
           الجدول والامتحانات
@@ -177,17 +179,17 @@ export function AcademicSchedulePanel() {
           )}
         </div>
       </div>
-      <Tabs defaultValue="schedule" dir="rtl">
-        <TabsList className="w-full sm:w-auto">
-          <TabsTrigger className="flex-1 sm:flex-none" value="schedule">
-            الجدول
-          </TabsTrigger>
-          <TabsTrigger className="flex-1 sm:flex-none" value="exams">
-            الامتحانات
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="schedule" className="space-y-5">
-          {data.can_edit && (
+      <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl" className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger className="flex-1 sm:flex-none" value="schedule">
+              الجدول
+            </TabsTrigger>
+            <TabsTrigger className="flex-1 sm:flex-none" value="exams">
+              الامتحانات
+            </TabsTrigger>
+          </TabsList>
+          {data.can_edit && activeTab === "schedule" && (
             <div className="flex gap-2" role="group" aria-label="عرض الجدول وإدارته">
               <Button
                 variant={management ? "outline" : "default"}
@@ -205,6 +207,8 @@ export function AcademicSchedulePanel() {
               </Button>
             </div>
           )}
+        </div>
+        <TabsContent value="schedule" className="space-y-3">
           {!management && (
             <ScheduleWeekView
               data={data}

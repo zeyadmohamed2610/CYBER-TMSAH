@@ -1,5 +1,4 @@
 import { AccountsWorkspace } from "../components/AccountsWorkspace";
-import { LearningCenter } from "../../learning/components/LearningCenter";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
 import { TabsContent } from "@/shared/components/ui/tabs";
 import { getFriendlyErrorMessage } from "@/shared/lib/academicCopy";
@@ -30,9 +29,8 @@ import { DashboardWorkspace } from "../components/DashboardWorkspace";
 import { StatCard } from "../components/StatCard";
 
 export const OwnerDashboard = () => {
-  const { role, fullName } = useAuth();
+  const { role } = useAuth();
   const isOwner = role === "owner";
-  const isCoordinator = role === "coordinator";
 
   const { error, metrics, ready } = useAttendanceDashboardData(isOwner ? "owner" : "coordinator");
   const [searchParams, setSearchParams] = useSearchParams();
@@ -54,7 +52,6 @@ export const OwnerDashboard = () => {
   };
 
   const ALL_TABS = [
-    { value: "followup", label: "النتائج والأعذار", icon: BookOpenCheck, category: "academic" },
     {
       value: "users",
       label: "المستخدمون والطلبات",
@@ -83,35 +80,14 @@ export const OwnerDashboard = () => {
         : requestedTab;
   const activeTab = ALL_TABS.some((tab) => tab.value === destination) ? destination : defaultTab;
 
-  const roleBadgeLabel = isOwner ? "مالك المنصة" : isCoordinator ? "رئيس القسم" : role;
-  const roleBadgeColor = isOwner
-    ? "bg-purple-600/20 text-purple-300 border-purple-500/40"
-    : "bg-blue-600/20 text-blue-300 border-blue-500/40";
-
   return (
-    <div className="space-y-5" dir="rtl">
+    <div className="space-y-3" dir="rtl">
       {error && (
         <Alert variant="destructive">
           <AlertTitle>تعذر تحميل البيانات. أعد المحاولة.</AlertTitle>
           <AlertDescription>{getFriendlyErrorMessage(error)}</AlertDescription>
         </Alert>
       )}
-
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex flex-col gap-1">
-          {fullName && (
-            <p className="text-lg font-bold text-white">
-              مرحباً بك يا <span className="text-purple-400">{fullName}</span>
-            </p>
-          )}
-          <span
-            className={`self-start px-2.5 py-0.5 rounded-full text-xs font-bold border ${roleBadgeColor}`}
-          >
-            {roleBadgeLabel}
-          </span>
-        </div>
-      </div>
 
       {/* Every summary remains visible without sideways scrolling. */}
       {isOwner && (
@@ -216,9 +192,6 @@ export const OwnerDashboard = () => {
           ) : (
             <LectureManagementPanel onSelectLecture={setSelectedLecture} />
           )}
-        </TabsContent>
-        <TabsContent value="followup" aria-label="النتائج والأعذار">
-          <LearningCenter />
         </TabsContent>
       </DashboardWorkspace>
     </div>

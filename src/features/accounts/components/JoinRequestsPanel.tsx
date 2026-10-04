@@ -391,11 +391,11 @@ export function JoinRequestsPanel() {
 
           {/* Join List */}
           {loadingJoin ? (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex items-center justify-center py-5">
               <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
             </div>
           ) : joinRequests.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
+            <div className="flex flex-col items-center gap-3 py-5 text-center text-muted-foreground">
               <Clock className="w-10 h-10 opacity-30" />
               <p className="text-sm">
                 {lang === "ar" ? "لا توجد طلبات انضمام حالياً." : "No join requests found."}
@@ -614,11 +614,11 @@ export function JoinRequestsPanel() {
 
           {/* Reset List */}
           {loadingReset ? (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex items-center justify-center py-5">
               <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
             </div>
           ) : resetRequests.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
+            <div className="flex flex-col items-center gap-3 py-5 text-center text-muted-foreground">
               <KeyRound className="w-10 h-10 opacity-30" />
               <p className="text-sm">
                 {lang === "ar"

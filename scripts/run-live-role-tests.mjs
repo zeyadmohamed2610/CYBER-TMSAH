@@ -17,7 +17,6 @@ for (const account of accounts) {
 let failed = false;
 const passkeys = process.env.E2E_LIVE_SUITE === "passkeys";
 const sessionSuite = process.env.E2E_LIVE_SUITE === "sessions";
-const learningSuite = process.env.E2E_LIVE_SUITE === "learning";
 const sessionRun = "QA browser sessions " + crypto.randomUUID();
 if (sessionSuite) env.E2E_SESSION_RUN = sessionRun;
 const originalAssignments = [];
@@ -117,13 +116,11 @@ try {
       [
         "node_modules/@playwright/test/cli.js",
         "test",
-        learningSuite
-          ? "e2e/learning.spec.ts"
-          : sessionSuite
-            ? "e2e/sessions.spec.ts"
-            : passkeys
-              ? "e2e/passkeys.spec.ts"
-              : "e2e/authenticated.spec.ts",
+        sessionSuite
+          ? "e2e/sessions.spec.ts"
+          : passkeys
+            ? "e2e/passkeys.spec.ts"
+            : "e2e/authenticated.spec.ts",
         `--project=${project}`,
         "--workers=1",
       ],

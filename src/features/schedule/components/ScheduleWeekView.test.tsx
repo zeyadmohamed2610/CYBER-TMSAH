@@ -2,6 +2,7 @@ import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { AcademicEntry, AcademicSchedule } from "../utils/academicSchedule";
+import { ScheduleMatrix } from "./ScheduleMatrix";
 import { ScheduleWeekView } from "./ScheduleWeekView";
 
 const entry = (section: number, changes: Partial<AcademicEntry> = {}): AcademicEntry => ({
@@ -77,8 +78,19 @@ async function click(label: string) {
   const button = [...container.querySelectorAll("button")].find(
     (button) => button.textContent?.trim() === label,
   );
-  expect(button, `button ${label}`).toBeDefined();
-  await act(async () => button!.click());
+  if (button) {
+    await act(async () => button.click());
+    return;
+  }
+  const option = [...container.querySelectorAll("option")].find(
+    (option) => option.textContent?.trim() === label,
+  );
+  expect(option, `control ${label}`).toBeDefined();
+  const select = option!.parentElement as HTMLSelectElement;
+  await act(async () => {
+    select.value = option!.value;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
 }
 describe("Student timetable display", () => {
   it("highlights the current lesson and only the nearest next lesson on today's automatic view", async () => {
@@ -175,5 +187,61 @@ describe("Student timetable display", () => {
     );
     expect(container.textContent).toContain("لم يُحدد سكشن حسابك بعد");
     expect(container.textContent).toContain("الجدول لم يُنشر بعد");
+  });
+});
+
+describe("schedule matrix", () => {
+  const renderMatrix = async (entries: AcademicEntry[], selectedDay: number | null = null) => {
+    await act(async () =>
+      root.render(
+        <ScheduleMatrix
+          data={schedule(entries)}
+          entries={entries}
+          days={[5, 6, 0, 1, 2, 3, 4]}
+          selectedDay={selectedDay}
+          section={1}
+          allSections
+          cycleForDay={() => 2}
+        />,
+      ),
+    );
+  };
+  it("merges shared lectures without merging different rooms and respects holidays", async () => {
+    await renderMatrix([
+      entry(1),
+      entry(2),
+      entry(3, { room: "D105" }),
+      entry(1, { day_index: 6, subject_name: "Holiday lesson" }),
+    ]);
+    const table = container.querySelector("table")!;
+    expect(table.textContent?.match(/Programming For Cyber-Security/g)).toHaveLength(2);
+    expect(table.textContent).toContain("سكاشن 1، 2");
+    expect(table.textContent).toContain("D105");
+    expect(table.textContent).not.toContain("Holiday lesson");
+  });
+  it("shows every section through pages on phones and uses the selected rotation", async () => {
+    const width = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", { value: 375, configurable: true });
+    try {
+      await renderMatrix(
+        [entry(15, { uses_rotation: true, lab_room: "Lab", hall_room: "Hall", lab_week: 2 })],
+        5,
+      );
+      expect(container.querySelectorAll("thead th")).toHaveLength(4);
+      expect(container.querySelector("table")?.textContent).not.toContain("Hall");
+      for (let i = 0; i < 4; i++) await click("التالي");
+      expect(container.querySelector("table")?.textContent).toContain("سكشن 15");
+      expect(container.querySelector("table")?.textContent).toContain("Lab");
+      expect(
+        [...container.querySelectorAll("button")].find((b) => b.textContent === "التالي")?.disabled,
+      ).toBe(true);
+    } finally {
+      Object.defineProperty(window, "innerWidth", { value: width, configurable: true });
+    }
+  });
+  it("preserves empty periods between lessons", async () => {
+    await renderMatrix([entry(1, { period: 1 }), entry(1, { period: 3 })]);
+    expect(container.querySelectorAll("tbody tr")).toHaveLength(3);
+    expect(container.querySelectorAll("tbody tr")[1]?.textContent).toContain("—");
   });
 });

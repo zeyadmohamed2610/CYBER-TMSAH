@@ -9,7 +9,7 @@ export function useDashboardTab(defaultTab: string, allowed: string[]) {
       (previous) => {
         const next = new URLSearchParams(previous);
         next.set("tab", value);
-        if (value !== "followup") next.delete("view");
+        next.delete("view");
         return next;
       },
       { replace: true },

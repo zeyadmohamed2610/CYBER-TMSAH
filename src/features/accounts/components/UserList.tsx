@@ -99,7 +99,7 @@ export function UserList({
           </Button>
         ))}
       </div>
-      <CardContent className="p-5 space-y-5">
+      <CardContent className="p-4 space-y-3">
         {/* Manual Creation Form */}
         {showCreate && <CreateUserForm model={model} />}
 
@@ -119,7 +119,7 @@ export function UserList({
         {/* Users List */}
         <div className="space-y-3 sm:space-y-0">
           {loading ? (
-            <div className="flex justify-center items-center py-12 text-slate-400 gap-2">
+            <div className="flex justify-center items-center py-5 text-slate-400 gap-2">
               <Loader2 className="h-6 w-6 animate-spin text-purple-400" />
               <span>جارٍ تحميل المستخدمين...</span>
             </div>

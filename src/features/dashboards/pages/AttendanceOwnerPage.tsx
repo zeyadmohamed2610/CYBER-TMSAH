@@ -8,9 +8,9 @@ const AttendanceOwnerPage = () => {
 
   return (
     <Layout>
-      <section className="section-container py-6 sm:py-8 md:py-10 animate-fade-up">
+      <section className="section-container py-4 sm:py-5 animate-fade-up">
         {/* Clean, purposeful header without clunky badges or duplicate logout buttons */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-4">
+        <div className="mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-3">
           <div>
             <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
               {isCoordinator ? "لوحة الإشراف الأكاديمي" : "لوحة الإدارة الأكاديمية"}

@@ -14,10 +14,10 @@ export function EmptyState({
 }) {
   return (
     <div
-      className="rounded-2xl border border-dashed border-border bg-muted/10 px-5 py-10 text-center"
+      className="rounded-2xl border border-dashed border-border bg-muted/10 px-4 py-5 text-center"
       role="status"
     >
-      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+      <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary">
         <Icon aria-hidden="true" className="h-6 w-6" />
       </div>
       <p className="font-semibold text-foreground">{title}</p>

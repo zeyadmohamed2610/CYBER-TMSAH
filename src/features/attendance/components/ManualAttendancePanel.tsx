@@ -158,7 +158,7 @@ export function ManualAttendancePanel() {
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-2">
           {/* Student selection with search */}
           <div className="space-y-2">
             <Label className="text-sm font-semibold">اختيار الطالب</Label>
