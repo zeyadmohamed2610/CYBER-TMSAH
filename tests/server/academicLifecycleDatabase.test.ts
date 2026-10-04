@@ -14,6 +14,7 @@ beforeAll(async () => {
   await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE SCHEMA private; CREATE SCHEMA auth;
     CREATE SCHEMA storage; CREATE TABLE storage.buckets(id text,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]); CREATE TABLE storage.objects(bucket_id text,name text); ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
     CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT NULLIF(current_setting('test.auth',true),'')::uuid $$;
+    CREATE TABLE auth.users(id uuid PRIMARY KEY);
     CREATE TABLE users(id uuid PRIMARY KEY,auth_id uuid,role text,department text,academic_year text,section_number integer,full_name text,subject_id uuid);
     CREATE TABLE subjects(id uuid PRIMARY KEY,name text,department text,academic_year text);
     CREATE TABLE user_subjects(user_id uuid,subject_id uuid);
@@ -56,8 +57,17 @@ beforeAll(async () => {
       "utf8",
     ),
   );
+  await db.exec(`ALTER TABLE lectures ADD CONSTRAINT lectures_created_by_fkey FOREIGN KEY(created_by) REFERENCES users(id);
+    ALTER TABLE sessions ADD CONSTRAINT sessions_created_by_fkey FOREIGN KEY(created_by) REFERENCES users(id);`);
+  await db.exec(
+    readFileSync("supabase/migrations/20261004062508_allow_faculty_account_removal.sql", "utf8"),
+  );
+  await db.exec(`CREATE TRIGGER enforce_academic_unit_kind BEFORE INSERT OR UPDATE OR DELETE ON public.lectures FOR EACH ROW EXECUTE FUNCTION private.guard_academic_unit();
+    CREATE TRIGGER enforce_academic_session_kind BEFORE INSERT OR UPDATE ON public.sessions FOR EACH ROW EXECUTE FUNCTION private.guard_academic_session();
+    ALTER TABLE user_subjects ADD FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE;`);
 }, 30000);
 beforeEach(async () => {
+  await db.exec("TRUNCATE auth.users");
   await db.exec(`TRUNCATE private.attendance_cases,private.academic_notifications,private.notification_preferences,private.attendance_rules,private.term_results,private.term_schedule_archives,public.attendance,public.session_roster,public.sessions,public.lectures,public.users,public.subjects CASCADE;
     UPDATE private.academic_terms SET status='active',closed_at=NULL WHERE department='cybersecurity';
     INSERT INTO users VALUES('${owner}','${owner}','owner','cybersecurity','2',NULL,'مدير',NULL),('${student}','${student}','student','cybersecurity','2',1,'طالب',NULL);
@@ -86,6 +96,75 @@ async function overview() {
 }
 
 describe("academic lifecycle authorization and historical integrity", () => {
+  it.each([
+    ["doctor", "active"],
+    ["doctor", "closed"],
+    ["ta", "active"],
+    ["ta", "closed"],
+  ])(
+    "lets an owner remove a %s account in an %s term without erasing classes",
+    async (role, termStatus) => {
+      const faculty = "10000000-0000-0000-0000-000000000003";
+      await db.exec(`INSERT INTO auth.users VALUES('${faculty}'); INSERT INTO users VALUES('${faculty}','${faculty}','${role}','cybersecurity',NULL,NULL,'محاضر محذوف','${subject}');
+      INSERT INTO user_subjects VALUES('${faculty}','${subject}');
+      UPDATE lectures SET created_by='${faculty}'; UPDATE sessions SET created_by='${faculty}';
+      UPDATE private.academic_terms SET status='${termStatus}' WHERE department='cybersecurity';
+      SELECT public.delete_user_by_id('${faculty}');`);
+      expect((await db.query("SELECT created_by FROM lectures")).rows).toEqual([
+        { created_by: null },
+      ]);
+      expect((await db.query("SELECT created_by FROM sessions")).rows).toEqual([
+        { created_by: null },
+      ]);
+      expect((await db.query("SELECT * FROM session_roster")).rows).toHaveLength(1);
+      expect((await db.query(`SELECT * FROM users WHERE id='${faculty}'`)).rows).toHaveLength(0);
+      expect((await db.query(`SELECT * FROM auth.users WHERE id='${faculty}'`)).rows).toHaveLength(
+        0,
+      );
+      expect(
+        (await db.query(`SELECT * FROM user_subjects WHERE user_id='${faculty}'`)).rows,
+      ).toHaveLength(0);
+      const audit = (
+        await db.query<{
+          metadata: {
+            deleted_profile: { full_name: string };
+            lecture_ids: string[];
+            session_ids: string[];
+          };
+        }>(
+          "SELECT metadata FROM system_logs WHERE action='delete_user_by_id' ORDER BY ctid DESC LIMIT 1",
+        )
+      ).rows[0].metadata;
+      expect(audit.deleted_profile.full_name).toBe("محاضر محذوف");
+      expect(audit.lecture_ids).toEqual([lecture]);
+      expect(audit.session_ids).toEqual([session]);
+      if (termStatus === "closed") {
+        await expect(db.exec("UPDATE lectures SET title='forged history'")).rejects.toThrow(
+          "term_closed",
+        );
+        await expect(db.exec(`UPDATE sessions SET created_by='${owner}'`)).rejects.toThrow(
+          "term_closed",
+        );
+      }
+    },
+  );
+  it("keeps account deletion scoped to the owner's or coordinator's authority", async () => {
+    await expect(db.query(`SELECT public.delete_user_by_id('${owner}')`)).rejects.toThrow(
+      "validation_error",
+    );
+    await db.exec(`SELECT set_config('test.auth','${student}',false)`);
+    await expect(db.query(`SELECT public.delete_user_by_id('${owner}')`)).rejects.toThrow(
+      "permission_denied",
+    );
+    await db.exec(`UPDATE users SET role='coordinator' WHERE id='${student}'`);
+    await expect(db.query(`SELECT public.delete_user_by_id('${owner}')`)).rejects.toThrow(
+      "permission_denied",
+    );
+    await db.exec(`UPDATE users SET role='doctor',department='ai' WHERE id='${owner}'`);
+    await expect(db.query(`SELECT public.delete_user_by_id('${owner}')`)).rejects.toThrow(
+      "permission_denied",
+    );
+  });
   it("counts student accounts independently of attendance and excludes open opportunities from the rate", async () => {
     const summary = async () =>
       (

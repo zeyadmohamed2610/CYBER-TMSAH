@@ -16,6 +16,7 @@ import {
   Edit2,
   GraduationCap,
   Mail,
+  Loader2,
   Shield,
   Trash2,
   X,
@@ -48,6 +49,7 @@ export function UserRow({ model, user, idx }: Props) {
     saveEdit,
     submitting,
     deleteConfirm,
+    deletingId,
     setDeleteConfirm,
     handleDelete,
     startEdit,
@@ -356,6 +358,7 @@ export function UserRow({ model, user, idx }: Props) {
               size="icon"
               onClick={() => setDeleteConfirm(null)}
               aria-label="إلغاء الحذف"
+              disabled={deletingId !== null}
               className="h-11 w-11 text-slate-400 hover:text-white"
             >
               <XCircle className="h-4 w-4" />
@@ -365,9 +368,14 @@ export function UserRow({ model, user, idx }: Props) {
               size="icon"
               onClick={() => handleDelete(user.id, user.full_name)}
               aria-label="تأكيد حذف المستخدم"
+              disabled={deletingId !== null}
               className="h-11 w-11"
             >
-              <CheckCircle className="h-4 w-4" />
+              {deletingId === user.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle className="h-4 w-4" />
+              )}
             </Button>
           </div>
         ) : (

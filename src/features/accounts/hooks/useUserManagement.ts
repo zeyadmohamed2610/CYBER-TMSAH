@@ -39,6 +39,8 @@ export function useUserManagement(initialRole = "all") {
   const [showPassword, setShowPassword] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const deleteInFlight = useRef(false);
   const [selectedUserForDetails, setSelectedUserForDetails] = useState<UserRecord | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const handleCopyText = async (text: string, fieldName: string) => {
@@ -414,14 +416,26 @@ export function useUserManagement(initialRole = "all") {
     }
   };
   const handleDelete = async (userId: string, name: string) => {
-    const { error } = await supabase.rpc("delete_user_by_id", { p_user_id: userId });
-    if (error) {
-      toast.error(getFriendlyErrorMessage(`فشل حذف المستخدم: ${error.message}`));
-    } else {
+    if (deleteInFlight.current) return;
+    deleteInFlight.current = true;
+    setDeletingId(userId);
+    try {
+      const { error } = await supabase.rpc("delete_user_by_id", { p_user_id: userId });
+      if (error) throw error;
       toast.success(`تم حذف "${name}" بنجاح`);
       setDeleteConfirm(null);
       notifyAcademicChange();
-      void loadUsers();
+      await loadUsers(true);
+    } catch (error) {
+      toast.error(
+        getFriendlyErrorMessage(
+          error instanceof Error ? error.message : ((error as { message?: string })?.message ?? ""),
+          "تعذر حذف الحساب. أعد المحاولة.",
+        ),
+      );
+    } finally {
+      deleteInFlight.current = false;
+      setDeletingId(null);
     }
   };
   const startEdit = (user: UserRecord) => {
@@ -569,6 +583,7 @@ export function useUserManagement(initialRole = "all") {
     cancelEdit,
     saveEdit,
     deleteConfirm,
+    deletingId,
     handleDelete,
     startEdit,
     totalPages,
