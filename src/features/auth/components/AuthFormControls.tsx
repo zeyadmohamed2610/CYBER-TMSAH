@@ -1,6 +1,7 @@
 import { useLang } from "@/shared/i18n";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
+import { normalizeIdentifier } from "../utils/loginInput";
 
 export function Field({
   id,
@@ -12,7 +13,7 @@ export function Field({
   placeholder,
   required,
   autoComplete,
-  dir = "ltr",
+  dir = "auto",
   icon,
   suffix,
   badge,
@@ -20,6 +21,9 @@ export function Field({
   autoFocus,
   onKeyDown,
   onKeyUp,
+  error,
+  enterKeyHint,
+  readOnly,
 }: {
   id: string;
   name?: string;
@@ -30,7 +34,10 @@ export function Field({
   placeholder?: string;
   required?: boolean;
   autoComplete?: string;
-  dir?: "ltr" | "rtl";
+  dir?: "ltr" | "rtl" | "auto";
+  error?: string | null;
+  enterKeyHint?: "next" | "go" | "send";
+  readOnly?: boolean;
   icon?: React.ReactNode;
   suffix?: React.ReactNode;
   badge?: React.ReactNode;
@@ -40,9 +47,10 @@ export function Field({
   onKeyUp?: React.KeyboardEventHandler<HTMLInputElement>;
 }) {
   const [focused, setFocused] = useState(false);
+  const { isRTL } = useLang();
   return (
     <div>
-      <div className="flex items-center justify-between mb-1.5">
+      <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
         <label
           htmlFor={id}
           className="block text-[12px] font-semibold tracking-wide select-none transition-colors duration-150"
@@ -71,19 +79,26 @@ export function Field({
           placeholder={placeholder}
           required={required}
           autoComplete={autoComplete}
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          enterKeyHint={enterKeyHint}
+          readOnly={readOnly}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `${id}-error` : undefined}
           dir={dir}
           autoFocus={autoFocus}
           onKeyDown={onKeyDown}
           onKeyUp={onKeyUp}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          className="w-full rounded-xl text-sm font-medium transition-all duration-200"
+          className="w-full min-w-0 rounded-xl text-base sm:text-sm font-medium transition-all duration-200"
           style={{
             height: "46px",
-            paddingInlineStart: icon ? "42px" : "14px",
-            paddingInlineEnd: suffix ? "44px" : "14px",
+            paddingRight: isRTL ? (icon ? "42px" : "14px") : suffix ? "58px" : "14px",
+            paddingLeft: isRTL ? (suffix ? "58px" : "14px") : icon ? "42px" : "14px",
             background: focused ? "rgba(147, 51, 234, 0.08)" : "rgba(255,255,255,0.045)",
-            border: `1.5px solid ${focused ? "#A855F7" : "rgba(255,255,255,0.12)"}`,
+            border: `1.5px solid ${error ? "#F87171" : focused ? "#A855F7" : "rgba(255,255,255,0.12)"}`,
             color: "#FFFFFF",
             boxShadow: focused
               ? "0 0 0 3.5px rgba(147, 51, 234, 0.22), 0 2px 4px rgba(0,0,0,0.2)"
@@ -93,6 +108,11 @@ export function Field({
         />
         {suffix && <span className="absolute end-2.5 top-1/2 -translate-y-1/2 z-10">{suffix}</span>}
       </div>
+      {error && (
+        <p id={`${id}-error`} role="alert" className="mt-1.5 text-xs text-red-300">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -110,7 +130,8 @@ export const PrimaryButton = ({
     <button
       type="submit"
       disabled={disabled || ld}
-      className="w-full flex items-center justify-center gap-2 rounded-xl text-sm font-bold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.985] cursor-pointer"
+      aria-busy={Boolean(ld)}
+      className="w-full flex items-center justify-center gap-2 rounded-xl text-sm font-bold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.985] cursor-pointer focus-visible:ring-2 focus-visible:ring-purple-300 focus-visible:ring-offset-2"
       style={{
         height: "46px",
         background: "linear-gradient(180deg, #9333EA 0%, #7E22CE 100%)",
@@ -138,7 +159,7 @@ export const PrimaryButton = ({
 };
 export function IdentifierBadge({ identifier }: { identifier: string }) {
   const { lang } = useLang();
-  const v = identifier.trim();
+  const v = normalizeIdentifier(identifier);
   if (!v) return null;
   const [bg, color, border, label] = /^\d{14}$/.test(v)
     ? [

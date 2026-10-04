@@ -1,6 +1,6 @@
 import { ForgotPasswordModal } from "@/features/auth/components/ForgotPasswordModal";
 import { LoadingScreen } from "@/shared/components/Loading";
-import { SITE_DESCRIPTION } from "@/shared/lib/siteMetadata";
+import { Link } from "react-router-dom";
 import { AuthIcons as Icon } from "../components/AuthIcons";
 
 import { JoinRequestForm } from "../components/JoinRequestForm";
@@ -21,6 +21,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
     setJoinSuccess,
     handleTabChange,
     hasSavedSession,
+    authBusy,
   } = model;
   if (loading && hasSavedSession) {
     return (
@@ -36,7 +37,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
   }
   return (
     <main
-      className="min-h-[100dvh] w-full flex flex-col items-center justify-center relative overflow-x-hidden overflow-y-auto px-4 py-10"
+      className="auth-entry min-h-[100dvh] w-full flex flex-col items-center justify-center relative overflow-x-hidden overflow-y-auto px-4 py-5 sm:py-8"
       dir={isRTL ? "rtl" : "ltr"}
       style={{ background: "#02060F" }}
     >
@@ -97,11 +98,16 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
 
       {/* ── Brand Wordmark as the Logo ─────────────────────────────────── */}
       <div
-        className="relative z-10 flex flex-col items-center mb-7 select-none text-center"
+        className="relative z-10 flex flex-col items-center mb-4 select-none text-center"
         style={{ animation: "rise 0.5s cubic-bezier(0.22,1,0.36,1) both" }}
       >
         {/* Hero Wordmark */}
-        <div className="flex items-center justify-center gap-2.5" dir="ltr">
+        <Link
+          to="/"
+          aria-label="الصفحة الرئيسية — سايبر تمساح"
+          className="flex items-center justify-center gap-2 rounded-lg focus-visible:ring-2 focus-visible:ring-purple-300"
+          dir="ltr"
+        >
           <img
             src="/brand/logo-small.webp"
             alt=""
@@ -110,7 +116,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
             className="h-9 w-9 md:h-11 md:w-11 shrink-0 object-contain"
           />
           <span
-            className="font-black text-white text-[28px] md:text-[34px] tracking-[0.14em]"
+            className="font-black text-white text-[23px] md:text-[30px] tracking-[0.14em]"
             style={{
               fontFamily: "'Inter', sans-serif",
               letterSpacing: "0.14em",
@@ -120,7 +126,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
             CYBER
           </span>
           <span
-            className="font-black text-[28px] md:text-[34px] tracking-[0.14em]"
+            className="font-black text-[23px] md:text-[30px] tracking-[0.14em]"
             style={{
               fontFamily: "'Inter', sans-serif",
               letterSpacing: "0.14em",
@@ -132,7 +138,7 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
           >
             TMSAH
           </span>
-        </div>
+        </Link>
 
         {/* System Descriptor Pill */}
         <div
@@ -148,7 +154,6 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
             {lang === "ar" ? "منصتك لمتابعة الدراسة والحضور" : "Your academic attendance platform"}
           </span>
         </div>
-        <p className="mt-3 max-w-md text-xs leading-6 text-slate-400">{SITE_DESCRIPTION}</p>
       </div>
 
       {/* ── Card Container with Ambient Depth ─────────────────────────── */}
@@ -197,9 +202,9 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
             }}
           />
 
-          <div className="px-5 sm:px-8 pt-6 sm:pt-7 pb-7 sm:pb-8">
+          <div className="px-4 sm:px-7 py-5 sm:py-6">
             {/* ── Card header ─────────────────────────────────────────── */}
-            <div className="mb-6">
+            <div className="mb-4">
               <h1 className="font-bold text-white text-[22px] tracking-tight">
                 {tab === "login"
                   ? lang === "ar"
@@ -221,15 +226,39 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
             </div>
 
             {/* ── Modern Premium Segmented Pill Tabs ─────────────────────── */}
-            <div className="relative p-1.5 mb-6 rounded-2xl bg-white/[0.04] border border-white/[0.08] grid grid-cols-2 gap-1.5 shadow-inner">
+            <div
+              role="tablist"
+              aria-label="الدخول وطلب الانضمام"
+              className="relative p-1 mb-4 rounded-xl bg-white/[0.04] border border-white/[0.08] grid grid-cols-2 gap-1 shadow-inner"
+            >
               {(["login", "join"] as Tab[]).map((tb) => {
                 const isActive = tab === tb;
                 return (
                   <button
                     key={tb}
                     type="button"
+                    role="tab"
+                    id={`auth-tab-${tb}`}
+                    aria-controls={`auth-panel-${tb}`}
+                    aria-selected={isActive}
+                    tabIndex={isActive ? 0 : -1}
+                    disabled={authBusy}
+                    onKeyDown={(event) => {
+                      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+                      event.preventDefault();
+                      const next: Tab =
+                        event.key === "Home"
+                          ? "login"
+                          : event.key === "End"
+                            ? "join"
+                            : tb === "login"
+                              ? "join"
+                              : "login";
+                      handleTabChange(next);
+                      document.getElementById(`auth-tab-${next}`)?.focus();
+                    }}
                     onClick={() => handleTabChange(tb)}
-                    className="relative py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer select-none outline-none flex items-center justify-center gap-2"
+                    className="relative min-h-11 py-2 px-3 rounded-lg text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer select-none focus-visible:ring-2 focus-visible:ring-purple-300 flex items-center justify-center gap-2 disabled:opacity-50"
                     style={{
                       background: isActive
                         ? "linear-gradient(135deg, rgba(147, 51, 234, 0.35) 0%, rgba(126, 34, 206, 0.2) 100%)"
@@ -270,54 +299,56 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
             </div>
 
             {/* ══════ LOGIN ══════ */}
-            {tab === "login" && <SignInForm model={model} />}
+            <div role="tabpanel" id={`auth-panel-${tab}`} aria-labelledby={`auth-tab-${tab}`}>
+              {tab === "login" && <SignInForm model={model} />}
 
-            {/* ══════ JOIN ══════ */}
-            {tab === "join" &&
-              (joinSuccess ? (
-                <div className="flex flex-col items-center gap-5 py-6 text-center">
-                  <div
-                    className="flex items-center justify-center w-16 h-16 rounded-2xl"
-                    style={{
-                      background: "rgba(147,51,234,0.15)",
-                      border: "1px solid rgba(147,51,234,0.35)",
-                    }}
-                  >
-                    <span style={{ color: "#C084FC" }}>
-                      <Icon.Check />
-                    </span>
+              {/* ══════ JOIN ══════ */}
+              {tab === "join" &&
+                (joinSuccess ? (
+                  <div className="flex flex-col items-center gap-5 py-6 text-center">
+                    <div
+                      className="flex items-center justify-center w-16 h-16 rounded-2xl"
+                      style={{
+                        background: "rgba(147,51,234,0.15)",
+                        border: "1px solid rgba(147,51,234,0.35)",
+                      }}
+                    >
+                      <span style={{ color: "#C084FC" }}>
+                        <Icon.Check />
+                      </span>
+                    </div>
+                    <div>
+                      <p className="font-bold text-white text-lg">
+                        {lang === "ar" ? "تم إرسال طلبك بنجاح!" : "Request Sent!"}
+                      </p>
+                      <p className="text-[13px] mt-1 text-slate-400">{t.auth.requestSent}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setJoinSuccess(false);
+                        handleTabChange("login");
+                      }}
+                      className="h-11 px-7 rounded-xl text-sm font-semibold text-white cursor-pointer active:scale-[0.98] transition-all"
+                      style={{
+                        background: "linear-gradient(180deg, #9333EA 0%, #7E22CE 100%)",
+                        boxShadow:
+                          "0 1px 0 rgba(255,255,255,0.2) inset, 0 4px 18px rgba(147,51,234,0.45)",
+                      }}
+                    >
+                      {lang === "ar" ? "العودة لتسجيل الدخول" : "Back to Sign In"}
+                    </button>
                   </div>
-                  <div>
-                    <p className="font-bold text-white text-lg">
-                      {lang === "ar" ? "تم إرسال طلبك بنجاح!" : "Request Sent!"}
-                    </p>
-                    <p className="text-[13px] mt-1 text-slate-400">{t.auth.requestSent}</p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setJoinSuccess(false);
-                      handleTabChange("login");
-                    }}
-                    className="h-11 px-7 rounded-xl text-sm font-semibold text-white cursor-pointer active:scale-[0.98] transition-all"
-                    style={{
-                      background: "linear-gradient(180deg, #9333EA 0%, #7E22CE 100%)",
-                      boxShadow:
-                        "0 1px 0 rgba(255,255,255,0.2) inset, 0 4px 18px rgba(147,51,234,0.45)",
-                    }}
-                  >
-                    {lang === "ar" ? "العودة لتسجيل الدخول" : "Back to Sign In"}
-                  </button>
-                </div>
-              ) : (
-                <JoinRequestForm model={model} />
-              ))}
+                ) : (
+                  <JoinRequestForm model={model} />
+                ))}
+            </div>
           </div>
         </div>
       </div>
 
       {/* ── Page footer ──────────────────────────────────────────────── */}
       <div
-        className="relative z-0 mt-8 text-center"
+        className="relative z-0 mt-4 text-center"
         style={{ animation: "rise 0.6s cubic-bezier(0.22,1,0.36,1) 0.1s both" }}
       >
         <p className="text-[12px] font-medium text-slate-400">
@@ -340,7 +371,10 @@ const LoginPage = ({ initialTab }: { initialTab?: Tab }) => {
           from { opacity: 0; transform: translateY(16px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        input::placeholder { color: #64748B !important; }
+        .auth-entry input::placeholder { color: #94A3B8; }
+        @media (prefers-reduced-motion: reduce) {
+          .auth-entry *, .auth-entry *::before, .auth-entry *::after { animation: none !important; transition: none !important; }
+        }
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button { opacity: 0; }
       `}</style>

@@ -1,6 +1,6 @@
 import { Loader2 } from "lucide-react";
 import type { useLoginForm } from "../hooks/useLoginForm";
-import { Field, IdentifierBadge, PrimaryButton as PrimaryBtn } from "./AuthFormControls";
+import { Field, PrimaryButton as PrimaryBtn } from "./AuthFormControls";
 import { AuthIcons as Icon } from "./AuthIcons";
 
 export function SignInForm({ model }: { model: ReturnType<typeof useLoginForm> }) {
@@ -10,6 +10,11 @@ export function SignInForm({ model }: { model: ReturnType<typeof useLoginForm> }
     interpolate,
     lockRemaining,
     passRef,
+    identifierRef,
+    loginErrorField,
+    clearLoginError,
+    authBusy,
+    sessionExpired,
     username,
     setUsername,
     password,
@@ -24,15 +29,20 @@ export function SignInForm({ model }: { model: ReturnType<typeof useLoginForm> }
     passkeyLoading,
     isCapsLockOn,
     setIsCapsLockOn,
-    handleTabChange,
     handleLogin,
     handlePasskeyLogin,
     lockMins,
   } = model;
   return (
-    <form onSubmit={handleLogin} className="space-y-4">
+    <form onSubmit={handleLogin} noValidate aria-busy={authBusy} className="space-y-3">
+      {sessionExpired && (
+        <p role="status" className="rounded-xl bg-amber-500/10 p-3 text-xs text-amber-200">
+          انتهت جلستك، سجّل الدخول مجددًا للمتابعة.
+        </p>
+      )}
       {lockRemaining > 0 && (
         <div
+          role="alert"
           className="flex items-start gap-2.5 p-3.5 rounded-xl text-[13px]"
           style={{
             background: "rgba(245,158,11,0.08)",
@@ -52,18 +62,23 @@ export function SignInForm({ model }: { model: ReturnType<typeof useLoginForm> }
         name="identifier"
         label={
           lang === "ar"
-            ? "اسم المستخدم / البريد الإلكتروني / الرقم القومي"
+            ? "اسم المستخدم أو البريد أو الرقم القومي"
             : "Username / Email / National ID"
         }
         value={username}
-        onChange={setUsername}
+        onChange={(value) => {
+          setUsername(value);
+          clearLoginError();
+        }}
         placeholder={
-          lang === "ar"
-            ? "أدخل اسم المستخدم، البريد، أو الرقم القومي (14 رقم)"
-            : "Enter username, email, or 14-digit National ID"
+          lang === "ar" ? "مثال: ahmed" : "Enter username, email, or 14-digit National ID"
         }
         required
         autoComplete="username"
+        inputRef={identifierRef}
+        enterKeyHint="next"
+        readOnly={authBusy}
+        error={loginErrorField === "identifier" ? loginError : null}
         autoFocus={typeof window !== "undefined" && window.innerWidth >= 768}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
@@ -71,7 +86,6 @@ export function SignInForm({ model }: { model: ReturnType<typeof useLoginForm> }
             passRef.current?.focus();
           }
         }}
-        badge={<IdentifierBadge identifier={username} />}
         icon={<Icon.User />}
       />
 
@@ -82,10 +96,16 @@ export function SignInForm({ model }: { model: ReturnType<typeof useLoginForm> }
           label={t.auth.password}
           type={showPass ? "text" : "password"}
           value={password}
-          onChange={setPassword}
+          onChange={(value) => {
+            setPassword(value);
+            clearLoginError();
+          }}
           placeholder={t.auth.passwordPlaceholder}
           required
           autoComplete="current-password"
+          enterKeyHint="go"
+          readOnly={authBusy}
+          error={loginErrorField === "password" ? loginError : null}
           inputRef={passRef}
           icon={<Icon.Lock />}
           onKeyDown={(e) => {
@@ -108,7 +128,7 @@ export function SignInForm({ model }: { model: ReturnType<typeof useLoginForm> }
               }
               aria-pressed={showPass}
               onClick={() => setShowPass((v) => !v)}
-              className="flex items-center justify-center w-11 h-11 rounded-md cursor-pointer transition-colors text-slate-400 hover:text-white"
+              className="flex items-center justify-center w-11 h-11 rounded-md cursor-pointer transition-colors text-slate-400 hover:text-white focus-visible:ring-2 focus-visible:ring-purple-300"
             >
               <Icon.Eye off={showPass} />
             </button>
@@ -123,7 +143,7 @@ export function SignInForm({ model }: { model: ReturnType<typeof useLoginForm> }
       </div>
 
       {/* Remember + Forgot */}
-      <div className="flex items-center justify-between pt-0.5">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pt-0.5">
         <label className="flex items-center gap-2 cursor-pointer select-none group">
           <input
             type="checkbox"
@@ -133,11 +153,12 @@ export function SignInForm({ model }: { model: ReturnType<typeof useLoginForm> }
             style={{ accentColor: "#9333EA" }}
           />
           <span className="text-[12.5px] font-medium text-slate-300 group-hover:text-white transition-colors">
-            {lang === "ar" ? "تذكرني" : "Remember me"}
+            {lang === "ar" ? "تذكر اسم المستخدم" : "Remember username"}
           </span>
         </label>
         <button
           type="button"
+          disabled={authBusy}
           onClick={() => setShowForgotModal(true)}
           className="text-[12.5px] font-semibold text-purple-400 hover:text-purple-300 cursor-pointer transition-colors"
         >
@@ -146,7 +167,7 @@ export function SignInForm({ model }: { model: ReturnType<typeof useLoginForm> }
       </div>
 
       {/* Error */}
-      {loginError && (
+      {loginError && !loginErrorField && (
         <div
           role="alert"
           className="flex items-start gap-2.5 p-3.5 rounded-xl text-[13px] font-medium"
@@ -164,7 +185,7 @@ export function SignInForm({ model }: { model: ReturnType<typeof useLoginForm> }
       )}
 
       <div className="pt-1.5">
-        <PrimaryBtn loading={loginLoading} disabled={lockRemaining > 0}>
+        <PrimaryBtn loading={loginLoading} disabled={authBusy || lockRemaining > 0}>
           <Icon.LogIn />
           <span>{t.auth.signIn}</span>
         </PrimaryBtn>
@@ -184,8 +205,9 @@ export function SignInForm({ model }: { model: ReturnType<typeof useLoginForm> }
       <button
         type="button"
         onClick={handlePasskeyLogin}
-        disabled={passkeyLoading || lockRemaining > 0}
-        className="w-full h-11 sm:h-12 rounded-2xl flex items-center justify-center gap-2.5 text-xs sm:text-sm font-bold text-white transition-all cursor-pointer relative overflow-hidden group border border-purple-500/40 hover:border-cyan-400 bg-gradient-to-r from-purple-950/40 via-[#0B0E28] to-cyan-950/40 hover:shadow-[0_0_20px_rgba(6,182,212,0.35)] active:scale-[0.98]"
+        disabled={authBusy || lockRemaining > 0}
+        aria-busy={passkeyLoading}
+        className="w-full min-h-11 rounded-xl flex items-center justify-center gap-2.5 text-sm font-bold text-white transition-all cursor-pointer relative overflow-hidden group border border-purple-500/40 hover:border-cyan-400 bg-gradient-to-r from-purple-950/40 via-[#0B0E28] to-cyan-950/40 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-purple-300 active:scale-[0.98]"
       >
         {passkeyLoading ? (
           <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
@@ -197,24 +219,13 @@ export function SignInForm({ model }: { model: ReturnType<typeof useLoginForm> }
         <span className="bg-gradient-to-r from-purple-200 via-white to-cyan-200 bg-clip-text text-transparent group-hover:to-cyan-300">
           {passkeyLoading
             ? lang === "ar"
-              ? "جاري فحص البصمة..."
+              ? "جاري التحقق من مفتاح الدخول..."
               : "Checking your fingerprint..."
             : lang === "ar"
-              ? "تسجيل الدخول بالبصمة"
+              ? "الدخول بمفتاح الدخول"
               : "Sign in with your fingerprint"}
         </span>
       </button>
-
-      <p className="text-center text-[12.5px] pt-1.5 text-slate-400">
-        {lang === "ar" ? "ليس لديك حساب؟" : "No account?"}{" "}
-        <button
-          type="button"
-          onClick={() => handleTabChange("join")}
-          className="font-semibold text-purple-400 hover:text-purple-300 cursor-pointer transition-colors"
-        >
-          {t.auth.joinTitle}
-        </button>
-      </p>
     </form>
   );
 }

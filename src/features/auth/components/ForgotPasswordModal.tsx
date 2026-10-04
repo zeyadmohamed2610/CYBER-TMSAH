@@ -6,21 +6,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
-import {
-  CheckCircle2,
-  Copy,
-  ExternalLink,
-  KeyRound,
-  Loader2,
-  Mail,
-  MessageCircle,
-  Phone,
-  Send,
-  X,
-} from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
+import { CheckCircle2, KeyRound, Loader2, Mail, Phone } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { recordAuditLog } from "../services/auditService";
+import { normalizeDigits } from "../utils/loginInput";
+import { Field } from "./AuthFormControls";
 
 interface ForgotPasswordModalProps {
   isOpen: boolean;
@@ -28,290 +18,224 @@ interface ForgotPasswordModalProps {
   lang: string;
   isRTL: boolean;
 }
+const COOLDOWN_KEY = "cyber_reset_retry_at";
+function savedCooldown(): number {
+  try {
+    return Number(sessionStorage.getItem(COOLDOWN_KEY)) || 0;
+  } catch {
+    return 0;
+  }
+}
 
-const SUPPORT_WHATSAPP = "01553450232";
-const WHATSAPP_LINK = "https://wa.me/201553450232";
-
-export function ForgotPasswordModal({ isOpen, onClose, lang }: ForgotPasswordModalProps) {
-  const [emailInput, setEmailInput] = useState("");
-  const [phoneInput, setPhoneInput] = useState("");
+export function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordModalProps) {
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [sentSuccess, setSentSuccess] = useState(false);
-
-  if (!isOpen) return null;
-
-  const handleResetRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedEmail = emailInput.trim().toLowerCase();
-    const trimmedPhone = phoneInput.trim();
-
-    // 1. Strict validation: must be a valid Gmail address ending in @gmail.com
-    const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
-    if (!gmailRegex.test(trimmedEmail)) {
-      toast.error(
-        lang === "ar"
-          ? "شرط الاستعادة: يجب كتابة بريد Gmail صالح ينتهي بـ @gmail.com"
-          : "A valid Gmail address ending with @gmail.com is strictly required.",
-      );
+  const [requestRegistered, setRequestRegistered] = useState(false);
+  const [emailAccepted, setEmailAccepted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [errorField, setErrorField] = useState<"email" | "phone" | null>(null);
+  const [retryAt, setRetryAt] = useState(savedCooldown);
+  const [now, setNow] = useState(Date.now);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
+  const pending = useRef(false);
+  const registeredRequest = useRef<{ email: string; phone: string } | null>(null);
+  const remaining = Math.max(0, Math.ceil((retryAt - now) / 1000));
+  useEffect(() => {
+    if (!isOpen) return;
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [isOpen]);
+  const fail = (message: string, field: "email" | "phone" | null = null) => {
+    setError(message);
+    setErrorField(field);
+    if (field === "email") emailRef.current?.focus();
+    if (field === "phone") phoneRef.current?.focus();
+  };
+  const handleResetRequest = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (pending.current || Date.now() < retryAt || emailAccepted) return;
+    const request = registeredRequest.current ?? {
+      email: email.trim().toLowerCase(),
+      phone: normalizeDigits(phone).replace(/[\s()-]/g, ""),
+    };
+    if (!/^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(request.email)) {
+      fail("أدخل بريد Gmail المسجل في حسابك.", "email");
       return;
     }
-
-    // 2. Phone validation (WhatsApp)
-    if (!trimmedPhone || trimmedPhone.length < 8) {
-      toast.error(
-        lang === "ar"
-          ? "يرجى كتابة رقم الواتساب الخاص بك لاستلام البيانات الجديدة"
-          : "Please enter your WhatsApp phone number to receive your new credentials.",
-      );
+    if (!/^\+?\d{8,15}$/.test(request.phone)) {
+      fail("أدخل رقم واتساب صحيحًا من 8 إلى 15 رقمًا.", "phone");
       return;
     }
-
+    if (!navigator.onLine) {
+      fail("الاتصال بالإنترنت مقطوع. اتصل ثم أعد المحاولة.");
+      return;
+    }
+    pending.current = true;
     setSubmitting(true);
+    setError(null);
+    setErrorField(null);
+    const deadline = Date.now() + 60_000;
+    setRetryAt(deadline);
+    setNow(Date.now());
     try {
-      // 1. Insert into password_reset_requests with both email and phone
-      const { error: dbError } = await supabase.from("password_reset_requests").insert({
-        email: trimmedEmail,
-        phone: trimmedPhone,
-        status: "pending",
-      });
-
-      let dbFailed = false;
-      if (dbError) {
-        console.error("Failed to insert into password_reset_requests:", dbError);
-        dbFailed = true;
-      }
-
-      // 2. Trigger Supabase auth reset email if user exists in auth (Option B self-service)
-      try {
-        const { error: resetErr } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
-          redirectTo: `${window.location.origin}/reset-password`,
+      sessionStorage.setItem(COOLDOWN_KEY, String(deadline));
+    } catch {
+      /* Storage is optional. */
+    }
+    try {
+      if (!registeredRequest.current) {
+        const { error: dbError } = await supabase
+          .from("password_reset_requests")
+          .insert({ ...request, status: "pending" });
+        if (dbError) throw dbError;
+        registeredRequest.current = request;
+        setRequestRegistered(true);
+        void recordAuditLog({
+          action: "password_reset_request",
+          identifier: `${request.email} | ${request.phone}`,
         });
-        if (resetErr) {
-          console.warn("Supabase resetPasswordForEmail warning/error:", resetErr);
-        }
-      } catch (err) {
-        console.warn("Exception calling resetPasswordForEmail:", err);
       }
-
-      // If DB failed, throw so the user knows
-      if (dbFailed) {
-        throw dbError;
-      }
-
-      // 3. Record audit log
-      await recordAuditLog({
-        action: "password_reset_request",
-        identifier: `${trimmedEmail} | ${trimmedPhone}`,
+      // Retrying email must not insert the accepted administrator request again.
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(request.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
       });
-
-      setSentSuccess(true);
-      toast.success(
-        lang === "ar"
-          ? "تم إرسال طلب استعادة كلمة المرور للمشرفين بنجاح."
-          : "Password reset request submitted successfully.",
-      );
-    } catch (err: unknown) {
-      console.error("Password reset request failed:", err);
-      toast.error(
-        lang === "ar"
-          ? "تعذر إرسال الطلب، تأكد من الاتصال وحاول مجدداً."
-          : "Could not send your request. Check your connection and try again.",
+      if (resetError) throw resetError;
+      setEmailAccepted(true);
+    } catch {
+      fail(
+        registeredRequest.current
+          ? "سُجّل طلب المساعدة، لكن تعذر طلب رسالة الاستعادة. يمكنك إعادة المحاولة بعد انتهاء الانتظار أو التواصل مع الإدارة."
+          : "تعذر تسجيل الطلب. احتفظنا ببياناتك؛ تحقق من الاتصال ثم أعد المحاولة.",
       );
     } finally {
+      pending.current = false;
       setSubmitting(false);
     }
   };
-
-  const copyWhatsApp = () => {
-    navigator.clipboard.writeText(SUPPORT_WHATSAPP);
-    toast.success(
-      lang === "ar"
-        ? "تم نسخ رقم الواتساب: " + SUPPORT_WHATSAPP
-        : "WhatsApp number copied: " + SUPPORT_WHATSAPP,
-    );
-  };
-
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
       <DialogContent
-        className="max-w-md bg-[#0A0F1D]/98 border border-purple-500/30 text-white rounded-3xl p-6 sm:p-7 shadow-[0_25px_70px_rgba(0,0,0,0.95)] max-h-[90vh] overflow-y-auto [&>button:last-child]:hidden"
         dir="rtl"
+        className="max-w-md max-h-[90dvh] overflow-y-auto rounded-2xl border-purple-500/30 bg-[#0A0F1D] p-5 text-white"
       >
-        {/* Header */}
-        <DialogHeader className="text-start pb-2 border-b border-white/10 shrink-0">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shadow-[0_0_15px_rgba(147,51,234,0.25)] shrink-0">
-                <KeyRound className="w-5 h-5" />
-              </div>
-              <div>
-                <DialogTitle className="text-base font-black text-white">
-                  {lang === "ar" ? "استعادة كلمة المرور" : "Reset Password"}
-                </DialogTitle>
-                <DialogDescription className="text-xs text-slate-400 mt-0.5">
-                  {lang === "ar"
-                    ? "أدخل بريدك الإلكتروني ورقم هاتفك وسيقوم فريق المساعدة بمساعدتك فوراً"
-                    : "Enter your email and phone number, support will assist you immediately"}
-                </DialogDescription>
-              </div>
-            </div>
-
-            {/* Close Button */}
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-8 h-8 rounded-xl bg-white/5 hover:bg-rose-500/20 border border-white/10 hover:border-rose-500/40 flex items-center justify-center text-slate-400 hover:text-rose-400 transition-all cursor-pointer shrink-0"
-              aria-label="Close"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+        <DialogHeader className="text-start pr-9">
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <KeyRound className="h-5 w-5 text-purple-400" />
+            استعادة كلمة المرور
+          </DialogTitle>
+          <DialogDescription className="text-xs leading-5 text-slate-400">
+            أدخل بريد حسابك ورقم واتسابك لتسجيل طلب مساعدة وطلب رابط الاستعادة.
+          </DialogDescription>
         </DialogHeader>
-
-        {sentSuccess ? (
-          <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 space-y-3 text-center animate-fade-up">
-            <CheckCircle2 className="w-9 h-9 text-emerald-400 mx-auto" />
-            <h4 className="text-sm font-black text-emerald-400">
-              {lang === "ar" ? "تم تسجيل طلبك بنجاح" : "Request Submitted"}
-            </h4>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              {lang === "ar"
-                ? "وصل طلبك إلى المشرف متضمناً بريدك ورقم واتسابك. سيقوم المشرف بتعيين كلمة مرور جديدة وإرسالها لك مباشرة على الواتساب."
-                : "Your request with email and WhatsApp number reached the administrator. You will receive your credentials shortly."}
-            </p>
-
-            {/* Quick WhatsApp followup */}
-            <div className="pt-2">
-              <a
-                href={WHATSAPP_LINK}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-emerald-500/20 text-emerald-300 text-xs font-bold hover:bg-emerald-500/30 transition-all cursor-pointer border border-emerald-500/30"
-              >
-                <MessageCircle className="w-4 h-4 text-emerald-400" />
-                <span>
-                  {lang === "ar" ? "متابعة فورية مع الإدارة عبر واتساب" : "Follow up via WhatsApp"}
-                </span>
-                <ExternalLink className="w-3 h-3 opacity-70" />
-              </a>
-            </div>
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="mt-1 w-full h-9 rounded-xl bg-white/5 text-slate-400 text-xs font-semibold hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+        <form noValidate onSubmit={handleResetRequest} aria-busy={submitting} className="space-y-3">
+          {requestRegistered ? (
+            <div
+              role="status"
+              className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-sm text-emerald-200"
             >
-              {lang === "ar" ? "إغلاق" : "Close"}
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={handleResetRequest} className="space-y-3.5">
-            {/* Gmail Input */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-[11.5px] font-semibold text-slate-300 tracking-wide">
-                  {lang === "ar"
-                    ? "بريد Gmail المسجل (شرط الاستعادة)"
-                    : "Registered Gmail (Required)"}
-                </label>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30">
-                  @gmail.com
-                </span>
-              </div>
-              <div className="relative">
-                <Mail className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="email"
-                  required
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  placeholder="example@gmail.com"
-                  dir="ltr"
-                  className="w-full h-11 ps-10 pe-3.5 rounded-xl text-sm font-medium bg-white/[0.045] border border-white/12 text-white placeholder:text-slate-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/25 transition-all"
-                />
-              </div>
+              <p className="flex items-center gap-2 font-bold">
+                <CheckCircle2 className="h-4 w-4" />
+                سُجّل طلب المساعدة لدى الإدارة.
+              </p>
+              {emailAccepted && (
+                <p className="mt-2 text-xs leading-5">
+                  إذا كان البريد مسجلًا ويدعم الاستعادة، ستصلك رسالة برابط تغيير كلمة المرور. راجع
+                  البريد الوارد والرسائل غير المرغوب فيها.
+                </p>
+              )}
             </div>
-
-            {/* WhatsApp Phone Input */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-[11.5px] font-semibold text-slate-300 tracking-wide">
-                  {lang === "ar"
-                    ? "رقم الواتساب (لاستلام كلمة المرور الجديدة)"
-                    : "WhatsApp Number (To receive credentials)"}
-                </label>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  WhatsApp
-                </span>
-              </div>
-              <div className="relative">
-                <Phone className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="tel"
-                  required
-                  value={phoneInput}
-                  onChange={(e) => setPhoneInput(e.target.value)}
-                  placeholder={lang === "ar" ? "01xxxxxxxxx" : "WhatsApp Number"}
-                  dir="ltr"
-                  className="w-full h-11 ps-10 pe-3.5 rounded-xl text-sm font-medium bg-white/[0.045] border border-white/12 text-white placeholder:text-slate-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/25 transition-all"
-                />
-              </div>
-            </div>
-
+          ) : (
+            <>
+              <Field
+                id="reset-email"
+                name="email"
+                label="بريد Gmail المسجل"
+                type="email"
+                value={email}
+                onChange={(value) => {
+                  setEmail(value);
+                  setError(null);
+                }}
+                placeholder="example@gmail.com"
+                autoComplete="email"
+                enterKeyHint="next"
+                readOnly={submitting}
+                inputRef={emailRef}
+                error={errorField === "email" ? error : null}
+                icon={<Mail className="h-4 w-4" />}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    phoneRef.current?.focus();
+                  }
+                }}
+              />
+              <Field
+                id="reset-phone"
+                name="tel"
+                label="رقم واتساب للتواصل"
+                type="tel"
+                value={phone}
+                onChange={(value) => {
+                  setPhone(value);
+                  setError(null);
+                }}
+                placeholder="01xxxxxxxxx"
+                autoComplete="tel"
+                enterKeyHint="send"
+                readOnly={submitting}
+                inputRef={phoneRef}
+                error={errorField === "phone" ? error : null}
+                icon={<Phone className="h-4 w-4" />}
+              />
+            </>
+          )}
+          {error && !errorField && (
+            <p role="alert" className="rounded-xl bg-red-500/10 p-3 text-xs leading-5 text-red-300">
+              {error}
+            </p>
+          )}
+          {!emailAccepted && (
             <button
               type="submit"
-              disabled={submitting}
-              className="w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 text-white active:scale-[0.985] transition-all disabled:opacity-50 cursor-pointer shadow-[0_4px_20px_rgba(147,51,234,0.45)] mt-1"
-              style={{
-                background: "linear-gradient(180deg, #a855f7 0%, #9333ea 100%)",
-                border: "1px solid rgba(255,255,255,0.12)",
-              }}
+              disabled={submitting || remaining > 0}
+              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-3 text-sm font-bold disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-purple-300"
             >
               {submitting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
                 <>
-                  <Send className="w-4 h-4" />
-                  <span>{lang === "ar" ? "إرسال طلب الاستعادة" : "Send Reset Request"}</span>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  جاري إرسال الطلب...
                 </>
+              ) : remaining > 0 ? (
+                `أعد المحاولة بعد ${remaining} ثانية`
+              ) : requestRegistered ? (
+                "إعادة طلب رسالة الاستعادة"
+              ) : (
+                "إرسال طلب الاستعادة"
               )}
             </button>
-
-            {/* Support Box with WhatsApp */}
-            <div className="p-3.5 rounded-2xl bg-white/[0.035] border border-white/10 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-200">
-                <MessageCircle className="w-4 h-4 text-emerald-400" />
-                <span>{lang === "ar" ? "هل تحتاج لمساعدة فورية؟" : "Need Instant Help?"}</span>
-              </div>
-              <p className="text-[11.5px] text-slate-400 leading-relaxed">
-                {lang === "ar"
-                  ? "يمكنك أيضاً التواصل مباشرة مع فريق المساعدة عبر واتساب لمتابعة حسابك:"
-                  : "You can reach out directly to technical support via WhatsApp:"}
-              </p>
-              <div className="flex items-center gap-2 pt-0.5">
-                <a
-                  href={WHATSAPP_LINK}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 flex items-center justify-center gap-2 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold hover:bg-emerald-500/25 hover:text-emerald-300 transition-all cursor-pointer shadow-sm"
-                >
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  <span>{lang === "ar" ? "تواصل عبر واتساب" : "Chat on WhatsApp"}</span>
-                  <ExternalLink className="w-3 h-3 opacity-60" />
-                </a>
-                <button
-                  type="button"
-                  onClick={copyWhatsApp}
-                  className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
-                  title={SUPPORT_WHATSAPP}
-                >
-                  <Copy className="w-3.5 h-3.5 text-purple-400" />
-                  <span dir="ltr">{SUPPORT_WHATSAPP}</span>
-                </button>
-              </div>
-            </div>
-          </form>
-        )}
+          )}
+          <p className="text-xs leading-5 text-slate-400">
+            لم تصلك الرسالة أو لا تستطيع الوصول لبريدك؟ تواصل مع الإدارة لمتابعة الطلب والتحقق من
+            ملكية الحساب.
+          </p>
+          <a
+            href="https://wa.me/201553450232"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex min-h-11 items-center justify-center rounded-xl border border-emerald-500/30 text-sm text-emerald-300 focus-visible:ring-2 focus-visible:ring-emerald-300"
+          >
+            التواصل مع الإدارة عبر واتساب
+          </a>
+        </form>
       </DialogContent>
     </Dialog>
   );

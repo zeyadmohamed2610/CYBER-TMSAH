@@ -20,6 +20,7 @@ interface AuthContextValue {
   departments: string[];
   avatarUrl: string | null;
   loading: boolean;
+  sessionExpired: boolean;
   refreshRole: () => Promise<void>;
   updateAvatarUrl: (url: string | null) => Promise<void>;
   signOut: () => Promise<{ error: string | null }>;
@@ -149,6 +150,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Browser cache cannot establish a session. Resolve it before routing a cold start.
   const [loading, setLoading] = useState(true);
+  const [sessionExpired, setSessionExpired] = useState(false);
+  const intentionalSignOut = useRef(false);
+  const hadStoredSession = useRef(false);
 
   const [departments, setDepartments] = useState<string[]>([]);
 
@@ -163,6 +167,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let active = true;
     let authRevision = 0;
+    try {
+      hadStoredSession.current = Boolean(sessionStorage.getItem(USERID_STORAGE_KEY));
+    } catch {
+      /* Storage is optional. */
+    }
 
     /** Full apply — fetches role silently if already initialized to prevent unmounting active forms */
     const applySession = async (sessionUser: User | null, silent = false) => {
@@ -175,6 +184,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         setUser(null);
+        setSessionExpired(hadStoredSession.current && !intentionalSignOut.current);
         setRole(null);
         setFullName(null);
         setDepartment(null);
@@ -199,6 +209,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // FAST PATH: If user is already loaded and same id, and role is already known,
+      intentionalSignOut.current = false;
+      setSessionExpired(false);
       // NEVER show loading spinner and NEVER re-fetch profile from database on app switch!
       const isSameUser = currentUserRef.current?.id === sessionUser.id;
       if (isSameUser && roleRef.current) {
@@ -326,6 +338,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // SIGNED_OUT: only here do we clear the user session
       if (event === "SIGNED_OUT") {
+        setSessionExpired(
+          !intentionalSignOut.current &&
+            Boolean(currentUserRef.current || hadStoredSession.current),
+        );
         roleRef.current = null;
         setUser(null);
         setRole(null);
@@ -422,6 +438,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user, refreshRole]);
 
   const signOut = useCallback(async (): Promise<{ error: string | null }> => {
+    intentionalSignOut.current = true;
+    hadStoredSession.current = false;
+    setSessionExpired(false);
     const { error } = await supabase.auth.signOut();
     setUser(null);
     setRole(null);
@@ -502,12 +521,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       departments,
       avatarUrl,
       loading,
+      sessionExpired,
       refreshRole,
       updateAvatarUrl,
       signOut,
     }),
     [
       loading,
+      sessionExpired,
       role,
       fullName,
       department,

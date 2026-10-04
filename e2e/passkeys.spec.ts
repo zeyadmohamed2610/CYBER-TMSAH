@@ -90,7 +90,7 @@ for (const [role, destination] of [
     const authenticated = page.waitForResponse((r) =>
       r.url().includes("passkey-login?action=auth-finish"),
     );
-    await page.getByRole("button", { name: "تسجيل الدخول بالبصمة" }).click();
+    await page.getByRole("button", { name: "الدخول بمفتاح الدخول" }).click();
     expect((await (await authenticated).json()).success).toBe(true);
     await expect(page).toHaveURL(new RegExp(destination), { timeout: 30000 });
     if (role === "student" && process.env.E2E_ATTENDANCE_CODE) {
@@ -161,7 +161,7 @@ test("@passkey a stored credential creates a fresh session after site-data delet
     await expect(page).toHaveURL(/login/, { timeout: 30000 });
     await page.goto("/login");
     const initialLogin = page.waitForResponse((r) => r.url().includes("action=auth-finish"));
-    await page.getByRole("button", { name: "تسجيل الدخول بالبصمة" }).click();
+    await page.getByRole("button", { name: "الدخول بمفتاح الدخول" }).click();
     expect((await (await initialLogin).json()).success).toBe(true);
     await expect(page).toHaveURL(/owner-dashboard/, { timeout: 30000 });
     await page.goto("/profile");
@@ -196,7 +196,7 @@ test("@passkey a stored credential creates a fresh session after site-data delet
       ),
     ).toEqual([]);
     const authenticated = newPage.waitForResponse((r) => r.url().includes("action=auth-finish"));
-    await newPage.getByRole("button", { name: "تسجيل الدخول بالبصمة" }).click();
+    await newPage.getByRole("button", { name: "الدخول بمفتاح الدخول" }).click();
     expect((await (await authenticated).json()).success).toBe(true);
     await expect(newPage).toHaveURL(/owner-dashboard/, { timeout: 30000 });
   } finally {

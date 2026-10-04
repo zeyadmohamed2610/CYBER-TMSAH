@@ -9,7 +9,12 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
-import { getDashboardRoute } from "../utils/dashboardRoutes";
+import {
+  getLoginDestination,
+  hasStoredSession,
+  normalizeDigits,
+  normalizeIdentifier,
+} from "../utils/loginInput";
 type Tab = "login" | "join";
 export type JoinRole = "doctor" | "ta" | "student";
 
@@ -58,18 +63,41 @@ function recordAttempt(success: boolean): void {
 export function useLoginForm(initialTab?: Tab) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, role, loading } = useAuth();
+  const { user, role, loading, sessionExpired } = useAuth();
   const { t, lang, isRTL, interpolate } = useLang();
   const resolvedInitialTab: Tab = initialTab ?? (location.pathname === "/join" ? "join" : "login");
   const [tab, setTab] = useState<Tab>(resolvedInitialTab);
   const [lockRemaining, setLockRemaining] = useState(getLockoutRemaining);
   const passRef = useRef<HTMLInputElement>(null);
+  const identifierRef = useRef<HTMLInputElement>(null);
+  const requestPending = useRef(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMeState] = useState(false);
+  const setRememberMe = (checked: boolean) => {
+    setRememberMeState(checked);
+    if (!checked) {
+      try {
+        localStorage.removeItem(REMEMBER_KEY);
+      } catch {
+        /* Storage may be disabled. */
+      }
+    }
+  };
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginErrorField, setLoginErrorField] = useState<"identifier" | "password" | null>(null);
+  const reportLoginError = (message: string, field: "identifier" | "password" | null = null) => {
+    setLoginError(message);
+    setLoginErrorField(field);
+    if (field === "identifier") identifierRef.current?.focus();
+    if (field === "password") passRef.current?.focus();
+  };
+  const clearLoginError = () => {
+    setLoginError(null);
+    setLoginErrorField(null);
+  };
   const [loginLoading, setLoginLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [isCapsLockOn, setIsCapsLockOn] = useState(false);
@@ -109,11 +137,13 @@ export function useLoginForm(initialTab?: Tab) {
     return () => clearInterval(id);
   }, [lockRemaining]);
   const handleTabChange = (newTab: Tab) => {
+    if (requestPending.current) return;
+    clearLoginError();
     setTab(newTab);
     if (newTab === "join") {
-      navigate("/join", { replace: true });
+      navigate("/join", { replace: true, state: location.state });
     } else {
-      navigate("/login", { replace: true });
+      navigate("/login", { replace: true, state: location.state });
     }
   };
   useEffect(() => {
@@ -126,25 +156,33 @@ export function useLoginForm(initialTab?: Tab) {
     }
   }, [initialTab, location.pathname]);
   useEffect(() => {
-    if (!loading && user && role) navigate(getDashboardRoute(role), { replace: true });
-  }, [loading, navigate, role, user]);
-  const hasSavedSession =
-    typeof window !== "undefined" &&
-    Object.keys(localStorage).some((k) => k.startsWith("sb-") && k.endsWith("-auth-token"));
+    if (!loading && user && role)
+      navigate(getLoginDestination(role, location.state?.from), { replace: true });
+  }, [loading, navigate, role, user, location.state]);
+  const hasSavedSession = hasStoredSession();
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (lockRemaining > 0) return;
+    if (lockRemaining > 0 || requestPending.current) return;
+    requestPending.current = true;
     setLoginLoading(true);
     try {
-      setLoginError(null);
-      const raw = username.trim().replace(/^@+/, "");
+      clearLoginError();
+      const raw = normalizeIdentifier(username);
+      if (!raw) {
+        reportLoginError("أدخل اسم المستخدم أو البريد أو الرقم القومي.", "identifier");
+        return;
+      }
       if (/^\d+$/.test(raw) && raw.length !== 14) {
-        setLoginError(
-          lang === "ar"
-            ? "يجب أن يتكون الرقم القومي من 14 رقماً (National ID must be 14 digits)"
-            : "National ID must be 14 digits",
-        );
+        reportLoginError("يجب أن يتكون الرقم القومي من 14 رقمًا.", "identifier");
 
+        return;
+      }
+      if (!password) {
+        reportLoginError("أدخل كلمة المرور.", "password");
+        return;
+      }
+      if (!navigator.onLine) {
+        reportLoginError("الاتصال بالإنترنت مقطوع. احتفظنا ببياناتك؛ اتصل ثم أعد المحاولة.");
         return;
       }
       const response = await supabase.functions.invoke("account-login", {
@@ -164,18 +202,29 @@ export function useLoginForm(initialTab?: Tab) {
         authenticated?.error ||
         (!authData?.user ? new Error("Invalid credentials") : null);
       if (error) {
+        const status =
+          response.error?.context instanceof Response ? response.error.context.status : undefined;
+        if (
+          response.error?.name === "FunctionsFetchError" ||
+          response.error?.name === "FunctionsRelayError" ||
+          authenticated?.error?.name === "AuthRetryableFetchError" ||
+          (status && status >= 500)
+        ) {
+          reportLoginError("تعذر الاتصال بخدمة الدخول. احتفظنا ببياناتك؛ أعد المحاولة بعد قليل.");
+          return;
+        }
+        if (status === 429) {
+          reportLoginError("طلبات كثيرة خلال وقت قصير. انتظر قليلًا ثم أعد المحاولة.");
+          return;
+        }
         recordAttempt(false);
         setLockRemaining(getLockoutRemaining());
-        await recordAuditLog({
+        void recordAuditLog({
           action: "login_failed",
           identifier: raw,
           notes: "authentication_rejected",
         });
-        setLoginError(
-          lang === "ar"
-            ? "بيانات الدخول غير صحيحة أو تعذر الدخول الآن. أعد المحاولة."
-            : "Invalid sign-in details or sign-in unavailable. Try again.",
-        );
+        reportLoginError("بيانات الدخول غير صحيحة. راجع الحساب وكلمة المرور.", "password");
         return;
       }
       try {
@@ -206,7 +255,7 @@ export function useLoginForm(initialTab?: Tab) {
               ? (profile.role as ValidRole)
               : null;
             if (safeRole) {
-              navigate(getDashboardRoute(safeRole), { replace: true });
+              navigate(getLoginDestination(safeRole, location.state?.from), { replace: true });
 
               return;
             }
@@ -217,22 +266,20 @@ export function useLoginForm(initialTab?: Tab) {
       }
       navigate("/attendance", { replace: true });
     } catch {
-      setLoginError(
-        lang === "ar"
-          ? "تعذر إكمال تسجيل الدخول. أعد المحاولة."
-          : "Could not sign in. Please try again.",
-      );
+      reportLoginError("تعذر الاتصال بخدمة الدخول. احتفظنا ببياناتك؛ أعد المحاولة.");
     } finally {
       setLoginLoading(false);
+      requestPending.current = false;
     }
   };
   const handlePasskeyLogin = async () => {
-    if (lockRemaining > 0) return;
+    if (lockRemaining > 0 || requestPending.current) return;
+    requestPending.current = true;
     setPasskeyLoading(true);
-    setLoginError(null);
+    clearLoginError();
 
     try {
-      const result = await authenticateWithPasskey(username.trim());
+      const result = await authenticateWithPasskey(normalizeIdentifier(username));
 
       if (result.cancelled) {
         setPasskeyLoading(false);
@@ -240,11 +287,11 @@ export function useLoginForm(initialTab?: Tab) {
       }
 
       if (!result.success || !result.user) {
-        setLoginError(
+        reportLoginError(
           getFriendlyErrorMessage(
             result.error ||
               (lang === "ar"
-                ? "تعذر التحقق من البصمة. تأكد من تفعيل البصمة في حسابك أولاً."
+                ? "تعذر التحقق من مفتاح الدخول. تأكد من إضافته إلى حسابك أولًا."
                 : "Could not verify your fingerprint. Add your device in your profile first."),
             lang === "ar"
               ? "تعذر إكمال الطلب. أعد المحاولة."
@@ -257,7 +304,7 @@ export function useLoginForm(initialTab?: Tab) {
 
       playCyberSuccessChime();
       toast.success(
-        lang === "ar" ? "✅ تم التحقق من البصمة بنجاح!" : "✅ Fingerprint verified successfully!",
+        lang === "ar" ? "تم التحقق من مفتاح الدخول بنجاح." : "Passkey verified successfully!",
       );
       recordAttempt(true);
 
@@ -271,7 +318,7 @@ export function useLoginForm(initialTab?: Tab) {
           ? (result.role as ValidRole)
           : null;
         if (safeRole) {
-          navigate(getDashboardRoute(safeRole), { replace: true });
+          navigate(getLoginDestination(safeRole, location.state?.from), { replace: true });
           setPasskeyLoading(false);
           return;
         }
@@ -280,17 +327,20 @@ export function useLoginForm(initialTab?: Tab) {
       navigate("/attendance", { replace: true });
     } catch (err: unknown) {
       console.error("Passkey login unexpected error:", err);
-      setLoginError(
+      reportLoginError(
         lang === "ar"
-          ? "حدث خطأ غير متوقع أثناء فحص البصمة."
+          ? "تعذر التحقق من مفتاح الدخول. أعد المحاولة."
           : "Could not verify your fingerprint. Please try again.",
       );
     } finally {
       setPasskeyLoading(false);
+      requestPending.current = false;
     }
   };
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (requestPending.current) return;
+    requestPending.current = true;
     setJoinLoading(true);
     try {
       const trimmedName = fullName.trim();
@@ -359,7 +409,7 @@ export function useLoginForm(initialTab?: Tab) {
       }
       let trimmedNID: string | null = null;
       if (joinRole === "student") {
-        trimmedNID = joinNationalId.trim();
+        trimmedNID = normalizeDigits(joinNationalId.trim());
         if (!trimmedNID || !/^\d{14}$/.test(trimmedNID)) {
           toast.error(
             lang === "ar"
@@ -370,7 +420,7 @@ export function useLoginForm(initialTab?: Tab) {
           return;
         }
 
-        if (!academicYear || !/^(?:[1-9]|1[0-5])$/.test(sectionNumber)) {
+        if (!academicYear || !/^(?:[1-9]|1[0-5])$/.test(normalizeDigits(sectionNumber))) {
           toast.error(
             lang === "ar"
               ? "اختر الفرقة الدراسية ورقم السكشن من 1 إلى 15."
@@ -389,7 +439,8 @@ export function useLoginForm(initialTab?: Tab) {
         department: joinRole === "doctor" || joinRole === "ta" ? joinDepartments[0] : department,
         departments: joinRole === "doctor" || joinRole === "ta" ? joinDepartments : [department],
         academic_year: joinRole === "student" ? academicYear : null,
-        section_number: joinRole === "student" && sectionNumber ? parseInt(sectionNumber) : null,
+        section_number:
+          joinRole === "student" && sectionNumber ? parseInt(normalizeDigits(sectionNumber)) : null,
         national_id: joinRole === "student" ? trimmedNID : null,
       });
       if (error) {
@@ -419,6 +470,7 @@ export function useLoginForm(initialTab?: Tab) {
       );
     } finally {
       setJoinLoading(false);
+      requestPending.current = false;
     }
   };
   const lockMins = Math.ceil(lockRemaining / 60_000);
@@ -434,6 +486,11 @@ export function useLoginForm(initialTab?: Tab) {
     tab,
     lockRemaining,
     passRef,
+    identifierRef,
+    loginErrorField,
+    clearLoginError,
+    authBusy: loginLoading || passkeyLoading || joinLoading,
+    sessionExpired: sessionExpired || location.state?.sessionExpired === true,
     username,
     setUsername,
     password,

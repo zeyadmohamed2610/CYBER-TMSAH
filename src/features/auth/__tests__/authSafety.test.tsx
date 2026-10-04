@@ -2,12 +2,21 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { AuthProvider, useAuth } from "../context/AuthContext";
-const mocks = vi.hoisted(() => ({ getSession: vi.fn(), maybeSingle: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  getSession: vi.fn(),
+  maybeSingle: vi.fn(),
+  signOut: vi.fn(),
+  onChange: vi.fn(),
+}));
 vi.mock("@/shared/api/supabaseClient", () => ({
   supabase: {
     auth: {
       getSession: mocks.getSession,
-      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: vi.fn() } } }),
+      signOut: mocks.signOut,
+      onAuthStateChange: (callback: unknown) => {
+        mocks.onChange(callback);
+        return { data: { subscription: { unsubscribe: vi.fn() } } };
+      },
     },
     from: () => ({ select: () => ({ eq: () => ({ maybeSingle: mocks.maybeSingle }) }) }),
   },
@@ -15,7 +24,9 @@ vi.mock("@/shared/api/supabaseClient", () => ({
 
 let root: Root;
 let container: HTMLDivElement;
+let auth: ReturnType<typeof useAuth>;
 function Probe() {
+  auth = useAuth();
   const { role, loading } = useAuth();
   return <div>{loading ? "loading" : (role ?? "none")}</div>;
 }
@@ -28,6 +39,44 @@ beforeEach(() => {
   document.body.appendChild(container);
   root = createRoot(container);
   mocks.maybeSingle.mockResolvedValue({ data: null, error: new Error("profile unavailable") });
+});
+
+it("explains expiration when an established session is signed out unexpectedly", async () => {
+  mocks.getSession.mockResolvedValue({
+    data: { session: { user: { id: "student" } } },
+    error: null,
+  });
+  mocks.maybeSingle.mockResolvedValue({ data: { role: "student" }, error: null });
+  await act(async () =>
+    root.render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>,
+    ),
+  );
+  const callback = mocks.onChange.mock.calls[0]![0];
+  await act(async () => callback("SIGNED_OUT", null));
+  expect(auth.user).toBeNull();
+  expect(auth.sessionExpired).toBe(true);
+});
+
+it("does not describe intentional logout or a first visit as expiration", async () => {
+  mocks.getSession.mockResolvedValue({ data: { session: null }, error: null });
+  await act(async () =>
+    root.render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>,
+    ),
+  );
+  expect(auth.sessionExpired).toBe(false);
+  const callback = mocks.onChange.mock.calls[0]![0];
+  mocks.signOut.mockImplementation(async () => {
+    callback("SIGNED_OUT", null);
+    return { error: null };
+  });
+  await act(async () => auth.signOut());
+  expect(auth.sessionExpired).toBe(false);
 });
 afterEach(async () => {
   await act(async () => root.unmount());

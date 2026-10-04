@@ -3,11 +3,24 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { useLoginForm } from "../hooks/useLoginForm";
 
-const mocks = vi.hoisted(() => ({ invoke: vi.fn(), insert: vi.fn(), navigate: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  invoke: vi.fn(),
+  insert: vi.fn(),
+  navigate: vi.fn(),
+  passkey: vi.fn(),
+  setSession: vi.fn(),
+  getSession: vi.fn(),
+  maybeSingle: vi.fn(),
+  from: undefined as string | undefined,
+}));
 vi.mock("@/shared/api/supabaseClient", () => ({
   supabase: {
     functions: { invoke: mocks.invoke },
-    from: () => ({ insert: mocks.insert }),
+    auth: { setSession: mocks.setSession, getSession: mocks.getSession },
+    from: () => ({
+      insert: mocks.insert,
+      select: () => ({ eq: () => ({ maybeSingle: mocks.maybeSingle }) }),
+    }),
   },
 }));
 vi.mock("../context/AuthContext", () => ({
@@ -15,11 +28,12 @@ vi.mock("../context/AuthContext", () => ({
 }));
 vi.mock("react-router-dom", () => ({
   useNavigate: () => mocks.navigate,
-  useLocation: () => ({ pathname: "/login" }),
+  useLocation: () => ({ pathname: "/login", state: { from: mocks.from } }),
 }));
 vi.mock("@/shared/i18n", () => ({
-  useLang: () => ({ t: { auth: { requestSent: "Sent" } }, lang: "en", isRTL: false }),
+  useLang: () => ({ t: { auth: { requestSent: "تم الإرسال" } }, lang: "ar", isRTL: true }),
 }));
+vi.mock("@/features/auth/passkeys", () => ({ authenticateWithPasskey: mocks.passkey }));
 vi.mock("@/features/auth/services/auditService", () => ({ recordAuditLog: vi.fn() }));
 vi.mock("@/features/auth/utils/cyberAudio", () => ({ playCyberSuccessChime: vi.fn() }));
 vi.mock("@/shared/lib/pwnedPassword", () => ({
@@ -39,6 +53,7 @@ beforeEach(async () => {
   vi.clearAllMocks();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   localStorage.clear();
+  mocks.from = undefined;
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
@@ -57,7 +72,8 @@ it("releases password login after a transport rejection and allows retry", async
   });
   await act(async () => model.handleLogin(submit()));
   expect(model.loginLoading).toBe(false);
-  expect(model.loginError).toBe("Could not sign in. Please try again.");
+  expect(model.loginError).toContain("تعذر الاتصال");
+  expect(localStorage.getItem("attendance_login_attempts")).toBeNull();
   expect(mocks.navigate).not.toHaveBeenCalled();
   await act(async () => model.handleLogin(submit()));
   expect(mocks.invoke).toHaveBeenCalledTimes(2);
@@ -68,7 +84,8 @@ it("rejects an invalid numeric identifier before submitting authentication", asy
   await act(async () => model.handleLogin(submit()));
   expect(mocks.invoke).not.toHaveBeenCalled();
   expect(model.loginLoading).toBe(false);
-  expect(model.loginError).toContain("14 digits");
+  expect(model.loginError).toContain("14");
+  expect(model.loginErrorField).toBe("identifier");
 });
 
 it("releases join submission after a transport rejection without claiming success", async () => {
@@ -85,4 +102,76 @@ it("releases join submission after a transport rejection without claiming succes
   expect(mocks.insert).toHaveBeenCalledTimes(1);
   expect(model.joinLoading).toBe(false);
   expect(model.joinSuccess).toBe(false);
+});
+
+it("blocks simultaneous password and passkey attempts, including the same tick", async () => {
+  let resolve!: (value: unknown) => void;
+  mocks.invoke.mockImplementation(
+    () =>
+      new Promise((done) => {
+        resolve = done;
+      }),
+  );
+  await act(async () => {
+    model.setUsername("student_name");
+    model.setPassword("Example!123");
+  });
+  let flight!: Promise<void>;
+  await act(async () => {
+    flight = model.handleLogin(submit());
+    void model.handleLogin(submit());
+    await model.handlePasskeyLogin();
+  });
+  expect(model.authBusy).toBe(true);
+  expect(mocks.invoke).toHaveBeenCalledTimes(1);
+  expect(mocks.passkey).not.toHaveBeenCalled();
+  await act(async () => {
+    resolve({ data: null, error: { name: "FunctionsFetchError" } });
+    await flight;
+  });
+  expect(model.authBusy).toBe(false);
+});
+
+it("releases cancellation without showing an error or counting a failed attempt", async () => {
+  mocks.passkey.mockResolvedValue({ cancelled: true });
+  await act(async () => model.handlePasskeyLogin());
+  expect(model.loginError).toBeNull();
+  expect(model.authBusy).toBe(false);
+  expect(localStorage.getItem("attendance_login_attempts")).toBeNull();
+});
+
+it("normalizes national ID digits without modifying or trimming the password", async () => {
+  mocks.invoke.mockResolvedValue({ data: null, error: { name: "FunctionsFetchError" } });
+  await act(async () => {
+    model.setUsername("٣٠٤١٠٢٦٠٢٠١٩١١");
+    model.setPassword("  pasted Password!  ");
+  });
+  await act(async () => model.handleLogin(submit()));
+  expect(mocks.invoke).toHaveBeenCalledWith("account-login", {
+    body: { identifier: "30410260201911", password: "  pasted Password!  " },
+  });
+  expect(model.password).toBe("  pasted Password!  ");
+});
+
+it("removes a remembered identifier immediately when unchecked", async () => {
+  localStorage.setItem("cyber_remember_user", "old_name");
+  await act(async () => model.setRememberMe(false));
+  expect(localStorage.getItem("cyber_remember_user")).toBeNull();
+});
+
+it("returns to a protected deep link after resolving the trusted role", async () => {
+  mocks.from = "/owner-dashboard?tab=users#pending";
+  mocks.invoke.mockResolvedValue({
+    data: { session: { access_token: "test", refresh_token: "test" } },
+    error: null,
+  });
+  mocks.setSession.mockResolvedValue({ data: { user: { id: "owner" } }, error: null });
+  mocks.getSession.mockResolvedValue({ data: { session: {} } });
+  mocks.maybeSingle.mockResolvedValue({ data: { role: "owner" } });
+  await act(async () => {
+    model.setUsername("owner_name");
+    model.setPassword("Example!123");
+  });
+  await act(async () => model.handleLogin(submit()));
+  expect(mocks.navigate).toHaveBeenCalledWith(mocks.from, { replace: true });
 });
