@@ -1,9 +1,10 @@
 import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { buildTimetable } from "../utils/timetable";
 import type { AcademicEntry, AcademicSchedule } from "../utils/academicSchedule";
 import { ScheduleMatrix } from "./ScheduleMatrix";
-import { ScheduleWeekView } from "./ScheduleWeekView";
+import { ScheduleTimetable } from "./ScheduleTimetable";
 
 const entry = (section: number, changes: Partial<AcademicEntry> = {}): AcademicEntry => ({
   section,
@@ -57,7 +58,7 @@ function Harness({
   const [view, setView] = useState(student ? "mine" : "all");
   const [cycle, setCycle] = useState(initialCycle);
   return (
-    <ScheduleWeekView
+    <ScheduleTimetable
       data={data}
       student={student}
       section={1}
@@ -114,20 +115,13 @@ describe("Student timetable display", () => {
       ),
     ).toHaveLength(0);
   });
-  it("collapses the full week, opens a chosen day and finds its correct venue", async () => {
+  it("renders the week immediately as a matrix and searches its resolved venues", async () => {
     await act(async () =>
       root.render(<Harness data={schedule([entry(1), entry(1, { day_index: 0, room: "A02" })])} />),
     );
-    await click("الجدول الأسبوعي");
-    expect(container.querySelectorAll("article")).toHaveLength(0);
-    const day = [...container.querySelectorAll("details")].find((element) =>
-      element.querySelector("summary")?.textContent?.includes("الجمعة"),
-    )!;
-    await act(async () => {
-      day.open = true;
-      day.dispatchEvent(new Event("toggle"));
-    });
-    expect(container.querySelectorAll("article")).toHaveLength(1);
+    expect(container.querySelectorAll("table")).toHaveLength(1);
+    expect(container.querySelectorAll("article")).toHaveLength(2);
+    expect(container.textContent).not.toMatch(/عرض القائمة|عرض المصفوفة|عرض تفاصيل الأسبوع/);
     const input = container.querySelector<HTMLInputElement>("#schedule-search")!;
     await act(async () => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "a02");
@@ -142,12 +136,12 @@ describe("Student timetable display", () => {
   it("opens own section, switches to all sections and combines a shared lecture without duplicate cards", async () => {
     await act(async () => root.render(<Harness data={schedule([entry(1), entry(2)])} />));
     expect(container.querySelectorAll("article")).toHaveLength(1);
-    expect(container.textContent).toContain("جدول اليوم · سكشن 1");
+    expect(container.textContent).toContain("الجدول الأسبوعي · سكشن 1");
     await click("كل السكاشن");
     expect(container.querySelectorAll("article")).toHaveLength(1);
-    expect(container.textContent).toContain("السكاشن: 1، 2");
-    expect(container.textContent).toContain("2:00 م");
-    expect(container.textContent).toContain("3:00 م");
+    expect(container.textContent).toContain("سكاشن 1، 2");
+    expect(container.textContent).toContain("14:00");
+    expect(container.textContent).toContain("15:00");
     expect(container.textContent).not.toMatch(/Excel|week1|week2|استيراد/);
   });
   it("shows the correct alternating place and keeps different venues separate", async () => {
@@ -174,10 +168,7 @@ describe("Student timetable display", () => {
     await act(async () =>
       root.render(<Harness data={schedule([entry(1), entry(1, { day_index: 6 })])} />),
     );
-    const saturday = [...container.querySelectorAll("button")].find((button) =>
-      button.textContent?.startsWith("السبت"),
-    )!;
-    await act(async () => saturday.click());
+    await click("السبت · إجازة");
     expect(container.textContent).toContain("إجازة حسب الجدول المعتمد.");
     expect(container.querySelectorAll("article")).toHaveLength(0);
   });
@@ -195,13 +186,15 @@ describe("schedule matrix", () => {
     await act(async () =>
       root.render(
         <ScheduleMatrix
-          data={schedule(entries)}
-          entries={entries}
-          days={[5, 6, 0, 1, 2, 3, 4]}
+          model={buildTimetable({
+            data: schedule(entries),
+            student: false,
+            section: 1,
+            allSections: true,
+            date: "2026-10-02",
+            previewCycle: "2",
+          })}
           selectedDay={selectedDay}
-          section={1}
-          allSections
-          cycleForDay={() => 2}
         />,
       ),
     );
@@ -238,6 +231,41 @@ describe("schedule matrix", () => {
     } finally {
       Object.defineProperty(window, "innerWidth", { value: width, configurable: true });
     }
+  });
+  it("edits and deletes the exact underlying entry from its matrix cell", async () => {
+    const source = entry(1, { id: "lesson-id" });
+    const onEdit = vi.fn(),
+      onDelete = vi.fn();
+    const model = buildTimetable({
+      data: schedule([source]),
+      student: false,
+      section: 1,
+      allSections: false,
+      date: "2026-10-02",
+      previewCycle: "1",
+    });
+    await act(async () =>
+      root.render(
+        <ScheduleMatrix model={model} selectedDay={null} onEdit={onEdit} onDelete={onDelete} />,
+      ),
+    );
+    await click("تعديل");
+    await click("حذف");
+    expect(onEdit).toHaveBeenCalledWith(source);
+    expect(onDelete).toHaveBeenCalledWith(source);
+    await act(async () =>
+      root.render(
+        <ScheduleMatrix
+          model={model}
+          selectedDay={null}
+          busy
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />,
+      ),
+    );
+    await click("حذف");
+    expect(onDelete).toHaveBeenCalledTimes(1);
   });
   it("preserves empty periods between lessons", async () => {
     await renderMatrix([entry(1, { period: 1 }), entry(1, { period: 3 })]);

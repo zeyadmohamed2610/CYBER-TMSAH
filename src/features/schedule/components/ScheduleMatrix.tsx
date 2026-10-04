@@ -1,38 +1,19 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/shared/components/ui/button";
-import {
-  ACADEMIC_DAYS,
-  scheduleRoom,
-  slotTime,
-  type AcademicEntry,
-  type AcademicSchedule,
-} from "../utils/academicSchedule";
+import { ACADEMIC_DAYS, slotTime, type AcademicEntry } from "../utils/academicSchedule";
+import type { Timetable } from "../utils/timetable";
+import { cn } from "@/shared/lib/utils";
 
 interface Props {
-  data: AcademicSchedule;
-  entries: AcademicEntry[];
-  days: number[];
+  model: Timetable;
   selectedDay: number | null;
-  section: number;
-  allSections: boolean;
-  cycleForDay: (day: number) => number;
+  busy?: boolean;
+  onEdit?: (entry: AcademicEntry) => void;
+  onDelete?: (entry: AcademicEntry) => void;
 }
-export function ScheduleMatrix({
-  data,
-  entries,
-  days,
-  selectedDay,
-  section,
-  allSections,
-  cycleForDay,
-}: Props) {
+export function ScheduleMatrix({ model, selectedDay, busy, onEdit, onDelete }: Props) {
+  const { data, days, section, allSections } = model;
   const [small, setSmall] = useState(() => window.innerWidth < 640);
-  const [page, setPage] = useState(0);
-  useEffect(() => {
-    const resize = () => setSmall(window.innerWidth < 640);
-    window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
-  }, []);
   const columns =
     selectedDay === null
       ? days
@@ -40,18 +21,26 @@ export function ScheduleMatrix({
         ? Array.from({ length: 15 }, (_, i) => i + 1)
         : [section];
   const size = small ? (selectedDay === null ? 2 : 3) : selectedDay === null ? 7 : 5;
-  const count = Math.ceil(columns.length / size);
-  const currentPage = Math.min(page, count - 1);
+  const count = Math.max(1, Math.ceil(columns.length / size));
+  const initialDay =
+    model.search && model.lessons.length
+      ? days.find((day) => model.lessons.some((lesson) => lesson.day === day))!
+      : new Date(`${model.date}T00:00:00Z`).getUTCDay();
+  const initialPage =
+    selectedDay === null ? Math.floor(Math.max(0, days.indexOf(initialDay)) / size) : 0;
+  const [page, setPage] = useState(initialPage);
+  useEffect(() => {
+    const resize = () => setSmall(window.innerWidth < 640);
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, []);
+  const currentPage = Math.max(0, Math.min(page, count - 1));
   const visible = columns.slice(currentPage * size, (currentPage + 1) * size);
-  const available = entries.filter(
-    (e) =>
-      !data.settings.days_off.includes(e.day_index) &&
-      (selectedDay === null || e.day_index === selectedDay),
+  const available = model.lessons.filter(
+    (lesson) => selectedDay === null || lesson.day === selectedDay,
   );
-  const last = Math.max(1, ...available.map((e) => e.period));
-  const first = Math.min(last, ...available.map((e) => e.period));
-  const subject = (e: AcademicEntry) =>
-    e.subject_name ?? data.subjects.find((s) => s.id === e.subject_id)?.name ?? "مادة غير محددة";
+  const last = Math.max(1, ...available.map((lesson) => lesson.period));
+  const first = Math.min(last, ...available.map((lesson) => lesson.period));
   return (
     <section aria-label="مصفوفة الجدول" className="space-y-2">
       {count > 1 && (
@@ -95,6 +84,11 @@ export function ScheduleMatrix({
             {visible.map((column) => (
               <th scope="col" key={column} className="border border-border bg-muted/40 p-2">
                 {selectedDay === null ? ACADEMIC_DAYS[column] : `سكشن ${column}`}
+                {selectedDay === null && (
+                  <span className="mt-1 block text-[10px] font-normal text-muted-foreground">
+                    {model.dateForDay(column)} · أسبوع {model.cycleForDay(column)}
+                  </span>
+                )}
               </th>
             ))}
           </tr>
@@ -109,54 +103,84 @@ export function ScheduleMatrix({
               </th>
               {visible.map((column) => {
                 const day = selectedDay ?? column;
-                const lessons = available.filter(
-                  (e) =>
-                    e.day_index === day &&
-                    e.period === period &&
-                    (selectedDay === null || e.section === column),
+                const lessons = model.getCell(
+                  day,
+                  period,
+                  selectedDay === null ? undefined : column,
                 );
-                const groups = new Map<string, AcademicEntry[]>();
-                for (const e of lessons) {
-                  const key = JSON.stringify([
-                    e.subject_id,
-                    e.kind,
-                    e.instructor_name,
-                    e.instructor_id,
-                    scheduleRoom(e, cycleForDay(day)),
-                  ]);
-                  groups.set(key, [...(groups.get(key) ?? []), e]);
-                }
                 return (
                   <td key={column} className="border border-border p-1 align-top">
                     {data.settings.days_off.includes(day) ? (
                       <span className="text-muted-foreground">إجازة</span>
-                    ) : groups.size ? (
-                      [...groups.entries()].map(([key, group]) => {
-                        const e = group[0]!;
-                        const room = scheduleRoom(e, cycleForDay(day));
+                    ) : lessons.length ? (
+                      lessons.map((lesson) => {
                         return (
-                          <div
-                            key={key}
-                            className="rounded-lg border border-primary/20 bg-primary/5 p-2 [&+div]:mt-1"
+                          <article
+                            key={lesson.key}
+                            data-timing={lesson.timing}
+                            className={cn(
+                              "min-w-0 break-words rounded-lg border p-2 [&+article]:mt-1",
+                              lesson.timing === "current"
+                                ? "border-emerald-400/40 bg-emerald-500/10"
+                                : lesson.next
+                                  ? "border-primary/40 bg-primary/10"
+                                  : "border-primary/20 bg-primary/5",
+                            )}
                           >
                             <p className="font-bold leading-relaxed" dir="auto">
-                              {subject(e)}
+                              {lesson.subject}
                             </p>
                             <p className="mt-1 text-primary">
-                              {e.kind === "lecture" ? "محاضرة" : "سكشن"} ·{" "}
-                              {/^O\.[LN]$/i.test(room) ? "مسجلة" : room || "المكان غير محدد"}
+                              {lesson.kind === "lecture" ? "محاضرة" : "سكشن"} ·{" "}
+                              {lesson.remote ? "مسجلة" : lesson.room || "المكان غير محدد"}
                             </p>
                             <p className="mt-1 text-muted-foreground" dir="auto">
-                              {e.instructor_name || "المحاضر غير محدد"}
+                              {lesson.instructor || "المحاضر غير محدد"}
                             </p>
                             {selectedDay === null && allSections && (
                               <p className="mt-1 text-muted-foreground">
-                                {new Set(group.map((item) => item.section)).size === 15
+                                {lesson.sections.length === 15
                                   ? "كل السكاشن"
-                                  : `سكاشن ${[...new Set(group.map((item) => item.section))].sort((a, b) => a - b).join("، ")}`}
+                                  : `سكاشن ${lesson.sections.join("، ")}`}
                               </p>
                             )}
-                          </div>
+                            {lesson.timing === "current" && (
+                              <span className="text-xs font-semibold text-emerald-300">الآن</span>
+                            )}
+                            {lesson.next && (
+                              <span className="text-xs font-semibold text-primary">القادمة</span>
+                            )}
+                            {lesson.timing === "finished" && (
+                              <span className="text-xs text-muted-foreground">انتهى موعدها</span>
+                            )}
+                            {(onEdit || onDelete) && lesson.entry.id && (
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {onEdit && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={busy}
+                                    aria-label={`تعديل حصة ${lesson.subject}`}
+                                    onClick={() => onEdit(lesson.entry)}
+                                  >
+                                    تعديل
+                                  </Button>
+                                )}
+                                {onDelete && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={busy}
+                                    className="text-destructive"
+                                    aria-label={`حذف حصة ${lesson.subject}`}
+                                    onClick={() => onDelete(lesson.entry)}
+                                  >
+                                    حذف
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </article>
                         );
                       })
                     ) : (
@@ -172,7 +196,13 @@ export function ScheduleMatrix({
         </tbody>
       </table>
       {!available.length && (
-        <p className="text-sm text-muted-foreground">لا توجد حصص في العرض المختار.</p>
+        <p role="status" className="text-sm text-muted-foreground">
+          {selectedDay !== null && data.settings.days_off.includes(selectedDay)
+            ? "إجازة حسب الجدول المعتمد."
+            : model.search
+              ? "لا توجد مواعيد مطابقة للبحث في العرض المختار."
+              : "لا توجد حصص في العرض المختار."}
+        </p>
       )}
     </section>
   );

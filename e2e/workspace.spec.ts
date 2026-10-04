@@ -37,11 +37,13 @@ for (const [role, path] of [
       await expect(
         page.getByRole("heading", { name: "الجدول والامتحانات", exact: true }),
       ).toBeVisible();
-      await page.getByRole("button", { name: "الجدول الأسبوعي", exact: true }).click();
+      await page.getByRole("combobox", { name: "أيام المصفوفة", exact: true }).selectOption("week");
       await expect(
-        page.getByRole("button", { name: "عرض تفاصيل الأسبوع", exact: true }),
+        page.getByRole("table", { name: "مصفوفة الأسبوع حسب الوقت واليوم", exact: true }),
       ).toBeVisible();
-      await page.getByRole("button", { name: "الجدول اليومي", exact: true }).click();
+      await page
+        .getByRole("combobox", { name: "أيام المصفوفة", exact: true })
+        .selectOption("today");
       if (role === "doctor" || role === "ta") {
         const departments = page.getByRole("combobox", { name: "قسم الجدول", exact: true });
         await expect(departments.locator("option")).toHaveCount(2);

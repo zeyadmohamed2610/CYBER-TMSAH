@@ -1,3 +1,5 @@
+import { ScheduleMatrix } from "./ScheduleMatrix";
+import { buildTimetable } from "../utils/timetable";
 import { useState } from "react";
 import { DEPARTMENTS } from "@/features/academics/types";
 import { scheduleService } from "@/features/schedule/services/scheduleService";
@@ -5,15 +7,9 @@ import { ScheduleSkeleton } from "@/shared/components/Loading";
 import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
-import { Calendar, Download, Plus, Trash2, Upload } from "lucide-react";
+import { Calendar, Download, Plus, Upload } from "lucide-react";
 import { toast } from "sonner";
-import {
-  ACADEMIC_DAYS,
-  academicWeek,
-  scheduleCycle,
-  scheduleRoom,
-  slotTime,
-} from "../utils/academicSchedule";
+import { academicWeek, scheduleCycle } from "../utils/academicSchedule";
 import { emptyEntry, selectClass } from "../utils/scheduleEditor";
 import { readScheduleWorkbook } from "../utils/scheduleWorkbook";
 import { AcademicCycleControl } from "./AcademicCycleControl";
@@ -21,7 +17,7 @@ import { AcademicScheduleSettings } from "./AcademicScheduleSettings";
 import { ExamSchedulePanel } from "./ExamSchedulePanel";
 import { ScheduleEntryEditor } from "./ScheduleEntryEditor";
 import { ScheduleImportReview } from "./ScheduleImportReview";
-import { ScheduleWeekView } from "./ScheduleWeekView";
+import { ScheduleTimetable } from "./ScheduleTimetable";
 import { ScheduleVersions } from "./ScheduleVersions";
 
 import { useAcademicSchedule } from "../hooks/useAcademicSchedule";
@@ -132,10 +128,6 @@ export function AcademicSchedulePanel() {
   const editableSettings = settingsDraft ?? settings;
   const actualWeek = academicWeek(date, settings.semester_start, settings.week_start_day);
   const cycle = previewCycle === "auto" ? scheduleCycle(date, data) : Number(previewCycle);
-  const visibleEntries = data.entries.filter(
-    (e) => e.section === section && (!e.week_pattern || e.week_pattern === cycle),
-  );
-  const days = Array.from({ length: 7 }, (_, i) => (settings.week_start_day + i) % 7);
 
   return (
     <div dir="rtl" className="space-y-3">
@@ -210,7 +202,7 @@ export function AcademicSchedulePanel() {
         </div>
         <TabsContent value="schedule" className="space-y-3">
           {!management && (
-            <ScheduleWeekView
+            <ScheduleTimetable
               data={data}
               student={role === "student"}
               section={section}
@@ -368,82 +360,27 @@ export function AcademicSchedulePanel() {
                   </select>
                 </div>
               </div>
-              {days
-                .filter((day) => visibleEntries.some((entry) => entry.day_index === day))
-                .map((day) => (
-                  <section key={day} className="rounded-xl border p-4">
-                    <h3 className="font-bold mb-3">
-                      {ACADEMIC_DAYS[day]}{" "}
-                      {settings.days_off.includes(day) && (
-                        <span className="text-amber-400 text-sm">· إجازة</span>
-                      )}
-                    </h3>
-                    {settings.days_off.includes(day) ? (
-                      <p className="text-sm text-muted-foreground">
-                        هذا اليوم إجازة حسب الإعدادات. تبقى حصصه محفوظة لتظهر عند إلغاء الإجازة.
-                      </p>
-                    ) : (
-                      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                        {visibleEntries
-                          .filter((e) => e.day_index === day)
-                          .map((e) => (
-                            <article
-                              key={e.id}
-                              className="rounded-lg bg-muted/40 p-3 text-sm space-y-1"
-                            >
-                              <p className="font-bold">{e.subject_name}</p>
-                              <p>
-                                {e.kind === "lecture" ? "محاضرة" : "سكشن"} · سكشن {e.section} ·{" "}
-                                {slotTime(settings.start_time, e.period)}–
-                                {slotTime(settings.start_time, e.period + 1)}
-                              </p>
-                              <p>{e.instructor_name || "المحاضر لم يُحدد"}</p>
-                              <p>
-                                {cycle
-                                  ? scheduleRoom(e, cycle) || "المكان لم يُحدد"
-                                  : e.uses_rotation
-                                    ? `الأسبوع ${e.lab_week}: ${e.lab_room} · الأسبوع الآخر: ${e.hall_room}`
-                                    : e.room || "المكان لم يُحدد"}
-                              </p>
-                              {/^O\.[LN]$/i.test(e.room.trim()) && (
-                                <p>محاضرة مسجلة تُنشر في مجموعة الطلاب</p>
-                              )}
-                              {e.week_pattern > 0 && <p>الأسبوع {e.week_pattern} فقط</p>}
-                              {data.can_edit && (
-                                <div className="flex gap-2 pt-2">
-                                  <Button size="sm" variant="outline" onClick={() => setDraft(e)}>
-                                    تعديل
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    disabled={busy}
-                                    aria-label={`حذف حصة ${e.subject_name}`}
-                                    onClick={() =>
-                                      void run(async () => {
-                                        const result = await scheduleService.deleteEntry({
-                                          p_id: e.id,
-                                        });
-                                        if (result.error) throw new Error(result.error.message);
-                                        await load();
-                                      })
-                                    }
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              )}
-                            </article>
-                          ))}
-                        {!visibleEntries.some((e) => e.day_index === day) && (
-                          <p className="text-sm text-muted-foreground">
-                            لا توجد حصص مضافة لهذا اليوم.
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </section>
-                ))}
+              <ScheduleMatrix
+                key={`manage:${data.department}:${data.academic_year}:${section}:${previewCycle}:${date}`}
+                model={buildTimetable({
+                  data,
+                  student: false,
+                  section,
+                  allSections: false,
+                  date,
+                  previewCycle,
+                })}
+                selectedDay={null}
+                busy={busy}
+                onEdit={setDraft}
+                onDelete={(entry) =>
+                  void run(async () => {
+                    const result = await scheduleService.deleteEntry({ p_id: entry.id });
+                    if (result.error) throw new Error(result.error.message);
+                    await load();
+                  })
+                }
+              />
             </>
           )}
         </TabsContent>
