@@ -71,7 +71,7 @@ export function SignInForm({ model }: { model: ReturnType<typeof useLoginForm> }
           clearLoginError();
         }}
         placeholder={
-          lang === "ar" ? "مثال: ahmed" : "Enter username, email, or 14-digit National ID"
+          lang === "ar" ? "example: ahmed" : "Enter username, email, or 14-digit National ID"
         }
         required
         autoComplete="username"

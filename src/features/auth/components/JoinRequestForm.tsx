@@ -49,7 +49,7 @@ export function JoinRequestForm({ model }: { model: ReturnType<typeof useLoginFo
         label={lang === "ar" ? "الاسم ثلاثي بالإنجليزية" : "Full Name (English - 3 parts)"}
         value={fullName}
         onChange={setFullName}
-        placeholder={lang === "ar" ? "مثال: Ahmed Mohamed Ali" : "e.g. John David Smith"}
+        placeholder={lang === "ar" ? "example: Ahmed Mohamed Ali" : "e.g. John David Smith"}
         required
         dir="ltr"
         icon={<Icon.User />}
@@ -74,7 +74,7 @@ export function JoinRequestForm({ model }: { model: ReturnType<typeof useLoginFo
         label={lang === "ar" ? "اسم المستخدم (فريد)" : "Unique Username"}
         value={joinUsername}
         onChange={setJoinUsername}
-        placeholder={lang === "ar" ? "مثال: ahmed_ali" : "e.g. ahmed_ali"}
+        placeholder={lang === "ar" ? "example: ahmed_ali" : "e.g. ahmed_ali"}
         required
         dir="ltr"
         autoComplete="username"
@@ -296,7 +296,7 @@ export function JoinRequestForm({ model }: { model: ReturnType<typeof useLoginFo
               type="number"
               value={sectionNumber}
               onChange={setSectionNumber}
-              placeholder={lang === "ar" ? "مثال: 1" : "e.g. 1"}
+              placeholder={lang === "ar" ? "example: 1" : "e.g. 1"}
               required
               icon={<Icon.Hash />}
             />
