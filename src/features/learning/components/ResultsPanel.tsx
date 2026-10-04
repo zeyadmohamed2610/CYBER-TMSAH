@@ -57,9 +57,11 @@ async function exportResults(rows: Result[]) {
 export function ResultsPanel({
   rows,
   run,
+  student = false,
 }: {
   rows: Result[];
   run: (operation: () => Promise<unknown>) => void;
+  student?: boolean;
 }) {
   const [search, setSearch] = useState("");
   const [subject, setSubject] = useState("");
@@ -78,24 +80,28 @@ export function ResultsPanel({
     <section className="space-y-4">
       <div className="flex flex-wrap justify-between gap-3">
         <h3 className="font-bold">الحضور والغياب حسب المادة</h3>
-        <Button
-          variant="outline"
-          disabled={!filtered.length}
-          onClick={() => run(() => exportResults(filtered))}
-        >
-          تصدير Excel
-        </Button>
+        {!student && (
+          <Button
+            variant="outline"
+            disabled={!filtered.length}
+            onClick={() => run(() => exportResults(filtered))}
+          >
+            تصدير Excel
+          </Button>
+        )}
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
-        <Input
-          aria-label="البحث في النتائج"
-          placeholder="ابحث باسم الطالب أو السكشن"
-          value={search}
-          onChange={(event) => {
-            setSearch(event.target.value);
-            setLimit(100);
-          }}
-        />
+        {!student && (
+          <Input
+            aria-label="البحث في النتائج"
+            placeholder="ابحث باسم الطالب أو السكشن"
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setLimit(100);
+            }}
+          />
+        )}
         <select
           aria-label="مادة النتائج"
           className="rounded-lg border bg-background p-2"
@@ -127,7 +133,8 @@ export function ResultsPanel({
         </select>
       </div>
       <p className="text-sm text-muted-foreground">
-        {filtered.length} نتيجة · {new Set(filtered.map((row) => row.student_id)).size} طالبًا ·{" "}
+        {filtered.length} نتيجة ·{" "}
+        {!student && `${new Set(filtered.map((row) => row.student_id)).size} طالبًا · `}
         {filtered.reduce((sum, row) => sum + row.absent, 0)} حالة غياب
       </p>
       {!rows.length && (
@@ -144,9 +151,11 @@ export function ResultsPanel({
             <h4 className="font-bold">
               {row.subject_name} · {row.kind === "lecture" ? "محاضرات" : "سكاشن"}
             </h4>
-            <p className="text-sm">
-              {row.student_snapshot.name} · السكشن {row.student_snapshot.section ?? "—"}
-            </p>
+            {!student && (
+              <p className="text-sm">
+                {row.student_snapshot.name} · السكشن {row.student_snapshot.section ?? "—"}
+              </p>
+            )}
             <dl className="grid grid-cols-3 gap-2 text-center">
               <div>
                 <dt className="text-xs text-muted-foreground">حضور</dt>

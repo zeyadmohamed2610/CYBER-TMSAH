@@ -5,6 +5,7 @@ import { Input } from "@/shared/components/ui/input";
 import { getFriendlyErrorMessage } from "@/shared/lib/academicCopy";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { escapeReportCsvCell } from "../../reports/utils/reportEncoding";
+import { useAuth } from "@/features/auth/context/AuthContext";
 
 interface RegisterRow {
   unit_id: string;
@@ -18,6 +19,8 @@ interface RegisterRow {
 const labels = { present: "حاضر", absent: "غائب", pending: "التسجيل مفتوح", excused: "عذر مقبول" };
 const pageSize = 100;
 export function AttendanceRegisterPanel({ lectureId }: { lectureId?: string }) {
+  const { role } = useAuth();
+  const student = role === "student";
   const [rows, setRows] = useState<RegisterRow[]>([]);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -80,14 +83,16 @@ export function AttendanceRegisterPanel({ lectureId }: { lectureId?: string }) {
   return (
     <Card dir="rtl">
       <CardHeader>
-        <CardTitle>كشف الحضور والغياب</CardTitle>
+        <CardTitle>{student ? "سجل حضوري وغيابي" : "كشف الحضور والغياب"}</CardTitle>
         <p className="text-sm text-muted-foreground">
-          يُحسب الطالب مرة واحدة لكل محاضرة. يظهر الغياب بعد انتهاء وقت التسجيل.
+          {student
+            ? "سجلك الشخصي للمحاضرات والسكاشن. يظهر الغياب بعد انتهاء وقت التسجيل."
+            : "يُحسب الطالب مرة واحدة لكل حصة. يظهر الغياب بعد انتهاء وقت التسجيل."}
         </p>
         <div className="flex flex-wrap gap-2">
           <Input
             aria-label="بحث في كشف الحضور والغياب"
-            placeholder="اسم الطالب أو المادة أو المحاضرة"
+            placeholder={student ? "المادة أو الحصة" : "اسم الطالب أو المادة أو الحصة"}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-sm"
@@ -108,9 +113,11 @@ export function AttendanceRegisterPanel({ lectureId }: { lectureId?: string }) {
           <Button variant="outline" disabled={loading} onClick={() => void load()}>
             تحديث
           </Button>
-          <Button variant="outline" disabled={!filtered.length} onClick={exportPage}>
-            تصدير الصفحة المعروضة
-          </Button>
+          {!student && (
+            <Button variant="outline" disabled={!filtered.length} onClick={exportPage}>
+              تصدير الصفحة المعروضة
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -130,14 +137,16 @@ export function AttendanceRegisterPanel({ lectureId }: { lectureId?: string }) {
                   className="rounded-xl border p-4 space-y-2"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-2">
-                    <h3 className="font-bold break-words">{row.student_name}</h3>
+                    <h3 className="font-bold break-words">
+                      {student ? row.subject_name : row.student_name}
+                    </h3>
                     <span
                       className={`text-sm ${row.status === "absent" ? "text-destructive" : "text-primary"}`}
                     >
                       {labels[row.status]}
                     </span>
                   </div>
-                  <p className="text-sm break-words">{row.subject_name}</p>
+                  {!student && <p className="text-sm break-words">{row.subject_name}</p>}
                   <p className="text-sm text-muted-foreground break-words">{row.title}</p>
                   <time className="block text-xs text-muted-foreground" dateTime={row.lecture_date}>
                     {row.lecture_date}
@@ -148,17 +157,19 @@ export function AttendanceRegisterPanel({ lectureId }: { lectureId?: string }) {
             <table className="hidden sm:table w-full text-sm">
               <thead>
                 <tr>
-                  {["الطالب", "المادة والمحاضرة", "التاريخ", "الحالة"].map((label) => (
-                    <th key={label} className="p-2 text-right">
-                      {label}
-                    </th>
-                  ))}
+                  {[...(!student ? ["الطالب"] : []), "المادة والحصة", "التاريخ", "الحالة"].map(
+                    (label) => (
+                      <th key={label} className="p-2 text-right">
+                        {label}
+                      </th>
+                    ),
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((row) => (
                   <tr key={`${row.unit_id}:${row.student_id}`} className="border-t">
-                    <td className="p-2">{row.student_name}</td>
+                    {!student && <td className="p-2">{row.student_name}</td>}
                     <td className="p-2">
                       {row.subject_name}
                       <br />

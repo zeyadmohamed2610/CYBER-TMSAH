@@ -1,3 +1,4 @@
+import { dashboardTabs } from "@/features/auth/utils/roleAccess";
 import { useDashboardTab } from "../hooks/useDashboardTab";
 import { LearningCenter } from "../../learning/components/LearningCenter";
 import { getFriendlyErrorMessage } from "@/shared/lib/academicCopy";
@@ -6,7 +7,6 @@ import { AttendanceRegisterPanel } from "../../attendance/components/AttendanceR
 import { AcademicSchedulePanel } from "../../schedule/components/AcademicSchedulePanel";
 // Updated: Modern tabbed dashboard for Student role
 import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
-import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import {
   Card,
@@ -21,45 +21,32 @@ import {
   BarChart3,
   BookOpen,
   CalendarDays,
-  CheckCircle2,
   ClipboardCheck,
   CloudOff,
   History,
   QrCode,
   RefreshCw,
-  ShieldCheck,
-  Smartphone,
   Sparkles,
   TrendingUp,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { DataTable, type DataTableColumn } from "../../../shared/components/DataTable";
 import { ActiveSessionsBar } from "../../attendance/components/ActiveSessionsBar";
 import { AttendanceSubmissionForm } from "../../attendance/components/AttendanceSubmissionForm";
 import { SubjectProgressCard } from "../../attendance/components/SubjectProgressCard";
 import { useAttendanceDashboardData } from "../../attendance/hooks/useAttendanceDashboardData";
-import { useDeviceLock } from "../../attendance/hooks/useDeviceLock";
+import { StudentAttendanceAccess } from "../../attendance/components/StudentAttendanceAccess";
+import { GpsProvider } from "../../attendance/context/GpsContext";
 import { offlineAttendanceService } from "../../attendance/services/offlineAttendanceService";
-import { type AttendanceRecord } from "../../attendance/types";
-import { formatDateTime } from "../../attendance/utils/rotatingSession";
 import { useAuth } from "../../auth/context/AuthContext";
 import { DashboardWorkspace } from "../components/DashboardWorkspace";
 import { StatCard } from "../components/StatCard";
 
 export const StudentDashboard = () => {
-  const { fullName, user } = useAuth();
-  const { loading, error, metrics, records, sessions, subjectMetrics, refetch } =
+  const { fullName } = useAuth();
+  const { error, metrics, sessions, subjectMetrics, refetch } =
     useAttendanceDashboardData("student");
-  const { isDeviceLocked, lockLabel } = useDeviceLock(user?.id);
 
-  const [activeTab, setActiveTab] = useDashboardTab("checkin", [
-    "checkin",
-    "records",
-    "schedule",
-    "analytics",
-    "device",
-    "followup",
-  ]);
+  const [activeTab, setActiveTab] = useDashboardTab("checkin", dashboardTabs("student"));
   const [pendingCount, setPendingCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
 
@@ -88,43 +75,6 @@ export const StudentDashboard = () => {
   const topSubjects = useMemo(
     () => [...subjectMetrics].sort((a, b) => b.attendanceRate - a.attendanceRate).slice(0, 3),
     [subjectMetrics],
-  );
-  const columns = useMemo<DataTableColumn<AttendanceRecord>[]>(
-    () => [
-      {
-        id: "subject",
-        header: "المادة الدراسية",
-        cell: (row) => (
-          <div className="flex items-center gap-2">
-            <BookOpen className="h-4 w-4 text-primary shrink-0" />
-            <span className="font-semibold text-foreground">{row.subjectName || "—"}</span>
-          </div>
-        ),
-      },
-      {
-        id: "submitted-at",
-        header: "وقت التسجيل",
-        cell: (row) => (
-          <span className="text-sm text-muted-foreground" dir="ltr">
-            {formatDateTime(row.submittedAt)}
-          </span>
-        ),
-      },
-      {
-        id: "status",
-        header: "الحالة",
-        cell: () => (
-          <Badge
-            variant="outline"
-            className="border-emerald-500/40 bg-emerald-500/10 text-emerald-400 gap-1"
-          >
-            <CheckCircle2 className="h-3 w-3" />
-            حاضر
-          </Badge>
-        ),
-      },
-    ],
-    [],
   );
 
   return (
@@ -156,24 +106,6 @@ export const StudentDashboard = () => {
               {pendingCount} معلق (تحديث)
             </Button>
           )}
-
-          {isDeviceLocked ? (
-            <Badge
-              variant="outline"
-              className="gap-1.5 border-emerald-500/40 bg-emerald-500/10 text-emerald-400 py-1 px-3"
-            >
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-              جهاز موثق ({lockLabel || "هذا الجهاز"})
-            </Badge>
-          ) : (
-            <Badge
-              variant="outline"
-              className="gap-1.5 border-amber-500/40 bg-amber-500/10 text-amber-400 py-1 px-3"
-            >
-              <Smartphone className="h-3.5 w-3.5" />
-              غير مقفول
-            </Badge>
-          )}
         </div>
       </div>
 
@@ -198,7 +130,6 @@ export const StudentDashboard = () => {
             label: "سجل حضوري",
             shortLabel: "السجل",
             icon: History,
-            badge: records.length,
           },
           {
             value: "schedule",
@@ -212,8 +143,7 @@ export const StudentDashboard = () => {
             shortLabel: "المواد",
             icon: BarChart3,
           },
-          { value: "followup", label: "متابعة الدراسة", icon: BookOpen },
-          { value: "device", label: "أمان الجهاز", shortLabel: "الجهاز", icon: ShieldCheck },
+          { value: "followup", label: "نتائجي وطلباتي", icon: BookOpen },
         ]}
       >
         <TabsContent aria-label="الجدول والامتحانات" value="schedule">
@@ -225,28 +155,32 @@ export const StudentDashboard = () => {
           value="checkin"
           className="space-y-6 focus-visible:outline-none"
         >
-          {/* Active Sessions Panel */}
-          <div className="rounded-3xl glass-card p-5 sm:p-6 border border-white/10 shadow-lg">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <h2 className="text-lg font-bold flex items-center gap-2">
-                <Activity className="h-5 w-5 text-primary animate-pulse" />
-                الجلسات النشطة الآن
-              </h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => refetch()}
-                className="h-8 px-2 text-xs text-muted-foreground hover:text-white gap-1"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-                تحديث
-              </Button>
+          <StudentAttendanceAccess>
+            {/* Active Sessions Panel */}
+            <div className="rounded-3xl glass-card p-5 sm:p-6 border border-white/10 shadow-lg">
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <h2 className="text-lg font-bold flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-primary animate-pulse" />
+                  الجلسات النشطة الآن
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => refetch()}
+                  className="h-8 px-2 text-xs text-muted-foreground hover:text-white gap-1"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  تحديث
+                </Button>
+              </div>
+              <ActiveSessionsBar />
             </div>
-            <ActiveSessionsBar />
-          </div>
 
-          {/* Submission Form */}
-          <AttendanceSubmissionForm sessions={sessions} onSubmitSuccess={refetch} />
+            {/* Submission Form */}
+            <GpsProvider>
+              <AttendanceSubmissionForm sessions={sessions} onSubmitSuccess={refetch} />
+            </GpsProvider>
+          </StudentAttendanceAccess>
         </TabsContent>
 
         {/* ── TAB 2: Attendance Records ───────────────────────────────────── */}
@@ -256,18 +190,6 @@ export const StudentDashboard = () => {
           className="space-y-4 focus-visible:outline-none"
         >
           <AttendanceRegisterPanel />
-          <DataTable
-            title="سجل الحضور الأكاديمي"
-            caption={
-              loading
-                ? "جارٍ التحميل..."
-                : "يعرض هذا الجدول جميع المحاضرات والسكاشن التي تم إثبات حضورك فيها."
-            }
-            columns={columns}
-            rows={records}
-            getRowId={(row) => row.id}
-            emptyMessage="لا توجد سجلات حضور مسجلة حتى الآن."
-          />
         </TabsContent>
 
         {/* ── TAB 3: Analytics & Progress ─────────────────────────────────── */}
@@ -288,7 +210,7 @@ export const StudentDashboard = () => {
             <StatCard
               title="معدل الغياب"
               value={`${absenceRate.toFixed(1)}%`}
-              description="نسبة الغياب عن المحاضرات"
+              description="نسبة الغياب عن المحاضرات والسكاشن"
               icon={ClipboardCheck}
               colorScheme="default"
             />
@@ -336,77 +258,6 @@ export const StudentDashboard = () => {
           )}
         </TabsContent>
 
-        {/* ── TAB 4: Device & Security ────────────────────────────────────── */}
-        <TabsContent
-          aria-label="أمان الجهاز"
-          value="device"
-          className="space-y-4 focus-visible:outline-none"
-        >
-          <Card className="bg-card/70 border-white/10">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Smartphone className="h-5 w-5 text-primary" />
-                حالة قفل وتوثيق الجهاز
-              </CardTitle>
-              <CardDescription>
-                نظام الحماية يمنع تسجيل الحضور إلا من الجهاز المعتمد والمربوط بحسابك الأكاديمي.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="rounded-xl border border-white/10 bg-background/50 p-4 space-y-1">
-                  <p className="text-xs text-muted-foreground">حالة الجهاز الحالي</p>
-                  <div className="flex items-center gap-2">
-                    {isDeviceLocked ? (
-                      <span className="font-bold text-emerald-400 flex items-center gap-1.5">
-                        <CheckCircle2 className="h-4 w-4" />
-                        موثق ومقترن بنجاح
-                      </span>
-                    ) : (
-                      <span className="font-bold text-amber-400">غير مقترن بعد</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-white/10 bg-background/50 p-4 space-y-1">
-                  <p className="text-xs text-muted-foreground">معرف الجهاز المقترن</p>
-                  <p className="font-mono text-sm text-foreground">{lockLabel || "هذا الجهاز"}</p>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-xs text-muted-foreground leading-relaxed space-y-2">
-                <p className="font-bold text-primary text-sm flex items-center gap-1.5">
-                  <ShieldCheck className="h-4 w-4" />
-                  سياسة الأمان ومنع التلاعب:
-                </p>
-                <ul className="list-disc list-inside space-y-1 marker:text-primary">
-                  <li>نطلب تأكيد جهازك وموقعك للتأكد من وجودك داخل القاعة.</li>
-                  <li>
-                    في حال تغيير هاتفك أو فرمتته، يرجى تقديم طلب للمشرف الأكاديمي أو منسق البرنامج
-                    لإعادة تعيين قفل الجهاز.
-                  </li>
-                  <li>
-                    التسجيلات غير المتصلة بالإنترنت يتم تخزينها بأمان وتتم إرسالها تلقائياً عند عودة
-                    الاتصال.
-                  </li>
-                </ul>
-              </div>
-
-              <div className="pt-2 flex justify-start">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={syncAndRefresh}
-                  disabled={syncing}
-                  className="gap-2 border-white/15 hover:bg-white/5"
-                >
-                  <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-                  {syncing ? "جارٍ التحديث والتحديث..." : "تحديث البيانات فورياً"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
         <TabsContent value="followup" aria-label="متابعة الدراسة">
           <LearningCenter />
         </TabsContent>

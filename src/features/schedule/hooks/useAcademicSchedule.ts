@@ -14,8 +14,9 @@ import { exportScheduleWorkbook, ScheduleImportError } from "../utils/scheduleWo
 import type { UniversityImport } from "../utils/universitySchedule";
 
 export function useAcademicSchedule() {
-  const { role } = useAuth();
+  const { role, department: accountDepartment } = useAuth();
   const [department, setDepartment] = useState("cybersecurity");
+  const scopedDepartment = role === "owner" ? department : accountDepartment;
   const [year, setYear] = useState("");
   const [data, setData] = useState<AcademicSchedule | null>(null);
   const [settingsDraft, setSettingsDraft] = useState<AcademicSettings | null>(null);
@@ -40,7 +41,7 @@ export function useAcademicSchedule() {
     setData(null);
     if ((role === "owner" || role === "coordinator") && !year) return;
     const result = await scheduleService.get({
-      p_department: role === "owner" ? department : null,
+      p_department: role === "owner" ? scopedDepartment : null,
       p_year: role === "student" ? null : year || null,
     });
     if (version !== loadVersion.current) return;
@@ -55,7 +56,7 @@ export function useAcademicSchedule() {
     setSettingsDraft(null);
     if (next.student_section && /^[1-9]$|^1[0-5]$/.test(next.student_section))
       setSection(Number(next.student_section));
-  }, [department, year, role]);
+  }, [scopedDepartment, year, role]);
   useEffect(() => {
     void load();
     setDraft(null);

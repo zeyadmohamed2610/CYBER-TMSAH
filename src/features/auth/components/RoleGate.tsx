@@ -19,8 +19,8 @@ export const RoleGate = ({ allowedRole, children }: RoleGateProps) => {
     return <LoadingScreen />;
   }
 
-  // Redirect to login only when loading is complete and both user and role are definitely absent
-  if (!loading && !user && !role) {
+  // A protected page needs both a signed-in user and a resolved, trusted role.
+  if (!user || !role) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 

@@ -32,6 +32,49 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
+  vi.restoreAllMocks();
+});
+
+it("does not fall back to stale privileged metadata when the account profile no longer exists", async () => {
+  mocks.maybeSingle.mockResolvedValue({ data: null, error: null });
+  mocks.getSession.mockResolvedValue({
+    data: { session: { user: { id: "deleted", app_metadata: { role: "owner" } } } },
+    error: null,
+  });
+  await act(async () =>
+    root.render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>,
+    ),
+  );
+  expect(container.textContent).toBe("none");
+});
+
+it("silently refreshes role changes when the user returns to the page", async () => {
+  vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  mocks.getSession.mockResolvedValue({
+    data: { session: { user: { id: "changed", app_metadata: { role: "doctor" } } } },
+    error: null,
+  });
+  mocks.maybeSingle.mockResolvedValue({
+    data: { role: "doctor", full_name: "Teacher", department: "cybersecurity" },
+    error: null,
+  });
+  await act(async () =>
+    root.render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>,
+    ),
+  );
+  expect(container.textContent).toBe("doctor");
+  mocks.maybeSingle.mockResolvedValue({
+    data: { role: "student", full_name: "Student", department: "cybersecurity" },
+    error: null,
+  });
+  await act(async () => window.dispatchEvent(new Event("focus")));
+  expect(container.textContent).toBe("student");
 });
 
 it("does not grant a role from editable account metadata or browser cache", async () => {

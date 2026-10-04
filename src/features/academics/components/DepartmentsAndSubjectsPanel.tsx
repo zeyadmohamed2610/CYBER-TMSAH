@@ -16,7 +16,7 @@ interface SubjectItem {
 }
 
 export function DepartmentsAndSubjectsPanel() {
-  const { role, user } = useAuth();
+  const { role, user, department: accountDepartment } = useAuth();
   const canEdit = role === "owner" || role === "coordinator";
   const [department, setDepartment] = useState<string | null>(
     role === "owner" ? "cybersecurity" : null,
@@ -47,7 +47,7 @@ export function DepartmentsAndSubjectsPanel() {
     return () => {
       active = false;
     };
-  }, [role, user?.id]);
+  }, [role, user?.id, accountDepartment]);
   const load = useCallback(async () => {
     if (!department) return;
     const version = ++requestVersion.current;
@@ -151,7 +151,11 @@ export function DepartmentsAndSubjectsPanel() {
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2">
             <BookOpen className="h-5 w-5 text-primary" />
-            {canEdit ? "الأقسام والمواد" : "موادي الدراسية"}
+            {canEdit
+              ? "الأقسام والمواد"
+              : role === "student"
+                ? "موادي الدراسية"
+                : "المواد المسندة إليّ"}
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
             {DEPARTMENTS.find((item) => item.id === department)?.nameAr ?? "مواد قسمك الدراسي"}

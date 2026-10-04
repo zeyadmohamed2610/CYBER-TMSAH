@@ -36,7 +36,7 @@ for (const [role, destination] of [
     await expect(page).toHaveURL(new RegExp(destination), { timeout: 30000 });
     if (role === "student") {
       const bind = page.getByRole("button", { name: "قفل هذا الجهاز والمتابعة" });
-      await expect(bind.or(page.getByRole("tab").first())).toBeVisible();
+      await expect(bind.or(page.getByRole("tab").first()).first()).toBeVisible();
       if (await bind.isVisible()) await bind.click();
     }
     await page.goto("/profile", { waitUntil: "domcontentloaded" });
@@ -95,7 +95,7 @@ for (const [role, destination] of [
     await expect(page).toHaveURL(new RegExp(destination), { timeout: 30000 });
     if (role === "student" && process.env.E2E_ATTENDANCE_CODE) {
       const bind = page.getByRole("button", { name: "قفل هذا الجهاز والمتابعة" });
-      await expect(bind.or(page.getByRole("tab").first())).toBeVisible();
+      await expect(bind.or(page.getByRole("tab").first()).first()).toBeVisible();
       if (await bind.isVisible()) await bind.click();
       await page.getByRole("tab", { name: "تسجيل الحضور", exact: true }).click();
       await page.locator("#attendance-code").fill(process.env.E2E_ATTENDANCE_CODE);

@@ -31,7 +31,7 @@ for (const [role, destination] of [
     await expect(page.locator("main, [role=main]").first()).toBeVisible();
     if (role === "student") {
       const bind = page.getByRole("button", { name: "قفل هذا الجهاز والمتابعة" });
-      await expect(bind.or(page.getByRole("tab").first())).toBeVisible();
+      await expect(bind.or(page.getByRole("tab").first()).first()).toBeVisible();
       if (await bind.isVisible()) await bind.click();
       await expect(page.getByRole("tab").first()).toBeVisible();
     }

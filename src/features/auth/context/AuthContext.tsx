@@ -73,7 +73,7 @@ const fetchUserProfile = async (
   }
 
   if (error) throw error;
-  if (!isAppRole(data?.role)) throw new Error("Unable to resolve user role.");
+  if (!isAppRole(data?.role)) throw new Error("ACCOUNT_PROFILE_UNAVAILABLE");
   const typedData = data as {
     role: AppRole;
     full_name: string | null;
@@ -271,6 +271,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       } catch (err) {
         if (!active || currentUserRef.current?.id !== sessionUser.id) return;
+        if (err instanceof Error && err.message === "ACCOUNT_PROFILE_UNAVAILABLE") {
+          roleRef.current = null;
+          setRole(null);
+          return;
+        }
         console.warn("Could not refresh role in background, keeping current cached role:", err);
         // CRITICAL: DO NOT set role to null if a background query fails while app is in use!
         // A saved browser value is not an authority for account permissions.
@@ -378,9 +383,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // ignore
       }
     } catch (error) {
+      if (
+        currentUserRef.current?.id === user.id &&
+        error instanceof Error &&
+        error.message === "ACCOUNT_PROFILE_UNAVAILABLE"
+      ) {
+        roleRef.current = null;
+        setRole(null);
+        return;
+      }
       console.warn("Failed to manually refresh attendance role:", error);
     }
   }, [user]);
+
+  // Refresh permissions silently after an administrator changes a role or department.
+  useEffect(() => {
+    if (!user) return;
+    const refresh = () => {
+      if (document.visibilityState === "visible") void refreshRole();
+    };
+    const timer = setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("online", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("online", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [user, refreshRole]);
 
   const signOut = useCallback(async (): Promise<{ error: string | null }> => {
     const { error } = await supabase.auth.signOut();

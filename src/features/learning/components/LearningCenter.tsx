@@ -12,6 +12,7 @@ import { CasesPanel } from "./CasesPanel";
 import { NotificationsPanel } from "./NotificationsPanel";
 import { ResultsPanel } from "./ResultsPanel";
 import { useSearchParams } from "react-router-dom";
+import { learningTabs } from "@/features/auth/utils/roleAccess";
 
 export function LearningCenter() {
   const { role, department } = useAuth();
@@ -20,7 +21,8 @@ export function LearningCenter() {
   const [data, setData] = useState<Overview | null>(null);
   const [inbox, setInbox] = useState<Inbox | null>(null);
   const [params, setParams] = useSearchParams();
-  const tab = params.get("view") ?? "results";
+  const requestedTab = params.get("view") ?? "results";
+  const tab = learningTabs(role).includes(requestedTab) ? requestedTab : "results";
   const setTab = (value: string) =>
     setParams(
       (previous) => {
@@ -33,6 +35,13 @@ export function LearningCenter() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const manage = role === "owner" || role === "coordinator";
+  useEffect(() => {
+    if (role !== "owner" && department && department !== scope) {
+      setData(null);
+      setScope(department);
+      setTerm(null);
+    }
+  }, [role, department, scope]);
   const refresh = useCallback(async () => {
     const [overview, messages] = await Promise.all([loadOverview(scope, term), loadInbox()]);
     setData(overview);
@@ -150,7 +159,9 @@ export function LearningCenter() {
       </nav>
       {busy && !data && <LoadingScreen message="جارٍ تحميل المتابعة..." />}
       <fieldset disabled={busy} className="min-w-0 space-y-4">
-        {data && tab === "results" && <ResultsPanel rows={data.results} run={run} />}
+        {data && tab === "results" && (
+          <ResultsPanel rows={data.results} run={run} student={role === "student"} />
+        )}
         {data && tab === "cases" && (
           <CasesPanel data={data} student={role === "student"} run={run} />
         )}
