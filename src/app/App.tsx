@@ -35,6 +35,7 @@ const AttendanceTAPage = lazy(() => import("../features/dashboards/pages/Attenda
 const AttendancePage = lazy(() => import("../features/dashboards/pages/AttendancePage"));
 const ProfilePage = lazy(() => import("../features/accounts/pages/ProfilePage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const About = lazy(() => import("./pages/About"));
 
 const AppWrapper = ({ children }: { children: React.ReactNode }) => {
   usePerformanceMonitoring();
@@ -74,6 +75,7 @@ const App = () => (
                           <Route path="/" element={<LoginPage />} />
                           <Route path="/login" element={<LoginPage />} />
                           <Route path="/join" element={<LoginPage initialTab="join" />} />
+                          <Route path="/about" element={<About />} />
                           <Route path="/reset-password" element={<ResetPasswordPage />} />
 
                           {/* ── Direct Role Dashboards (Clean URLs without /attendance) ── */}

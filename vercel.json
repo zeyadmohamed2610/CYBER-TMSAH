@@ -14,6 +14,7 @@
   "rewrites": [
     { "source": "/login", "destination": "/login/index.html" },
     { "source": "/join", "destination": "/join/index.html" },
+    { "source": "/about", "destination": "/about/index.html" },
     { "source": "/reset-password", "destination": "/reset-password/index.html" },
     { "source": "/api/:path*", "destination": "/api/:path*" },
     { "source": "/sitemap.xml", "destination": "/sitemap.xml" },
@@ -28,9 +29,17 @@
     { "source": "/placeholder.svg", "destination": "/placeholder.svg" },
     { "source": "/assets/:match*", "destination": "/assets/:match*" },
     { "source": "/brand/:match*", "destination": "/brand/:match*" },
-    { "source": "/:match*", "destination": "/index.html" }
+    {
+      "source": "/:page(owner-dashboard|coordinator-dashboard|doctor-dashboard|ta-dashboard|student-panel|profile|attendance|schedule)",
+      "destination": "/index.html"
+    },
+    { "source": "/attendance/:match*", "destination": "/index.html" }
   ],
   "headers": [
+    {
+      "source": "/404.html",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }]
+    },
     {
       "source": "/:page(owner-dashboard|doctor-dashboard|ta-dashboard|coordinator-dashboard|student-panel|profile|attendance|reset-password|schedule)",
       "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }]
