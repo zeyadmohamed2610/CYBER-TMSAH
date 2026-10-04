@@ -122,8 +122,30 @@ export function AttendanceRegisterPanel({ lectureId }: { lectureId?: string }) {
         {loading ? (
           <p>جاري تحميل الكشف...</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div>
+            <div className="space-y-3 sm:hidden">
+              {filtered.map((row) => (
+                <article
+                  key={`${row.unit_id}:${row.student_id}`}
+                  className="rounded-xl border p-4 space-y-2"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <h3 className="font-bold break-words">{row.student_name}</h3>
+                    <span
+                      className={`text-sm ${row.status === "absent" ? "text-destructive" : "text-primary"}`}
+                    >
+                      {labels[row.status]}
+                    </span>
+                  </div>
+                  <p className="text-sm break-words">{row.subject_name}</p>
+                  <p className="text-sm text-muted-foreground break-words">{row.title}</p>
+                  <time className="block text-xs text-muted-foreground" dateTime={row.lecture_date}>
+                    {row.lecture_date}
+                  </time>
+                </article>
+              ))}
+            </div>
+            <table className="hidden sm:table w-full text-sm">
               <thead>
                 <tr>
                   {["الطالب", "المادة والمحاضرة", "التاريخ", "الحالة"].map((label) => (
@@ -155,7 +177,7 @@ export function AttendanceRegisterPanel({ lectureId }: { lectureId?: string }) {
             {!filtered.length && <p className="py-4">لا توجد نتائج في هذه الصفحة.</p>}
           </div>
         )}
-        <div className="mt-4 flex items-center gap-3">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           <Button
             variant="outline"
             disabled={page === 0 || loading}

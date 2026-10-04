@@ -62,6 +62,9 @@ export interface DashboardMetrics {
   pendingSubmissions: number;
   completedOpportunities?: number;
   absenceRate?: number;
+  facultyCount?: number;
+  pendingRequests?: number;
+  pendingFixes?: number;
 }
 
 export interface AttendanceTrendPoint {

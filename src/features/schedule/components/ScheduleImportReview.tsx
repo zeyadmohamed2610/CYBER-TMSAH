@@ -1,6 +1,7 @@
 import { scheduleService } from "@/features/schedule/services/scheduleService";
 import { Button } from "@/shared/components/ui/button";
 import { toast } from "sonner";
+import { useState } from "react";
 import { type useAcademicSchedule } from "../hooks/useAcademicSchedule";
 import type { AcademicSchedule } from "../utils/academicSchedule";
 import { ACADEMIC_DAYS, slotTime } from "../utils/academicSchedule";
@@ -17,9 +18,19 @@ export function ScheduleImportReview({
     model;
   const settings = data.settings;
   const changes = scheduleDiff(data.entries, imported);
+  const [visibleCount, setVisibleCount] = useState(50);
   return (
     <div className="rounded-xl border p-4 space-y-3">
       <h3 className="font-bold">معاينة الاستيراد · {imported.length} حصة</h3>
+      {importReview?.file_name && (
+        <p className="text-sm break-words">الملف: {importReview.file_name}</p>
+      )}
+      {importReview?.format === "university" && (
+        <p className="text-sm text-muted-foreground">
+          تمت قراءة {importReview.source_cells} خلية من ورقة {importReview.sheet_name} وتوزيع
+          المواعيد على السكاشن المحددة في الملف.
+        </p>
+      )}
       {importReview?.format === "university" && (
         <p className="text-sm">
           جديدة: {changes.added} · محذوفة: {changes.removed} · معدّلة: {changes.changed} · دون
@@ -42,17 +53,25 @@ export function ScheduleImportReview({
           المسندة للمواد من تعديل الحصة لاحقًا.
         </p>
       )}
-      <div className="max-h-60 overflow-auto text-sm">
-        {imported.slice(0, 50).map((entry, i) => (
+      <div className="max-h-60 overflow-y-auto text-sm break-words">
+        {imported.slice(0, visibleCount).map((entry, i) => (
           <p key={i}>
             سكشن {entry.section} · {ACADEMIC_DAYS[entry.day_index]} ·{" "}
             {slotTime(importReview?.start_time ?? settings.start_time, entry.period)}–
             {slotTime(importReview?.start_time ?? settings.start_time, entry.period + 1)} ·{" "}
             {entry.room} · {data.subjects.find((s) => s.id === entry.subject_id)?.name} ·{" "}
             {entry.week_pattern ? `الأسبوع ${entry.week_pattern}` : "كل أسبوع"}
+            {importReview?.places[i] && (
+              <span className="text-muted-foreground"> · خلية {importReview.places[i]!.cell}</span>
+            )}
           </p>
         ))}
       </div>
+      {visibleCount < imported.length && (
+        <Button variant="outline" onClick={() => setVisibleCount((count) => count + 50)}>
+          عرض المزيد من المواعيد ({visibleCount} من {imported.length})
+        </Button>
+      )}
       <Button
         disabled={busy}
         onClick={() =>

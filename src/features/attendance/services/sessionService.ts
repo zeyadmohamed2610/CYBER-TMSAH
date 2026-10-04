@@ -8,7 +8,6 @@ import {
   updateSessionExpirySchema,
   validateRpcInput,
 } from "@/features/attendance/utils/rpcValidation";
-import { resolveAuthUserId, resolveDbUserProfile } from "@/features/auth/services/currentUser";
 import { type AppRole } from "@/features/auth/types";
 import { fail, ok } from "@/shared/api/result";
 import { supabase } from "@/shared/api/supabaseClient";
@@ -20,54 +19,16 @@ export const sessionService = {
   ): Promise<ApiResponse<SessionSummary[]>> {
     const operation = "sessionService.fetchSessionsByRole";
     try {
-      const sessionSelect =
-        "id, subject_id, rotating_hash, short_code, expires_at, created_at, latitude, longitude, radius_meters, subjects(name)";
-
-      if (role === "owner") {
-        let query = supabase
-          .from("sessions")
-          .select(sessionSelect)
-          .order("created_at", { ascending: false });
-        if (sectionFilter && sectionFilter.length > 0) {
-          query = query.in("section", sectionFilter);
-        }
-        const { data, error } = await query;
-        if (error) throw error;
-        return ok<SessionSummary[]>(((data ?? []) as SessionRow[]).map(mapSessionSummary));
-      }
-
-      // Student: sees ALL active sessions (attends every subject)
-      if (role === "student") {
-        const { data, error } = await supabase
-          .from("sessions")
-          .select(sessionSelect)
-          .gt("expires_at", new Date().toISOString())
-          .order("created_at", { ascending: false });
-        if (error) throw error;
-        return ok<SessionSummary[]>(((data ?? []) as SessionRow[]).map(mapSessionSummary));
-      }
-
-      // Doctor: filter by their assigned subject only
-      const authId = await resolveAuthUserId();
-      if (!authId) throw new Error("Not authenticated.");
-
-      const profile = await resolveDbUserProfile(authId);
-      if (!profile?.subjectId) {
-        return ok<SessionSummary[]>([]);
-      }
-
+      // RLS scopes every role to its department, assigned subjects and eligible sections.
       let query = supabase
         .from("sessions")
-        .select(sessionSelect)
-        .eq("subject_id", profile.subjectId)
+        .select(
+          "id, subject_id, lecture_id, section, rotating_hash, short_code, expires_at, created_at, latitude, longitude, radius_meters, subjects(name)",
+        )
         .order("created_at", { ascending: false });
-
-      if (sectionFilter && sectionFilter.length > 0) {
-        query = query.in("section", sectionFilter);
-      }
-
+      if (role === "student") query = query.gt("expires_at", new Date().toISOString());
+      if (sectionFilter?.length) query = query.in("section", sectionFilter);
       const { data, error } = await query;
-
       if (error) throw error;
       return ok<SessionSummary[]>(((data ?? []) as SessionRow[]).map(mapSessionSummary));
     } catch (error) {

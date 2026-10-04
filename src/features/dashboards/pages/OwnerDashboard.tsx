@@ -1,5 +1,4 @@
 import { LearningCenter } from "../../learning/components/LearningCenter";
-import { supabase } from "@/shared/api/supabaseClient";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
 import { TabsContent } from "@/shared/components/ui/tabs";
 import { getFriendlyErrorMessage } from "@/shared/lib/academicCopy";
@@ -17,7 +16,7 @@ import {
   Users,
   Wrench,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { DepartmentsAndSubjectsPanel } from "../../academics/components/DepartmentsAndSubjectsPanel";
 import { JoinRequestsPanel } from "../../accounts/components/JoinRequestsPanel";
@@ -40,51 +39,17 @@ export const OwnerDashboard = () => {
   const isOwner = role === "owner";
   const isCoordinator = role === "coordinator";
 
-  const { error, metrics } = useAttendanceDashboardData(isOwner ? "owner" : "coordinator");
+  const { error, metrics, ready } = useAttendanceDashboardData(isOwner ? "owner" : "coordinator");
   const [searchParams, setSearchParams] = useSearchParams();
 
   const defaultTab = isOwner ? "requests" : "schedule";
   const requestedTab =
     searchParams.get("tab") || sessionStorage.getItem(`cyber_${role}_active_tab`) || defaultTab;
 
-  const [pendingRequestsCount, setPendingRequestsCount] = useState<number>(0);
-  const [pendingFixesCount, setPendingFixesCount] = useState<number>(0);
-  const [facultyCount, setFacultyCount] = useState<number>(0);
+  const pendingRequestsCount = metrics.pendingRequests ?? 0;
+  const pendingFixesCount = metrics.pendingFixes ?? 0;
+  const facultyCount = metrics.facultyCount ?? 0;
   const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
-
-  useEffect(() => {
-    if (!role) return;
-    let isMounted = true;
-    async function loadAuxCounts() {
-      try {
-        const [reqs, fixes, faculty] = await Promise.all([
-          supabase
-            .from("join_requests")
-            .select("id", { count: "exact", head: true })
-            .eq("status", "pending"),
-          supabase
-            .from("error_reports")
-            .select("id", { count: "exact", head: true })
-            .eq("status", "pending"),
-          supabase
-            .from("users")
-            .select("id", { count: "exact", head: true })
-            .in("role", ["doctor", "ta"]),
-        ]);
-        if (isMounted) {
-          if (typeof reqs.count === "number") setPendingRequestsCount(reqs.count);
-          if (typeof fixes.count === "number") setPendingFixesCount(fixes.count);
-          if (typeof faculty.count === "number") setFacultyCount(faculty.count);
-        }
-      } catch {
-        // ignore auxiliary errors
-      }
-    }
-    loadAuxCounts();
-    return () => {
-      isMounted = false;
-    };
-  }, [role]);
 
   const setActiveTab = (tab: string) => {
     try {
@@ -164,53 +129,54 @@ export const OwnerDashboard = () => {
         </div>
       </div>
 
-      {/* Compact, scrollable summary on phones; full grid on larger screens. */}
+      {/* Every summary remains visible without sideways scrolling. */}
       <div
         role="region"
         aria-label="ملخص المنصة"
-        tabIndex={0}
-        className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary flex overflow-x-auto gap-2 pb-2 sm:grid sm:grid-cols-3 xl:grid-cols-6 sm:gap-3 [&>*]:w-40 [&>*]:min-w-40 [&>*]:shrink-0 sm:[&>*]:w-auto sm:[&>*]:min-w-0"
+        aria-busy={!ready}
+        className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6 sm:gap-3"
       >
         <StatCard
           title="الطلاب"
-          value={metrics.totalStudents}
+          value={ready ? metrics.totalStudents : "—"}
           description="إجمالي المسجلين"
           icon={Users}
           colorScheme="purple"
+          onClick={() => setActiveTab("students")}
         />
         <StatCard
           title="هيئة التدريس"
-          value={facultyCount}
+          value={ready ? facultyCount : "—"}
           description="دكاترة ومعيدين"
           icon={GraduationCap}
           colorScheme="blue"
         />
         <StatCard
           title="الجلسات"
-          value={metrics.totalSessions}
-          description="منذ البداية"
+          value={ready ? metrics.totalSessions : "—"}
+          description="الفصل الحالي"
           icon={BookOpenCheck}
           colorScheme="cyan"
         />
         <StatCard
           title="نشطة الآن"
-          value={metrics.activeSessions}
+          value={ready ? metrics.activeSessions : "—"}
           description="جلسات مباشرة"
           icon={Clock3}
           colorScheme="emerald"
         />
         <StatCard
           title="نسبة الحضور"
-          value={metrics.attendanceRate.toFixed(1) + "%"}
-          description="المعدل التراكمي"
+          value={ready ? metrics.attendanceRate.toFixed(1) + "%" : "—"}
+          description="الحصص المنتهية"
           icon={Activity}
           colorScheme="purple"
         />
         {isOwner ? (
           <StatCard
             title="طلبات معلقة"
-            value={pendingRequestsCount}
-            description="انضمام واستعادة"
+            value={ready ? pendingRequestsCount : "—"}
+            description="طلبات الانضمام"
             icon={Inbox}
             colorScheme={pendingRequestsCount > 0 ? "amber" : "default"}
             badge={pendingRequestsCount > 0 ? pendingRequestsCount : undefined}
@@ -221,7 +187,7 @@ export const OwnerDashboard = () => {
         ) : (
           <StatCard
             title="بلاغات معلقة"
-            value={pendingFixesCount}
+            value={ready ? pendingFixesCount : "—"}
             description="تحتاج مراجعة"
             icon={Wrench}
             colorScheme={pendingFixesCount > 0 ? "rose" : "default"}

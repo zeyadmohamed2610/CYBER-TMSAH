@@ -52,7 +52,6 @@ export function DashboardWorkspace({
     query.addEventListener("change", update);
     return () => query.removeEventListener("change", update);
   }, []);
-  const selected = items.find((i) => i.value === value) ?? items[0];
   const priority = compactMobile
     ? items
     : [...items].sort((a, b) => {
@@ -187,19 +186,8 @@ export function DashboardWorkspace({
       </aside>
       <div className="min-w-0 space-y-4">
         {!desktop && (
-          <div className="lg:hidden rounded-2xl border border-border bg-card p-2">
+          <div className="contents">
             <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="فتح قائمة التنقل"
-                  className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
-                >
-                  <Menu aria-hidden="true" className="h-5 w-5 text-purple-300" />
-                  <span className="min-w-0 flex-1 font-bold text-white">{selected?.label}</span>
-                  <span className="text-xs text-slate-400">القائمة</span>
-                </button>
-              </DialogTrigger>
               <DialogContent
                 dir="rtl"
                 className="inset-y-0 right-0 left-auto top-0 flex h-[100dvh] w-[min(88vw,22rem)] max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-y-0 border-l border-r-0 border-white/10 bg-[#0b1020] p-4 shadow-2xl data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100 [&>button:last-child]:hidden"
@@ -250,16 +238,21 @@ export function DashboardWorkspace({
                       );
                     })}
                   </TabsList>
-                  <button
-                    type="button"
-                    onClick={() => setOpen(true)}
-                    aria-label="المزيد من الصفحات"
-                    aria-expanded={open}
-                    className="flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-semibold text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <Menu aria-hidden="true" className="h-5 w-5" />
-                    <span>المزيد</span>
-                  </button>
+                  <DialogTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="المزيد من الصفحات"
+                      aria-expanded={open}
+                      className={cn(
+                        "flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-semibold text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        !mobileItems.some((item) => item.value === value) &&
+                          "bg-primary/10 text-primary",
+                      )}
+                    >
+                      <Menu aria-hidden="true" className="h-5 w-5" />
+                      <span>المزيد</span>
+                    </button>
+                  </DialogTrigger>
                 </nav>,
                 document.body,
               )}

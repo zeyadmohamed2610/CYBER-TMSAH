@@ -42,11 +42,27 @@ export const DataTable = <T,>({
         <CardTitle className="text-lg sm:text-xl font-bold">{title}</CardTitle>
       </CardHeader>
       <CardContent className="pt-0 px-2 sm:px-6">
+        <div className="space-y-3 sm:hidden" aria-label={title}>
+          {caption && <p className="text-sm text-muted-foreground">{caption}</p>}
+          {!rows.length && <p className="py-6 text-center text-muted-foreground">{emptyMessage}</p>}
+          {rows.map((row, index) => (
+            <dl key={getRowId(row)} className="rounded-xl border bg-background p-4 space-y-3">
+              {columns.map((column) => (
+                <div key={column.id} className="min-w-0 space-y-1">
+                  <dt className="text-xs text-muted-foreground">{column.header}</dt>
+                  <dd className="text-sm break-words [overflow-wrap:anywhere]">
+                    {column.cell(row, index)}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          ))}
+        </div>
         <div
           role="region"
           aria-label={title}
           tabIndex={0}
-          className="w-full overflow-x-auto pb-4 custom-scrollbar scroll-touch"
+          className="hidden w-full sm:block sm:overflow-x-auto pb-4 custom-scrollbar"
         >
           <Table className="whitespace-nowrap sm:whitespace-normal">
             {caption ? <TableCaption>{caption}</TableCaption> : null}

@@ -2,8 +2,8 @@ import { attendanceRecordService } from "@/features/attendance/services/attendan
 import { sessionService } from "@/features/attendance/services/sessionService";
 import { type AppRole } from "@/features/auth/types";
 import { dashboardService } from "@/features/dashboards/services/dashboardService";
-import { supabase } from "@/shared/api/supabaseClient";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useLiveRefresh } from "@/shared/hooks/useLiveRefresh";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   type AttendanceRecord,
   type AttendanceTrendPoint,
@@ -22,6 +22,7 @@ const EMPTY_METRICS: DashboardMetrics = {
 
 export const useAttendanceDashboardData = (role: AppRole, sectionFilter?: string[]) => {
   const [loading, setLoading] = useState(true);
+  const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<DashboardMetrics>(EMPTY_METRICS);
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
@@ -29,33 +30,35 @@ export const useAttendanceDashboardData = (role: AppRole, sectionFilter?: string
   const [trendPoints, setTrendPoints] = useState<AttendanceTrendPoint[]>([]);
   const [subjectMetrics, setSubjectMetrics] = useState<SubjectAttendanceMetric[]>([]);
   const mountedRef = useRef(true);
+  const requestVersion = useRef(0);
+  const sectionKey = JSON.stringify(sectionFilter ?? []);
+  const sections = useMemo(() => JSON.parse(sectionKey) as string[], [sectionKey]);
 
   /** Core fetch — updates state silently (no loading spinner) */
   const fetchData = useCallback(async () => {
-    const [metricsResult, sessionsResult, recordsResult, subjectResult] = await Promise.all([
-      dashboardService.fetchDashboardMetrics(role, sectionFilter),
-      sessionService.fetchSessionsByRole(role, sectionFilter),
-      attendanceRecordService.fetchAttendanceRecords(role, undefined, sectionFilter),
-      dashboardService.fetchSubjectMetrics(role, sectionFilter),
+    const version = ++requestVersion.current;
+    const [summaryResult, sessionsResult, recordsResult] = await Promise.all([
+      dashboardService.fetchDashboardSnapshot(sections),
+      sessionService.fetchSessionsByRole(role, sections),
+      attendanceRecordService.fetchAttendanceRecords(role, undefined, sections),
     ]);
 
-    if (!mountedRef.current) return;
+    if (!mountedRef.current || version !== requestVersion.current) return;
 
-    const fetchedRecords = recordsResult.data ?? [];
-    setMetrics(metricsResult.data ?? EMPTY_METRICS);
-    setSessions(sessionsResult.data ?? []);
-    setRecords(fetchedRecords);
-    setTrendPoints(dashboardService.computeTrendData(fetchedRecords));
-    setSubjectMetrics(subjectResult.data ?? []);
+    if (summaryResult.data) {
+      setMetrics(summaryResult.data.metrics);
+      setSubjectMetrics(summaryResult.data.subjects);
+      setReady(true);
+    }
+    if (sessionsResult.data) setSessions(sessionsResult.data);
+    if (recordsResult.data) {
+      setRecords(recordsResult.data);
+      setTrendPoints(dashboardService.computeTrendData(recordsResult.data));
+    }
 
-    const firstError =
-      metricsResult.error ||
-      sessionsResult.error ||
-      recordsResult.error ||
-      subjectResult.error ||
-      null;
+    const firstError = summaryResult.error || sessionsResult.error || recordsResult.error || null;
     setError(firstError);
-  }, [role, sectionFilter]);
+  }, [role, sections]);
 
   /** Initial fetch with loading spinner */
   const initialFetch = useCallback(async () => {
@@ -66,32 +69,29 @@ export const useAttendanceDashboardData = (role: AppRole, sectionFilter?: string
 
   // Initial load only
   useEffect(() => {
+    const versionRef = requestVersion;
     mountedRef.current = true;
+    setReady(false);
     void initialFetch();
     return () => {
       mountedRef.current = false;
+      versionRef.current++;
     };
   }, [initialFetch]);
 
-  // Realtime subscriptions — silent refresh, NO loading state
-  useEffect(() => {
-    const channel = supabase
-      .channel(`dashboard-${role}-${Date.now()}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "sessions" }, () => {
-        void fetchData();
-      })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "attendance" }, () => {
-        void fetchData();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [fetchData, role]);
+  useLiveRefresh(fetchData, [
+    "users",
+    "user_subjects",
+    "subjects",
+    "lectures",
+    "sessions",
+    "attendance",
+    "error_reports",
+  ]);
 
   return {
     loading,
+    ready,
     error,
     metrics,
     sessions,

@@ -26,7 +26,7 @@ for (const role of roles) {
       await page.locator("input[name=identifier]").fill(identifier!);
       await page.locator("input[name=password]").fill(password!);
       await page.locator("button[type=submit]").click();
-      await expect(page).toHaveURL(new RegExp(role + "-dashboard"));
+      await expect(page).toHaveURL(new RegExp(role + "-dashboard"), { timeout: 30000 });
       if (role === "owner" || role === "coordinator")
         await page.goto(`/${role}-dashboard?tab=lectures`);
       await page

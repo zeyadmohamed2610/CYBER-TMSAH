@@ -16,7 +16,7 @@ import type { UniversityImport } from "../utils/universitySchedule";
 export function useAcademicSchedule() {
   const { role } = useAuth();
   const [department, setDepartment] = useState("cybersecurity");
-  const [year, setYear] = useState("1");
+  const [year, setYear] = useState("");
   const [data, setData] = useState<AcademicSchedule | null>(null);
   const [settingsDraft, setSettingsDraft] = useState<AcademicSettings | null>(null);
   const [error, setError] = useState("");
@@ -38,9 +38,10 @@ export function useAcademicSchedule() {
     const version = ++loadVersion.current;
     setError("");
     setData(null);
+    if ((role === "owner" || role === "coordinator") && !year) return;
     const result = await scheduleService.get({
       p_department: role === "owner" ? department : null,
-      p_year: role === "student" ? null : year,
+      p_year: role === "student" ? null : year || null,
     });
     if (version !== loadVersion.current) return;
     if (result.error) {
@@ -78,14 +79,14 @@ export function useAcademicSchedule() {
     }
   };
   useEffect(() => {
-    if (management) return;
+    if (management || ((role === "owner" || role === "coordinator") && !year)) return;
     let active = true;
     const refresh = async () => {
       const version = loadVersion.current;
       const result = await scheduleService
         .get({
           p_department: role === "owner" ? department : null,
-          p_year: role === "student" ? null : year,
+          p_year: role === "student" ? null : year || null,
         })
         .then(
           (result) => result,
@@ -150,7 +151,10 @@ export function useAcademicSchedule() {
     busy,
     imported,
     department,
-    setDepartment,
+    setDepartment: (value: string) => {
+      setDepartment(value);
+      setYear("");
+    },
     year,
     setYear,
     management,

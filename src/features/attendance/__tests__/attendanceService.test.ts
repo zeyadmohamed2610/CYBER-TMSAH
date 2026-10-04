@@ -68,16 +68,15 @@ describe("attendanceService", () => {
     });
   });
 
-  describe("fetchDashboardMetrics", () => {
+  describe("fetchDashboardSnapshot", () => {
     it("should return error on database failure", async () => {
       const { supabase } = await import("@/shared/api/supabaseClient");
-      (supabase.from as ReturnType<typeof vi.fn>).mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          count: vi.fn().mockResolvedValue({ error: { message: "DB error" } }),
-        }),
-      });
+      vi.mocked(supabase.rpc).mockResolvedValue({
+        data: null,
+        error: { message: "DB error" },
+      } as never);
 
-      const result = await dashboardService.fetchDashboardMetrics("owner");
+      const result = await dashboardService.fetchDashboardSnapshot();
       expect(result.error).toBeTruthy();
       expect(result.data).toBeNull();
     });

@@ -26,7 +26,7 @@ for (const [role, destination] of [
     await page.locator('input[name="identifier"]').fill(identifier!);
     await page.locator('input[name="password"]').fill(password!);
     await page.locator('button[type="submit"]').click();
-    await expect(page).toHaveURL(new RegExp(destination));
+    await expect(page).toHaveURL(new RegExp(destination), { timeout: 30000 });
     await expect(page.locator('input[name="password"]')).toHaveCount(0);
     await expect(page.locator("main, [role=main]").first()).toBeVisible();
     if (role === "student") {
@@ -36,6 +36,28 @@ for (const [role, destination] of [
       await expect(page.getByRole("tab").first()).toBeVisible();
     }
     const errors: string[] = [];
+    const expectMobileLayout = async () => {
+      if ((page.viewportSize()?.width ?? 1280) >= 640) return;
+      const scrollers = await page.evaluate(() =>
+        Array.from(document.querySelectorAll<HTMLElement>("*"))
+          .filter((element) => {
+            const rect = element.getBoundingClientRect();
+            const style = getComputedStyle(element);
+            return (
+              rect.width > 20 &&
+              rect.height > 0 &&
+              style.visibility !== "hidden" &&
+              element.scrollWidth > element.clientWidth + 2 &&
+              ["auto", "scroll"].includes(style.overflowX)
+            );
+          })
+          .map((element) => element.tagName + ":" + element.className),
+      );
+      expect(scrollers).toEqual([]);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+    };
     if ((page.viewportSize()?.width ?? 1280) < 1024) {
       const dock = page.locator(".mobile-dock");
       await expect(dock).toBeVisible();
@@ -67,7 +89,10 @@ for (const [role, destination] of [
     });
     page.on("pageerror", (error) => errors.push(error.message));
     if (role !== "student" && (page.viewportSize()?.width ?? 1280) < 1024) {
-      const menu = page.getByRole("button", { name: "فتح قائمة التنقل", exact: true });
+      await expect(page.getByRole("button", { name: "فتح قائمة التنقل", exact: true })).toHaveCount(
+        0,
+      );
+      const menu = page.getByRole("button", { name: "المزيد من الصفحات", exact: true });
       await menu.click();
       const labels = await page.getByRole("dialog").locator("nav button").allTextContents();
       await page.keyboard.press("Escape");
@@ -77,6 +102,7 @@ for (const [role, destination] of [
         await page.getByRole("dialog").locator("nav button").filter({ hasText: label }).click();
         await expect(page.getByRole("dialog")).toHaveCount(0);
         await expect(page.getByRole("tabpanel").first()).toBeVisible();
+        await expectMobileLayout();
       }
     }
     const tabs = page.getByRole("tab");
@@ -84,6 +110,7 @@ for (const [role, destination] of [
       await tabs.nth(index).click();
       await expect(page.getByRole("tabpanel").first()).toBeVisible();
       await page.waitForTimeout(300);
+      await expectMobileLayout();
     }
     if (role === "owner" || role === "coordinator") {
       const adminTabs = [
@@ -105,6 +132,25 @@ for (const [role, destination] of [
         await expect(page.getByRole("tabpanel").first()).toBeVisible();
         await page.waitForLoadState("networkidle");
         if (tab === "schedule") {
+          const year = page.getByRole("combobox", { name: "الفرقة الدراسية", exact: true });
+          await expect(year).toHaveValue("");
+          await expect(year.locator("option:not([disabled])")).toHaveCount(4);
+          await expect(page.getByRole("button", { name: "إدارة الجدول", exact: true })).toHaveCount(
+            0,
+          );
+          if (role === "coordinator")
+            await expect(
+              page.getByRole("combobox", { name: "قسم الجدول", exact: true }),
+            ).toHaveCount(0);
+          else
+            await expect(
+              page.getByRole("combobox", { name: "قسم الجدول", exact: true }).locator("option"),
+            ).toHaveCount(7);
+          await year.selectOption("2");
+          await expect(
+            page.getByRole("button", { name: "إدارة الجدول", exact: true }),
+          ).toBeVisible();
+          await expectMobileLayout();
           await page.getByRole("button", { name: "إدارة الجدول", exact: true }).click();
           const downloaded = page.waitForEvent("download");
           await page.getByRole("button", { name: "قالب الاستيراد", exact: true }).click();

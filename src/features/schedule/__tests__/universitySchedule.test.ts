@@ -33,6 +33,17 @@ describe("university workbook structure", () => {
     expect(universitySheetYear("الفرقة الثانية")).toBe("2");
     expect(universitySheetYear("1st Year")).toBe("1");
     expect(universitySheetYear("Instructions")).toBeNull();
+    expect(universitySheetYear("Second Year - 2026/2027")).toBe("2");
+    expect(universitySheetYear("First Year / Second Year")).toBeNull();
+  });
+  it("rejects a university heading belonging to a different department", () => {
+    const sheet = grid();
+    sheet.getCell("A1").value = "Cyber-Security Technology / Time Table / Second Year";
+    sheet.getCell("E5").value = "C++\nEng. Amal / A01";
+    expect(() => parseUniversitySchedule(sheet, { ...schedule, department: "ai" })).toThrow(
+      "قسم ملف الجامعة",
+    );
+    expect(parseUniversitySchedule(sheet, schedule).entries).toHaveLength(1);
   });
   it("expands horizontal merges and splits two locations into alternating weeks", () => {
     const sheet = grid();

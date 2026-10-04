@@ -73,7 +73,7 @@ export function UserList({
       </CardHeader>
 
       <div
-        className="flex gap-2 overflow-x-auto scroll-touch p-4"
+        className="grid grid-cols-2 gap-2 p-4 sm:flex sm:flex-wrap"
         role="group"
         aria-label="تصفية المستخدمين حسب الرتبة"
       >
@@ -85,7 +85,7 @@ export function UserList({
             key={item.id}
             variant={filterRole === item.id ? "default" : "outline"}
             aria-pressed={filterRole === item.id}
-            className="min-h-11 shrink-0"
+            className="min-h-11 min-w-0 h-auto whitespace-normal text-start"
             onClick={() => {
               setFilterRole(item.id);
               setEditingId(null);

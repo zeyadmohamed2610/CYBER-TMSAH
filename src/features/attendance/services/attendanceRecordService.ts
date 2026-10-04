@@ -8,7 +8,6 @@ import {
   submitAttendanceSchema,
   validateRpcInput,
 } from "@/features/attendance/utils/rpcValidation";
-import { resolveAuthUserId, resolveDbUserProfile } from "@/features/auth/services/currentUser";
 import { type AppRole } from "@/features/auth/types";
 import { fail, ok } from "@/shared/api/result";
 import { supabase } from "@/shared/api/supabaseClient";
@@ -17,7 +16,7 @@ import { computeFingerprint } from "@/shared/lib/deviceFingerprint";
 import { getPaginationRange } from "@/shared/lib/pagination";
 export const attendanceRecordService = {
   async fetchAttendanceRecords(
-    role: AppRole,
+    _role: AppRole,
     pagination?: { page?: number; pageSize?: number },
     sectionFilter?: string[],
   ): Promise<ApiResponse<AttendanceRecord[]>> {
@@ -30,56 +29,13 @@ export const attendanceRecordService = {
       const attendanceSelect =
         "id, session_id, student_id, created_at, sessions(subject_id, subjects(name)), users!attendance_student_id_fkey(full_name)";
 
-      if (role === "owner") {
-        const { data, error } = await supabase
-          .from("attendance")
-          .select(attendanceSelect)
-          .order("created_at", { ascending: false })
-          .range(from, to);
-        if (error) throw error;
-        const records = ((data ?? []) as unknown as AttendanceRow[]).map(mapAttendanceRecord);
-        return ok<AttendanceRecord[]>(records);
-      }
-
-      const authId = await resolveAuthUserId();
-      if (!authId) throw new Error("Not authenticated.");
-      const profile = await resolveDbUserProfile(authId);
-      if (!profile) return ok<AttendanceRecord[]>([]);
-
-      if (role === "student") {
-        const { data, error } = await supabase
-          .from("attendance")
-          .select(attendanceSelect)
-          .eq("student_id", profile.id)
-          .order("created_at", { ascending: false })
-          .range(from, to);
-        if (error) throw error;
-        return ok<AttendanceRecord[]>(
-          ((data ?? []) as unknown as AttendanceRow[]).map(mapAttendanceRecord),
-        );
-      }
-
-      // Doctor: all attendance for their subject
-      if (!profile.subjectId) return ok<AttendanceRecord[]>([]);
-      const { data: sessionIds, error: sErr } = await supabase
-        .from("sessions")
-        .select("id")
-        .eq("subject_id", profile.subjectId);
-      if (sErr) throw sErr;
-      const ids = (sessionIds ?? []).map((r) => r.id as string);
-      if (ids.length === 0) return ok<AttendanceRecord[]>([]);
-
+      // The attendance policy checks the session and all subject assignments.
       let query = supabase
         .from("attendance")
         .select(attendanceSelect)
-        .in("session_id", ids)
         .order("created_at", { ascending: false })
         .range(from, to);
-
-      if (sectionFilter && sectionFilter.length > 0) {
-        query = query.in("section", sectionFilter);
-      }
-
+      if (sectionFilter?.length) query = query.in("section", sectionFilter);
       const { data, error } = await query;
       if (error) throw error;
       return ok<AttendanceRecord[]>(

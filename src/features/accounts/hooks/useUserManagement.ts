@@ -1,6 +1,7 @@
 import { DEPARTMENTS, type DepartmentInfo } from "@/features/academics/types";
 import { supabase } from "@/shared/api/supabaseClient";
 import { useDebounce } from "@/shared/hooks/useDebounce";
+import { notifyAcademicChange, useLiveRefresh } from "@/shared/hooks/useLiveRefresh";
 import { getFriendlyErrorMessage } from "@/shared/lib/academicCopy";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -188,46 +189,50 @@ export function useUserManagement(initialRole = "all") {
     );
     setUserSubjects((prev) => ({ ...prev, ...results }));
   }, []);
-  const loadUsers = useCallback(async () => {
-    const version = ++loadVersion.current;
-    setLoading(true);
-    try {
-      const collected: UserRecord[] = [];
-      for (let offset = 0; ; offset += 500) {
-        const { data, error } = await supabase
-          .from("users")
-          .select(
-            "id, full_name, username, email, role, national_id, subject_id, department, academic_year, section_number, created_at",
-          )
-          .in(
-            "role",
-            viewerRole === "owner"
-              ? ["coordinator", "doctor", "ta", "student"]
-              : ["doctor", "ta", "student"],
-          )
-          .order("id")
-          .range(offset, offset + 499);
+  const loadUsers = useCallback(
+    async (silent = false) => {
+      const version = ++loadVersion.current;
+      if (!silent) setLoading(true);
+      try {
+        const collected: UserRecord[] = [];
+        for (let offset = 0; ; offset += 500) {
+          const { data, error } = await supabase
+            .from("users")
+            .select(
+              "id, full_name, username, email, role, national_id, subject_id, department, academic_year, section_number, created_at",
+            )
+            .in(
+              "role",
+              viewerRole === "owner"
+                ? ["coordinator", "doctor", "ta", "student"]
+                : ["doctor", "ta", "student"],
+            )
+            .order("id")
+            .range(offset, offset + 499);
+          if (version !== loadVersion.current) return;
+          if (error) throw error;
+          collected.push(...data);
+          if (data.length < 500) break;
+        }
+        const sortedData = collected.sort((a, b) => a.full_name.localeCompare(b.full_name, "ar"));
+        setUsers(sortedData as UserRecord[]);
+        // Load multi-subjects for doctors/TAs
+        void loadUserSubjects(sortedData.filter((u) => u.role !== "student").map((u) => u.id));
+      } catch (err) {
         if (version !== loadVersion.current) return;
-        if (error) throw error;
-        collected.push(...data);
-        if (data.length < 500) break;
+        console.error(err);
+        toast.error("فشل تحميل قائمة المستخدمين");
+        if (!silent) setUsers([]);
+      } finally {
+        if (version === loadVersion.current) setLoading(false);
       }
-      const sortedData = collected.sort((a, b) => a.full_name.localeCompare(b.full_name, "ar"));
-      setUsers(sortedData as UserRecord[]);
-      // Load multi-subjects for doctors/TAs
-      void loadUserSubjects(sortedData.filter((u) => u.role !== "student").map((u) => u.id));
-    } catch (err) {
-      if (version !== loadVersion.current) return;
-      console.error(err);
-      toast.error("فشل تحميل قائمة المستخدمين");
-      setUsers([]);
-    } finally {
-      if (version === loadVersion.current) setLoading(false);
-    }
-  }, [viewerRole, loadUserSubjects]);
+    },
+    [viewerRole, loadUserSubjects],
+  );
   useEffect(() => {
     void loadUsers();
   }, [loadUsers]);
+  useLiveRefresh(() => loadUsers(true), ["users", "user_subjects"]);
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -372,6 +377,7 @@ export function useUserManagement(initialRole = "all") {
           }
           toast.success(`تمت إضافة الحساب بنجاح لـ ${trimmedName} ✓`);
           resetFormAndDraft();
+          notifyAcademicChange();
           void loadUsers();
         }
       } else {
@@ -393,6 +399,7 @@ export function useUserManagement(initialRole = "all") {
         }
         toast.success(`تمت إضافة الحساب بنجاح لـ ${trimmedName} ✓`);
         resetFormAndDraft();
+        notifyAcademicChange();
         void loadUsers();
       }
     } catch (err: unknown) {
@@ -413,6 +420,7 @@ export function useUserManagement(initialRole = "all") {
     } else {
       toast.success(`تم حذف "${name}" بنجاح`);
       setDeleteConfirm(null);
+      notifyAcademicChange();
       void loadUsers();
     }
   };

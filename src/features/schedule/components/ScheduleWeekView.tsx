@@ -255,14 +255,14 @@ export function ScheduleWeekView({
         </details>
       </div>
       <div
-        className="flex gap-2 overflow-x-auto scroll-touch pb-1"
+        className="grid grid-cols-2 gap-2 min-[400px]:grid-cols-3 sm:grid-cols-4 xl:grid-cols-8"
         role="group"
         aria-label="أيام الجدول"
       >
         <Button
           variant={selectedDay === null ? "default" : "outline"}
           aria-pressed={selectedDay === null}
-          className="h-auto min-h-14 shrink-0 whitespace-normal px-4"
+          className="h-auto min-h-14 min-w-0 whitespace-normal px-2"
           onClick={() => setSelectedDay(null)}
         >
           الأسبوع كاملًا
@@ -272,7 +272,7 @@ export function ScheduleWeekView({
             key={day}
             variant={selectedDay === day ? "default" : "outline"}
             aria-pressed={selectedDay === day}
-            className="h-auto min-h-14 min-w-[4.5rem] shrink-0 flex-col gap-1 px-3"
+            className="h-auto min-h-14 min-w-0 flex-col gap-1 px-2 whitespace-normal"
             onClick={() => setSelectedDay(day)}
           >
             <span>{ACADEMIC_DAYS[day]}</span>

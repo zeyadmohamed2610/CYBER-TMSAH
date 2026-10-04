@@ -1,4 +1,5 @@
 import type { Worksheet } from "exceljs";
+import { DEPARTMENTS } from "@/features/academics/types";
 import {
   slotTime,
   validateAcademicEntries,
@@ -10,6 +11,7 @@ export interface UniversityImport {
   entries: AcademicEntry[];
   format: "university" | "template";
   sheet_name: string;
+  file_name?: string;
   warnings: string[];
   start_time?: string;
   source_cells: number;
@@ -52,8 +54,10 @@ export function universitySheetYear(name: string): string | null {
     ["3rdyear", "thirdyear", "الفرقةالثالثة"],
     ["4thyear", "fourthyear", "الفرقةالرابعة"],
   ];
-  const index = names.findIndex((group) => group.includes(n));
-  return index < 0 ? null : String(index + 1);
+  const matches = names.flatMap((group, index) =>
+    group.some((name) => n.includes(name)) ? [String(index + 1)] : [],
+  );
+  return matches.length === 1 ? matches[0]! : null;
 }
 export function parseUniversitySchedule(
   sheet: Worksheet,
@@ -81,6 +85,21 @@ export function parseUniversitySchedule(
     }
   }
   if (!headerRow) throw new Error("لم أجد صف السكاشن 1–15 في شيت الجامعة. راجع عناوين الأعمدة");
+  const headingDepartments = new Set<string>();
+  for (let row = 1; row < headerRow; row++)
+    sheet.getRow(row).eachCell((cell) => {
+      if (cell.master.address !== cell.address) return;
+      const title = normalize(cell.text);
+      for (const department of DEPARTMENTS) {
+        if (
+          title.includes(normalize(department.nameEn)) ||
+          title.includes(normalize(department.nameAr))
+        )
+          headingDepartments.add(department.id);
+      }
+    });
+  if (headingDepartments.size === 1 && !headingDepartments.has(schedule.department))
+    throw new Error("قسم ملف الجامعة لا يطابق القسم المحدد. اختر القسم الصحيح قبل الاستيراد.");
   const firstColumn = Math.min(...columns.map((c) => c.column));
   const entries: AcademicEntry[] = [],
     places: UniversityImport["places"] = [],

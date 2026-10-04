@@ -22,6 +22,8 @@ beforeAll(async () => {
     CREATE TABLE session_roster(session_id uuid,student_id uuid);
     CREATE TABLE attendance(id uuid DEFAULT gen_random_uuid(),student_id uuid,session_id uuid,created_at timestamptz DEFAULT now(),metadata jsonb);
     CREATE TABLE system_logs(actor_id uuid,action text,metadata jsonb);
+    CREATE TABLE join_requests(id uuid,status text);
+    CREATE TABLE error_reports(id uuid,status text);
     CREATE TABLE academic_schedule_entries(id uuid,department text,academic_year text,section integer,day_index integer,period integer,subject_id uuid);
     CREATE TABLE academic_schedule_settings(department text,academic_year text,semester_start date,updated_at timestamptz);
     CREATE TABLE exam_schedules(id uuid,department text,academic_year text);
@@ -47,6 +49,12 @@ beforeAll(async () => {
   );
   await db.exec(
     readFileSync("supabase/migrations/20261004004615_safe_subject_removal.sql", "utf8"),
+  );
+  await db.exec(
+    readFileSync(
+      "supabase/migrations/20261004055002_consistent_dashboard_and_schedule_scope.sql",
+      "utf8",
+    ),
   );
 }, 30000);
 beforeEach(async () => {
@@ -78,6 +86,57 @@ async function overview() {
 }
 
 describe("academic lifecycle authorization and historical integrity", () => {
+  it("counts student accounts independently of attendance and excludes open opportunities from the rate", async () => {
+    const summary = async () =>
+      (
+        await db.query<{
+          data: {
+            dashboard: {
+              totalStudents: number;
+              totalSessions: number;
+              completedOpportunities: number;
+            };
+          };
+        }>("SELECT public.get_attendance_summary(NULL) AS data")
+      ).rows[0].data.dashboard;
+    expect(await summary()).toMatchObject({
+      totalStudents: 1,
+      totalSessions: 1,
+      completedOpportunities: 1,
+    });
+    await db.exec(`UPDATE sessions SET expires_at=now()+interval '1 hour'`);
+    expect(await summary()).toMatchObject({
+      totalStudents: 1,
+      totalSessions: 1,
+      completedOpportunities: 0,
+    });
+    await db.exec(`DELETE FROM session_roster`);
+    expect(await summary()).toMatchObject({
+      totalStudents: 1,
+      totalSessions: 1,
+      completedOpportunities: 0,
+    });
+  });
+  it("defaults administrators to the published year while retaining explicit year and student scope", async () => {
+    await db.exec(
+      `UPDATE users SET academic_year=NULL WHERE id='${owner}'; INSERT INTO academic_schedule_entries(id,department,academic_year) VALUES(gen_random_uuid(),'cybersecurity','2')`,
+    );
+    const scope = async (year: string | null) =>
+      (
+        await db.query<{ data: { academic_year: string } }>(
+          "SELECT private.academic_scope('cybersecurity',$1,false) AS data",
+          [year],
+        )
+      ).rows[0].data;
+    expect((await scope(null)).academic_year).toBe("2");
+    expect((await scope("1")).academic_year).toBe("1");
+    await db.exec(`SELECT set_config('test.auth','${student}',false)`);
+    expect((await scope(null)).academic_year).toBe("2");
+    await expect(scope("1")).rejects.toThrow("permission_denied");
+    await db.exec(
+      `SELECT set_config('test.auth','${owner}',false); DELETE FROM academic_schedule_entries`,
+    );
+  });
   it("leaves rules and retention periods unset", async () => {
     expect((await overview()).rules).toEqual([]);
     expect(
