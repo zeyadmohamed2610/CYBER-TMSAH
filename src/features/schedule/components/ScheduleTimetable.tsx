@@ -62,10 +62,10 @@ export function ScheduleTimetable({
   });
   const { days, cycleForDay: dayCycle } = model;
   return (
-    <section aria-label="مواعيد الأسبوع" className="space-y-3">
-      <div className="rounded-xl border bg-card p-3 space-y-2">
+    <section aria-label="مواعيد الأسبوع" className="space-y-2">
+      <div className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="font-bold">
+          <h3 className="font-bold text-sm">
             {selectedDay === null
               ? "الجدول الأسبوعي"
               : selectedDay === dateDay
@@ -73,6 +73,14 @@ export function ScheduleTimetable({
                 : `جدول ${ACADEMIC_DAYS[selectedDay]}`}
             {student && view === "mine" ? ` · سكشن ${data.student_section ?? "غير محدد"}` : ""}
           </h3>
+          <span className="text-xs text-muted-foreground">
+            {actualWeek && previewCycle === "auto" ? `الأسبوع الدراسي ${actualWeek} · ` : ""}الأسبوع{" "}
+            {selectedDay === null
+              ? previewCycle === "auto"
+                ? weeklyScheduleCycle(date, data)
+                : cycle
+              : dayCycle(selectedDay)}
+          </span>
           {now && (
             <span className="text-xs text-muted-foreground">
               <time dir="ltr">
@@ -88,7 +96,7 @@ export function ScheduleTimetable({
           )}
         </div>
         <div
-          className="flex flex-wrap items-center gap-1"
+          className="flex flex-wrap items-center gap-2"
           role="group"
           aria-label="نطاق أيام المصفوفة"
         >
@@ -126,16 +134,7 @@ export function ScheduleTimetable({
               اليوم
             </Button>
           )}
-          <span className="text-xs text-muted-foreground mr-auto">
-            {actualWeek && previewCycle === "auto" ? `الأسبوع الدراسي ${actualWeek} · ` : ""}الأسبوع{" "}
-            {selectedDay === null
-              ? previewCycle === "auto"
-                ? weeklyScheduleCycle(date, data)
-                : cycle
-              : dayCycle(selectedDay)}
-          </span>
-        </div>
-        <div className="flex flex-wrap items-center gap-1" role="group" aria-label="اختيار الأسبوع">
+
           <select
             aria-label="الأسبوع"
             value={previewCycle}
@@ -169,48 +168,48 @@ export function ScheduleTimetable({
               ))}
             </select>
           )}
-        </div>
-        {student && !data.student_section && (
-          <p role="alert" className="text-amber-400 text-sm">
-            لم يُحدد سكشن حسابك بعد. تواصل مع الإدارة، أو اختر كل السكاشن للاطلاع على المواعيد.
-          </p>
-        )}
-        <div className="space-y-1">
-          <Label htmlFor="schedule-search" className="sr-only">
-            ابحث في المواعيد
-          </Label>
-          <div className="flex gap-2">
-            <Input
-              id="schedule-search"
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="المادة أو المكان أو المحاضر"
-            />
-            {search && (
-              <Button variant="outline" onClick={() => setSearch("")}>
-                مسح
-              </Button>
-            )}
+          {student && !data.student_section && (
+            <p role="alert" className="text-amber-400 text-sm">
+              لم يُحدد سكشن حسابك بعد. تواصل مع الإدارة، أو اختر كل السكاشن للاطلاع على المواعيد.
+            </p>
+          )}
+          <div className="min-w-0 flex-1 basis-40">
+            <Label htmlFor="schedule-search" className="sr-only">
+              ابحث في المواعيد
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                id="schedule-search"
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="المادة أو المكان أو المحاضر"
+              />
+              {search && (
+                <Button variant="outline" onClick={() => setSearch("")}>
+                  مسح
+                </Button>
+              )}
+            </div>
           </div>
+          <details className="relative text-xs">
+            <summary className="text-xs text-muted-foreground cursor-pointer min-h-11 inline-flex items-center">
+              تاريخ آخر
+            </summary>
+            <div className="max-w-xs mt-3 space-y-2">
+              <Label htmlFor="schedule-date">تاريخ العرض</Label>
+              <Input
+                id="schedule-date"
+                type="date"
+                value={date}
+                onChange={(event) => {
+                  onDate(event.target.value);
+                  onCycle("auto");
+                }}
+              />
+            </div>
+          </details>
         </div>
-        <details>
-          <summary className="text-sm text-muted-foreground cursor-pointer">
-            عرض أسبوع بتاريخ آخر
-          </summary>
-          <div className="max-w-xs mt-3 space-y-2">
-            <Label htmlFor="schedule-date">تاريخ العرض</Label>
-            <Input
-              id="schedule-date"
-              type="date"
-              value={date}
-              onChange={(event) => {
-                onDate(event.target.value);
-                onCycle("auto");
-              }}
-            />
-          </div>
-        </details>
       </div>
       {data.entries.length === 0 ? (
         <EmptyState

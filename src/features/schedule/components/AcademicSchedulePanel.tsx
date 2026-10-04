@@ -131,73 +131,59 @@ export function AcademicSchedulePanel() {
 
   return (
     <div dir="rtl" className="space-y-3">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="font-bold flex gap-2">
-          <Calendar className="h-5 w-5 text-primary" />
-          الجدول والامتحانات
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          {(role === "owner" || availableDepartments.length > 1) && (
-            <select
-              aria-label="قسم الجدول"
-              disabled={busy || imported.length > 0}
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              className={selectClass}
-            >
-              {DEPARTMENTS.filter(
-                (d) => role === "owner" || availableDepartments.includes(d.id),
-              ).map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.nameAr}
-                </option>
-              ))}
-            </select>
-          )}
-          {role !== "student" && (
-            <select
-              aria-label="الفرقة الدراسية"
-              disabled={busy || imported.length > 0}
-              value={data.academic_year}
-              onChange={(e) => setYear(e.target.value)}
-              className={selectClass}
-            >
-              {[1, 2, 3, 4].map((y) => (
-                <option key={y} value={y}>
-                  الفرقة {y}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-      </div>
       <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl" className="space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <TabsList className="w-full sm:w-auto">
-            <TabsTrigger className="flex-1 sm:flex-none" value="schedule">
-              الجدول
-            </TabsTrigger>
-            <TabsTrigger className="flex-1 sm:flex-none" value="exams">
-              الامتحانات
-            </TabsTrigger>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="font-bold text-sm flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-primary" />
+            الجدول والامتحانات
+          </h2>
+          <div className="flex min-w-0 flex-wrap gap-2">
+            {(role === "owner" || availableDepartments.length > 1) && (
+              <select
+                aria-label="قسم الجدول"
+                disabled={busy || imported.length > 0}
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+                className="h-11 min-w-0 rounded-lg border border-input bg-background px-2 text-sm"
+              >
+                {DEPARTMENTS.filter(
+                  (d) => role === "owner" || availableDepartments.includes(d.id),
+                ).map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.nameAr}
+                  </option>
+                ))}
+              </select>
+            )}
+            {role !== "student" && (
+              <select
+                aria-label="الفرقة الدراسية"
+                disabled={busy || imported.length > 0}
+                value={data.academic_year}
+                onChange={(e) => setYear(e.target.value)}
+                className="h-11 min-w-0 rounded-lg border border-input bg-background px-2 text-sm"
+              >
+                {[1, 2, 3, 4].map((y) => (
+                  <option key={y} value={y}>
+                    الفرقة {y}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          <TabsList className="sm:ms-auto">
+            <TabsTrigger value="schedule">الجدول</TabsTrigger>
+            <TabsTrigger value="exams">الامتحانات</TabsTrigger>
           </TabsList>
           {data.can_edit && activeTab === "schedule" && (
-            <div className="flex gap-2" role="group" aria-label="عرض الجدول وإدارته">
-              <Button
-                variant={management ? "outline" : "default"}
-                aria-pressed={!management}
-                onClick={() => setManagement(false)}
-              >
-                عرض الجدول
-              </Button>
-              <Button
-                variant={management ? "default" : "outline"}
-                aria-pressed={management}
-                onClick={() => setManagement(true)}
-              >
-                إدارة الجدول
-              </Button>
-            </div>
+            <Button
+              variant={management ? "default" : "outline"}
+              aria-pressed={management}
+              onClick={() => setManagement(!management)}
+            >
+              {management ? "عرض الجدول" : "إدارة الجدول"}
+            </Button>
           )}
         </div>
         <TabsContent value="schedule" className="space-y-3">
