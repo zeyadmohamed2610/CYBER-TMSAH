@@ -16,7 +16,19 @@ import {
   normalizeIdentifier,
 } from "../utils/loginInput";
 type Tab = "login" | "join";
-export type JoinRole = "doctor" | "ta" | "student";
+export type JoinRole = "coordinator" | "doctor" | "ta" | "student";
+export type JoinField =
+  | "j-name"
+  | "j-email"
+  | "j-user"
+  | "j-pass"
+  | "j-confirm-pass"
+  | "j-role"
+  | "j-dept"
+  | "j-departments"
+  | "j-national-id"
+  | "j-year"
+  | "j-sec";
 
 const STORAGE_KEY = "attendance_login_attempts";
 const REMEMBER_KEY = "cyber_remember_user";
@@ -116,6 +128,20 @@ export function useLoginForm(initialTab?: Tab) {
   const [joinNationalId, setJoinNationalId] = useState("");
   const [joinLoading, setJoinLoading] = useState(false);
   const [joinSuccess, setJoinSuccess] = useState(false);
+  const [joinError, setJoinError] = useState<{ field: JoinField | null; message: string } | null>(
+    null,
+  );
+  const clearJoinError = (field?: JoinField) => {
+    setJoinError((previous) =>
+      !field || previous?.field === field || previous?.field === null ? null : previous,
+    );
+  };
+  const reportJoinError = (message: string, field: JoinField | null = null) => {
+    setJoinError({ field, message });
+  };
+  useEffect(() => {
+    if (!joinLoading && joinError?.field) document.getElementById(joinError.field)?.focus();
+  }, [joinError, joinLoading]);
   useEffect(() => {
     try {
       const saved = localStorage.getItem(REMEMBER_KEY);
@@ -342,93 +368,65 @@ export function useLoginForm(initialTab?: Tab) {
     if (requestPending.current) return;
     requestPending.current = true;
     setJoinLoading(true);
+    clearJoinError();
     try {
       const trimmedName = fullName.trim();
-      const nameParts = trimmedName.split(/\s+/).filter(Boolean);
-      const isEnglishOnly = /^[A-Za-z\s]+$/.test(trimmedName);
-      if (!isEnglishOnly || nameParts.length < 3) {
-        toast.error(
-          lang === "ar"
-            ? "يجب كتابة الاسم ثلاثي باللغة الإنجليزية (مثال: Ahmed Mohamed Ali)"
-            : "Full name must be at least 3 parts in English (e.g. John David Smith)",
-        );
-
+      if (
+        !/^[A-Za-z\s]+$/.test(trimmedName) ||
+        trimmedName.split(/\s+/).filter(Boolean).length < 3
+      ) {
+        reportJoinError("اكتب اسمك ثلاثيًا بالإنجليزية، example: Ahmed Mohamed Ali.", "j-name");
         return;
       }
       const trimmedEmail = joinEmail.trim().toLowerCase();
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(trimmedEmail)) {
-        toast.error(
-          lang === "ar" ? "يرجى كتابة بريد إلكتروني صالح" : "Please enter a valid email address",
-        );
-
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+        reportJoinError("اكتب بريدًا إلكترونيًا صالحًا.", "j-email");
         return;
       }
       const trimmedUsername = joinUsername.trim().toLowerCase();
-      const userRegex = /^[a-zA-Z0-9_]{3,30}$/;
-      if (!userRegex.test(trimmedUsername)) {
-        toast.error(
-          lang === "ar"
-            ? "اسم المستخدم يجب أن يتكون من 3-30 حرفاً إنجليزياً أو رقماً بدون مسافات"
-            : "Username must be 3-30 English alphanumeric characters with no spaces",
+      if (!/^[a-zA-Z0-9_]{3,30}$/.test(trimmedUsername)) {
+        reportJoinError(
+          "استخدم من 3 إلى 30 حرفًا إنجليزيًا أو رقمًا أو شرطة سفلية (_) دون مسافات.",
+          "j-user",
         );
-
         return;
       }
-      if (!joinPassword || joinPassword.length < 6) {
-        toast.error(
-          lang === "ar"
-            ? "كلمة المرور يجب ألا تقل عن 6 أحرف"
-            : "Password must be at least 6 characters",
-        );
-
+      if (joinPassword.length < 6) {
+        reportJoinError("كلمة المرور يجب ألا تقل عن 6 أحرف.", "j-pass");
         return;
       }
       if (joinPassword !== confirmPassword) {
-        toast.error(lang === "ar" ? "كلمتا المرور غير متطابقتين" : "Passwords do not match");
-
+        reportJoinError("تأكيد كلمة المرور لا يطابق كلمة المرور.", "j-confirm-pass");
         return;
+      }
+      if (!["coordinator", "doctor", "ta", "student"].includes(joinRole)) {
+        reportJoinError("اختر الرتبة المطلوبة لاعتماد حسابك.", "j-role");
+        return;
+      }
+      const isFaculty = joinRole === "doctor" || joinRole === "ta";
+      if (isFaculty ? !joinDepartments.length : !department) {
+        reportJoinError("اختر قسمًا واحدًا على الأقل.", isFaculty ? "j-departments" : "j-dept");
+        return;
+      }
+      const trimmedNID = joinRole === "student" ? normalizeDigits(joinNationalId.trim()) : null;
+      if (joinRole === "student") {
+        if (!trimmedNID || !/^\d{14}$/.test(trimmedNID)) {
+          reportJoinError("الرقم القومي للطالب يجب أن يتكون من 14 رقمًا.", "j-national-id");
+          return;
+        }
+        if (!/^[1-4]$/.test(academicYear)) {
+          reportJoinError("اختر الفرقة الدراسية من الأولى إلى الرابعة.", "j-year");
+          return;
+        }
+        if (!/^(?:[1-9]|1[0-5])$/.test(normalizeDigits(sectionNumber))) {
+          reportJoinError("اكتب رقم السكشن من 1 إلى 15.", "j-sec");
+          return;
+        }
       }
       const pwnedResult = await checkPwnedPassword(joinPassword);
       if (pwnedResult.isPwned) {
-        toast.error(
-          lang === "ar"
-            ? `كلمة المرور هذه غير آمنة (تم تسريبها ${pwnedResult.count.toLocaleString()} مرة في اختراقات سابقة). يرجى اختيار كلمة مرور أكثر أماناً.`
-            : `This password is compromised (found ${pwnedResult.count.toLocaleString()} times in previous breaches). Please choose a safer password.`,
-        );
-
+        reportJoinError("ظهرت كلمة المرور في تسريبات سابقة. اختر كلمة مرور أخرى.", "j-pass");
         return;
-      }
-      if (
-        !department ||
-        ((joinRole === "doctor" || joinRole === "ta") && !joinDepartments.length)
-      ) {
-        toast.error(lang === "ar" ? "يرجى اختيار القسم" : "Please select your department");
-
-        return;
-      }
-      let trimmedNID: string | null = null;
-      if (joinRole === "student") {
-        trimmedNID = normalizeDigits(joinNationalId.trim());
-        if (!trimmedNID || !/^\d{14}$/.test(trimmedNID)) {
-          toast.error(
-            lang === "ar"
-              ? "الرقم القومي إلزامي للطالب ويجب أن يتكون من 14 رقماً بالضبط"
-              : "National ID is required for students and must be exactly 14 digits",
-          );
-
-          return;
-        }
-
-        if (!academicYear || !/^(?:[1-9]|1[0-5])$/.test(normalizeDigits(sectionNumber))) {
-          toast.error(
-            lang === "ar"
-              ? "اختر الفرقة الدراسية ورقم السكشن من 1 إلى 15."
-              : "Choose an academic year and section 1–15.",
-          );
-
-          return;
-        }
       }
       const { error } = await supabase.from("join_requests").insert({
         full_name: trimmedName,
@@ -436,38 +434,31 @@ export function useLoginForm(initialTab?: Tab) {
         username: trimmedUsername,
         password: joinPassword,
         role: joinRole,
-        department: joinRole === "doctor" || joinRole === "ta" ? joinDepartments[0] : department,
-        departments: joinRole === "doctor" || joinRole === "ta" ? joinDepartments : [department],
+        department: isFaculty ? joinDepartments[0] : department,
+        departments: isFaculty ? joinDepartments : [department],
         academic_year: joinRole === "student" ? academicYear : null,
-        section_number:
-          joinRole === "student" && sectionNumber ? parseInt(normalizeDigits(sectionNumber)) : null,
-        national_id: joinRole === "student" ? trimmedNID : null,
+        section_number: joinRole === "student" ? parseInt(normalizeDigits(sectionNumber)) : null,
+        national_id: trimmedNID,
       });
       if (error) {
-        toast.error(
-          getFriendlyErrorMessage(
-            lang === "ar" ? `فشل إرسال الطلب: ${error.message}` : "Failed to submit request.",
-            lang === "ar"
-              ? "تعذر إكمال الطلب. أعد المحاولة."
-              : "Could not complete your request. Please try again.",
-          ),
+        reportJoinError(
+          error.code === "23505"
+            ? "يوجد حساب أو طلب سابق بهذه البيانات. راجع اسم المستخدم والبريد أو تواصل مع الإدارة."
+            : "تعذر إرسال الطلب. احتفظنا ببياناتك؛ تحقق من الاتصال ثم أعد المحاولة.",
         );
-
         return;
       }
-      await recordAuditLog({
+      void recordAuditLog({
         action: "join_request",
         identifier: `${trimmedUsername} | ${trimmedEmail}`,
         role: joinRole,
       });
       setJoinSuccess(true);
+      setJoinPassword("");
+      setConfirmPassword("");
       toast.success(t.auth.requestSent);
     } catch {
-      toast.error(
-        lang === "ar"
-          ? "تعذر إرسال الطلب. أعد المحاولة."
-          : "Could not submit your request. Please try again.",
-      );
+      reportJoinError("تعذر إرسال الطلب. احتفظنا ببياناتك؛ تحقق من الاتصال ثم أعد المحاولة.");
     } finally {
       setJoinLoading(false);
       requestPending.current = false;
@@ -533,6 +524,8 @@ export function useLoginForm(initialTab?: Tab) {
     joinNationalId,
     setJoinNationalId,
     joinLoading,
+    joinError,
+    clearJoinError,
     joinSuccess,
     setJoinSuccess,
     handleTabChange,

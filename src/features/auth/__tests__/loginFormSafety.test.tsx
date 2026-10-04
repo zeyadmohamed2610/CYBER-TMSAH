@@ -175,3 +175,51 @@ it("returns to a protected deep link after resolving the trusted role", async ()
   await act(async () => model.handleLogin(submit()));
   expect(mocks.navigate).toHaveBeenCalledWith(mocks.from, { replace: true });
 });
+
+it.each([
+  ["name", "j-name"],
+  ["email", "j-email"],
+  ["username", "j-user"],
+  ["password", "j-pass"],
+  ["confirmation", "j-confirm-pass"],
+  ["departments", "j-departments"],
+] as const)(
+  "reports %s validation beside its field without inserting a request",
+  async (invalid, field) => {
+    await act(async () => {
+      model.setJoinRole("doctor");
+      model.setFullName("Ahmed Mohamed Ali");
+      model.setJoinEmail("doctor@example.com");
+      model.setJoinUsername("doctor_name");
+      model.setJoinPassword("Example!123");
+      model.setConfirmPassword("Example!123");
+      if (invalid === "name") model.setFullName("Ahmed");
+      if (invalid === "email") model.setJoinEmail("invalid");
+      if (invalid === "username") model.setJoinUsername("invalid name");
+      if (invalid === "password") model.setJoinPassword("123");
+      if (invalid === "confirmation") model.setConfirmPassword("different");
+      if (invalid === "departments") model.setJoinDepartments([]);
+    });
+    await act(async () => model.handleJoin(submit()));
+    expect(model.joinError?.field).toBe(field);
+    expect(model.joinLoading).toBe(false);
+    expect(mocks.insert).not.toHaveBeenCalled();
+  },
+);
+
+it("submits coordinator membership as a request without creating a session", async () => {
+  mocks.insert.mockResolvedValue({ error: null });
+  await act(async () => {
+    model.setJoinRole("coordinator");
+    model.setFullName("Ahmed Mohamed Ali");
+    model.setJoinEmail("coordinator@example.com");
+    model.setJoinUsername("coordinator_name");
+    model.setJoinPassword("Example!123");
+    model.setConfirmPassword("Example!123");
+  });
+  await act(async () => model.handleJoin(submit()));
+  expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({ role: "coordinator" }));
+  expect(mocks.setSession).not.toHaveBeenCalled();
+  expect(mocks.navigate).not.toHaveBeenCalled();
+  expect(model.joinSuccess).toBe(true);
+});

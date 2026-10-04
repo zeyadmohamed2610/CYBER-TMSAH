@@ -23,6 +23,7 @@ interface CustomRoleSelectProps {
   textColor?: string;
   faintColor?: string;
   isRTL?: boolean;
+  error?: string | null;
 }
 
 export function CustomRoleSelect({
@@ -38,6 +39,7 @@ export function CustomRoleSelect({
   textColor = "#FFFFFF",
   faintColor = "#94A3B8",
   isRTL = true,
+  error,
 }: CustomRoleSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [openUp, setOpenUp] = useState(false);
@@ -78,6 +80,8 @@ export function CustomRoleSelect({
       <button
         id={id}
         type="button"
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? `${id}-error` : undefined}
         onClick={() => setIsOpen((prev) => !prev)}
         style={{
           background: isOpen ? "rgba(147, 51, 234, 0.12)" : fieldBg,
@@ -87,7 +91,7 @@ export function CustomRoleSelect({
             ? "0 0 0 3.5px rgba(147, 51, 234, 0.25), 0 2px 8px rgba(0,0,0,0.3)"
             : "0 1px 2px rgba(0,0,0,0.15)",
         }}
-        className="w-full h-[46px] px-3.5 rounded-xl text-sm font-semibold flex items-center justify-between transition-all duration-200 cursor-pointer select-none group outline-none"
+        className="w-full h-[46px] px-3.5 rounded-xl text-sm font-semibold flex items-center justify-between transition-all duration-200 cursor-pointer select-none group focus-visible:ring-2 focus-visible:ring-purple-300"
       >
         <div className="flex items-center gap-2.5">
           <span
@@ -107,6 +111,11 @@ export function CustomRoleSelect({
           style={{ color: isOpen ? "#C084FC" : faintColor }}
         />
       </button>
+      {error && (
+        <p id={`${id}-error`} role="alert" className="mt-1.5 text-xs text-red-300">
+          {error}
+        </p>
+      )}
 
       {/* Floating 100% Solid Opaque Dropdown Menu (No bleed-through) */}
       {isOpen && (

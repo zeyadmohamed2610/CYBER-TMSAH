@@ -24,6 +24,8 @@ export function Field({
   error,
   enterKeyHint,
   readOnly,
+  hint,
+  inputMode,
 }: {
   id: string;
   name?: string;
@@ -38,6 +40,8 @@ export function Field({
   error?: string | null;
   enterKeyHint?: "next" | "go" | "send";
   readOnly?: boolean;
+  hint?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   icon?: React.ReactNode;
   suffix?: React.ReactNode;
   badge?: React.ReactNode;
@@ -83,9 +87,13 @@ export function Field({
           autoCorrect="off"
           spellCheck={false}
           enterKeyHint={enterKeyHint}
+          inputMode={inputMode}
           readOnly={readOnly}
           aria-invalid={Boolean(error)}
-          aria-describedby={error ? `${id}-error` : undefined}
+          aria-describedby={
+            [hint ? `${id}-hint` : null, error ? `${id}-error` : null].filter(Boolean).join(" ") ||
+            undefined
+          }
           dir={dir}
           autoFocus={autoFocus}
           onKeyDown={onKeyDown}
@@ -108,6 +116,11 @@ export function Field({
         />
         {suffix && <span className="absolute end-2.5 top-1/2 -translate-y-1/2 z-10">{suffix}</span>}
       </div>
+      {hint && (
+        <p id={`${id}-hint`} className="mt-1.5 text-xs leading-5 text-slate-400">
+          {hint}
+        </p>
+      )}
       {error && (
         <p id={`${id}-error`} role="alert" className="mt-1.5 text-xs text-red-300">
           {error}
