@@ -139,16 +139,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   });
 
-  // If we already have a cached role in storage, start with loading=false so the view doesn't flash or unmount
-  const [loading, setLoading] = useState<boolean>(() => {
-    try {
-      const cached =
-        sessionStorage.getItem(ROLE_STORAGE_KEY) || localStorage.getItem(ROLE_STORAGE_KEY);
-      return !isAppRole(cached);
-    } catch {
-      return true;
-    }
-  });
+  // Browser cache cannot establish a session. Resolve it before routing a cold start.
+  const [loading, setLoading] = useState(true);
 
   const initializedRef = useRef(false);
   const currentUserRef = useRef<User | null>(null);

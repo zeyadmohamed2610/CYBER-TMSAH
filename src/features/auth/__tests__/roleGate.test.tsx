@@ -64,6 +64,15 @@ it("allows a resolved signed-in owner", async () => {
   Object.assign(state, { user: { id: "owner" }, role: "owner" });
   expect(await render()).toBe("privileged-content");
 });
+it("waits for the session instead of redirecting from a cached role", async () => {
+  Object.assign(state, { role: "owner", loading: true });
+  const content = await render();
+  expect(content).not.toContain("redirected");
+  expect(content).not.toContain("privileged-content");
+  state.user = { id: "owner" };
+  state.loading = false;
+  expect(await render()).toBe("privileged-content");
+});
 it.each(["student", "doctor", "ta"] as const)("restricts %s tabs to academic tasks", (role) => {
   expect(dashboardTabs(role)).not.toContain("users");
   expect(dashboardTabs(role)).not.toContain("devices");

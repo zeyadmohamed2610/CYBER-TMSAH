@@ -14,8 +14,8 @@ export const RoleGate = ({ allowedRole, children }: RoleGateProps) => {
   const location = useLocation();
   const { user, role, loading } = useAuth();
 
-  // Show loading screen only on cold initial start when no role has been resolved yet
-  if (loading && !role) {
+  // Keep the requested URL while a cold start resolves its session and role.
+  if (loading && (!user || !role)) {
     return <LoadingScreen />;
   }
 
