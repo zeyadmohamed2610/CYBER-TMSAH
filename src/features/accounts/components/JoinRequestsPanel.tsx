@@ -1,3 +1,4 @@
+import { DEPARTMENTS } from "@/features/academics/types";
 import { supabase } from "@/shared/api/supabaseClient";
 import { useLang } from "@/shared/i18n";
 import { getFriendlyErrorMessage } from "@/shared/lib/academicCopy";
@@ -29,6 +30,7 @@ interface JoinRequest {
   username: string;
   role: "coordinator" | "doctor" | "ta" | "student";
   department?: string | null;
+  departments?: string[];
   academic_year?: string | null;
   section_number?: number | null;
   national_id?: string | null;
@@ -102,7 +104,7 @@ export function JoinRequestsPanel() {
     const query = supabase
       .from("join_requests")
       .select(
-        "id, full_name, email, username, role, department, academic_year, section_number, national_id, status, created_at, rejection_note",
+        "id, full_name, email, username, role, department, departments, academic_year, section_number, national_id, status, created_at, rejection_note",
       )
       .order("created_at", { ascending: false });
 
@@ -448,7 +450,9 @@ export function JoinRequestsPanel() {
                         )}
                         {req.department && (
                           <span className="text-indigo-300">
-                            {lang === "ar" ? `القسم: ${req.department}` : `Dept: ${req.department}`}
+                            {lang === "ar"
+                              ? `الأقسام: ${(req.departments?.length ? req.departments : [req.department]).map((id) => DEPARTMENTS.find((d) => d.id === id)?.nameAr ?? id).join("، ")}`
+                              : `Dept: ${req.department}`}
                           </span>
                         )}
                         {req.academic_year && (

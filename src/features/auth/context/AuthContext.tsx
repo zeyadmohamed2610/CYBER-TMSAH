@@ -17,6 +17,7 @@ interface AuthContextValue {
   role: AppRole | null;
   fullName: string | null;
   department: string | null;
+  departments: string[];
   avatarUrl: string | null;
   loading: boolean;
   refreshRole: () => Promise<void>;
@@ -50,11 +51,12 @@ const fetchUserProfile = async (
   fullName: string | null;
   department: string | null;
   avatarUrl: string | null;
+  departments: string[];
 }> => {
   // 1. Try fetching full profile with department & avatar_url
   let { data, error } = await supabase
     .from("users")
-    .select("role, full_name, department, avatar_url")
+    .select("role, full_name, department, departments, avatar_url")
     .eq("auth_id", authId)
     .maybeSingle();
 
@@ -67,7 +69,7 @@ const fetchUserProfile = async (
       .maybeSingle();
 
     if (!fallback.error && fallback.data) {
-      data = { ...fallback.data, department: null, avatar_url: null };
+      data = { ...fallback.data, department: null, departments: [], avatar_url: null };
       error = null;
     }
   }
@@ -78,12 +80,18 @@ const fetchUserProfile = async (
     role: AppRole;
     full_name: string | null;
     department?: string | null;
+    departments?: string[];
     avatar_url?: string | null;
   };
   return {
     role: typedData.role,
     fullName: typedData.full_name ?? null,
     department: typedData.department ?? null,
+    departments: typedData.departments?.length
+      ? typedData.departments
+      : typedData.department
+        ? [typedData.department]
+        : [],
     avatarUrl: typedData.avatar_url ?? null,
   };
 };
@@ -142,6 +150,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Browser cache cannot establish a session. Resolve it before routing a cold start.
   const [loading, setLoading] = useState(true);
 
+  const [departments, setDepartments] = useState<string[]>([]);
+
   const initializedRef = useRef(false);
   const currentUserRef = useRef<User | null>(null);
   const roleRef = useRef<AppRole | null>(role);
@@ -168,6 +178,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setRole(null);
         setFullName(null);
         setDepartment(null);
+        setDepartments([]);
         setAvatarUrl(null);
         setLoading(false);
         currentUserRef.current = null;
@@ -209,6 +220,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setRole(null);
         setFullName(null);
         setDepartment(null);
+        setDepartments([]);
         setLoading(true);
       }
 
@@ -238,6 +250,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setRole(profile.role);
         setFullName(profile.fullName);
         setDepartment(profile.department);
+        setDepartments(profile.departments);
         if (profile.avatarUrl) {
           setAvatarUrl(profile.avatarUrl);
           try {
@@ -318,6 +331,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setRole(null);
         setFullName(null);
         setDepartment(null);
+        setDepartments([]);
         setAvatarUrl(null);
         setLoading(false);
         initializedRef.current = false;
@@ -367,6 +381,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setRole(profile.role);
       setFullName(profile.fullName);
       setDepartment(profile.department);
+      setDepartments(profile.departments);
       try {
         sessionStorage.setItem(ROLE_STORAGE_KEY, profile.role);
         if (profile.fullName) sessionStorage.setItem(NAME_STORAGE_KEY, profile.fullName);
@@ -412,6 +427,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setRole(null);
     setFullName(null);
     setDepartment(null);
+    setDepartments([]);
     setAvatarUrl(null);
     currentUserRef.current = null;
     roleRef.current = null;
@@ -483,13 +499,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       role,
       fullName,
       department,
+      departments,
       avatarUrl,
       loading,
       refreshRole,
       updateAvatarUrl,
       signOut,
     }),
-    [loading, role, fullName, department, avatarUrl, user, refreshRole, updateAvatarUrl, signOut],
+    [
+      loading,
+      role,
+      fullName,
+      department,
+      departments,
+      avatarUrl,
+      user,
+      refreshRole,
+      updateAvatarUrl,
+      signOut,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,3 +1,4 @@
+import { AccountsWorkspace } from "../components/AccountsWorkspace";
 import { LearningCenter } from "../../learning/components/LearningCenter";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
 import { TabsContent } from "@/shared/components/ui/tabs";
@@ -12,24 +13,18 @@ import {
   GraduationCap,
   Inbox,
   Layers,
-  Smartphone,
   Users,
-  Wrench,
 } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { DepartmentsAndSubjectsPanel } from "../../academics/components/DepartmentsAndSubjectsPanel";
-import { JoinRequestsPanel } from "../../accounts/components/JoinRequestsPanel";
-import { UserList } from "../../accounts/components/UserList";
 import { AttendanceRecordsPanel } from "../../attendance/components/AttendanceRecordsPanel";
-import { DeviceLockPanel } from "../../attendance/components/DeviceLockPanel";
 import { LectureDetailView } from "../../attendance/components/LectureDetailView";
 import { LectureManagementPanel } from "../../attendance/components/LectureManagementPanel";
 import { ManualAttendancePanel } from "../../attendance/components/ManualAttendancePanel";
 import { useAttendanceDashboardData } from "../../attendance/hooks/useAttendanceDashboardData";
 import { type Lecture } from "../../attendance/types";
 import { useAuth } from "../../auth/context/AuthContext";
-import { FixesReportsPanel } from "../../reports/components/FixesReportsPanel";
 import { QuickScheduleEditor } from "../../schedule/components/QuickScheduleEditor";
 import { DashboardWorkspace } from "../components/DashboardWorkspace";
 import { StatCard } from "../components/StatCard";
@@ -42,46 +37,33 @@ export const OwnerDashboard = () => {
   const { error, metrics, ready } = useAttendanceDashboardData(isOwner ? "owner" : "coordinator");
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const defaultTab = isOwner ? "requests" : "schedule";
-  const requestedTab =
-    searchParams.get("tab") || sessionStorage.getItem(`cyber_${role}_active_tab`) || defaultTab;
+  const defaultTab = "users";
+  const requestedTab = searchParams.get("tab") || defaultTab;
 
   const pendingRequestsCount = metrics.pendingRequests ?? 0;
-  const pendingFixesCount = metrics.pendingFixes ?? 0;
   const facultyCount = metrics.facultyCount ?? 0;
   const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
 
   const setActiveTab = (tab: string) => {
-    try {
-      sessionStorage.setItem(`cyber_${role}_active_tab`, tab);
-    } catch {
-      // ignore
-    }
-    setSearchParams({ tab });
+    const aliases: Record<string, string> = {
+      requests: "requests",
+      devices: "devices",
+      fixes: "fixes",
+    };
+    setSearchParams(aliases[tab] ? { tab: "users", manage: aliases[tab] } : { tab });
   };
 
   const ALL_TABS = [
-    { value: "followup", label: "متابعة الدراسة", icon: BookOpenCheck, category: "academic" },
-    { value: "users", label: "المستخدمون", icon: Users, category: "users" },
+    { value: "followup", label: "النتائج والأعذار", icon: BookOpenCheck, category: "academic" },
     {
-      value: "requests",
-      label: "الطلبات المعلقة",
-      icon: Inbox,
-      category: "system",
+      value: "users",
+      label: "المستخدمون والطلبات",
+      icon: Users,
+      category: "users",
       badge: pendingRequestsCount,
-      colorScheme: "amber",
     },
-    { value: "devices", label: "أمان الأجهزة", icon: Smartphone, category: "system" },
     { value: "schedule", label: "الجدول الدراسي", icon: CalendarDays, category: "academic" },
     { value: "departments", label: "الأقسام والمواد", icon: Layers, category: "academic" },
-    {
-      value: "fixes",
-      label: "بلاغات المشاكل",
-      icon: Wrench,
-      category: "system",
-      badge: pendingFixesCount,
-      colorScheme: "rose",
-    },
     { value: "manual-attendance", label: "تسجيل يدوي", icon: CheckCircle2, category: "attendance" },
     { value: "lectures", label: "المحاضرات", icon: BookOpen, category: "attendance" },
     { value: "attendance-records", label: "سجلات الحضور", icon: Activity, category: "attendance" },
@@ -96,7 +78,9 @@ export const OwnerDashboard = () => {
   const destination =
     legacyRoles[requestedTab] && (isOwner || requestedTab !== "coordinators")
       ? "users"
-      : requestedTab;
+      : ["requests", "devices", "fixes"].includes(requestedTab)
+        ? "users"
+        : requestedTab;
   const activeTab = ALL_TABS.some((tab) => tab.value === destination) ? destination : defaultTab;
 
   const roleBadgeLabel = isOwner ? "مالك المنصة" : isCoordinator ? "رئيس القسم" : role;
@@ -130,49 +114,49 @@ export const OwnerDashboard = () => {
       </div>
 
       {/* Every summary remains visible without sideways scrolling. */}
-      <div
-        role="region"
-        aria-label="ملخص المنصة"
-        aria-busy={!ready}
-        className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6 sm:gap-3"
-      >
-        <StatCard
-          title="الطلاب"
-          value={ready ? metrics.totalStudents : "—"}
-          description="إجمالي المسجلين"
-          icon={Users}
-          colorScheme="purple"
-          onClick={() => setActiveTab("students")}
-        />
-        <StatCard
-          title="هيئة التدريس"
-          value={ready ? facultyCount : "—"}
-          description="دكاترة ومعيدين"
-          icon={GraduationCap}
-          colorScheme="blue"
-        />
-        <StatCard
-          title="الجلسات"
-          value={ready ? metrics.totalSessions : "—"}
-          description="الفصل الحالي"
-          icon={BookOpenCheck}
-          colorScheme="cyan"
-        />
-        <StatCard
-          title="نشطة الآن"
-          value={ready ? metrics.activeSessions : "—"}
-          description="جلسات مباشرة"
-          icon={Clock3}
-          colorScheme="emerald"
-        />
-        <StatCard
-          title="نسبة الحضور"
-          value={ready ? metrics.attendanceRate.toFixed(1) + "%" : "—"}
-          description="الحصص المنتهية"
-          icon={Activity}
-          colorScheme="purple"
-        />
-        {isOwner ? (
+      {isOwner && (
+        <div
+          role="region"
+          aria-label="ملخص المنصة"
+          aria-busy={!ready}
+          className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6 sm:gap-3"
+        >
+          <StatCard
+            title="الطلاب"
+            value={ready ? metrics.totalStudents : "—"}
+            description="إجمالي المسجلين"
+            icon={Users}
+            colorScheme="purple"
+            onClick={() => setActiveTab("students")}
+          />
+          <StatCard
+            title="هيئة التدريس"
+            value={ready ? facultyCount : "—"}
+            description="دكاترة ومعيدين"
+            icon={GraduationCap}
+            colorScheme="blue"
+          />
+          <StatCard
+            title="الجلسات"
+            value={ready ? metrics.totalSessions : "—"}
+            description="الفصل الحالي"
+            icon={BookOpenCheck}
+            colorScheme="cyan"
+          />
+          <StatCard
+            title="نشطة الآن"
+            value={ready ? metrics.activeSessions : "—"}
+            description="جلسات مباشرة"
+            icon={Clock3}
+            colorScheme="emerald"
+          />
+          <StatCard
+            title="نسبة الحضور"
+            value={ready ? metrics.attendanceRate.toFixed(1) + "%" : "—"}
+            description="الحصص المنتهية"
+            icon={Activity}
+            colorScheme="purple"
+          />
           <StatCard
             title="طلبات معلقة"
             value={ready ? pendingRequestsCount : "—"}
@@ -184,53 +168,33 @@ export const OwnerDashboard = () => {
               setActiveTab("requests");
             }}
           />
-        ) : (
-          <StatCard
-            title="بلاغات معلقة"
-            value={ready ? pendingFixesCount : "—"}
-            description="تحتاج مراجعة"
-            icon={Wrench}
-            colorScheme={pendingFixesCount > 0 ? "rose" : "default"}
-            badge={pendingFixesCount > 0 ? pendingFixesCount : undefined}
-            onClick={() => {
-              setActiveTab("fixes");
-            }}
-          />
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ── TABS NAVIGATION (Zero Horizontal Scroll on Mobile) ── */}
       <DashboardWorkspace
         value={activeTab}
         onValueChange={setActiveTab}
         items={ALL_TABS}
+        mobilePriority={["users", "lectures", "schedule", "attendance-records"]}
         title={isOwner ? "إدارة المنصة" : "إدارة القسم"}
         groups={[
+          { id: "users", label: "المستخدمون والطلبات" },
           { id: "academic", label: "الدراسة" },
           { id: "attendance", label: "الحضور والغياب" },
-          { id: "users", label: "المستخدمون" },
-          { id: "system", label: "الطلبات والمتابعة" },
         ]}
       >
         <TabsContent aria-label="المستخدمون" value="users" className="mt-4 outline-none">
-          <UserList key={requestedTab} role={legacyRoles[requestedTab] ?? "all"} />
-        </TabsContent>
-
-        {/* Shared tab panels */}
-        <TabsContent aria-label="الطلبات المعلقة" value="requests" className="mt-4 outline-none">
-          <JoinRequestsPanel />
-        </TabsContent>
-        <TabsContent aria-label="أمان الأجهزة" value="devices" className="mt-4 outline-none">
-          <DeviceLockPanel />
+          <AccountsWorkspace
+            initialRole={legacyRoles[requestedTab] ?? "all"}
+            pending={pendingRequestsCount}
+          />
         </TabsContent>
         <TabsContent aria-label="الجدول والامتحانات" value="schedule" className="mt-4 outline-none">
           <QuickScheduleEditor />
         </TabsContent>
         <TabsContent aria-label="الأقسام والمواد" value="departments" className="mt-4 outline-none">
           <DepartmentsAndSubjectsPanel />
-        </TabsContent>
-        <TabsContent aria-label="بلاغات المشاكل" value="fixes" className="mt-4 outline-none">
-          <FixesReportsPanel />
         </TabsContent>
         <TabsContent
           aria-label="تسجيل يدوي"
@@ -253,7 +217,7 @@ export const OwnerDashboard = () => {
             <LectureManagementPanel onSelectLecture={setSelectedLecture} />
           )}
         </TabsContent>
-        <TabsContent value="followup" aria-label="متابعة الدراسة">
+        <TabsContent value="followup" aria-label="النتائج والأعذار">
           <LearningCenter />
         </TabsContent>
       </DashboardWorkspace>

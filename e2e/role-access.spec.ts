@@ -44,7 +44,7 @@ for (const [role, destination] of [
     const tabs =
       role === "student"
         ? ["records", "schedule", "analytics", "followup"]
-        : ["records", "schedule", "stats", "subjects", "followup"];
+        : ["records", "schedule", "subjects", "followup"];
     for (const tab of tabs) {
       await page.goto(`/${destination}?tab=${tab}`);
       await expect(page.getByRole("tabpanel").first()).toBeVisible({ timeout: 30000 });
@@ -89,12 +89,7 @@ for (const [role, destination] of [
     await expect(page.getByRole("tabpanel").first()).toBeVisible();
     await expect(
       page.getByRole("heading", {
-        name:
-          role === "student"
-            ? /^(جهاز تسجيل الحضور|تسجيل الحضور)$/
-            : role === "doctor"
-              ? "المحاضرات"
-              : "السكاشن",
+        name: "الجدول والامتحانات",
         exact: true,
       }),
     ).toBeVisible({ timeout: 30000 });

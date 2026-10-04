@@ -159,6 +159,7 @@ export function useUserManagement(initialRole = "all") {
     name: "",
     nationalId: "",
     department: "",
+    departments: [] as string[],
     academicYear: "",
     sectionNumber: "",
     subjectIds: [] as string[],
@@ -201,7 +202,7 @@ export function useUserManagement(initialRole = "all") {
           const { data, error } = await supabase
             .from("users")
             .select(
-              "id, full_name, username, email, role, national_id, subject_id, department, academic_year, section_number, created_at",
+              "id, full_name, username, email, role, national_id, subject_id, department, departments, academic_year, section_number, created_at",
             )
             .in(
               "role",
@@ -444,6 +445,9 @@ export function useUserManagement(initialRole = "all") {
       name: user.full_name,
       nationalId: user.national_id || "",
       department: user.department || "cybersecurity",
+      departments: user.departments?.length
+        ? user.departments
+        : [user.department || "cybersecurity"],
       academicYear: user.academic_year || "1",
       sectionNumber: user.section_number ? String(user.section_number) : "1",
       subjectIds:
@@ -477,6 +481,16 @@ export function useUserManagement(initialRole = "all") {
       department: editData.department,
     };
 
+    if ((role === "doctor" || role === "ta") && viewerRole === "owner") {
+      if (!editData.departments.length) {
+        toast.error("اختر قسمًا واحدًا على الأقل");
+        setSubmitting(false);
+        return;
+      }
+      updatePayload.departments = editData.departments;
+      updatePayload.department = editData.departments[0];
+      updatePayload.subject_id = null;
+    }
     if (role === "student") {
       updatePayload.academic_year = editData.academicYear;
       updatePayload.section_number = parseInt(editData.sectionNumber) || 1;

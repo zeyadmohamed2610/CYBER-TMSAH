@@ -29,6 +29,7 @@ interface Props {
   title: string;
   groups?: { id: string; label: string }[];
   compactMobile?: boolean;
+  mobilePriority?: string[];
 }
 export function DashboardWorkspace({
   items,
@@ -38,6 +39,7 @@ export function DashboardWorkspace({
   title,
   groups,
   compactMobile = false,
+  mobilePriority,
 }: Props) {
   const [open, setOpen] = useState(false),
     [collapsed, setCollapsed] = useState(false),
@@ -52,16 +54,22 @@ export function DashboardWorkspace({
     query.addEventListener("change", update);
     return () => query.removeEventListener("change", update);
   }, []);
-  const priority = compactMobile
-    ? items
-    : [...items].sort((a, b) => {
-        const order = ["schedule", "lectures", "users", "records", "attendance-records"];
-        const rank = (item: DashboardDestination) => {
-          const i = order.indexOf(item.value);
-          return i < 0 ? order.length : i;
-        };
-        return rank(a) - rank(b);
-      });
+  const priority = mobilePriority
+    ? [...items].sort((a, b) => {
+        const rank = (value: string) =>
+          mobilePriority.includes(value) ? mobilePriority.indexOf(value) : mobilePriority.length;
+        return rank(a.value) - rank(b.value);
+      })
+    : compactMobile
+      ? items
+      : [...items].sort((a, b) => {
+          const order = ["schedule", "lectures", "users", "records", "attendance-records"];
+          const rank = (item: DashboardDestination) => {
+            const i = order.indexOf(item.value);
+            return i < 0 ? order.length : i;
+          };
+          return rank(a) - rank(b);
+        });
   const mobileItems = priority.slice(0, 4);
   const shortLabel = (item: DashboardDestination) =>
     item.shortLabel ??

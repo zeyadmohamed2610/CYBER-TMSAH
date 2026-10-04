@@ -35,9 +35,11 @@ for (const [role, destination] of [
       await expect(page.getByRole("tab").first()).toBeVisible();
     }
     await page.goto(`/${destination}?tab=followup`);
-    await expect(page.getByRole("heading", { name: "متابعة الدراسة", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "النتائج", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "الأعذار والمراجعة", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "النتائج والأعذار", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "نتائج الحضور", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "الأعذار وطلبات التصحيح", exact: true }).click();
     await expect(page.getByText("لا توجد طلبات مراجعة لهذا الفصل.", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: /^الإشعارات/ }).click();
     await expect(page.getByText("الإشعارات التي ترغب في تلقيها", { exact: true })).toBeVisible();

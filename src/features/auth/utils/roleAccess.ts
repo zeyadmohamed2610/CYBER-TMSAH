@@ -3,7 +3,7 @@ import type { AppRole } from "@/features/auth/types";
 export function dashboardTabs(role: AppRole): string[] {
   if (role === "student") return ["checkin", "records", "schedule", "analytics", "followup"];
   if (role === "doctor" || role === "ta")
-    return ["lectures", "records", "schedule", "stats", "subjects", "followup"];
+    return ["lectures", "records", "schedule", "subjects", "followup"];
   return [];
 }
 

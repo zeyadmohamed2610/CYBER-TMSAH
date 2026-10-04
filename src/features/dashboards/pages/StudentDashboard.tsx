@@ -8,45 +8,33 @@ import { AcademicSchedulePanel } from "../../schedule/components/AcademicSchedul
 // Updated: Modern tabbed dashboard for Student role
 import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/shared/components/ui/card";
 import { TabsContent } from "@/shared/components/ui/tabs";
 import {
   Activity,
   BarChart3,
   BookOpen,
   CalendarDays,
-  ClipboardCheck,
   CloudOff,
   History,
   QrCode,
   RefreshCw,
   Sparkles,
-  TrendingUp,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActiveSessionsBar } from "../../attendance/components/ActiveSessionsBar";
 import { AttendanceSubmissionForm } from "../../attendance/components/AttendanceSubmissionForm";
-import { SubjectProgressCard } from "../../attendance/components/SubjectProgressCard";
 import { useAttendanceDashboardData } from "../../attendance/hooks/useAttendanceDashboardData";
 import { StudentAttendanceAccess } from "../../attendance/components/StudentAttendanceAccess";
 import { GpsProvider } from "../../attendance/context/GpsContext";
 import { offlineAttendanceService } from "../../attendance/services/offlineAttendanceService";
 import { useAuth } from "../../auth/context/AuthContext";
 import { DashboardWorkspace } from "../components/DashboardWorkspace";
-import { StatCard } from "../components/StatCard";
 
 export const StudentDashboard = () => {
   const { fullName } = useAuth();
-  const { error, metrics, sessions, subjectMetrics, refetch } =
-    useAttendanceDashboardData("student");
+  const { error, sessions, refetch } = useAttendanceDashboardData("student");
 
-  const [activeTab, setActiveTab] = useDashboardTab("checkin", dashboardTabs("student"));
+  const [activeTab, setActiveTab] = useDashboardTab("schedule", dashboardTabs("student"));
   const [pendingCount, setPendingCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
 
@@ -70,12 +58,6 @@ export const StudentDashboard = () => {
 
     return () => window.removeEventListener("online", handleOnline);
   }, [syncAndRefresh]);
-
-  const absenceRate = metrics.absenceRate ?? 0;
-  const topSubjects = useMemo(
-    () => [...subjectMetrics].sort((a, b) => b.attendanceRate - a.attendanceRate).slice(0, 3),
-    [subjectMetrics],
-  );
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -123,6 +105,7 @@ export const StudentDashboard = () => {
         onValueChange={setActiveTab}
         title="منصتي الأكاديمية"
         compactMobile
+        mobilePriority={["checkin", "schedule", "records", "followup"]}
         items={[
           { value: "checkin", label: "تسجيل الحضور", shortLabel: "الحضور", icon: QrCode },
           {
@@ -139,7 +122,7 @@ export const StudentDashboard = () => {
           },
           {
             value: "analytics",
-            label: "المواد ونسب الحضور",
+            label: "المواد الدراسية",
             shortLabel: "المواد",
             icon: BarChart3,
           },
@@ -199,63 +182,6 @@ export const StudentDashboard = () => {
           className="space-y-6 focus-visible:outline-none"
         >
           <DepartmentsAndSubjectsPanel />
-          <div className="grid gap-3 sm:grid-cols-2">
-            <StatCard
-              title="معدل الحضور العام"
-              value={`${metrics.attendanceRate.toFixed(1)}%`}
-              description="نسبة التزامك الكلية"
-              icon={Activity}
-              colorScheme="emerald"
-            />
-            <StatCard
-              title="معدل الغياب"
-              value={`${absenceRate.toFixed(1)}%`}
-              description="نسبة الغياب عن المحاضرات والسكاشن"
-              icon={ClipboardCheck}
-              colorScheme="default"
-            />
-          </div>
-
-          {topSubjects.length > 0 && (
-            <Card className="bg-card/70 border-white/10">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <TrendingUp className="h-5 w-5 text-primary" />
-                  أعلى المواد التزاماً بالحضور
-                </CardTitle>
-                <CardDescription>المواد التي حققت فيها أعلى معدلات تواجد</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2.5">
-                  {topSubjects.map((subject) => (
-                    <div
-                      key={subject.subjectName}
-                      className="flex items-center gap-2 rounded-xl bg-background/60 border border-white/10 px-4 py-2.5 text-sm shadow-inner transition hover:border-primary/40"
-                    >
-                      <span className="font-semibold text-white">{subject.subjectName}</span>
-                      <span className="text-primary font-bold bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-lg text-xs">
-                        {subject.attendanceRate.toFixed(0)}%
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {subjectMetrics.length > 0 && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-bold flex items-center gap-2">
-                <BookOpen className="h-5 w-5 text-primary" />
-                تفاصيل المواد الدراسية والغياب
-              </h2>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {subjectMetrics.map((subject) => (
-                  <SubjectProgressCard key={subject.subjectName} metric={subject} />
-                ))}
-              </div>
-            </div>
-          )}
         </TabsContent>
 
         <TabsContent value="followup" aria-label="متابعة الدراسة">

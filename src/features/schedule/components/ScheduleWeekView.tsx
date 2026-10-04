@@ -97,6 +97,30 @@ export function ScheduleWeekView({
     ]);
   return (
     <section aria-label="مواعيد الأسبوع" className="space-y-4">
+      <div
+        className="grid grid-cols-2 gap-2 rounded-2xl border bg-card p-1.5"
+        role="group"
+        aria-label="طريقة عرض الجدول"
+      >
+        <Button
+          className="min-h-12 gap-2"
+          variant={selectedDay !== null ? "default" : "ghost"}
+          aria-pressed={selectedDay !== null}
+          onClick={() => setSelectedDay("today")}
+        >
+          <Clock3 className="h-4 w-4" />
+          الجدول اليومي
+        </Button>
+        <Button
+          className="min-h-12 gap-2"
+          variant={selectedDay === null ? "default" : "ghost"}
+          aria-pressed={selectedDay === null}
+          onClick={() => setSelectedDay(null)}
+        >
+          <CalendarDays className="h-4 w-4" />
+          الجدول الأسبوعي
+        </Button>
+      </div>
       <div className="rounded-2xl border bg-card p-4 sm:p-5 space-y-4">
         <div className="flex flex-wrap justify-between gap-3 items-center">
           <div>
@@ -254,36 +278,43 @@ export function ScheduleWeekView({
           </div>
         </details>
       </div>
-      <div
-        className="grid grid-cols-2 gap-2 min-[400px]:grid-cols-3 sm:grid-cols-4 xl:grid-cols-8"
-        role="group"
-        aria-label="أيام الجدول"
-      >
-        <Button
-          variant={selectedDay === null ? "default" : "outline"}
-          aria-pressed={selectedDay === null}
-          className="h-auto min-h-14 min-w-0 whitespace-normal px-2"
-          onClick={() => setSelectedDay(null)}
+      {selectedDay !== null && (
+        <div
+          className="grid grid-cols-4 gap-2 xl:grid-cols-7"
+          role="group"
+          aria-label="أيام الجدول"
         >
-          الأسبوع كاملًا
-        </Button>
-        {days.map((day) => (
+          {days.map((day) => (
+            <Button
+              key={day}
+              variant={selectedDay === day ? "default" : "outline"}
+              aria-pressed={selectedDay === day}
+              className="h-auto min-h-11 min-w-0 flex-col gap-1 px-1 text-xs sm:text-sm whitespace-normal"
+              onClick={() => setSelectedDay(day)}
+            >
+              <span>{ACADEMIC_DAYS[day]}</span>
+              <span className="text-xs">
+                {data.settings.days_off.includes(day)
+                  ? "إجازة"
+                  : `${new Set(entries.filter((entry) => entry.day_index === day).map(groupKey)).size} موعد`}
+              </span>
+            </Button>
+          ))}
+        </div>
+      )}
+      {selectedDay === null && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-muted-foreground">
+            مواعيد الأسبوع مرتبة يومًا بيوم. افتح اليوم لعرض تفاصيل حصصه.
+          </p>
           <Button
-            key={day}
-            variant={selectedDay === day ? "default" : "outline"}
-            aria-pressed={selectedDay === day}
-            className="h-auto min-h-14 min-w-0 flex-col gap-1 px-2 whitespace-normal"
-            onClick={() => setSelectedDay(day)}
+            variant="outline"
+            onClick={() => setExpandedDays(expandedDays.length ? [] : days)}
           >
-            <span>{ACADEMIC_DAYS[day]}</span>
-            <span className="text-xs">
-              {data.settings.days_off.includes(day)
-                ? "إجازة"
-                : `${new Set(entries.filter((entry) => entry.day_index === day).map(groupKey)).size} موعد`}
-            </span>
+            {expandedDays.length ? "طي تفاصيل الأيام" : "عرض تفاصيل الأسبوع"}
           </Button>
-        ))}
-      </div>
+        </div>
+      )}
       {data.entries.length === 0 ? (
         <EmptyState
           icon={CalendarDays}
@@ -343,7 +374,7 @@ export function ScheduleWeekView({
                     description="يمكنك اختيار يوم آخر أو الاطلاع على الأسبوع كاملًا."
                   />
                 ) : (
-                  <div className="grid gap-3 xl:grid-cols-2">
+                  <div className={cn("grid gap-3", selectedDay === null && "xl:grid-cols-2")}>
                     {[...groups.entries()].map(([key, group]) => {
                       const entry = group[0]!;
                       const room = scheduleRoom(entry, dayCycle(day));
@@ -363,7 +394,7 @@ export function ScheduleWeekView({
                           key={key}
                           data-timing={timing}
                           className={cn(
-                            "rounded-2xl border bg-card p-4 sm:p-5 space-y-4",
+                            "rounded-2xl border bg-card p-4 sm:p-5 space-y-3 border-r-4",
                             timing === "current"
                               ? "border-emerald-400/40 bg-emerald-500/5"
                               : upcoming

@@ -77,27 +77,59 @@ export function UserRow({ model, user, idx }: Props) {
               />
             </div>
 
-            <div>
-              <Label className="text-xs text-slate-400">القسم:</Label>
-              <Select
-                value={editData.department}
-                onValueChange={(val) => setEditData({ ...editData, department: val })}
-              >
-                <SelectTrigger className="bg-black/60 border-white/10 text-white h-9 text-xs rounded-lg">
-                  <SelectValue placeholder="القسم" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#120d1c] border-purple-500/30 text-white">
-                  {deptList
-                    .filter((d) => viewerRole !== "coordinator" || d.id === managedDepartment)
-                    .map((d) => (
-                      <SelectItem key={d.id} value={d.id}>
-                        {d.nameAr}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-
+            {(user.role === "doctor" || user.role === "ta") && viewerRole === "owner" ? (
+              <fieldset className="space-y-2">
+                <legend className="text-xs text-slate-400">الأقسام المسندة</legend>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {deptList.map((d) => (
+                    <label
+                      key={d.id}
+                      className="flex min-h-11 items-center gap-2 rounded-lg border p-2 text-xs"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={editData.departments.includes(d.id)}
+                        onChange={(e) =>
+                          setEditData({
+                            ...editData,
+                            departments: e.target.checked
+                              ? [...editData.departments, d.id]
+                              : editData.departments.filter((id) => id !== d.id),
+                            subjectIds: e.target.checked
+                              ? editData.subjectIds
+                              : editData.subjectIds.filter(
+                                  (id) => subjects.find((s) => s.id === id)?.department !== d.id,
+                                ),
+                          })
+                        }
+                      />
+                      {d.nameAr}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            ) : (
+              <div>
+                <Label className="text-xs text-slate-400">القسم:</Label>
+                <Select
+                  value={editData.department}
+                  onValueChange={(val) => setEditData({ ...editData, department: val })}
+                >
+                  <SelectTrigger className="bg-black/60 border-white/10 text-white h-9 text-xs rounded-lg">
+                    <SelectValue placeholder="القسم" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#120d1c] border-purple-500/30 text-white">
+                    {deptList
+                      .filter((d) => viewerRole !== "coordinator" || d.id === managedDepartment)
+                      .map((d) => (
+                        <SelectItem key={d.id} value={d.id}>
+                          {d.nameAr}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {user.role === "student" && (
               <>
                 <div>
@@ -160,7 +192,14 @@ export function UserRow({ model, user, idx }: Props) {
                 <Label className="text-xs text-slate-400">المواد المسندة:</Label>
                 <div className="rounded-lg border border-white/10 bg-black/40 p-2 space-y-1 max-h-40 overflow-y-auto custom-scrollbar mt-1">
                   {subjects
-                    .filter((s) => isDeptMatch(s.department, editData.department))
+                    .filter((s) =>
+                      viewerRole === "owner" && (user.role === "doctor" || user.role === "ta")
+                        ? editData.departments.some((d) => isDeptMatch(s.department, d))
+                        : isDeptMatch(
+                            s.department,
+                            viewerRole === "coordinator" ? managedDepartment : editData.department,
+                          ),
+                    )
                     .map((s) => (
                       <label
                         key={s.id}
@@ -243,7 +282,12 @@ export function UserRow({ model, user, idx }: Props) {
               {/* Department Badge */}
               <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 flex items-center gap-1">
                 <Building2 className="w-2.5 h-2.5" />
-                {getDepartmentLabel(user.department)}
+                {(viewerRole === "owner" && user.departments?.length
+                  ? user.departments
+                  : [viewerRole === "coordinator" ? managedDepartment : user.department]
+                )
+                  .map((d) => getDepartmentLabel(d))
+                  .join("، ")}
               </span>
             </div>
 
@@ -390,16 +434,18 @@ export function UserRow({ model, user, idx }: Props) {
             >
               <Edit2 className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setDeleteConfirm({ id: user.id, name: user.full_name })}
-              className="h-11 w-11 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg"
-              aria-label="حذف المستخدم"
-              title="حذف المستخدم"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {(viewerRole === "owner" || (user.departments?.length ?? 1) <= 1) && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setDeleteConfirm({ id: user.id, name: user.full_name })}
+                className="h-11 w-11 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg"
+                aria-label="حذف المستخدم"
+                title="حذف المستخدم"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </>
         )}
       </div>

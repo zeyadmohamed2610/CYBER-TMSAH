@@ -8,6 +8,7 @@ export interface UserRecord {
   subject_id?: string | null;
   subject_name?: string | null;
   department?: string | null;
+  departments?: string[];
   academic_year?: string | null;
   section_number?: number | null;
   created_at?: string;

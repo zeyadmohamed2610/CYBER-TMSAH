@@ -15,6 +15,8 @@ export function UserDetailsDialog({ model }: Props) {
     handleCopyText,
     copiedField,
     userSubjects,
+    viewerRole,
+    managedDepartment,
     startEdit,
   } = model;
   return (
@@ -46,7 +48,14 @@ export function UserDetailsDialog({ model }: Props) {
                         {getRoleLabel(selectedUserForDetails.role)}
                       </span>
                       <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/25">
-                        {getDepartmentLabel(selectedUserForDetails.department)}
+                        {(viewerRole === "coordinator" && managedDepartment
+                          ? [managedDepartment]
+                          : selectedUserForDetails.departments?.length
+                            ? selectedUserForDetails.departments
+                            : [selectedUserForDetails.department]
+                        )
+                          .map((d) => getDepartmentLabel(d))
+                          .join("، ")}
                       </span>
                     </div>
                   </div>

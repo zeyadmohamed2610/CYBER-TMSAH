@@ -15,7 +15,7 @@ import { useSearchParams } from "react-router-dom";
 import { learningTabs } from "@/features/auth/utils/roleAccess";
 
 export function LearningCenter() {
-  const { role, department } = useAuth();
+  const { role, department, departments = [] } = useAuth();
   const [scope, setScope] = useState(department ?? "cybersecurity");
   const [term, setTerm] = useState<string | null>(null);
   const [data, setData] = useState<Overview | null>(null);
@@ -36,12 +36,17 @@ export function LearningCenter() {
   const [error, setError] = useState("");
   const manage = role === "owner" || role === "coordinator";
   useEffect(() => {
-    if (role !== "owner" && department && department !== scope) {
+    if (
+      role !== "owner" &&
+      department &&
+      department !== scope &&
+      !((role === "doctor" || role === "ta") && departments.includes(scope))
+    ) {
       setData(null);
       setScope(department);
       setTerm(null);
     }
-  }, [role, department, scope]);
+  }, [role, department, departments, scope]);
   const refresh = useCallback(async () => {
     const [overview, messages] = await Promise.all([loadOverview(scope, term), loadInbox()]);
     setData(overview);
@@ -78,8 +83,8 @@ export function LearningCenter() {
       .finally(() => setBusy(false));
   };
   const tabs = [
-    { id: "results", label: "النتائج" },
-    { id: "cases", label: "الأعذار والمراجعة" },
+    { id: "results", label: "نتائج الحضور" },
+    { id: "cases", label: "الأعذار وطلبات التصحيح" },
     { id: "notifications", label: `الإشعارات${inbox?.unread ? ` (${inbox.unread})` : ""}` },
     ...(manage
       ? [
@@ -92,13 +97,15 @@ export function LearningCenter() {
   return (
     <div className="space-y-5" aria-busy={busy}>
       <div>
-        <h2 className="text-xl font-bold">متابعة الدراسة</h2>
+        <h2 className="text-xl font-bold">النتائج والأعذار</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          نتائج كل فصل، ومراجعة الغياب، وآخر الإشعارات.
+          {role === "student"
+            ? "راجع حضورك وغيابك حسب المادة، وقدّم عذرًا أو طلب تصحيح عند الحاجة."
+            : "راجع نتائج الحضور حسب المادة، وافصل في الأعذار وطلبات تصحيح الغياب."}
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        {role === "owner" && (
+        {(role === "owner" || ((role === "doctor" || role === "ta") && departments.length > 1)) && (
           <label className="text-sm">
             القسم
             <select
@@ -111,11 +118,13 @@ export function LearningCenter() {
                 setTerm(null);
               }}
             >
-              {DEPARTMENTS.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.nameAr}
-                </option>
-              ))}
+              {DEPARTMENTS.filter((item) => role === "owner" || departments.includes(item.id)).map(
+                (item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.nameAr}
+                  </option>
+                ),
+              )}
             </select>
           </label>
         )}
@@ -157,6 +166,21 @@ export function LearningCenter() {
           </Button>
         ))}
       </nav>
+      <p className="rounded-xl border bg-muted/30 p-3 text-sm leading-relaxed text-muted-foreground">
+        {tab === "results"
+          ? "نتائج الحضور تجمع عدد مرات حضور وغياب الطالب والأعذار المقبولة لكل مادة خلال الفصل المختار."
+          : tab === "cases"
+            ? role === "student"
+              ? "قدّم عذرًا عن غيابك أو اطلب تصحيح تسجيل، وتابع رد الإدارة هنا."
+              : "راجع الأعذار وطلبات تصحيح الحضور، ثم اقبلها أو ارفضها مع توضيح السبب. تظهر لك الطلبات ضمن صلاحياتك."
+            : tab === "notifications"
+              ? "رسائل المنصة الخاصة بالمواعيد وطلباتك وتحديثات الحضور."
+              : tab === "terms"
+                ? "حدّد الفصل الدراسي الحالي وتواريخه، ثم أغلقه بعد مراجعة النتائج."
+                : tab === "rules"
+                  ? "اضبط قواعد احتساب الغياب والأعذار لكل مادة عند اعتماد لائحة القسم. لا يُفرض حد غياب تلقائيًا."
+                  : "حدّد سياسة الاحتفاظ بالبيانات بما يتوافق مع لائحة القسم."}
+      </p>
       {busy && !data && <LoadingScreen message="جارٍ تحميل المتابعة..." />}
       <fieldset disabled={busy} className="min-w-0 space-y-4">
         {data && tab === "results" && (

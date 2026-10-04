@@ -106,7 +106,7 @@ describe("Student timetable display", () => {
     await act(async () =>
       root.render(<Harness data={schedule([entry(1), entry(1, { day_index: 0, room: "A02" })])} />),
     );
-    await click("الأسبوع كاملًا");
+    await click("الجدول الأسبوعي");
     expect(container.querySelectorAll("article")).toHaveLength(0);
     const day = [...container.querySelectorAll("details")].find((element) =>
       element.querySelector("summary")?.textContent?.includes("الجمعة"),

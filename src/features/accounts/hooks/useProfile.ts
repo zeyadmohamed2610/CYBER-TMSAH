@@ -1,5 +1,4 @@
 import { ACADEMIC_YEARS, DEPARTMENTS } from "@/features/academics/types";
-import { deleteUserAvatar } from "@/features/accounts/services/avatarService";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { getDashboardRoute } from "@/features/auth/utils/dashboardRoutes";
 import { supabase } from "@/shared/api/supabaseClient";
@@ -16,7 +15,7 @@ export function useProfile() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfileDetails | null>(null);
   const [activeMainTab, setActiveMainTab] = useState<string>(() =>
-    ["overview", "avatar", "security", "passkeys"].includes(searchParams.get("section") ?? "")
+    ["overview", "security", "passkeys"].includes(searchParams.get("section") ?? "")
       ? searchParams.get("section")!
       : "overview",
   );
@@ -71,6 +70,7 @@ export function useProfile() {
             email,
             role,
             department,
+            departments,
             academic_year,
             section_number,
             subject_id,
@@ -88,6 +88,7 @@ export function useProfile() {
           email: string | null;
           role: string | null;
           department: string | null;
+          departments?: string[];
           academic_year: string | null;
           section_number: number | null;
           subject_id: string | null;
@@ -277,17 +278,6 @@ export function useProfile() {
       setSavingPassword(false);
     }
   };
-  const handleRemoveAvatarDirect = async () => {
-    if (!user?.id) return;
-    try {
-      await deleteUserAvatar(user.id);
-      await updateAvatarUrl(null);
-      toast.success("تمت إزالة الصورة الشخصية بنجاح.");
-    } catch (err) {
-      console.error(err);
-      toast.error("فشل حذف الصورة");
-    }
-  };
   const handleSignOutConfirm = async () => {
     await signOut();
     navigate("/");
@@ -325,7 +315,6 @@ export function useProfile() {
     user,
     copyToClipboard,
     copiedField,
-    handleRemoveAvatarDirect,
     handleChangePassword,
     showPassword,
     newPassword,

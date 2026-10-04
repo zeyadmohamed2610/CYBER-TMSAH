@@ -28,6 +28,8 @@ export function JoinRequestForm({ model }: { model: ReturnType<typeof useLoginFo
     setShowConfirmPass,
     department,
     setDepartment,
+    joinDepartments,
+    setJoinDepartments,
     academicYear,
     setAcademicYear,
     sectionNumber,
@@ -176,26 +178,59 @@ export function JoinRequestForm({ model }: { model: ReturnType<typeof useLoginFo
         isRTL={isRTL}
       />
 
-      {/* Department (The 7 departments for all roles) */}
-      <CustomRoleSelect
-        id="j-dept"
-        label={lang === "ar" ? "القسم التابع له (7 أقسام)" : "Department (7 Disciplines)"}
-        value={department}
-        onChange={setDepartment}
-        icon={<Icon.Dept />}
-        options={DEPARTMENTS.map((d) => ({
-          value: d.id,
-          label: lang === "ar" ? d.nameAr : d.nameEn,
-        }))}
-        labelColor="#CBD5E1"
-        fieldBg="rgba(255,255,255,0.045)"
-        fieldBorder="rgba(255,255,255,0.12)"
-        fieldFocus="rgba(147,51,234,0.08)"
-        fieldGlow="0 0 0 3px rgba(147,51,234,0.22)"
-        textColor="#FFFFFF"
-        faintColor="#94A3B8"
-        isRTL={isRTL}
-      />
+      {/* Faculty can request membership in several departments. */}
+      {joinRole === "doctor" || joinRole === "ta" ? (
+        <fieldset className="space-y-3 rounded-xl border border-white/10 p-3">
+          <legend className="px-2 text-sm font-semibold">
+            {lang === "ar" ? "الأقسام التي تعمل بها" : "Your departments"}
+          </legend>
+          <p className="text-xs text-slate-400">
+            {lang === "ar"
+              ? "اختر قسمًا أو أكثر. تُعتمد الأقسام والمواد بعد مراجعة طلبك."
+              : "Select one or more departments, subject to approval."}
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {DEPARTMENTS.map((d) => (
+              <label
+                key={d.id}
+                className="flex min-h-11 items-center gap-3 rounded-lg bg-white/5 p-3 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  checked={joinDepartments.includes(d.id)}
+                  onChange={(e) =>
+                    setJoinDepartments((previous) =>
+                      e.target.checked ? [...previous, d.id] : previous.filter((id) => id !== d.id),
+                    )
+                  }
+                  className="h-4 w-4 accent-purple-500"
+                />
+                {lang === "ar" ? d.nameAr : d.nameEn}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      ) : (
+        <CustomRoleSelect
+          id="j-dept"
+          label={lang === "ar" ? "القسم التابع له (7 أقسام)" : "Department (7 Disciplines)"}
+          value={department}
+          onChange={setDepartment}
+          icon={<Icon.Dept />}
+          options={DEPARTMENTS.map((d) => ({
+            value: d.id,
+            label: lang === "ar" ? d.nameAr : d.nameEn,
+          }))}
+          labelColor="#CBD5E1"
+          fieldBg="rgba(255,255,255,0.045)"
+          fieldBorder="rgba(255,255,255,0.12)"
+          fieldFocus="rgba(147,51,234,0.08)"
+          fieldGlow="0 0 0 3px rgba(147,51,234,0.22)"
+          textColor="#FFFFFF"
+          faintColor="#94A3B8"
+          isRTL={isRTL}
+        />
+      )}
 
       {/* Student Specific Fields: National ID, Academic Year & Section Number */}
       {isStudent && (

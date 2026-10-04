@@ -16,7 +16,7 @@ interface SubjectItem {
 }
 
 export function DepartmentsAndSubjectsPanel() {
-  const { role, user, department: accountDepartment } = useAuth();
+  const { role, user, department: accountDepartment, departments = [] } = useAuth();
   const canEdit = role === "owner" || role === "coordinator";
   const [department, setDepartment] = useState<string | null>(
     role === "owner" ? "cybersecurity" : null,
@@ -169,7 +169,7 @@ export function DepartmentsAndSubjectsPanel() {
         )}
       </header>
       <div className="grid gap-3 sm:grid-cols-2 rounded-2xl border p-4">
-        {role === "owner" && (
+        {(role === "owner" || ((role === "doctor" || role === "ta") && departments.length > 1)) && (
           <div className="space-y-2">
             <Label htmlFor="subjects-department">القسم</Label>
             <select
@@ -179,11 +179,13 @@ export function DepartmentsAndSubjectsPanel() {
               onChange={(event) => setDepartment(event.target.value)}
               className="h-11 w-full rounded-lg border border-input bg-background px-3"
             >
-              {DEPARTMENTS.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.nameAr}
-                </option>
-              ))}
+              {DEPARTMENTS.filter((item) => role === "owner" || departments.includes(item.id)).map(
+                (item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.nameAr}
+                  </option>
+                ),
+              )}
             </select>
           </div>
         )}

@@ -82,6 +82,7 @@ export function useLoginForm(initialTab?: Tab) {
   const [showJoinPass, setShowJoinPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [department, setDepartment] = useState<string>("cybersecurity");
+  const [joinDepartments, setJoinDepartments] = useState<string[]>(["cybersecurity"]);
   const [academicYear, setAcademicYear] = useState<string>("1");
   const [sectionNumber, setSectionNumber] = useState("");
   const [joinNationalId, setJoinNationalId] = useState("");
@@ -348,7 +349,10 @@ export function useLoginForm(initialTab?: Tab) {
 
         return;
       }
-      if (!department) {
+      if (
+        !department ||
+        ((joinRole === "doctor" || joinRole === "ta") && !joinDepartments.length)
+      ) {
         toast.error(lang === "ar" ? "يرجى اختيار القسم" : "Please select your department");
 
         return;
@@ -382,7 +386,8 @@ export function useLoginForm(initialTab?: Tab) {
         username: trimmedUsername,
         password: joinPassword,
         role: joinRole,
-        department: department,
+        department: joinRole === "doctor" || joinRole === "ta" ? joinDepartments[0] : department,
+        departments: joinRole === "doctor" || joinRole === "ta" ? joinDepartments : [department],
         academic_year: joinRole === "student" ? academicYear : null,
         section_number: joinRole === "student" && sectionNumber ? parseInt(sectionNumber) : null,
         national_id: joinRole === "student" ? trimmedNID : null,
@@ -462,6 +467,8 @@ export function useLoginForm(initialTab?: Tab) {
     setShowConfirmPass,
     department,
     setDepartment,
+    joinDepartments,
+    setJoinDepartments,
     academicYear,
     setAcademicYear,
     sectionNumber,

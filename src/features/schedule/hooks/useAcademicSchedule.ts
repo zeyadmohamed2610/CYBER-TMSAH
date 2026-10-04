@@ -14,9 +14,17 @@ import { exportScheduleWorkbook, ScheduleImportError } from "../utils/scheduleWo
 import type { UniversityImport } from "../utils/universitySchedule";
 
 export function useAcademicSchedule() {
-  const { role, department: accountDepartment } = useAuth();
+  const { role, department: accountDepartment, departments } = useAuth();
   const [department, setDepartment] = useState("cybersecurity");
-  const scopedDepartment = role === "owner" ? department : accountDepartment;
+  const faculty = role === "doctor" || role === "ta";
+  const scopedDepartment =
+    role === "owner"
+      ? department
+      : faculty && departments.includes(department)
+        ? department
+        : accountDepartment;
+  const availableDepartments =
+    role === "owner" ? [] : faculty ? departments : accountDepartment ? [accountDepartment] : [];
   const [year, setYear] = useState("");
   const [data, setData] = useState<AcademicSchedule | null>(null);
   const [settingsDraft, setSettingsDraft] = useState<AcademicSettings | null>(null);
@@ -41,7 +49,7 @@ export function useAcademicSchedule() {
     setData(null);
     if ((role === "owner" || role === "coordinator") && !year) return;
     const result = await scheduleService.get({
-      p_department: role === "owner" ? scopedDepartment : null,
+      p_department: role === "owner" || faculty ? scopedDepartment : null,
       p_year: role === "student" ? null : year || null,
     });
     if (version !== loadVersion.current) return;
@@ -56,7 +64,7 @@ export function useAcademicSchedule() {
     setSettingsDraft(null);
     if (next.student_section && /^[1-9]$|^1[0-5]$/.test(next.student_section))
       setSection(Number(next.student_section));
-  }, [scopedDepartment, year, role]);
+  }, [scopedDepartment, year, role, faculty]);
   useEffect(() => {
     void load();
     setDraft(null);
@@ -86,7 +94,7 @@ export function useAcademicSchedule() {
       const version = loadVersion.current;
       const result = await scheduleService
         .get({
-          p_department: role === "owner" ? department : null,
+          p_department: role === "owner" || faculty ? scopedDepartment : null,
           p_year: role === "student" ? null : year || null,
         })
         .then(
@@ -108,7 +116,7 @@ export function useAcademicSchedule() {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", visible);
     };
-  }, [department, year, role, management]);
+  }, [scopedDepartment, year, role, management, faculty]);
   const saveEntry = () =>
     run(async () => {
       if (!data || !draft) return;
@@ -151,7 +159,8 @@ export function useAcademicSchedule() {
     role,
     busy,
     imported,
-    department,
+    availableDepartments,
+    department: scopedDepartment ?? department,
     setDepartment: (value: string) => {
       setDepartment(value);
       setYear("");

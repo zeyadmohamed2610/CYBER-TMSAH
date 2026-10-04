@@ -6,6 +6,7 @@ export interface UserProfileDetails {
   email: string | null;
   role: string;
   department: string | null;
+  departments?: string[];
   academic_year: string | null;
   section_number: number | null;
   subject_name?: string | null;

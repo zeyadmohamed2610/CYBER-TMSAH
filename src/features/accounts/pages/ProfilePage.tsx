@@ -6,7 +6,6 @@ import { usePasskeySettings } from "@/features/auth/hooks/usePasskeySettings";
 import { Button } from "@/shared/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { ArrowLeft, Camera, Fingerprint, KeyRound, Loader2, LogOut, User } from "lucide-react";
-import { ProfileAvatar } from "../components/ProfileAvatar";
 import { ProfileOverview } from "../components/ProfileOverview";
 import { ProfilePassword } from "../components/ProfilePassword";
 import { useProfile } from "../hooks/useProfile";
@@ -92,7 +91,9 @@ export default function ProfilePage() {
                   </h2>
                   <p className="text-sm text-muted-foreground">
                     {roleInfo.label}
-                    {profile?.department ? ` · ${getDepartmentLabel(profile.department)}` : ""}
+                    {profile?.department
+                      ? ` · ${(profile.departments?.length ? profile.departments : [profile.department]).map((d) => getDepartmentLabel(d)).join("، ")}`
+                      : ""}
                   </p>
                   {profile?.academic_year && (
                     <p className="text-sm text-muted-foreground">
@@ -116,20 +117,13 @@ export default function ProfilePage() {
               <div className="space-y-6">
                 <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="w-full">
                   {/* Modern Navigation Tabs Header */}
-                  <TabsList className="w-full grid grid-cols-2 sm:grid-cols-4 bg-card p-1.5 rounded-2xl h-auto border border-border gap-1">
+                  <TabsList className="w-full grid grid-cols-1 min-[400px]:grid-cols-3 bg-card p-1.5 rounded-2xl h-auto border border-border gap-1">
                     <TabsTrigger
                       value="overview"
                       className="rounded-xl text-sm font-semibold py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none gap-1.5"
                     >
                       <User className="w-3.5 h-3.5" />
                       <span>البيانات الأساسية</span>
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="avatar"
-                      className="rounded-xl text-sm font-semibold py-3 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none gap-1.5"
-                    >
-                      <Camera className="w-3.5 h-3.5" />
-                      <span>الصورة الشخصية</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="security"
@@ -149,9 +143,6 @@ export default function ProfilePage() {
 
                   {/* TAB 1: OVERVIEW / PERSONAL INFO */}
                   <ProfileOverview model={model} />
-
-                  {/* TAB 2: AVATAR & APPEARANCE */}
-                  <ProfileAvatar model={model} />
 
                   {/* TAB 3: SECURITY & PASSWORD */}
                   <ProfilePassword model={model} />

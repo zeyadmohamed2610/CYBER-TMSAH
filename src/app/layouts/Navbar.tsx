@@ -1,6 +1,5 @@
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { getDashboardRoute } from "@/features/auth/utils/dashboardRoutes";
-import { NotificationShortcut } from "@/features/learning/components/NotificationShortcut";
 import { ChevronDown, LogOut, Menu, User, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -151,7 +150,6 @@ export const Navbar = () => {
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            {user && role && <NotificationShortcut destination={dashboardPath} />}
             {/* Desktop Right Controls: User Account Popup (Language switcher removed) */}
             <div className="hidden md:flex items-center gap-3">
               {user ? (

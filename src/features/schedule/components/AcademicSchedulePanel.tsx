@@ -39,6 +39,7 @@ export function AcademicSchedulePanel() {
     busy,
     imported,
     department,
+    availableDepartments,
     setDepartment,
     setYear,
     year,
@@ -70,7 +71,7 @@ export function AcademicSchedulePanel() {
             : "اختر الفرقة الدراسية لعرض جدول قسمك أو إدارته."}
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
-          {role === "owner" && (
+          {(role === "owner" || availableDepartments.length > 1) && (
             <label className="space-y-2 text-sm">
               القسم
               <select
@@ -79,7 +80,9 @@ export function AcademicSchedulePanel() {
                 onChange={(e) => setDepartment(e.target.value)}
                 className={`${selectClass} w-full`}
               >
-                {DEPARTMENTS.map((d) => (
+                {DEPARTMENTS.filter(
+                  (d) => role === "owner" || availableDepartments.includes(d.id),
+                ).map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.nameAr}
                   </option>
@@ -140,7 +143,7 @@ export function AcademicSchedulePanel() {
           الجدول والامتحانات
         </h2>
         <div className="flex flex-wrap gap-2">
-          {role === "owner" && (
+          {(role === "owner" || availableDepartments.length > 1) && (
             <select
               aria-label="قسم الجدول"
               disabled={busy || imported.length > 0}
@@ -148,7 +151,9 @@ export function AcademicSchedulePanel() {
               onChange={(e) => setDepartment(e.target.value)}
               className={selectClass}
             >
-              {DEPARTMENTS.map((d) => (
+              {DEPARTMENTS.filter(
+                (d) => role === "owner" || availableDepartments.includes(d.id),
+              ).map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.nameAr}
                 </option>
