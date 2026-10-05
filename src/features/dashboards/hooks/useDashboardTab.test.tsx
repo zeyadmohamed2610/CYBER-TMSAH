@@ -1,10 +1,11 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter } from "react-router-dom";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { dashboardTabs } from "../../auth/utils/roleAccess";
 import { useDashboardTab } from "./useDashboardTab";
 it("redirects removed student subject-list tabs to the schedule without affecting faculty tabs", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   const container = document.createElement("div");
   const root = createRoot(container);
   function Probe() {

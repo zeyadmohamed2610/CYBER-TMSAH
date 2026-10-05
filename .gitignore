@@ -83,3 +83,4 @@ PRODUCTION_REPOSITORY_RELEASE_REPORT.md
 
 # Temporary verification scripts
 scratch/
+/coverage/
