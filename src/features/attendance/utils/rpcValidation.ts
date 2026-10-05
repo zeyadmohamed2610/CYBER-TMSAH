@@ -5,7 +5,7 @@ export const generateRotatingHashSchema = z.object({
   p_duration_minutes: z.number().int().min(1).max(180).default(10),
   p_latitude: z.number().min(-90).max(90).nullable().optional(),
   p_longitude: z.number().min(-180).max(180).nullable().optional(),
-  p_radius_meters: z.number().int().min(1).max(5000).default(50),
+  p_radius_meters: z.number().int().min(10).max(500).default(50),
   p_lecture_id: z.string().uuid().nullable().optional(),
   p_section: z.string().max(50).nullable().optional(),
 });

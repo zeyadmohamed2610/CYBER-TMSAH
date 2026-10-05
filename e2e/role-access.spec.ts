@@ -26,6 +26,11 @@ for (const [role, destination] of [
     await page.locator('[name="password"]').fill(password!);
     await page.locator('button[type="submit"]').click();
     await expect(page).toHaveURL(new RegExp(destination), { timeout: 30000 });
+    if (role === "student") {
+      const bind = page.getByRole("button", { name: "قفل هذا الجهاز والمتابعة" });
+      await expect(bind.or(page.getByRole("tab").first()).first()).toBeVisible();
+      if (await bind.isVisible()) await bind.click();
+    }
     await expect(page.getByRole("tabpanel").first()).toBeVisible({ timeout: 30000 });
     if ((page.viewportSize()?.width ?? 1280) < 1024 && role !== "student") {
       await page.getByRole("button", { name: "المزيد من الصفحات", exact: true }).click();

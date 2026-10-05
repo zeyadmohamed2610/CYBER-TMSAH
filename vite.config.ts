@@ -75,9 +75,10 @@ function e2eSupportPlugin() {
           res.statusCode = 200;
           res.end(
             JSON.stringify({
-              status: "healthy",
+              status: "ok",
+              scope: "web-server",
               timestamp: new Date().toISOString(),
-              checks: { database: "ok", server: "ok" },
+              checks: { server: "ok" },
             }),
           );
           return;

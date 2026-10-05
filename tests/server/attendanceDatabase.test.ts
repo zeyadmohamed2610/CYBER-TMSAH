@@ -52,22 +52,124 @@ beforeAll(async () => {
     ),
   );
   await db.exec(submit);
+  // Exercise the current private worker and invoker wrapper, not only its predecessor.
+  const workers = readFileSync(
+    "supabase/migrations/20261003154843_private_account_rpc_workers.sql",
+    "utf8",
+  );
+  await db.exec(
+    workers.slice(
+      workers.lastIndexOf("CREATE OR REPLACE FUNCTION private.account_submit_attendance"),
+      workers.lastIndexOf("COMMIT;"),
+    ),
+  );
+  const gpsWorker = readFileSync(
+    "supabase/migrations/20261005080545_enforce_session_gps_and_duration_scope.sql",
+    "utf8",
+  );
+  await db.exec(
+    gpsWorker.slice(
+      gpsWorker.indexOf("CREATE OR REPLACE FUNCTION private.account_submit_attendance"),
+      gpsWorker.lastIndexOf("COMMIT;"),
+    ),
+  );
+  await db.exec(`CREATE OR REPLACE FUNCTION public.gps_distance_meters(lat1 float8,lon1 float8,lat2 float8,lon2 float8)
+    RETURNS float8 LANGUAGE sql IMMUTABLE AS $$ SELECT 6371000*2*asin(sqrt(least(1::float8,
+      power(sin(radians(lat2-lat1)/2),2)+cos(radians(lat1))*cos(radians(lat2))*power(sin(radians(lon2-lon1)/2),2)))) $$;`);
+  const cleanup = readFileSync(
+    "supabase/migrations/20261005081902_remove_retired_runtime_dependencies.sql",
+    "utf8",
+  );
+  await db.exec(
+    cleanup.slice(
+      cleanup.indexOf("CREATE OR REPLACE FUNCTION private.account_submit_attendance"),
+      cleanup.lastIndexOf("COMMIT;"),
+    ),
+  );
+  await db.exec("DROP TABLE public.student_devices");
 }, 30000);
 
 beforeEach(async () => {
-  await db.exec(`TRUNCATE attendance,system_logs,device_locks,student_devices,attendance_biometric_proofs,users,sessions,auth.users CASCADE;
+  await db.exec(`TRUNCATE attendance,system_logs,device_locks,attendance_biometric_proofs,users,sessions,auth.users CASCADE;
     INSERT INTO auth.users VALUES('${auth}');
     INSERT INTO users VALUES('${student}','${auth}','student');
-    INSERT INTO sessions(id,expires_at,rotating_hash,short_code) VALUES('${session}', now()+interval '5 minutes','seed','123456');
+    INSERT INTO sessions(id,expires_at,rotating_hash,short_code,latitude,longitude,radius_meters) VALUES('${session}', now()+interval '5 minutes','seed','123456',30,31,50);
     SELECT set_config('test.auth_id','${auth}',false); SELECT set_config('test.jwt','{}',false);
     INSERT INTO attendance_biometric_proofs(id,auth_id,attendance_hash,device_fingerprint,credential_id) VALUES('${receipt}','${auth}','123456','device','verified-credential');
   `);
 });
 afterAll(() => db.close());
 const call = (proof: string | null = receipt, hash = "123456", fingerprint = "device") =>
-  db.query("SELECT public.submit_attendance($1,$2,NULL,NULL,$3)", [hash, fingerprint, proof]);
+  db.query("SELECT public.submit_attendance($1,$2,30,31,$3)", [hash, fingerprint, proof]);
 
 describe("database-enforced attendance receipts", () => {
+  it.each([
+    [null, 31],
+    [30, null],
+    [91, 31],
+    [30, 181],
+    [NaN, 31],
+    [Infinity, 31],
+    [30.01, 31],
+  ])(
+    "rejects missing, impossible or outside GPS %s,%s without consuming proof",
+    async (lat, lon) => {
+      await expect(
+        db.query("SELECT public.submit_attendance('123456','device',$1,$2,$3)", [
+          lat,
+          lon,
+          receipt,
+        ]),
+      ).rejects.toThrow("location_denied");
+      expect((await db.query("SELECT * FROM attendance_biometric_proofs")).rows).toHaveLength(1);
+      expect((await db.query("SELECT * FROM attendance")).rows).toHaveLength(0);
+    },
+  );
+  it("rejects legacy sessions without a GPS center", async () => {
+    await db.exec("UPDATE sessions SET latitude=NULL");
+    await expect(call()).rejects.toThrow("location_denied");
+  });
+  it("isolates receipts and rank permissions across 1000 distinct local identities", async () => {
+    await db.exec(`
+      TRUNCATE attendance,system_logs,device_locks,attendance_biometric_proofs,users,auth.users CASCADE;
+      INSERT INTO auth.users SELECT md5('auth-'||n)::uuid FROM generate_series(1,1000) n;
+      INSERT INTO users(id,auth_id,role)
+        SELECT md5('student-'||n)::uuid,md5('auth-'||n)::uuid,
+          CASE WHEN n<=800 THEN 'student' WHEN n<=880 THEN 'doctor'
+            WHEN n<=940 THEN 'ta' WHEN n<=980 THEN 'coordinator' ELSE 'owner' END
+        FROM generate_series(1,1000) n;
+      INSERT INTO attendance_biometric_proofs(id,auth_id,attendance_hash,device_fingerprint,credential_id)
+        SELECT md5('proof-'||n)::uuid,md5('auth-'||n)::uuid,'123456','device-'||n,'credential-'||n
+        FROM generate_series(1,1000) n;
+      DO $test$ DECLARE n integer; BEGIN
+        FOR n IN 1..1000 LOOP
+          PERFORM set_config('test.auth_id',md5('auth-'||n),false);
+          IF n<=800 THEN
+            PERFORM public.submit_attendance('123456','device-'||n,30,31,md5('proof-'||n)::uuid::text);
+          ELSE
+            BEGIN
+              PERFORM public.submit_attendance('123456','device-'||n,NULL,NULL,md5('proof-'||n)::uuid::text);
+              RAISE EXCEPTION 'non_student_was_admitted';
+            EXCEPTION WHEN OTHERS THEN
+              IF SQLERRM NOT LIKE 'permission_denied:%' THEN RAISE; END IF;
+            END;
+          END IF;
+        END LOOP;
+      END $test$;
+    `);
+    expect((await db.query("SELECT count(*) AS n FROM attendance")).rows).toEqual([{ n: 800 }]);
+    expect((await db.query("SELECT count(*) AS n FROM device_locks")).rows).toEqual([{ n: 800 }]);
+    expect((await db.query("SELECT count(*) AS n FROM attendance_biometric_proofs")).rows).toEqual([
+      { n: 200 },
+    ]);
+    expect(
+      (
+        await db.query(`SELECT a.id FROM attendance a JOIN users u ON u.id=a.student_id
+          WHERE a.biometric_credential_id <> 'credential-'||replace(a.device_fingerprint,'device-','')
+            OR u.role<>'student'`)
+      ).rows,
+    ).toEqual([]);
+  }, 30000);
   it("does not authorize manual attendance from editable owner metadata", async () => {
     await db.exec(
       'DELETE FROM users; SELECT set_config(\'test.jwt\', \'{"user_metadata":{"role":"owner"}}\', false)',

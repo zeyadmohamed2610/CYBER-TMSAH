@@ -18,6 +18,8 @@ for (const [role, destination] of [
       "Dedicated QA accounts required",
     );
     const cdp = await context.newCDPSession(page);
+    await context.grantPermissions(["geolocation"]);
+    await context.setGeolocation({ latitude: 30, longitude: 31 });
     await cdp.send("WebAuthn.enable");
     await cdp.send("WebAuthn.addVirtualAuthenticator", {
       options: {
@@ -46,7 +48,7 @@ for (const [role, destination] of [
         name:
           process.env.E2E_PASSKEY_TRANSPORT === "usb"
             ? "جهاز آخر أو مفتاح أمان"
-            : "إضافة جهاز للدخول بالبصمة",
+            : "إضافة مفتاح دخول",
       })
       .click();
     await page.locator("#passkey-reauth-pass").fill(password!);
@@ -98,6 +100,9 @@ for (const [role, destination] of [
       await expect(bind.or(page.getByRole("tab").first()).first()).toBeVisible();
       if (await bind.isVisible()) await bind.click();
       await page.getByRole("tab", { name: "تسجيل الحضور", exact: true }).click();
+      // The registration gate is mounted only after opening the attendance tab.
+      await expect(page.locator("#attendance-code").or(bind).first()).toBeVisible();
+      if (await bind.isVisible()) await bind.click();
       await page.locator("#attendance-code").fill(process.env.E2E_ATTENDANCE_CODE);
       const receipt = page.waitForResponse((r) =>
         r.url().includes("passkey-login?action=attendance-finish"),
@@ -149,7 +154,7 @@ test("@passkey a stored credential creates a fresh session after site-data delet
     await page.locator('button[type="submit"]').click();
     await expect(page).toHaveURL(/owner-dashboard/, { timeout: 30000 });
     await page.goto("/profile?section=passkeys");
-    await page.getByRole("button", { name: "إضافة جهاز للدخول بالبصمة" }).click();
+    await page.getByRole("button", { name: "إضافة مفتاح دخول" }).click();
     await page.locator("#passkey-reauth-pass").fill(password!);
     const registered = page.waitForResponse((r) =>
       r.url().includes("/passkeys/registration/verify"),
@@ -163,7 +168,7 @@ test("@passkey a stored credential creates a fresh session after site-data delet
     const initialLogin = page.waitForResponse((r) => r.url().includes("action=auth-finish"));
     await page.getByRole("button", { name: "الدخول بمفتاح الدخول" }).click();
     expect((await (await initialLogin).json()).success).toBe(true);
-    await expect(page).toHaveURL(/owner-dashboard/, { timeout: 30000 });
+    await expect(page).toHaveURL(/owner-dashboard|profile/, { timeout: 30000 });
     await page.goto("/profile");
     await page.getByRole("button", { name: "تسجيل الخروج", exact: true }).click();
     await expect(page).toHaveURL(/login/, { timeout: 30000 });
@@ -204,9 +209,8 @@ test("@passkey a stored credential creates a fresh session after site-data delet
   }
 });
 
-test("@passkey failed device registration exposes a safe copyable report", async ({
+test("@passkey failed device registration shows a safe message and allows retry", async ({
   page,
-  context,
 }) => {
   const identifier = process.env.E2E_OWNER_IDENTIFIER,
     password = process.env.E2E_OWNER_PASSWORD;
@@ -214,7 +218,6 @@ test("@passkey failed device registration exposes a safe copyable report", async
     process.env.E2E_ALLOW_LIVE_AUTH !== "1" || !identifier || !password,
     "Dedicated QA account required",
   );
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto("/login");
   await page.locator('input[name="identifier"]').fill(identifier!);
   await page.locator('input[name="password"]').fill(password!);
@@ -232,26 +235,11 @@ test("@passkey failed device registration exposes a safe copyable report", async
       },
     }),
   );
-  await page.getByRole("button", { name: "إضافة جهاز للدخول بالبصمة" }).click();
+  await page.getByRole("button", { name: "إضافة مفتاح دخول" }).click();
   await page.locator("#passkey-reauth-pass").fill(password!);
   await page.getByRole("button", { name: "تأكيد ومتابعة البصمة" }).click();
   await page.getByRole("button", { name: "حفظ على هذا الجهاز", exact: true }).click();
-  await expect(
-    page.getByText("تعذر التواصل مع مدير مفاتيح الدخول على جهازك.", { exact: true }),
-  ).toBeVisible();
-  await expect(page.getByRole("link", { name: "كيفية اختيار مدير مفاتيح الدخول" })).toHaveAttribute(
-    "href",
-    "https://support.google.com/chrome/answer/14124480?hl=ar",
-  );
-  await page.getByRole("button", { name: "نسخ تفاصيل الخطأ", exact: true }).click();
-  await expect(page.getByText("تم نسخ تفاصيل الخطأ.", { exact: true })).toBeVisible();
-  const copied = await page.evaluate(() => navigator.clipboard.readText());
-  expect(JSON.parse(copied)).toMatchObject({
-    stage: "device-create",
-    errorName: "NotReadableError",
-    errorCode: "CREDENTIAL_MANAGER_UNAVAILABLE",
-    userActivation: true,
-  });
-  expect(copied).not.toContain("private@example.com");
-  expect(copied).not.toContain(identifier!);
+  await expect(page.getByText(/^تعذر التواصل مع مدير مفاتيح الدخول على الجهاز\./)).toBeVisible();
+  await expect(page.getByRole("button", { name: "إضافة مفتاح دخول" })).toBeEnabled();
+  expect(await page.locator("body").innerText()).not.toContain("private@example.com");
 });

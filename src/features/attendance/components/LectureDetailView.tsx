@@ -49,6 +49,7 @@ interface SessionDbRow {
   expires_at: string;
   section: string | null;
   radius_meters: number | null;
+  attendance?: { count: number }[];
 }
 
 interface SessionHistoryItem {
@@ -73,6 +74,7 @@ export function LectureDetailView({ lecture, onBack }: Props) {
   const [selectedSection, setSelectedSection] = useState<string>(lecture.section ?? "1");
   const sessionType = lecture.kind ?? "lecture";
   const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [gpsError, setGpsError] = useState("");
   const {
     activeSession,
     creating,
@@ -103,7 +105,7 @@ export function LectureDetailView({ lecture, onBack }: Props) {
     try {
       const { data: sessions } = await supabase
         .from("sessions")
-        .select("id, created_at, expires_at, section, radius_meters")
+        .select("id, created_at, expires_at, section, radius_meters, attendance(count)")
         .eq("lecture_id", lecture.id);
 
       const sortedSessions = (sessions ?? []).sort(
@@ -112,11 +114,6 @@ export function LectureDetailView({ lecture, onBack }: Props) {
 
       const history: SessionHistoryItem[] = [];
       for (const s of sortedSessions as SessionDbRow[]) {
-        const { count } = await supabase
-          .from("attendance")
-          .select("id", { head: true, count: "exact" })
-          .eq("session_id", s.id);
-
         // Compute intended duration from timestamps (in minutes)
         const durationMs = new Date(s.expires_at).getTime() - new Date(s.created_at).getTime();
         const durationMinutes = Math.max(1, Math.round(durationMs / 60000));
@@ -126,7 +123,7 @@ export function LectureDetailView({ lecture, onBack }: Props) {
           created_at: s.created_at,
           expires_at: s.expires_at,
           is_active: new Date(s.expires_at).getTime() > Date.now(),
-          attendee_count: count ?? 0,
+          attendee_count: s.attendance?.[0]?.count ?? 0,
           section: s.section ?? null,
           duration_minutes: durationMinutes,
           gps_radius: s.radius_meters ?? null,
@@ -141,13 +138,15 @@ export function LectureDetailView({ lecture, onBack }: Props) {
   // Restore active session on mount
   useEffect(() => {
     void restoreActiveSession(lecture.id);
+    setGpsCoords(null);
+    setGpsError("");
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => setGpsCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => {},
-        { enableHighAccuracy: true, timeout: 10000 },
+        () => setGpsError("اسمح بالوصول للموقع لتحديد نطاق الحضور وفتح الجلسة."),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
       );
-    }
+    } else setGpsError("هذا المتصفح لا يدعم تحديد الموقع. استخدم متصفحًا يدعم GPS لفتح الجلسة.");
   }, [lecture.id, restoreActiveSession]);
 
   // Reset section when session type changes
@@ -656,27 +655,36 @@ export function LectureDetailView({ lecture, onBack }: Props) {
                     </SelectContent>
                   </Select>
                 </div>
-              ) : (
-                <div className="space-y-1">
-                  <Label className="text-xs">نطاق الحضور حول القاعة (متر)</Label>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <Input
-                      id="session-radius"
-                      type="number"
-                      min={10}
-                      max={500}
-                      value={sessionRadius}
-                      onChange={(e) => setSessionRadius(Number(e.target.value))}
-                      className="h-8 text-sm"
-                      dir="ltr"
-                    />
-                  </div>
-                  {gpsCoords && <p className="text-xs text-green-500">تم تحديد الموقع</p>}
+              ) : null}
+              <div className="space-y-1">
+                <Label className="text-xs">نطاق الحضور حول القاعة (متر)</Label>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <Input
+                    id="session-radius"
+                    type="number"
+                    aria-label="نطاق الحضور حول القاعة بالمتر"
+                    min={10}
+                    max={500}
+                    value={sessionRadius}
+                    onChange={(e) => setSessionRadius(Number(e.target.value))}
+                    className="h-8 text-sm"
+                    dir="ltr"
+                  />
                 </div>
-              )}
+                {gpsCoords && <p className="text-xs text-green-500">تم تحديد الموقع</p>}
+              </div>
             </div>
-            <Button onClick={handleCreateSession} disabled={creating} className="w-full gap-2">
+            {!gpsCoords && (
+              <p role="status" className="text-sm text-muted-foreground">
+                {gpsError || "جاري تحديد الموقع لفتح جلسة بنطاق حضور محدد..."}
+              </p>
+            )}
+            <Button
+              onClick={handleCreateSession}
+              disabled={creating || !gpsCoords || sessionRadius < 10 || sessionRadius > 500}
+              className="w-full gap-2"
+            >
               <Hash className="h-4 w-4" />
               {creating ? "جاري الإنشاء..." : "بدء جلسة الحضور"}
             </Button>

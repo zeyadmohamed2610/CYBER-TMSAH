@@ -66,6 +66,19 @@ beforeAll(async () => {
   await db.exec(
     readFileSync("supabase/migrations/20261002161935_schedule_day_cycles_and_clock.sql", "utf8"),
   );
+  await db.exec(`ALTER TABLE system_logs ADD COLUMN metadata jsonb;
+    ALTER FUNCTION private.academic_replace_schedule(text,text,jsonb,text) RENAME TO academic_replace_schedule_core;
+    CREATE FUNCTION private.schedule_checkpoint(text,text,text) RETURNS void LANGUAGE sql AS $$ SELECT $$;`);
+  const cleanup = readFileSync(
+    "supabase/migrations/20261005081902_remove_retired_runtime_dependencies.sql",
+    "utf8",
+  );
+  await db.exec(
+    cleanup.slice(
+      0,
+      cleanup.indexOf("CREATE OR REPLACE FUNCTION private.account_lock_student_device"),
+    ) + "COMMIT;",
+  );
 }, 30000);
 beforeEach(async () => {
   await db.exec(`TRUNCATE private.academic_cycle_controls,private.academic_day_cycles,academic_schedule_entries,academic_schedule_settings,system_logs,user_subjects,users,subjects CASCADE;
@@ -88,6 +101,14 @@ const replace = (entries: object[], rev: string) =>
     rev,
   ]);
 describe("database university schedule replacement", () => {
+  it("imports entries after the notification feature has been removed", async () => {
+    const result = await db.query<{ count: number }>(
+      "SELECT private.academic_import_entries('cybersecurity','2',$1::jsonb) AS count",
+      [JSON.stringify([entry])],
+    );
+    expect(result.rows[0].count).toBe(1);
+    expect((await db.query("SELECT * FROM academic_schedule_entries")).rows).toHaveLength(1);
+  });
   it("synchronizes source time atomically without clearing holidays", async () => {
     await db.exec(
       'SELECT private.academic_save_settings(\'cybersecurity\',\'2\',\'{"week_start_day":5,"start_time":"07:30","days_off":[4,6]}\')',

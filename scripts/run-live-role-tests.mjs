@@ -1,4 +1,5 @@
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { createClient } from "@supabase/supabase-js";
 const accounts = JSON.parse(await readFile(".private/test-accounts.json", "utf8"));
@@ -17,6 +18,7 @@ for (const account of accounts) {
 let failed = false;
 const passkeys = process.env.E2E_LIVE_SUITE === "passkeys";
 const sessionSuite = process.env.E2E_LIVE_SUITE === "sessions";
+const accessSuite = process.env.E2E_LIVE_SUITE === "access";
 const sessionRun = "QA browser sessions " + crypto.randomUUID();
 if (sessionSuite) env.E2E_SESSION_RUN = sessionRun;
 const originalAssignments = [];
@@ -48,6 +50,9 @@ const prepareAttendance = async () => {
     p_subject_id: unit.data.subject_id,
     p_lecture_id: unit.data.id,
     p_duration_minutes: 30,
+    p_latitude: 30,
+    p_longitude: 31,
+    p_radius_meters: 50,
   });
   if (session.error) throw session.error;
   fixtureSessions.push(session.data.id);
@@ -107,6 +112,28 @@ try {
   }
   if (passkeys) await clearPasskeys();
   for (const project of ["chromium", "mobile-chrome"]) {
+    // Each project is a fresh fixture run. Reset only the five QA identifiers,
+    // preserving throttling for every other account on the linked project.
+    const hashes = accounts.map((a) =>
+      createHash("sha256").update(a.email.trim().toLowerCase()).digest("hex"),
+    );
+    await writeFile(
+      ".private/qa-login-limit-reset.sql",
+      `DELETE FROM private.account_login_limits WHERE identifier_hash IN (${hashes.map((hash) => `'${hash}'`).join(",")});`,
+    );
+    const limitReset = spawnSync(
+      process.platform === "win32" ? "powershell.exe" : "supabase",
+      process.platform === "win32"
+        ? [
+            "-NoProfile",
+            "-Command",
+            "supabase db query --linked --file .private/qa-login-limit-reset.sql",
+          ]
+        : ["db", "query", "--linked", "--file", ".private/qa-login-limit-reset.sql"],
+      { encoding: "utf8" },
+    );
+    if (limitReset.status !== 0 || limitReset.stdout.includes('"_tag":"Error"'))
+      throw new Error("QA login limiter reset failed");
     const reset = await admin.from("device_locks").delete().eq("student_auth_id", student.authId);
     if (reset.error) throw reset.error;
     if (passkeys) await clearPasskeys();
@@ -118,9 +145,11 @@ try {
         "test",
         sessionSuite
           ? "e2e/sessions.spec.ts"
-          : passkeys
-            ? "e2e/passkeys.spec.ts"
-            : "e2e/authenticated.spec.ts",
+          : accessSuite
+            ? "e2e/role-access.spec.ts"
+            : passkeys
+              ? "e2e/passkeys.spec.ts"
+              : "e2e/authenticated.spec.ts",
         `--project=${project}`,
         "--workers=1",
       ],

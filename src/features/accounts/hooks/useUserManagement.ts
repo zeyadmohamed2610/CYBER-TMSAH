@@ -290,7 +290,7 @@ export function useUserManagement(initialRole = "all") {
     const trimmedNID = role === "student" ? formData.nationalId.trim() : null;
 
     try {
-      // 1. Try Direct RPC admin_create_user
+      // The deployed account-creation RPC is the authoritative provisioning path.
       const { data: newUserId, error: rpcError } = await supabase.rpc("admin_create_user", {
         p_full_name: trimmedName,
         p_username: trimmedUsername,
@@ -322,90 +322,29 @@ export function useUserManagement(initialRole = "all") {
       };
 
       if (rpcError) {
-        if (rpcError.code !== "PGRST202" && rpcError.code !== "42883") {
-          toast.error(
-            getFriendlyErrorMessage(rpcError.message, "تعذر إنشاء الحساب. راجع البيانات."),
-          );
-          return;
-        }
-        // Fallback: If RPC not found yet or error, insert join_request and approve it immediately
-        console.warn("admin_create_user RPC failed, using auto-approval fallback:", rpcError);
-
-        const { data: joinReq, error: joinErr } = await supabase
-          .from("join_requests")
-          .insert({
-            full_name: trimmedName,
-            username: trimmedUsername,
-            email: trimmedEmail,
-            password: formData.password,
-            role: role,
-            department: formData.department,
-            academic_year: role === "student" ? formData.academicYear : null,
-            section_number: role === "student" ? parseInt(formData.sectionNumber) : null,
-            national_id: trimmedNID,
-            status: "pending",
-          })
-          .select("id")
-          .single();
-
-        if (joinErr) {
-          if (joinErr.message.includes("duplicate") || joinErr.message.includes("username")) {
-            toast.error("اسم المستخدم مسجل بالفعل. يرجى اختيار اسم مستخدم آخر.");
-          } else {
-            toast.error(getFriendlyErrorMessage(`فشل إنشاء المستخدم: ${joinErr.message}`));
-          }
-          setSubmitting(false);
-          return;
-        }
-
-        // Approve it immediately
-        const { data: approveResult, error: approveErr } = await supabase.rpc(
-          "approve_join_request",
-          {
-            p_request_id: joinReq.id,
-            p_temp_password: formData.password,
-          },
-        );
-
-        if (approveErr) {
-          toast.error(
-            getFriendlyErrorMessage(
-              `تم إنشاء الطلب ولكن فشل التفعيل المباشر: ${approveErr.message}`,
-            ),
-          );
-        } else {
-          // If coordinator, doctor, or TA had subjects selected, assign them
-          const createdUid = (approveResult as { user_id?: string })?.user_id;
-          if (createdUid && formData.subjectIds.length > 0) {
-            await assignSubjectsAfterCreate(createdUid);
-          }
-          toast.success(`تمت إضافة الحساب بنجاح لـ ${trimmedName} ✓`);
-          resetFormAndDraft();
-          notifyAcademicChange();
-          void loadUsers();
-        }
-      } else {
-        // Assign multiple subjects if provided
-        if (
-          newUserId &&
-          (role === "doctor" || role === "ta" || role === "coordinator") &&
-          formData.subjectIds.length > 0
-        ) {
-          await assignSubjectsAfterCreate(newUserId as string);
-        }
-        // Set national_id for student via update (admin_create_user doesn't accept it yet)
-        if (newUserId && role === "student" && trimmedNID) {
-          const identity = await supabase
-            .from("users")
-            .update({ national_id: trimmedNID })
-            .eq("id", newUserId as string);
-          if (identity.error) throw new Error(identity.error.message);
-        }
-        toast.success(`تمت إضافة الحساب بنجاح لـ ${trimmedName} ✓`);
-        resetFormAndDraft();
-        notifyAcademicChange();
-        void loadUsers();
+        toast.error(getFriendlyErrorMessage(rpcError.message, "تعذر إنشاء الحساب. راجع البيانات."));
+        return;
       }
+      // Assign multiple subjects if provided
+      if (
+        newUserId &&
+        (role === "doctor" || role === "ta" || role === "coordinator") &&
+        formData.subjectIds.length > 0
+      ) {
+        await assignSubjectsAfterCreate(newUserId as string);
+      }
+      // Set national_id for student via update (admin_create_user doesn't accept it yet)
+      if (newUserId && role === "student" && trimmedNID) {
+        const identity = await supabase
+          .from("users")
+          .update({ national_id: trimmedNID })
+          .eq("id", newUserId as string);
+        if (identity.error) throw new Error(identity.error.message);
+      }
+      toast.success(`تمت إضافة الحساب بنجاح لـ ${trimmedName} ✓`);
+      resetFormAndDraft();
+      notifyAcademicChange();
+      void loadUsers();
     } catch (err: unknown) {
       toast.error(
         getFriendlyErrorMessage(

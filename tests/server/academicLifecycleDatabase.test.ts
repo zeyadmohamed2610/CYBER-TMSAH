@@ -71,6 +71,12 @@ beforeAll(async () => {
   await db.exec(
     readFileSync("supabase/migrations/20261004202704_remove_retired_department_helper.sql", "utf8"),
   );
+  await db.exec(
+    readFileSync("supabase/migrations/20261005042812_fix_attendance_session_cascade.sql", "utf8"),
+  );
+  await db.exec(
+    "ALTER TABLE attendance ADD CONSTRAINT attendance_session_fk FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE",
+  );
 }, 30000);
 beforeEach(async () => {
   await db.exec("TRUNCATE auth.users");
@@ -85,6 +91,20 @@ beforeEach(async () => {
 });
 afterAll(() => db.close());
 describe("academic lifecycle authorization and historical integrity", () => {
+  it("cascades attendance when an active session is legitimately removed", async () => {
+    await db.exec(`INSERT INTO attendance(student_id,session_id) VALUES('${student}','${session}');
+      DELETE FROM sessions WHERE id='${session}';`);
+    expect((await db.query("SELECT * FROM attendance")).rows).toEqual([]);
+  });
+  it("still rejects session deletion and attendance changes after term closure", async () => {
+    await db.exec(`INSERT INTO attendance(student_id,session_id) VALUES('${student}','${session}');
+      UPDATE private.academic_terms SET status='closed' WHERE department='cybersecurity';`);
+    await expect(db.exec(`DELETE FROM sessions WHERE id='${session}'`)).rejects.toThrow(
+      "term_closed",
+    );
+    await expect(db.exec("DELETE FROM attendance")).rejects.toThrow("term_closed");
+    expect((await db.query("SELECT * FROM attendance")).rows).toHaveLength(1);
+  });
   it.each([
     ["doctor", "active"],
     ["doctor", "closed"],

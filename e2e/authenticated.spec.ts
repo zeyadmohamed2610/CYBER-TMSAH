@@ -10,6 +10,11 @@ for (const [role, destination] of [
 ] as const) {
   test("@auth " + role + " opens the correct dashboard", async ({ page }, testInfo) => {
     test.setTimeout(90000);
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    page.on("console", (message) => {
+      if (message.type() === "error") errors.push(message.text());
+    });
     const backendErrors: string[] = [];
     page.on("response", (response) => {
       if (response.url().includes(".supabase.co/") && response.status() >= 400) {
@@ -35,7 +40,6 @@ for (const [role, destination] of [
       if (await bind.isVisible()) await bind.click();
       await expect(page.getByRole("tab").first()).toBeVisible();
     }
-    const errors: string[] = [];
     const expectMobileLayout = async () => {
       if ((page.viewportSize()?.width ?? 1280) >= 640) return;
       const scrollers = await page.evaluate(() =>
@@ -87,7 +91,6 @@ for (const [role, destination] of [
       path: `.private/screenshots/${role}-${testInfo.project.name}.png`,
       fullPage: true,
     });
-    page.on("pageerror", (error) => errors.push(error.message));
     if (role !== "student" && (page.viewportSize()?.width ?? 1280) < 1024) {
       await expect(page.getByRole("button", { name: "فتح قائمة التنقل", exact: true })).toHaveCount(
         0,

@@ -7,8 +7,15 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    // PGlite starts a real WASM Postgres instance for each database suite.
+    maxWorkers: 4,
+    hookTimeout: 30000,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}", "tests/**/*.test.ts"],
+    coverage: {
+      include: ["src/**/*.{ts,tsx}", "api/**/*.ts", "supabase/functions/**/*.ts"],
+      exclude: ["**/*.{test,spec}.{ts,tsx}", "**/__tests__/**", "src/test/**", "**/*.d.ts"],
+    },
   },
   resolve: {
     alias: {

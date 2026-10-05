@@ -6,12 +6,6 @@ export const getTimeWindow = (date: Date = new Date()): number => {
   return Math.floor(date.getTime() / 1000 / ROTATING_WINDOW_SECONDS);
 };
 
-export const getSecondsUntilNextWindow = (date: Date = new Date()): number => {
-  const seconds = Math.floor(date.getTime() / 1000);
-  const elapsedInWindow = seconds % ROTATING_WINDOW_SECONDS;
-  return ROTATING_WINDOW_SECONDS - elapsedInWindow;
-};
-
 export const generateTOTPCode = async (
   secret: string | null | undefined,
   date: Date = new Date(),

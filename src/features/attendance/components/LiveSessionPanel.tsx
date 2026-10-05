@@ -92,11 +92,18 @@ export function LiveSessionPanel({ session, onStop, onUpdateDuration }: Props) {
     setUpdating(false);
   };
 
-  const handleCopyCode = () => {
+  const handleCopyCode = async () => {
     if (totpCode && totpCode !== "------") {
-      navigator.clipboard.writeText(totpCode).then(() => {
+      try {
+        await navigator.clipboard.writeText(totpCode);
         toast({ title: "تم نسخ الرمز", description: totpCode });
-      });
+      } catch {
+        toast({
+          variant: "destructive",
+          title: "تعذر نسخ الرمز",
+          description: "اسمح للمتصفح بالوصول للحافظة، أو انسخ الرمز المعروض يدويًا.",
+        });
+      }
     }
   };
 

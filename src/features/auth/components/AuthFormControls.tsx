@@ -1,7 +1,6 @@
 import { useLang } from "@/shared/i18n";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { normalizeIdentifier } from "../utils/loginInput";
 
 export function Field({
   id,
@@ -170,38 +169,3 @@ export const PrimaryButton = ({
     </button>
   );
 };
-export function IdentifierBadge({ identifier }: { identifier: string }) {
-  const { lang } = useLang();
-  const v = normalizeIdentifier(identifier);
-  if (!v) return null;
-  const [bg, color, border, label] = /^\d{14}$/.test(v)
-    ? [
-        "rgba(99,102,241,0.12)",
-        "#818CF8",
-        "rgba(99,102,241,0.3)",
-        lang === "ar" ? "رقم قومي" : "National ID",
-      ]
-    : /^\d+$/.test(v)
-      ? ["rgba(245,158,11,0.1)", "#F59E0B", "rgba(245,158,11,0.25)", lang === "ar" ? "رقم" : "ID"]
-      : v.includes("@")
-        ? [
-            "rgba(16,185,129,0.08)",
-            "#34D399",
-            "rgba(16,185,129,0.2)",
-            lang === "ar" ? "بريد" : "Email",
-          ]
-        : [
-            "rgba(255,255,255,0.06)",
-            "#94A3B8",
-            "rgba(255,255,255,0.12)",
-            lang === "ar" ? "اسم مستخدم" : "Username",
-          ];
-  return (
-    <span
-      className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md"
-      style={{ background: bg, color, border: `1px solid ${border}` }}
-    >
-      {label}
-    </span>
-  );
-}

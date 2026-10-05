@@ -1,13 +1,12 @@
 /**
  * HaveIBeenPwned (HIBP) Password Checker using k-Anonymity.
  *
- * This provides the exact same functionality as Supabase Pro's
- * "Leaked Password Protection" completely free of charge.
+ * Client-side assistance only. Server-side leaked-password protection is still
+ * required to enforce this rule for clients that bypass the form.
  *
  * Security & Privacy:
  * - Only the first 5 characters of the SHA-1 hash are sent to HIBP's API.
  * - The actual password and remaining 35 characters never leave the client.
- * - Conforms to NIST SP 800-63B guidelines on compromised credential checking.
  */
 
 export interface PwnedCheckResult {
@@ -38,6 +37,7 @@ export async function checkPwnedPassword(password: string): Promise<PwnedCheckRe
     // 3. Query HIBP range API (free, no API key needed, k-anonymity model)
     const response = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
       method: "GET",
+      signal: AbortSignal.timeout(5000),
       headers: {
         "Add-Padding": "true", // Mitigates response size side-channel analysis
       },
@@ -49,13 +49,16 @@ export async function checkPwnedPassword(password: string): Promise<PwnedCheckRe
     }
 
     const text = await response.text();
-    const lines = text.split("\r\n");
+    const lines = text.split(/\r?\n/);
 
     for (const line of lines) {
       const [hashSuffix, countStr] = line.split(":");
       if (hashSuffix && hashSuffix.trim().toUpperCase() === suffix) {
         const count = parseInt(countStr || "0", 10);
-        return { isPwned: true, count };
+        return {
+          isPwned: Number.isFinite(count) && count > 0,
+          count: Number.isFinite(count) ? count : 0,
+        };
       }
     }
 

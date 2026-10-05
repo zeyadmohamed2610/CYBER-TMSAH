@@ -128,6 +128,7 @@ jobs:
       - name: Run E2E tests
         run: pnpm test:e2e
         env:
+          E2E_PREVIEW: "1"
           VITE_SUPABASE_URL: https://example.supabase.co
           VITE_SUPABASE_ANON_KEY: local-test-key
 

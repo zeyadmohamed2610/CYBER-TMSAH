@@ -48,7 +48,7 @@ export default defineConfig({
   webServer: remoteBaseUrl
     ? undefined
     : {
-        command: `node node_modules/vite/bin/vite.js --port ${testPort} --strictPort`,
+        command: `node node_modules/vite/bin/vite.js ${process.env.E2E_PREVIEW === "1" ? "preview" : ""} --port ${testPort} --strictPort`,
         url: `http://localhost:${testPort}`,
         reuseExistingServer: !process.env.CI,
         timeout: 180000,
