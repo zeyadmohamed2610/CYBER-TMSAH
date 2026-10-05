@@ -2,10 +2,95 @@
 <html lang="ar" dir="rtl">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="supported-color-schemes" content="light dark" />
     <title>استعادة كلمة المرور | CYBER TMSAH</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        supported-color-schemes: light dark;
+      }
+      table {
+        border-collapse: separate;
+        border-spacing: 0;
+      }
+      a:focus {
+        outline: 2px solid #b985ff;
+        outline-offset: 3px;
+      }
+      @media screen and (max-width: 420px) {
+        .email-content {
+          padding: 22px 20px !important;
+        }
+        .email-heading {
+          font-size: 22px !important;
+          line-height: 34px !important;
+        }
+      }
+      @media (prefers-color-scheme: dark) {
+        .email-bg {
+          background-color: #090d18 !important;
+        }
+        .email-card {
+          background-color: #151b2b !important;
+          border-color: #343d52 !important;
+        }
+        .email-heading {
+          color: #f3f5fc !important;
+        }
+        .email-copy,
+        .email-muted {
+          color: #cbd3e4 !important;
+        }
+        .email-kicker,
+        .email-link {
+          color: #d2aaff !important;
+        }
+        .email-note {
+          background-color: #29223b !important;
+          color: #e3d2fa !important;
+        }
+        .email-footer {
+          background-color: #111726 !important;
+          border-color: #343d52 !important;
+        }
+        .email-button {
+          background-color: #7629c7 !important;
+          color: #ffffff !important;
+          border-color: #7629c7 !important;
+        }
+      }
+      [data-ogsc] .email-bg {
+        background-color: #090d18 !important;
+      }
+      [data-ogsc] .email-card {
+        background-color: #151b2b !important;
+        border-color: #343d52 !important;
+      }
+      [data-ogsc] .email-heading {
+        color: #f3f5fc !important;
+      }
+      [data-ogsc] .email-copy,
+      [data-ogsc] .email-muted {
+        color: #cbd3e4 !important;
+      }
+      [data-ogsc] .email-kicker,
+      [data-ogsc] .email-link {
+        color: #d2aaff !important;
+      }
+      [data-ogsc] .email-note {
+        background-color: #29223b !important;
+        color: #e3d2fa !important;
+      }
+      [data-ogsc] .email-footer {
+        background-color: #111726 !important;
+        border-color: #343d52 !important;
+      }
+    </style>
   </head>
   <body
+    class="email-bg"
     style="
       margin: 0;
       padding: 0;
@@ -27,10 +112,12 @@
         mso-hide: all;
       "
     >
-      رابط آمن لتعيين كلمة مرور جديدة لحسابك في CYBER TMSAH. إذا لم تطلب ذلك، يمكنك تجاهل الرسالة.
+      أعد تعيين كلمة المرور خلال 30 دقيقة. رابط خاص بك للاستخدام مرة
+      واحدة.&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;
     </div>
     <table
       role="presentation"
+      class="email-bg"
       width="100%"
       cellspacing="0"
       cellpadding="0"
@@ -39,19 +126,22 @@
       style="width: 100%; background-color: #f3f4f8"
     >
       <tr>
-        <td align="center" style="padding: 24px 12px">
+        <td align="center" style="padding: 20px 12px">
+          <!--[if mso]><table role="presentation" width="560" align="center" cellspacing="0" cellpadding="0" border="0"><tr><td><![endif]-->
           <table
             role="presentation"
+            class="email-card"
             width="560"
             cellspacing="0"
             cellpadding="0"
             border="0"
+            bgcolor="#ffffff"
             style="
               width: 100%;
               max-width: 560px;
               background-color: #ffffff;
               border: 1px solid #e2e4ed;
-              border-radius: 18px;
+              border-radius: 16px;
               overflow: hidden;
             "
           >
@@ -60,79 +150,144 @@
                 align="center"
                 bgcolor="#101426"
                 style="
-                  padding: 26px 24px 24px;
+                  padding: 18px 20px;
                   background-color: #101426;
                   border-top: 4px solid #9344e8;
                 "
               >
-                <img
-                  src="https://www.cyber-tmsah.site/brand/mark.png"
-                  width="52"
-                  height="52"
-                  alt="شعار سايبر تمساح"
-                  style="display: block; width: 52px; height: 52px; margin: 0 auto 12px; border: 0"
-                />
-                <p
+                <table
+                  role="presentation"
+                  align="center"
                   dir="ltr"
-                  style="
-                    margin: 0;
-                    font-size: 24px;
-                    line-height: 32px;
-                    font-weight: bold;
-                    letter-spacing: 2px;
-                    color: #ffffff;
-                  "
+                  cellspacing="0"
+                  cellpadding="0"
+                  border="0"
                 >
-                  CYBER <span style="color: #c99aff">TMSAH</span>
-                </p>
-                <p style="margin: 8px 0 0; font-size: 13px; line-height: 22px; color: #c8cddd">
-                  منصتك لمتابعة الدراسة والحضور
-                </p>
+                  <tr>
+                    <td width="40" valign="middle">
+                      <img
+                        src="https://www.cyber-tmsah.site/brand/mark.png"
+                        width="40"
+                        height="40"
+                        alt=""
+                        style="
+                          display: block;
+                          width: 40px;
+                          height: 40px;
+                          border: 0;
+                          color: #ffffff;
+                        "
+                      />
+                    </td>
+                    <td style="padding-left: 12px; text-align: center">
+                      <p
+                        dir="ltr"
+                        style="
+                          margin: 0;
+                          font-size: 20px;
+                          line-height: 28px;
+                          font-weight: bold;
+                          letter-spacing: 1px;
+                          color: #ffffff;
+                        "
+                      >
+                        CYBER <span style="color: #c99aff">TMSAH</span>
+                      </p>
+                      <p
+                        dir="rtl"
+                        style="
+                          margin: 3px 0 0;
+                          font-size: 12px;
+                          line-height: 20px;
+                          color: #d4d9e5;
+                        "
+                      >
+                        متابعة الدراسة والحضور
+                      </p>
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
             <tr>
-              <td dir="rtl" align="right" style="padding: 28px 24px 24px; text-align: right">
+              <td
+                class="email-content"
+                dir="rtl"
+                align="right"
+                style="
+                  padding: 24px;
+                  text-align: right;
+                  font-family: Tahoma, Arial, sans-serif;
+                  direction: rtl;
+                "
+              >
                 <p
+                  class="email-kicker"
                   style="
-                    margin: 0 0 10px;
-                    font-size: 12px;
-                    line-height: 20px;
+                    margin: 0 0 8px;
+                    font-size: 13px;
+                    line-height: 22px;
                     font-weight: bold;
-                    color: #7540b8;
+                    color: #7133ad;
                   "
                 >
                   أمان حسابك
                 </p>
-                <h1 style="margin: 0 0 16px; font-size: 25px; line-height: 38px; color: #171b2e">
-                  تعيين كلمة مرور جديدة
+                <h1
+                  class="email-heading"
+                  style="
+                    margin: 0 0 14px;
+                    font-size: 24px;
+                    line-height: 36px;
+                    color: #171b2e;
+                  "
+                >
+                  إعادة تعيين كلمة المرور
                 </h1>
-                <p style="margin: 0 0 24px; font-size: 15px; line-height: 28px; color: #4b5267">
-                  وصلنا طلب لاستعادة كلمة مرور حسابك. اضغط الزر التالي، ثم أدخل كلمة المرور الجديدة
-                  وأكّدها.
+                <p
+                  class="email-copy"
+                  style="
+                    margin: 0 0 20px;
+                    font-size: 15px;
+                    line-height: 28px;
+                    color: #424d61;
+                  "
+                >
+                  وصلنا طلب لاستعادة كلمة مرور حسابك. افتح الرابط، ثم أدخل كلمة
+                  مرور جديدة مختلفة عن السابقة وأكّدها.
                 </p>
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellspacing="0"
+                  cellpadding="0"
+                  border="0"
+                >
                   <tr>
                     <td
+                      class="email-button"
                       align="center"
-                      bgcolor="#7c2dce"
+                      bgcolor="#7629c7"
                       style="
-                        background-color: #7c2dce;
+                        background-color: #7629c7;
                         border-radius: 10px;
-                        mso-padding-alt: 16px 20px;
+                        mso-padding-alt: 14px 18px;
                       "
                     >
                       <a
+                        class="email-button"
                         href="{{ .ConfirmationURL }}"
                         style="
                           display: block;
-                          padding: 16px 20px;
+                          padding: 14px 18px;
                           font-size: 16px;
-                          line-height: 24px;
+                          line-height: 26px;
                           font-weight: bold;
                           color: #ffffff;
                           text-align: center;
                           text-decoration: none;
-                          border: 1px solid #7c2dce;
+                          border: 1px solid #7629c7;
                           border-radius: 10px;
                         "
                         >إعادة تعيين كلمة المرور</a
@@ -141,15 +296,16 @@
                   </tr>
                 </table>
                 <p
+                  class="email-muted"
                   style="
-                    margin: 12px 0 24px;
+                    margin: 10px 0 0;
+                    font-size: 14px;
+                    line-height: 24px;
                     text-align: center;
-                    font-size: 12px;
-                    line-height: 22px;
-                    color: #62697b;
+                    color: #4b5565;
                   "
                 >
-                  بعد حفظ كلمة المرور، سجّل الدخول إلى حسابك مجددًا.
+                  بعد الحفظ، سجّل الدخول بكلمة المرور الجديدة.
                 </p>
                 <table
                   role="presentation"
@@ -157,65 +313,101 @@
                   cellspacing="0"
                   cellpadding="0"
                   border="0"
-                  bgcolor="#f5f1fc"
-                  style="background-color: #f5f1fc; border-radius: 10px"
+                  style="margin-top: 18px"
                 >
                   <tr>
                     <td
+                      class="email-note"
+                      bgcolor="#f3edfb"
                       style="
-                        padding: 16px;
-                        font-size: 13px;
-                        line-height: 25px;
+                        padding: 14px 16px;
+                        background-color: #f3edfb;
+                        border-radius: 10px;
+                        font-size: 14px;
+                        line-height: 26px;
+                        color: #4b3367;
                         text-align: right;
-                        color: #4d3b65;
+                        font-family: Tahoma, Arial, sans-serif;
+                        direction: rtl;
                       "
                     >
-                      <strong style="color: #392450">هذا الرابط خاص بك</strong><br />صالح لفترة
-                      محدودة ويُستخدم مرة واحدة. لا تشاركه مع أي شخص؛ لن نطلب منك كلمة المرور عبر
-                      البريد.
+                      الرابط صالح لمدة 30 دقيقة من وقت إصداره ويُستخدم مرة
+                      واحدة. لا تشاركه مع أحد.
                     </td>
                   </tr>
                 </table>
-                <p style="margin: 20px 0 0; font-size: 13px; line-height: 25px; color: #62697b">
-                  <strong style="color: #343a50">لم تطلب تغيير كلمة المرور؟</strong><br />تجاهل هذه
-                  الرسالة. لن تتغير كلمة مرورك بمجرد وصولها.
+                <p
+                  class="email-muted"
+                  style="
+                    margin: 16px 0 0;
+                    font-size: 14px;
+                    line-height: 26px;
+                    color: #4b5565;
+                  "
+                >
+                  لم تطلب التغيير؟ تجاهل الرسالة؛ ستبقى كلمة مرورك كما هي.
                 </p>
-                <p style="margin: 18px 0 0; font-size: 13px; line-height: 25px; color: #62697b">
+                <p
+                  class="email-muted"
+                  style="
+                    margin: 14px 0 0;
+                    font-size: 14px;
+                    line-height: 26px;
+                    color: #4b5565;
+                  "
+                >
                   إذا لم يعمل الزر،
                   <a
+                    class="email-link"
                     href="{{ .ConfirmationURL }}"
-                    style="color: #7431b7; text-decoration: underline"
-                    >افتح رابط الاستعادة من هنا</a
+                    style="color: #7133ad; text-decoration: underline"
+                    >افتح رابط الاستعادة</a
                   >.
                 </p>
               </td>
             </tr>
             <tr>
               <td
+                class="email-footer"
                 align="center"
                 bgcolor="#f9fafc"
                 style="
-                  padding: 18px 24px;
+                  padding: 14px 20px;
                   border-top: 1px solid #e9ebf1;
-                  text-align: center;
                   background-color: #f9fafc;
+                  text-align: center;
+                  font-family: Tahoma, Arial, sans-serif;
+                  direction: rtl;
                 "
               >
-                <p style="margin: 0 0 6px; font-size: 12px; line-height: 22px; color: #62697b">
-                  تحتاج مساعدة؟ تواصل معنا عبر
+                <p
+                  class="email-muted"
+                  style="
+                    margin: 0 0 4px;
+                    font-size: 13px;
+                    line-height: 23px;
+                    color: #4b5565;
+                  "
+                >
+                  رسالة من منصة سايبر تمساح · للمساعدة
                 </p>
                 <a
+                  class="email-link"
                   dir="ltr"
                   href="mailto:cybertmsah@gmail.com"
-                  style="font-size: 13px; line-height: 22px; color: #7431b7; text-decoration: none"
+                  style="
+                    display: inline-block;
+                    font-size: 14px;
+                    line-height: 26px;
+                    color: #7133ad;
+                    text-decoration: underline;
+                  "
                   >cybertmsah@gmail.com</a
                 >
               </td>
             </tr>
           </table>
-          <p style="margin: 16px 0 0; font-size: 11px; line-height: 20px; color: #73798b">
-            CYBER TMSAH · رسالة خاصة بأمان حسابك
-          </p>
+          <!--[if mso]></td></tr></table><![endif]-->
         </td>
       </tr>
     </table>
