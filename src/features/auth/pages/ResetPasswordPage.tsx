@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { isAuthError } from "@supabase/supabase-js";
 import { PasswordStrengthMeter } from "../components/PasswordStrengthMeter";
 
 export default function ResetPasswordPage() {
@@ -27,7 +28,10 @@ export default function ResetPasswordPage() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [validSession, setValidSession] = useState<boolean | null>(null);
+  const [formError, setFormError] = useState("");
   const pending = useRef(false);
+  const recoveryUserId = useRef<string | null>(null);
+  const passwordInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -38,10 +42,13 @@ export default function ResetPasswordPage() {
       try {
         const session = await recoverySessionReady;
         const result = session ? await supabase.auth.getUser() : null;
-        if (active)
+        if (active) {
+          clearTimeout(timer);
+          recoveryUserId.current = session?.user.id ?? null;
           setValidSession(
             Boolean(session && !result?.error && result?.data.user?.id === session.user.id),
           );
+        }
       } catch {
         if (active) setValidSession(false);
       }
@@ -77,7 +84,15 @@ export default function ResetPasswordPage() {
     }
     pending.current = true;
     setSubmitting(true);
+    setFormError("");
     try {
+      // Validate the recovery account again; a different signed-in account must not be updated.
+      const { data: verified, error: verificationError } = await supabase.auth.getUser();
+      if (verificationError) throw verificationError;
+      if (!recoveryUserId.current || verified.user?.id !== recoveryUserId.current) {
+        setValidSession(false);
+        return;
+      }
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
@@ -98,6 +113,18 @@ export default function ResetPasswordPage() {
         navigate("/login", { replace: true });
       }, 2500);
     } catch (err: unknown) {
+      if (isAuthError(err) && err.code === "same_password") {
+        setFormError("لا يمكن استخدام كلمة المرور القديمة. اختر كلمة مرور جديدة مختلفة عنها.");
+        passwordInput.current?.focus();
+        return;
+      }
+      if (
+        isAuthError(err) &&
+        ["session_expired", "session_not_found", "bad_jwt"].includes(err.code ?? "")
+      ) {
+        setValidSession(false);
+        return;
+      }
       const msg = err instanceof Error ? err.message : "Failed to update password";
       toast.error(
         getFriendlyErrorMessage(
@@ -215,13 +242,19 @@ export default function ResetPasswordPage() {
                   <Lock className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
                     id="new-password"
+                    ref={passwordInput}
+                    aria-invalid={Boolean(formError)}
+                    aria-describedby={formError ? "reset-password-error" : undefined}
                     name="new-password"
                     autoComplete="new-password"
                     readOnly={submitting}
                     type={showPassword ? "text" : "password"}
                     required
                     value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
+                    onChange={(e) => {
+                      setNewPassword(e.target.value);
+                      setFormError("");
+                    }}
                     placeholder="••••••••"
                     dir="ltr"
                     className="w-full h-11 ps-10 pe-11 rounded-xl text-sm font-medium bg-white/[0.045] border border-white/12 text-white placeholder:text-slate-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/25 transition-all"
@@ -266,6 +299,15 @@ export default function ResetPasswordPage() {
               </div>
 
               {/* Submit */}
+              {formError && (
+                <p
+                  id="reset-password-error"
+                  role="alert"
+                  className="text-sm leading-relaxed text-red-300"
+                >
+                  {formError}
+                </p>
+              )}
               <button
                 type="submit"
                 disabled={submitting}

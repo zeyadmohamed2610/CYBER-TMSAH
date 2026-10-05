@@ -58,6 +58,7 @@ export const useAttendanceDashboardData = (role: AppRole, sectionFilter?: string
 
     const firstError = summaryResult.error || sessionsResult.error || recordsResult.error || null;
     setError(firstError);
+    return !firstError;
   }, [role, sections]);
 
   /** Initial fetch with loading spinner */
@@ -87,6 +88,7 @@ export const useAttendanceDashboardData = (role: AppRole, sectionFilter?: string
     "sessions",
     "attendance",
     "error_reports",
+    "join_requests",
   ]);
 
   return {

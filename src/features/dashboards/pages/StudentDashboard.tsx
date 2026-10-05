@@ -1,7 +1,6 @@
 import { dashboardTabs } from "@/features/auth/utils/roleAccess";
 import { useDashboardTab } from "../hooks/useDashboardTab";
 import { getFriendlyErrorMessage } from "@/shared/lib/academicCopy";
-import { DepartmentsAndSubjectsPanel } from "../../academics/components/DepartmentsAndSubjectsPanel";
 import { AttendanceRegisterPanel } from "../../attendance/components/AttendanceRegisterPanel";
 import { AcademicSchedulePanel } from "../../schedule/components/AcademicSchedulePanel";
 // Updated: Modern tabbed dashboard for Student role
@@ -10,7 +9,6 @@ import { Button } from "@/shared/components/ui/button";
 import { TabsContent } from "@/shared/components/ui/tabs";
 import {
   Activity,
-  BarChart3,
   CalendarDays,
   CloudOff,
   History,
@@ -103,7 +101,7 @@ export const StudentDashboard = () => {
         onValueChange={setActiveTab}
         title="منصتي الأكاديمية"
         compactMobile
-        mobilePriority={["checkin", "schedule", "records", "analytics"]}
+        mobilePriority={["checkin", "schedule", "records"]}
         items={[
           { value: "checkin", label: "تسجيل الحضور", shortLabel: "الحضور", icon: QrCode },
           {
@@ -117,12 +115,6 @@ export const StudentDashboard = () => {
             label: "الجدول والامتحانات",
             shortLabel: "الجدول",
             icon: CalendarDays,
-          },
-          {
-            value: "analytics",
-            label: "المواد الدراسية",
-            shortLabel: "المواد",
-            icon: BarChart3,
           },
         ]}
       >
@@ -170,15 +162,6 @@ export const StudentDashboard = () => {
           className="space-y-4 focus-visible:outline-none"
         >
           <AttendanceRegisterPanel />
-        </TabsContent>
-
-        {/* ── TAB 3: Analytics & Progress ─────────────────────────────────── */}
-        <TabsContent
-          aria-label="المواد ونسب الحضور"
-          value="analytics"
-          className="space-y-6 focus-visible:outline-none"
-        >
-          <DepartmentsAndSubjectsPanel />
         </TabsContent>
       </DashboardWorkspace>
     </div>

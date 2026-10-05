@@ -14,17 +14,34 @@ export function useLiveRefresh(refresh: () => Promise<unknown>, tables: readonly
     let active = true;
     let running = false;
     let queued = false;
+    let failures = 0;
+    let retryAt = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const check = async () => {
-      if (!active || document.visibilityState !== "visible") return;
+      if (
+        !active ||
+        !navigator.onLine ||
+        document.visibilityState !== "visible" ||
+        Date.now() < retryAt
+      )
+        return;
       if (running) {
         queued = true;
         return;
       }
       running = true;
       try {
-        await latest.current();
+        const result = await latest.current();
+        if (result === false) {
+          failures += 1;
+          retryAt = Date.now() + Math.min(30_000 * 2 ** failures, 300_000);
+        } else {
+          failures = 0;
+          retryAt = 0;
+        }
       } catch {
+        failures += 1;
+        retryAt = Date.now() + Math.min(30_000 * 2 ** failures, 300_000);
         /* Readers own error feedback and preserve prior data. */
       } finally {
         running = false;
@@ -36,7 +53,12 @@ export function useLiveRefresh(refresh: () => Promise<unknown>, tables: readonly
     };
     const schedule = () => {
       clearTimeout(timer);
-      timer = setTimeout(() => void check(), 300);
+      timer = setTimeout(() => void check(), Math.max(300, retryAt - Date.now()));
+    };
+    const reconnect = () => {
+      failures = 0;
+      retryAt = 0;
+      schedule();
     };
     const channel = supabase.channel(`live-view-${crypto.randomUUID()}`);
     for (const table of tableKey.split(",").filter(Boolean)) {
@@ -47,7 +69,7 @@ export function useLiveRefresh(refresh: () => Promise<unknown>, tables: readonly
     });
     const poll = setInterval(() => void check(), 30000);
     window.addEventListener("focus", schedule);
-    window.addEventListener("online", schedule);
+    window.addEventListener("online", reconnect);
     window.addEventListener("academic-data-changed", schedule);
     document.addEventListener("visibilitychange", schedule);
     return () => {
@@ -55,7 +77,7 @@ export function useLiveRefresh(refresh: () => Promise<unknown>, tables: readonly
       clearTimeout(timer);
       clearInterval(poll);
       window.removeEventListener("focus", schedule);
-      window.removeEventListener("online", schedule);
+      window.removeEventListener("online", reconnect);
       window.removeEventListener("academic-data-changed", schedule);
       document.removeEventListener("visibilitychange", schedule);
       void supabase.removeChannel(channel);

@@ -3,7 +3,8 @@ import { supabase } from "@/shared/api/supabaseClient";
 import { useLang } from "@/shared/i18n";
 import { getFriendlyErrorMessage } from "@/shared/lib/academicCopy";
 import { CheckCircle2, Clock, Loader2, RefreshCw, Users, UserX, XCircle } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLiveRefresh } from "@/shared/hooks/useLiveRefresh";
 import { toast } from "sonner";
 
 interface JoinRequest {
@@ -57,38 +58,63 @@ export function JoinRequestsPanel() {
   // Counts for badges
   const [pendingJoinCount, setPendingJoinCount] = useState(0);
 
+  const requestVersion = useRef(0);
+
   // Load join requests
   const loadJoinRequests = useCallback(async () => {
-    setLoadingJoin(true);
-    const query = supabase
-      .from("join_requests")
-      .select(
-        "id, full_name, email, username, role, department, departments, academic_year, section_number, national_id, status, created_at, rejection_note",
-      )
-      .order("created_at", { ascending: false });
-
-    let finalJoinQuery = query;
-    if (joinFilter !== "all") finalJoinQuery = query.eq("status", joinFilter);
-
-    const { data, error } = await finalJoinQuery;
-    if (error) {
-      toast.error(lang === "ar" ? "فشل تحميل طلبات الانضمام" : "Failed to load join requests");
-    } else {
-      setJoinRequests((data ?? []) as JoinRequest[]);
+    const version = ++requestVersion.current;
+    if (!navigator.onLine) {
+      setLoadingJoin(false);
+      return false;
     }
-    setLoadingJoin(false);
-
-    // Get pending count
-    const { count } = await supabase
-      .from("join_requests")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "pending");
-    setPendingJoinCount(count ?? 0);
+    setLoadingJoin(true);
+    try {
+      let query = supabase
+        .from("join_requests")
+        .select(
+          "id, full_name, email, username, role, department, departments, academic_year, section_number, national_id, status, created_at, rejection_note",
+          { count: "exact" },
+        )
+        .order("created_at", { ascending: false });
+      if (joinFilter !== "all") query = query.eq("status", joinFilter);
+      const [list, pending] = await Promise.all([
+        query,
+        joinFilter === "pending"
+          ? Promise.resolve(null)
+          : supabase
+              .from("join_requests")
+              .select("id", { count: "exact", head: true })
+              .eq("status", "pending"),
+      ]);
+      if (version !== requestVersion.current) return;
+      if (list.error || pending?.error) {
+        toast.error(
+          lang === "ar"
+            ? "تعذر تحديث طلبات الانضمام. احتفظنا بآخر بيانات ناجحة؛ تحقق من الاتصال."
+            : "Could not refresh join requests. Previous data retained.",
+        );
+      }
+      if (!list.error) setJoinRequests((list.data ?? []) as JoinRequest[]);
+      const count = joinFilter === "pending" ? list : pending;
+      if (count && !count.error && count.count !== null) setPendingJoinCount(count.count);
+      return !list.error && !pending?.error;
+    } catch {
+      if (version === requestVersion.current)
+        toast.error("تعذر الاتصال. احتفظنا بآخر بيانات ناجحة.");
+      return false;
+    } finally {
+      if (version === requestVersion.current) setLoadingJoin(false);
+    }
   }, [joinFilter, lang]);
 
   useEffect(() => {
     void loadJoinRequests();
+    const versionRef = requestVersion;
+    return () => {
+      versionRef.current++;
+    };
   }, [loadJoinRequests]);
+  useLiveRefresh(loadJoinRequests, ["join_requests"]);
 
   // ── Join Requests Actions ──────────────────────────────────────────────────
   const handleApprove = async (req: JoinRequest) => {

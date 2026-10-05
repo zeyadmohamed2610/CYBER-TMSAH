@@ -422,8 +422,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Refresh permissions silently after an administrator changes a role or department.
   useEffect(() => {
     if (!user) return;
-    const refresh = () => {
-      if (document.visibilityState === "visible") void refreshRole();
+    let running = false;
+    const refresh = async () => {
+      if (running || !navigator.onLine || document.visibilityState !== "visible") return;
+      running = true;
+      try {
+        await refreshRole();
+      } finally {
+        running = false;
+      }
     };
     const timer = setInterval(refresh, 30000);
     window.addEventListener("focus", refresh);

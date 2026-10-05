@@ -221,11 +221,12 @@ export function useUserManagement(initialRole = "all") {
         setUsers(sortedData as UserRecord[]);
         // Load multi-subjects for doctors/TAs
         void loadUserSubjects(sortedData.filter((u) => u.role !== "student").map((u) => u.id));
+        return true;
       } catch (err) {
         if (version !== loadVersion.current) return;
         console.error(err);
         toast.error("فشل تحميل قائمة المستخدمين");
-        if (!silent) setUsers([]);
+        return false;
       } finally {
         if (version === loadVersion.current) setLoading(false);
       }

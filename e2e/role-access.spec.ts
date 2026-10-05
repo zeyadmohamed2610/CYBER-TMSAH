@@ -27,7 +27,7 @@ for (const [role, destination] of [
     await page.locator('button[type="submit"]').click();
     await expect(page).toHaveURL(new RegExp(destination), { timeout: 30000 });
     await expect(page.getByRole("tabpanel").first()).toBeVisible({ timeout: 30000 });
-    if ((page.viewportSize()?.width ?? 1280) < 1024) {
+    if ((page.viewportSize()?.width ?? 1280) < 1024 && role !== "student") {
       await page.getByRole("button", { name: "المزيد من الصفحات", exact: true }).click();
       const menu = page.getByRole("dialog");
       for (const label of [
@@ -41,10 +41,7 @@ for (const [role, destination] of [
         await expect(menu.getByRole("button", { name: label, exact: true })).toHaveCount(0);
       await page.keyboard.press("Escape");
     }
-    const tabs =
-      role === "student"
-        ? ["records", "schedule", "analytics"]
-        : ["records", "schedule", "subjects"];
+    const tabs = role === "student" ? ["records", "schedule"] : ["records", "schedule", "subjects"];
     for (const tab of tabs) {
       await page.goto(`/${destination}?tab=${tab}`);
       await expect(page.getByRole("tabpanel").first()).toBeVisible({ timeout: 30000 });
@@ -62,6 +59,14 @@ for (const [role, destination] of [
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
           true,
         );
+    }
+    if (role === "student") {
+      await page.goto(`/${destination}?tab=analytics`);
+      await expect(
+        page.getByRole("heading", { name: "الجدول والامتحانات", exact: true }),
+      ).toBeVisible();
+      await expect(page.getByText("المواد الدراسية", { exact: true })).toHaveCount(0);
+      await expect(page.getByText("موادي الدراسية", { exact: true })).toHaveCount(0);
     }
     await page.goto(`/${destination}?tab=followup&view=cases`);
     await expect(
