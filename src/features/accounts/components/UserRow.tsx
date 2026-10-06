@@ -265,17 +265,17 @@ export function UserRow({ model, user, idx }: Props) {
             {(currentPage - 1) * 25 + idx + 1}
           </div>
 
-          <div className="min-w-0 flex-1 space-y-1">
+          <div className="min-w-0 flex-1 space-y-1 overflow-hidden">
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
                 onClick={() => setSelectedUserForDetails(user)}
-                className="font-bold text-white text-sm break-words hover:text-purple-300 hover:underline transition-colors text-start cursor-pointer inline-flex items-center gap-1.5 group"
-                title="عرض الملف والتفاصيل الكاملة لهذا الحساب"
+                className="font-bold text-white text-sm hover:text-purple-300 hover:underline transition-colors text-start cursor-pointer inline-flex items-center gap-1.5 group max-w-full"
+                title={user.full_name}
               >
-                <span>{user.full_name}</span>
-                <span className="text-[10px] text-purple-400/80 group-hover:text-purple-300 font-normal">
-                  (عرض الملف)
+                <span className="truncate max-w-[180px] sm:max-w-[260px]">{user.full_name}</span>
+                <span className="text-[10px] text-purple-400/80 group-hover:text-purple-300 font-normal shrink-0">
+                  (عرض)
                 </span>
               </button>
 
