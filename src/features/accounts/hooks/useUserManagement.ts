@@ -202,7 +202,7 @@ export function useUserManagement(initialRole = "all") {
           const { data, error } = await supabase
             .from("users")
             .select(
-              "id, full_name, username, email, role, national_id, subject_id, department, departments, academic_year, section_number, created_at",
+              "id, full_name, username, email, role, national_id, subject_id, department, departments, academic_year, section_number, created_at, permissions",
             )
             .in(
               "role",

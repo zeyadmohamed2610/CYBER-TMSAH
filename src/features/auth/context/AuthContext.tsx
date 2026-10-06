@@ -12,6 +12,15 @@ import {
   useState,
 } from "react";
 
+export interface UserPermissions {
+  schedule_access?: boolean;
+  manage_users?: boolean;
+  manage_departments?: boolean;
+  manage_lectures?: boolean;
+  view_reports?: boolean;
+  manual_attendance?: boolean;
+}
+
 interface AuthContextValue {
   user: User | null;
   role: AppRole | null;
@@ -19,6 +28,7 @@ interface AuthContextValue {
   department: string | null;
   departments: string[];
   avatarUrl: string | null;
+  permissions: UserPermissions;
   loading: boolean;
   sessionExpired: boolean;
   refreshRole: () => Promise<void>;
@@ -33,6 +43,7 @@ const NAME_STORAGE_KEY = "cyber_cached_fullname";
 const DEPT_STORAGE_KEY = "cyber_cached_department";
 const USERID_STORAGE_KEY = "cyber_cached_userid";
 const AVATAR_STORAGE_KEY = "cyber_cached_avatar";
+const PERMS_STORAGE_KEY = "cyber_cached_permissions";
 
 const isAppRole = (value: unknown): value is AppRole => {
   return (
@@ -44,7 +55,7 @@ const isAppRole = (value: unknown): value is AppRole => {
   );
 };
 
-/** Fetch role, full_name, department and avatar_url from database */
+/** Fetch role, full_name, department, avatar_url, and permissions from database */
 const fetchUserProfile = async (
   authId: string,
 ): Promise<{
@@ -53,11 +64,12 @@ const fetchUserProfile = async (
   department: string | null;
   avatarUrl: string | null;
   departments: string[];
+  permissions: UserPermissions;
 }> => {
-  // 1. Try fetching full profile with department & avatar_url
+  // 1. Try fetching full profile including permissions
   let { data, error } = await supabase
     .from("users")
-    .select("role, full_name, department, departments, avatar_url")
+    .select("role, full_name, department, departments, avatar_url, permissions")
     .eq("auth_id", authId)
     .maybeSingle();
 
@@ -70,7 +82,7 @@ const fetchUserProfile = async (
       .maybeSingle();
 
     if (!fallback.error && fallback.data) {
-      data = { ...fallback.data, department: null, departments: [], avatar_url: null };
+      data = { ...fallback.data, department: null, departments: [], avatar_url: null, permissions: {} };
       error = null;
     }
   }
@@ -83,6 +95,7 @@ const fetchUserProfile = async (
     department?: string | null;
     departments?: string[];
     avatar_url?: string | null;
+    permissions?: UserPermissions | null;
   };
   return {
     role: typedData.role,
@@ -94,6 +107,7 @@ const fetchUserProfile = async (
         ? [typedData.department]
         : [],
     avatarUrl: typedData.avatar_url ?? null,
+    permissions: (typedData.permissions as UserPermissions) ?? {},
   };
 };
 
@@ -147,6 +161,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return null;
     }
   });
+  const [permissions, setPermissions] = useState<UserPermissions>(() => {
+    try {
+      const cached = sessionStorage.getItem(PERMS_STORAGE_KEY) || localStorage.getItem(PERMS_STORAGE_KEY);
+      return cached ? (JSON.parse(cached) as UserPermissions) : {};
+    } catch {
+      return {};
+    }
+  });
 
   // Browser cache cannot establish a session. Resolve it before routing a cold start.
   const [loading, setLoading] = useState(true);
@@ -190,6 +212,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setDepartment(null);
         setDepartments([]);
         setAvatarUrl(null);
+        setPermissions({});
         setLoading(false);
         currentUserRef.current = null;
         try {
@@ -198,10 +221,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           sessionStorage.removeItem(DEPT_STORAGE_KEY);
           sessionStorage.removeItem(USERID_STORAGE_KEY);
           sessionStorage.removeItem(AVATAR_STORAGE_KEY);
+          sessionStorage.removeItem(PERMS_STORAGE_KEY);
           localStorage.removeItem(ROLE_STORAGE_KEY);
           localStorage.removeItem(NAME_STORAGE_KEY);
           localStorage.removeItem(DEPT_STORAGE_KEY);
           localStorage.removeItem(AVATAR_STORAGE_KEY);
+          localStorage.removeItem(PERMS_STORAGE_KEY);
         } catch {
           // ignore
         }
@@ -263,6 +288,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setFullName(profile.fullName);
         setDepartment(profile.department);
         setDepartments(profile.departments);
+        setPermissions(profile.permissions);
         if (profile.avatarUrl) {
           setAvatarUrl(profile.avatarUrl);
           try {
@@ -274,15 +300,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         }
 
-        // Cache role, name, department
+        // Cache role, name, department, permissions
         try {
           sessionStorage.setItem(ROLE_STORAGE_KEY, profile.role);
           if (profile.fullName) sessionStorage.setItem(NAME_STORAGE_KEY, profile.fullName);
           if (profile.department) sessionStorage.setItem(DEPT_STORAGE_KEY, profile.department);
           sessionStorage.setItem(USERID_STORAGE_KEY, sessionUser.id);
+          sessionStorage.setItem(PERMS_STORAGE_KEY, JSON.stringify(profile.permissions));
           localStorage.setItem(ROLE_STORAGE_KEY, profile.role);
           if (profile.fullName) localStorage.setItem(NAME_STORAGE_KEY, profile.fullName);
           if (profile.department) localStorage.setItem(DEPT_STORAGE_KEY, profile.department);
+          localStorage.setItem(PERMS_STORAGE_KEY, JSON.stringify(profile.permissions));
         } catch {
           // ignore
         }
@@ -398,10 +426,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setFullName(profile.fullName);
       setDepartment(profile.department);
       setDepartments(profile.departments);
+      setPermissions(profile.permissions);
       try {
         sessionStorage.setItem(ROLE_STORAGE_KEY, profile.role);
         if (profile.fullName) sessionStorage.setItem(NAME_STORAGE_KEY, profile.fullName);
         if (profile.department) sessionStorage.setItem(DEPT_STORAGE_KEY, profile.department);
+        sessionStorage.setItem(PERMS_STORAGE_KEY, JSON.stringify(profile.permissions));
+        localStorage.setItem(PERMS_STORAGE_KEY, JSON.stringify(profile.permissions));
       } catch {
         // ignore
       }
@@ -455,6 +486,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setDepartment(null);
     setDepartments([]);
     setAvatarUrl(null);
+    setPermissions({});
     currentUserRef.current = null;
     roleRef.current = null;
     try {
@@ -463,10 +495,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       sessionStorage.removeItem(DEPT_STORAGE_KEY);
       sessionStorage.removeItem(USERID_STORAGE_KEY);
       sessionStorage.removeItem(AVATAR_STORAGE_KEY);
+      sessionStorage.removeItem(PERMS_STORAGE_KEY);
       localStorage.removeItem(ROLE_STORAGE_KEY);
       localStorage.removeItem(NAME_STORAGE_KEY);
       localStorage.removeItem(DEPT_STORAGE_KEY);
       localStorage.removeItem(AVATAR_STORAGE_KEY);
+      localStorage.removeItem(PERMS_STORAGE_KEY);
     } catch {
       // ignore
     }
@@ -527,6 +561,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       department,
       departments,
       avatarUrl,
+      permissions,
       loading,
       sessionExpired,
       refreshRole,
@@ -541,6 +576,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       department,
       departments,
       avatarUrl,
+      permissions,
       user,
       refreshRole,
       updateAvatarUrl,

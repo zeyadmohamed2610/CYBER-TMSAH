@@ -5,7 +5,7 @@ import { LectureManagementPanel } from "@/features/attendance/components/Lecture
 import { useAttendanceDashboardData } from "@/features/attendance/hooks/useAttendanceDashboardData";
 import type { Lecture } from "@/features/attendance/types";
 import { useAuth } from "@/features/auth/context/AuthContext";
-import { dashboardTabs } from "@/features/auth/utils/roleAccess";
+import { dashboardTabs, canViewSchedule } from "@/features/auth/utils/roleAccess";
 import { AcademicSchedulePanel } from "@/features/schedule/components/AcademicSchedulePanel";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
 import { TabsContent } from "@/shared/components/ui/tabs";
@@ -16,10 +16,17 @@ import { useDashboardTab } from "../hooks/useDashboardTab";
 import { DashboardWorkspace } from "./DashboardWorkspace";
 
 export function FacultyDashboard({ role }: { role: "doctor" | "ta" }) {
-  const { fullName } = useAuth();
+  const { fullName, permissions } = useAuth();
   const { error } = useAttendanceDashboardData(role);
   const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
-  const [activeTab, setActiveTab] = useDashboardTab("schedule", dashboardTabs(role));
+  const hasScheduleAccess = canViewSchedule(role, permissions);
+
+  // Only include "schedule" tab if user has schedule access permission
+  const allowedTabs = dashboardTabs(role).filter(
+    (t) => t !== "schedule" || hasScheduleAccess,
+  );
+  const defaultTab = allowedTabs[0] ?? "lectures";
+  const [activeTab, setActiveTab] = useDashboardTab(defaultTab, allowedTabs);
   const classes = role === "doctor" ? "المحاضرات" : "السكاشن";
   if (selectedLecture)
     return <LectureDetailView lecture={selectedLecture} onBack={() => setSelectedLecture(null)} />;
@@ -44,7 +51,9 @@ export function FacultyDashboard({ role }: { role: "doctor" | "ta" }) {
         items={[
           { value: "lectures", label: classes, icon: BookOpenCheck },
           { value: "records", label: "سجلات الحضور", icon: ListChecks },
-          { value: "schedule", label: "الجدول والامتحانات", icon: CalendarDays },
+          ...(hasScheduleAccess
+            ? [{ value: "schedule", label: "الجدول والامتحانات", icon: CalendarDays }]
+            : []),
           { value: "subjects", label: "المواد المسندة إليّ", shortLabel: "موادي", icon: BookOpen },
         ]}
       >

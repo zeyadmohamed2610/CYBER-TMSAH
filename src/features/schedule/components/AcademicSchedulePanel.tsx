@@ -1,4 +1,5 @@
 import { ScheduleMatrix } from "./ScheduleMatrix";
+import { DailyScheduleView } from "./DailyScheduleView";
 import { buildTimetable } from "../utils/timetable";
 import { useState } from "react";
 import { DEPARTMENTS } from "@/features/academics/types";
@@ -7,7 +8,7 @@ import { ScheduleSkeleton } from "@/shared/components/Loading";
 import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
-import { Calendar, Download, Plus, Upload } from "lucide-react";
+import { Calendar, Download, Lock, Plus, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { academicWeek, scheduleCycle } from "../utils/academicSchedule";
 import { emptyEntry, selectClass } from "../utils/scheduleEditor";
@@ -17,13 +18,18 @@ import { AcademicScheduleSettings } from "./AcademicScheduleSettings";
 import { ExamSchedulePanel } from "./ExamSchedulePanel";
 import { ScheduleEntryEditor } from "./ScheduleEntryEditor";
 import { ScheduleImportReview } from "./ScheduleImportReview";
-import { ScheduleTimetable } from "./ScheduleTimetable";
 import { ScheduleVersions } from "./ScheduleVersions";
-
 import { useAcademicSchedule } from "../hooks/useAcademicSchedule";
+import { useAuth } from "@/features/auth/context/AuthContext";
+import { canViewSchedule } from "@/features/auth/utils/roleAccess";
+
 export function AcademicSchedulePanel() {
+  const { role, permissions } = useAuth();
   const model = useAcademicSchedule();
   const [activeTab, setActiveTab] = useState("schedule");
+  // Inner tab: "daily" | "weekly"
+  const [viewTab, setViewTab] = useState<"daily" | "weekly">("daily");
+
   const {
     error,
     load,
@@ -33,7 +39,6 @@ export function AcademicSchedulePanel() {
     previewCycle,
     section,
     setDraft,
-    role,
     busy,
     imported,
     department,
@@ -59,6 +64,28 @@ export function AcademicSchedulePanel() {
     setSettingsDraft,
     draft,
   } = model;
+
+  // ── Access Guard ─────────────────────────────────────────────────────────
+  if (!canViewSchedule(role, permissions)) {
+    return (
+      <section
+        dir="rtl"
+        className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-border bg-card p-10 text-center"
+      >
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted/40 border border-border">
+          <Lock className="h-6 w-6 text-muted-foreground" />
+        </div>
+        <div className="space-y-1">
+          <h3 className="font-bold text-base">الجدول غير متاح</h3>
+          <p className="text-sm text-muted-foreground max-w-xs">
+            ليس لديك صلاحية لعرض الجدول الدراسي. تواصل مع مالك المنصة لمنحك هذه الصلاحية.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  // ── Department/Year picker (owner & coordinator only) ─────────────────────
   if ((role === "owner" || role === "coordinator") && !year)
     return (
       <section dir="rtl" className="rounded-2xl border border-border bg-card p-5 space-y-4">
@@ -109,6 +136,7 @@ export function AcademicSchedulePanel() {
         </div>
       </section>
     );
+
   if (error)
     return (
       <div role="alert" className="rounded-xl border p-5">
@@ -124,10 +152,12 @@ export function AcademicSchedulePanel() {
         <ScheduleSkeleton />
       </div>
     );
+
   const settings = data.settings;
   const editableSettings = settingsDraft ?? settings;
   const actualWeek = academicWeek(date, settings.semester_start, settings.week_start_day);
   const cycle = previewCycle === "auto" ? scheduleCycle(date, data) : Number(previewCycle);
+  const isStudent = role === "student";
 
   return (
     <div dir="rtl" className="space-y-3">
@@ -186,29 +216,179 @@ export function AcademicSchedulePanel() {
             </Button>
           )}
         </div>
+
+        {/* ── SCHEDULE TAB ── */}
         <TabsContent value="schedule" className="space-y-3">
           {!management && (
-            <ScheduleTimetable
-              data={data}
-              student={role === "student"}
-              section={section}
-              view={view}
-              date={date}
-              cycle={cycle}
-              actualWeek={actualWeek}
-              previewCycle={previewCycle}
-              onSection={setSection}
-              onView={setView}
-              onDate={(value) => setCustomDate(value || null)}
-              onCycle={setPreviewCycle}
-              now={now}
-              clockSynced={synced}
-              onToday={() => {
-                setCustomDate(null);
-                setPreviewCycle("auto");
-              }}
-            />
+            <>
+              {/* ── Daily / Weekly inner tabs ── */}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                {/* Daily / Weekly switcher */}
+                <div
+                  className="flex rounded-xl border border-border overflow-hidden"
+                  role="group"
+                  aria-label="طريقة عرض الجدول"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setViewTab("daily")}
+                    className={`px-4 py-2 text-xs font-semibold transition-colors ${
+                      viewTab === "daily"
+                        ? "bg-primary text-white"
+                        : "text-muted-foreground hover:bg-muted/40"
+                    }`}
+                    aria-pressed={viewTab === "daily"}
+                  >
+                    اليومي
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewTab("weekly")}
+                    className={`px-4 py-2 text-xs font-semibold transition-colors border-r border-border ${
+                      viewTab === "weekly"
+                        ? "bg-primary text-white"
+                        : "text-muted-foreground hover:bg-muted/40"
+                    }`}
+                    aria-pressed={viewTab === "weekly"}
+                  >
+                    الأسبوعي
+                  </button>
+                </div>
+
+                {/* Week cycle selector + date */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {actualWeek && previewCycle === "auto" && (
+                    <span className="text-xs text-muted-foreground">
+                      الأسبوع الدراسي {actualWeek}
+                    </span>
+                  )}
+                  <select
+                    aria-label="الأسبوع"
+                    value={previewCycle}
+                    onChange={(e) => setPreviewCycle(e.target.value)}
+                    className="h-9 min-w-0 rounded-lg border bg-background px-2 text-xs"
+                  >
+                    <option value="auto">الأسبوع الحالي</option>
+                    <option value="1">الأسبوع الأول</option>
+                    <option value="2">الأسبوع الثاني</option>
+                  </select>
+
+                  {/* Section filter (non-student only in weekly view) */}
+                  {!isStudent && viewTab === "weekly" && (
+                    <>
+                      <select
+                        aria-label="نطاق عرض الجدول"
+                        value={view}
+                        onChange={(e) => setView(e.target.value)}
+                        className="h-9 min-w-0 rounded-lg border bg-background px-2 text-xs"
+                      >
+                        <option value="mine">سكشن محدد</option>
+                        <option value="all">كل السكاشن</option>
+                      </select>
+                      {view === "mine" && (
+                        <select
+                          aria-label="السكشن"
+                          value={section}
+                          onChange={(e) => setSection(Number(e.target.value))}
+                          className="h-9 rounded-lg border bg-background px-2 text-xs"
+                        >
+                          {Array.from({ length: 15 }, (_, i) => (
+                            <option key={i} value={i + 1}>
+                              سكشن {i + 1}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </>
+                  )}
+
+                  {/* Today button */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 text-xs"
+                    onClick={() => {
+                      setCustomDate(null);
+                      setPreviewCycle("auto");
+                    }}
+                  >
+                    اليوم
+                  </Button>
+
+                  {/* Custom date picker */}
+                  <details className="relative text-xs">
+                    <summary className="cursor-pointer text-xs text-muted-foreground h-9 inline-flex items-center px-2 rounded-lg border bg-background">
+                      تاريخ
+                    </summary>
+                    <div className="absolute left-0 top-11 z-10 rounded-xl border bg-card p-3 shadow-lg space-y-1">
+                      <Label htmlFor="schedule-date-panel" className="text-xs">تاريخ العرض</Label>
+                      <input
+                        id="schedule-date-panel"
+                        type="date"
+                        value={date}
+                        onChange={(e) => {
+                          setCustomDate(e.target.value || null);
+                          setPreviewCycle("auto");
+                        }}
+                        className="rounded-lg border bg-background px-2 py-1 text-xs w-40"
+                      />
+                    </div>
+                  </details>
+
+                  {now && (
+                    <span className="text-xs text-muted-foreground" dir="ltr">
+                      {new Intl.DateTimeFormat("ar-EG", {
+                        timeZone: "Africa/Cairo",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      }).format(now)}
+                      {!synced ? " · جارٍ ضبط الوقت" : ""}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Student section warning */}
+              {isStudent && !data.student_section && (
+                <p role="alert" className="text-amber-400 text-sm">
+                  لم يُحدد سكشن حسابك بعد. تواصل مع الإدارة.
+                </p>
+              )}
+
+              {/* ── Daily view ── */}
+              {viewTab === "daily" && (
+                <DailyScheduleView
+                  key={`daily:${data.department}:${data.academic_year}:${date}:${previewCycle}:${section}`}
+                  data={data}
+                  student={isStudent}
+                  section={section}
+                  date={date}
+                  previewCycle={previewCycle}
+                  now={now}
+                />
+              )}
+
+              {/* ── Weekly matrix view ── */}
+              {viewTab === "weekly" && (
+                <ScheduleMatrix
+                  key={`weekly:${data.department}:${data.academic_year}:${view}:${section}:${previewCycle}:${date}`}
+                  model={buildTimetable({
+                    data,
+                    student: isStudent,
+                    section,
+                    allSections: view === "all",
+                    date,
+                    previewCycle,
+                    now,
+                  })}
+                  selectedDay={null}
+                />
+              )}
+            </>
           )}
+
+          {/* ── Management panel (owner / coordinator only) ── */}
           {management && data.can_edit && (
             <>
               <div className="rounded-2xl border p-4 space-y-3">
@@ -263,8 +443,8 @@ export function AcademicSchedulePanel() {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  الحد الأقصى 5 ميجابايت · يمكنك رفع ملف يحتوي على الفرق الأربع. اعتماد نسخة الجامعة
-                  يستبدل جدول الفرقة المختارة فقط، ويحافظ على بقية الفرق والامتحانات.
+                  الحد الأقصى 5 ميجابايت · يمكنك رفع ملف يحتوي على الفرق الأربع. اعتماد نسخة
+                  الجامعة يستبدل جدول الفرقة المختارة فقط، ويحافظ على بقية الفرق والامتحانات.
                 </p>
               </div>
               {role === "owner" && (
@@ -370,6 +550,8 @@ export function AcademicSchedulePanel() {
             </>
           )}
         </TabsContent>
+
+        {/* ── EXAMS TAB ── */}
         <TabsContent value="exams">
           <ExamSchedulePanel
             department={data.department}

@@ -22,8 +22,10 @@ import {
   X,
   XCircle,
 } from "lucide-react";
+import { useState } from "react";
 import type { useUserManagement } from "../hooks/useUserManagement";
 import type { UserRecord } from "../types/management";
+import { PermissionsEditor } from "./PermissionsEditor";
 
 interface Props {
   model: ReturnType<typeof useUserManagement>;
@@ -54,6 +56,10 @@ export function UserRow({ model, user, idx }: Props) {
     handleDelete,
     startEdit,
   } = model;
+
+  const [showPermissions, setShowPermissions] = useState(false);
+  const [localRole, setLocalRole] = useState(user.role);
+  const canManagePermissions = viewerRole === "owner" && localRole !== "owner";
   return (
     <div
       key={user.id}
@@ -424,6 +430,24 @@ export function UserRow({ model, user, idx }: Props) {
           </div>
         ) : (
           <>
+            {/* Permissions button — owner only, not on other owners */}
+            {canManagePermissions && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowPermissions((v) => !v)}
+                className={`h-11 w-11 rounded-lg transition-colors ${
+                  showPermissions
+                    ? "text-primary bg-primary/15 border border-primary/30"
+                    : "text-slate-400 hover:text-primary hover:bg-primary/10"
+                }`}
+                aria-label="تعديل الصلاحيات"
+                aria-pressed={showPermissions}
+                title="تعديل الصلاحيات"
+              >
+                <Shield className="h-4 w-4" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -449,6 +473,26 @@ export function UserRow({ model, user, idx }: Props) {
           </>
         )}
       </div>
+
+      {/* Permissions panel — shown below the row when shield clicked */}
+      {showPermissions && canManagePermissions && (
+        <div className="w-full mt-2">
+          <PermissionsEditor
+            userId={user.id}
+            userName={user.full_name}
+            userRole={localRole}
+            currentPermissions={user.permissions ?? {}}
+            onSaved={(newPerms, newRole) => {
+              setLocalRole(newRole);
+              // Update the user object in-place so UI reflects change without full reload
+              user.permissions = newPerms;
+              user.role = newRole;
+              setShowPermissions(false);
+            }}
+            onCancel={() => setShowPermissions(false)}
+          />
+        </div>
+      )}
     </div>
   );
 }
