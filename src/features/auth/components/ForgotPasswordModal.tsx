@@ -69,8 +69,8 @@ export function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordModalProp
     setRetryAt(startRecoveryCooldown());
     setNow(Date.now());
     try {
-      const { error: requestError } = await supabase.auth.resetPasswordForEmail(address, {
-        redirectTo: `${window.location.origin}/reset-password`,
+      const { error: requestError } = await supabase.functions.invoke("account-recovery", {
+        body: { email: address },
       });
       if (requestError) throw requestError;
       setAccepted(true);
@@ -102,7 +102,7 @@ export function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordModalProp
             استعادة كلمة المرور
           </DialogTitle>
           <DialogDescription className="text-xs leading-5 text-slate-400">
-            أدخل بريد حسابك لتصلك رسالة برابط مؤقت لتعيين كلمة مرور جديدة.
+            الاستعادة متاحة للحسابات المسجلة التي تمت الموافقة عليها بالفعل.
           </DialogDescription>
         </DialogHeader>
         <form noValidate onSubmit={requestLink} aria-busy={submitting} className="space-y-3">
@@ -132,8 +132,8 @@ export function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordModalProp
               className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-xs leading-5 text-emerald-200"
             >
               <CheckCircle2 className="mb-1 h-4 w-4" />
-              إذا كان البريد مسجلًا في المنصة، ستصلك رسالة برابط الاستعادة. راجع البريد الوارد
-              والرسائل غير المرغوب فيها، ثم افتح الرابط لتعيين كلمة المرور.
+              إذا كان البريد مرتبطًا بحساب معتمد في المنصة، ستصلك رسالة برابط الاستعادة. راجع البريد
+              الوارد والرسائل غير المرغوب فيها، ثم افتح الرابط لتعيين كلمة المرور.
             </div>
           )}
           {error && !emailError && (

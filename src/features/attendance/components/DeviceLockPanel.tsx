@@ -28,21 +28,29 @@ export function DeviceLockPanel() {
   const [students, setStudents] = useState<StudentInfo[]>([]);
   const [locks, setLocks] = useState<DeviceLock[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
 
   const load = async () => {
     setLoading(true);
-    const [usersRes, locksRes] = await Promise.all([
-      supabase.from("users").select("id, full_name, national_id, auth_id").eq("role", "student"),
-      supabase.from("device_locks").select("student_auth_id, device_label, locked_at"),
-    ]);
-    const sortedUsers = (usersRes.data ?? []).sort((a, b) =>
-      a.full_name.localeCompare(b.full_name, "ar"),
-    );
-    setStudents(sortedUsers as StudentInfo[]);
-    setLocks((locksRes.data ?? []) as DeviceLock[]);
-    setLoading(false);
+    setLoadError("");
+    try {
+      const [usersRes, locksRes] = await Promise.all([
+        supabase.from("users").select("id, full_name, national_id, auth_id").eq("role", "student"),
+        supabase.from("device_locks").select("student_auth_id, device_label, locked_at"),
+      ]);
+      if (usersRes.error || locksRes.error) throw usersRes.error ?? locksRes.error;
+      const sortedUsers = (usersRes.data ?? []).sort((a, b) =>
+        a.full_name.localeCompare(b.full_name, "ar"),
+      );
+      setStudents(sortedUsers as StudentInfo[]);
+      setLocks((locksRes.data ?? []) as DeviceLock[]);
+    } catch {
+      setLoadError("تعذر تحميل الأجهزة المعتمدة. أعد المحاولة باستخدام زر التحديث.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -96,7 +104,8 @@ export function DeviceLockPanel() {
           </div>
         </div>
         <p className="text-xs text-muted-foreground mt-1">
-          الطالب يقفل جهازه بنفسه من لوحة التحكم. هنا يمكنك إلغاء القفل لو غير هاتفه.
+          هذا قيد إضافي على متصفح الحضور. تأكيد الهوية بمفتاح الدخول والتحقق من الموقع يظلان
+          مطلوبين. يمكنك إلغاء القيد عند تغيير الجهاز.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -111,7 +120,11 @@ export function DeviceLockPanel() {
           />
         </div>
 
-        {loading ? (
+        {loadError ? (
+          <p role="alert" className="text-sm text-destructive py-4">
+            {loadError}
+          </p>
+        ) : loading ? (
           <p className="text-sm text-muted-foreground text-center py-6">جاري التحميل...</p>
         ) : (
           <div className="space-y-2 max-h-[500px] overflow-y-auto">

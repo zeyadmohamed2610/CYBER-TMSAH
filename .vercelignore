@@ -1,0 +1,14 @@
+tests/
+e2e/
+src/test/
+**/__tests__/
+**/*.test.*
+**/*.spec.*
+supabase/
+docs/
+.private/
+.agents/
+.codex/
+coverage/
+playwright-report/
+test-results/
