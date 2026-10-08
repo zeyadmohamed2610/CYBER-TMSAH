@@ -30,7 +30,10 @@
     "check:architecture": "node scripts/check-architecture.mjs",
     "check": "pnpm check:architecture && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
     "supabase:deploy:account-login": "npx supabase@latest functions deploy account-login --use-api --no-verify-jwt",
-    "supabase:deploy:passkeys": "npx supabase@latest functions deploy passkey-login --use-api --no-verify-jwt"
+    "supabase:deploy:passkeys": "npx supabase@latest functions deploy passkey-login --use-api --no-verify-jwt",
+    "format:hosting": "prettier --check \"src/**/*.{ts,tsx,css}\" \"api/**/*.ts\" \"supabase/functions/**/*.{ts,json}\" \"scripts/seo-pages.ts\" \"*.{js,ts,json}\" .github/workflows/ci.yml --no-error-on-unmatched-pattern",
+    "typecheck:hosting": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.server.json --noEmit",
+    "supabase:deploy:recovery": "supabase functions deploy account-recovery --use-api --no-verify-jwt"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",

@@ -2,6 +2,7 @@ import { scheduleService } from "@/features/schedule/services/scheduleService";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "../../auth/context/AuthContext";
+import { canViewSchedule } from "../../auth/utils/roleAccess";
 import { useAcademicClock } from "../hooks/useAcademicClock";
 import {
   cairoDate,
@@ -14,7 +15,8 @@ import { exportScheduleWorkbook, ScheduleImportError } from "../utils/scheduleWo
 import type { UniversityImport } from "../utils/universitySchedule";
 
 export function useAcademicSchedule() {
-  const { role, department: accountDepartment, departments } = useAuth();
+  const { role, permissions, department: accountDepartment, departments } = useAuth();
+  const scheduleAllowed = canViewSchedule(role, permissions ?? {});
   const [department, setDepartment] = useState("cybersecurity");
   const faculty = role === "doctor" || role === "ta";
   const scopedDepartment =
@@ -47,6 +49,7 @@ export function useAcademicSchedule() {
     const version = ++loadVersion.current;
     setError("");
     setData(null);
+    if (!scheduleAllowed) return;
     if ((role === "owner" || role === "coordinator") && !year) return;
     const result = await scheduleService.get({
       p_department: role === "owner" || faculty ? scopedDepartment : null,
@@ -64,7 +67,7 @@ export function useAcademicSchedule() {
     setSettingsDraft(null);
     if (next.student_section && /^[1-9]$|^1[0-5]$/.test(next.student_section))
       setSection(Number(next.student_section));
-  }, [scopedDepartment, year, role, faculty]);
+  }, [scopedDepartment, year, role, faculty, scheduleAllowed]);
   useEffect(() => {
     void load();
     setDraft(null);
@@ -88,7 +91,8 @@ export function useAcademicSchedule() {
     }
   };
   useEffect(() => {
-    if (management || ((role === "owner" || role === "coordinator") && !year)) return;
+    if (!scheduleAllowed || management || ((role === "owner" || role === "coordinator") && !year))
+      return;
     let active = true;
     const refresh = async () => {
       const version = loadVersion.current;
@@ -116,7 +120,7 @@ export function useAcademicSchedule() {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", visible);
     };
-  }, [scopedDepartment, year, role, management, faculty]);
+  }, [scopedDepartment, year, role, management, faculty, scheduleAllowed]);
   const saveEntry = () =>
     run(async () => {
       if (!data || !draft) return;

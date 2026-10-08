@@ -22,9 +22,7 @@ export function FacultyDashboard({ role }: { role: "doctor" | "ta" }) {
   const hasScheduleAccess = canViewSchedule(role, permissions);
 
   // Only include "schedule" tab if user has schedule access permission
-  const allowedTabs = dashboardTabs(role).filter(
-    (t) => t !== "schedule" || hasScheduleAccess,
-  );
+  const allowedTabs = dashboardTabs(role).filter((t) => t !== "schedule" || hasScheduleAccess);
   const defaultTab = allowedTabs[0] ?? "lectures";
   const [activeTab, setActiveTab] = useDashboardTab(defaultTab, allowedTabs);
   const classes = role === "doctor" ? "المحاضرات" : "السكاشن";

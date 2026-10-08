@@ -82,7 +82,13 @@ const fetchUserProfile = async (
       .maybeSingle();
 
     if (!fallback.error && fallback.data) {
-      data = { ...fallback.data, department: null, departments: [], avatar_url: null, permissions: {} };
+      data = {
+        ...fallback.data,
+        department: null,
+        departments: [],
+        avatar_url: null,
+        permissions: {},
+      };
       error = null;
     }
   }
@@ -163,7 +169,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   });
   const [permissions, setPermissions] = useState<UserPermissions>(() => {
     try {
-      const cached = sessionStorage.getItem(PERMS_STORAGE_KEY) || localStorage.getItem(PERMS_STORAGE_KEY);
+      const cached =
+        sessionStorage.getItem(PERMS_STORAGE_KEY) || localStorage.getItem(PERMS_STORAGE_KEY);
       return cached ? (JSON.parse(cached) as UserPermissions) : {};
     } catch {
       return {};

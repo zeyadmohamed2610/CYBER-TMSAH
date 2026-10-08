@@ -84,3 +84,21 @@ PRODUCTION_REPOSITORY_RELEASE_REPORT.md
 # Temporary verification scripts
 scratch/
 /coverage/
+# Local verification and database history: retained on disk, excluded from GitHub
+/tests/
+/e2e/
+/src/test/
+**/__tests__/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+/supabase/migrations/
+/supabase/templates/
+/docs/
+/playwright.config.ts
+/vitest.config.ts
+/scripts/*
+!/scripts/seo-pages.ts
+/CYBER-TMSAH-second-year-import.xlsx
+/CYBER_TMSAH_Functionality_Document.md

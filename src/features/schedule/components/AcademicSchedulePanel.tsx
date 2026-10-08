@@ -10,7 +10,7 @@ import { Label } from "@/shared/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { Calendar, Download, Lock, Plus, Upload } from "lucide-react";
 import { toast } from "sonner";
-import { academicWeek, scheduleCycle } from "../utils/academicSchedule";
+import { academicWeek } from "../utils/academicSchedule";
 import { emptyEntry, selectClass } from "../utils/scheduleEditor";
 import { readScheduleWorkbook } from "../utils/scheduleWorkbook";
 import { AcademicCycleControl } from "./AcademicCycleControl";
@@ -156,7 +156,6 @@ export function AcademicSchedulePanel() {
   const settings = data.settings;
   const editableSettings = settingsDraft ?? settings;
   const actualWeek = academicWeek(date, settings.semester_start, settings.week_start_day);
-  const cycle = previewCycle === "auto" ? scheduleCycle(date, data) : Number(previewCycle);
   const isStudent = role === "student";
 
   return (
@@ -321,7 +320,9 @@ export function AcademicSchedulePanel() {
                       تاريخ
                     </summary>
                     <div className="absolute left-0 top-11 z-10 rounded-xl border bg-card p-3 shadow-lg space-y-1">
-                      <Label htmlFor="schedule-date-panel" className="text-xs">تاريخ العرض</Label>
+                      <Label htmlFor="schedule-date-panel" className="text-xs">
+                        تاريخ العرض
+                      </Label>
                       <input
                         id="schedule-date-panel"
                         type="date"
@@ -443,8 +444,8 @@ export function AcademicSchedulePanel() {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  الحد الأقصى 5 ميجابايت · يمكنك رفع ملف يحتوي على الفرق الأربع. اعتماد نسخة
-                  الجامعة يستبدل جدول الفرقة المختارة فقط، ويحافظ على بقية الفرق والامتحانات.
+                  الحد الأقصى 5 ميجابايت · يمكنك رفع ملف يحتوي على الفرق الأربع. اعتماد نسخة الجامعة
+                  يستبدل جدول الفرقة المختارة فقط، ويحافظ على بقية الفرق والامتحانات.
                 </p>
               </div>
               {role === "owner" && (

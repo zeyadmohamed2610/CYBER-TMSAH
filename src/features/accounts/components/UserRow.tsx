@@ -58,13 +58,14 @@ export function UserRow({ model, user, idx }: Props) {
   } = model;
 
   const [showPermissions, setShowPermissions] = useState(false);
-  const [localRole, setLocalRole] = useState(user.role);
-  const canManagePermissions = viewerRole === "owner" && localRole !== "owner";
+  const [localPermissions, setLocalPermissions] = useState(user.permissions ?? {});
+  const canManagePermissions =
+    viewerRole === "owner" && ["coordinator", "doctor", "ta"].includes(user.role);
   return (
     <div
       key={user.id}
       data-user-id={user.id}
-      className={`user-row flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl sm:rounded-none border sm:border-x-0 sm:border-t-0 p-4 transition-colors ${
+      className={`user-row flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-4 rounded-2xl sm:rounded-none border sm:border-x-0 sm:border-t-0 p-4 transition-colors ${
         editingId === user.id
           ? "bg-primary/5 border-primary/40"
           : "bg-card hover:bg-muted/30 border-border"
@@ -480,13 +481,10 @@ export function UserRow({ model, user, idx }: Props) {
           <PermissionsEditor
             userId={user.id}
             userName={user.full_name}
-            userRole={localRole}
-            currentPermissions={user.permissions ?? {}}
-            onSaved={(newPerms, newRole) => {
-              setLocalRole(newRole);
-              // Update the user object in-place so UI reflects change without full reload
-              user.permissions = newPerms;
-              user.role = newRole;
+            userRole={user.role}
+            currentPermissions={localPermissions}
+            onSaved={(newPerms) => {
+              setLocalPermissions(newPerms);
               setShowPermissions(false);
             }}
             onCancel={() => setShowPermissions(false)}
