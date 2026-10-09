@@ -56,9 +56,10 @@ export async function handlePasswordChange(request: Request): Promise<Response> 
     if (proof.error?.message.includes("same_password"))
       return json({ error: "PASSWORD_SAME" }, 400);
     if (proof.error || !proof.data) return json({ error: "Password update unavailable" }, 503);
-    const updated = await context.supabaseAdmin.auth.admin.updateUserById(fresh.data.user.id, {
-      password,
-      app_metadata: { ...fresh.data.user.app_metadata, password_write_nonce: proof.data },
+    const updated = await context.supabaseAdmin.rpc("apply_checked_password", {
+      p_auth_id: fresh.data.user.id,
+      p_session_id: claims.session_id,
+      p_password: password,
     });
     if (updated.error) return json({ error: "Password update failed" }, 400);
     return json({ success: true });
