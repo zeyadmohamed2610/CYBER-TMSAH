@@ -15,8 +15,8 @@ import { exportScheduleWorkbook, ScheduleImportError } from "../utils/scheduleWo
 import type { UniversityImport } from "../utils/universitySchedule";
 
 export function useAcademicSchedule() {
-  const { role, permissions, department: accountDepartment, departments } = useAuth();
-  const scheduleAllowed = canViewSchedule(role, permissions ?? {});
+  const { role, department: accountDepartment, departments } = useAuth();
+  const scheduleAllowed = canViewSchedule(role);
   const [department, setDepartment] = useState("cybersecurity");
   const faculty = role === "doctor" || role === "ta";
   const scopedDepartment =

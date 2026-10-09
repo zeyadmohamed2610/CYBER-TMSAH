@@ -24,7 +24,7 @@ import { useAuth } from "@/features/auth/context/AuthContext";
 import { canViewSchedule } from "@/features/auth/utils/roleAccess";
 
 export function AcademicSchedulePanel() {
-  const { role, permissions } = useAuth();
+  const { role } = useAuth();
   const model = useAcademicSchedule();
   const [activeTab, setActiveTab] = useState("schedule");
   // Inner tab: "daily" | "weekly"
@@ -66,7 +66,7 @@ export function AcademicSchedulePanel() {
   } = model;
 
   // ── Access Guard ─────────────────────────────────────────────────────────
-  if (!canViewSchedule(role, permissions)) {
+  if (!canViewSchedule(role)) {
     return (
       <section
         dir="rtl"

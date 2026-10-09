@@ -169,6 +169,21 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
       if (key.error || !key.data || (binding!.selected_key && binding!.selected_key !== key.data))
         return json({ success: false, error: "اختر مفتاح الدخول المحدد من حسابك." }, 403);
       if (!attendance) return json({ success: true, credentialId: key.data });
+      const trusted = await admin.rpc("claim_attendance_key", {
+        p_auth_id: userId,
+        p_key_id: key.data,
+      });
+      if (trusted.error)
+        return json({ success: false, error: "تعذر التحقق من مفتاح الحضور المعتمد." }, 503);
+      if (!trusted.data)
+        return json(
+          {
+            success: false,
+            error:
+              "استخدم مفتاح الحضور المعتمد. لتغييره، اطلب من الإدارة إلغاء المفتاح السابق وإعادة الاعتماد.",
+          },
+          403,
+        );
       const proof = await admin
         .from("attendance_biometric_proofs")
         .insert({

@@ -17,15 +17,12 @@ import {
   GraduationCap,
   Mail,
   Loader2,
-  Shield,
   Trash2,
   X,
   XCircle,
 } from "lucide-react";
-import { useState } from "react";
 import type { useUserManagement } from "../hooks/useUserManagement";
 import type { UserRecord } from "../types/management";
-import { PermissionsEditor } from "./PermissionsEditor";
 
 interface Props {
   model: ReturnType<typeof useUserManagement>;
@@ -57,10 +54,6 @@ export function UserRow({ model, user, idx }: Props) {
     startEdit,
   } = model;
 
-  const [showPermissions, setShowPermissions] = useState(false);
-  const [localPermissions, setLocalPermissions] = useState(user.permissions ?? {});
-  const canManagePermissions =
-    viewerRole === "owner" && ["coordinator", "doctor", "ta"].includes(user.role);
   return (
     <div
       key={user.id}
@@ -282,7 +275,7 @@ export function UserRow({ model, user, idx }: Props) {
 
               {/* Role Badge */}
               <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center gap-1">
-                <Shield className="w-2.5 h-2.5" />
+                <GraduationCap className="w-2.5 h-2.5" />
                 {getRoleLabel(user.role)}
               </span>
 
@@ -432,23 +425,6 @@ export function UserRow({ model, user, idx }: Props) {
         ) : (
           <>
             {/* Permissions button — owner only, not on other owners */}
-            {canManagePermissions && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowPermissions((v) => !v)}
-                className={`h-11 w-11 rounded-lg transition-colors ${
-                  showPermissions
-                    ? "text-primary bg-primary/15 border border-primary/30"
-                    : "text-slate-400 hover:text-primary hover:bg-primary/10"
-                }`}
-                aria-label="تعديل الصلاحيات"
-                aria-pressed={showPermissions}
-                title="تعديل الصلاحيات"
-              >
-                <Shield className="h-4 w-4" />
-              </Button>
-            )}
             <Button
               variant="ghost"
               size="icon"
@@ -474,23 +450,6 @@ export function UserRow({ model, user, idx }: Props) {
           </>
         )}
       </div>
-
-      {/* Permissions panel — shown below the row when shield clicked */}
-      {showPermissions && canManagePermissions && (
-        <div className="w-full mt-2">
-          <PermissionsEditor
-            userId={user.id}
-            userName={user.full_name}
-            userRole={user.role}
-            currentPermissions={localPermissions}
-            onSaved={(newPerms) => {
-              setLocalPermissions(newPerms);
-              setShowPermissions(false);
-            }}
-            onCancel={() => setShowPermissions(false)}
-          />
-        </div>
-      )}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { securityRequest } from "@/shared/lib/passwordService";
 import { ACADEMIC_YEARS, DEPARTMENTS } from "@/features/academics/types";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { getDashboardRoute } from "@/features/auth/utils/dashboardRoutes";
@@ -262,17 +263,12 @@ export function useProfile() {
         return;
       }
 
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-
-      if (error) throw error;
+      await securityRequest("account-password", { password: newPassword });
 
       toast.success("تم تغيير كلمة المرور بنجاح! احتفظ بها في مكان آمن.");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err: unknown) {
-      console.error(err);
       const msg = err instanceof Error ? err.message : "فشل تغيير كلمة المرور";
       toast.error(getFriendlyErrorMessage(`حدث خطأ: ${msg}`));
     } finally {
@@ -286,7 +282,7 @@ export function useProfile() {
   const roleInfo = getRoleBadge(profile?.role || role || "");
   const dashboardPath = role ? getDashboardRoute(role) : "/attendance";
   const userInitial = (profile?.full_name || fullName || "U").charAt(0).toUpperCase();
-  const hasMinLength = newPassword.length >= 6;
+  const hasMinLength = newPassword.length >= 8;
   const hasNumbers = /\d/.test(newPassword);
   const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(newPassword);
   const passwordStrengthScore =

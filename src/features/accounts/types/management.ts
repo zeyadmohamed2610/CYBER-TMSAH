@@ -1,5 +1,3 @@
-import type { UserPermissions } from "@/features/auth/context/AuthContext";
-
 export interface UserRecord {
   id: string;
   full_name: string;
@@ -14,7 +12,6 @@ export interface UserRecord {
   academic_year?: string | null;
   section_number?: number | null;
   created_at?: string;
-  permissions?: UserPermissions | null;
 }
 export interface Subject {
   id: string;

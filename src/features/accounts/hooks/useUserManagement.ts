@@ -1,3 +1,4 @@
+import { securityRequest } from "@/shared/lib/passwordService";
 import { DEPARTMENTS, type DepartmentInfo } from "@/features/academics/types";
 import { supabase } from "@/shared/api/supabaseClient";
 import { useDebounce } from "@/shared/hooks/useDebounce";
@@ -202,7 +203,7 @@ export function useUserManagement(initialRole = "all") {
           const { data, error } = await supabase
             .from("users")
             .select(
-              "id, full_name, username, email, role, national_id, subject_id, department, departments, academic_year, section_number, created_at, permissions",
+              "id, full_name, username, email, role, national_id, subject_id, department, departments, academic_year, section_number, created_at",
             )
             .in(
               "role",
@@ -291,22 +292,20 @@ export function useUserManagement(initialRole = "all") {
     const trimmedNID = role === "student" ? formData.nationalId.trim() : null;
 
     try {
-      // The deployed account-creation RPC is the authoritative provisioning path.
-      const { data: newUserId, error: rpcError } = await supabase.rpc("admin_create_user", {
-        p_full_name: trimmedName,
-        p_username: trimmedUsername,
-        p_email: trimmedEmail,
-        p_password: formData.password,
-        p_role: role,
-        p_department: formData.department,
-        p_academic_year: role === "student" ? formData.academicYear : null,
-        p_section_number: role === "student" ? parseInt(formData.sectionNumber) : null,
-        p_subject_id:
-          (role === "doctor" || role === "ta" || role === "coordinator") &&
-          formData.subjectIds.length > 0
-            ? formData.subjectIds[0]
-            : null,
+      const created = await securityRequest<{ user: { id: string } }>("createUser", {
+        name: trimmedName,
+        username: trimmedUsername,
+        email: trimmedEmail,
+        password: formData.password,
+        role,
+        department: formData.department,
+        national_id: trimmedNID,
+        academic_year: role === "student" ? formData.academicYear : null,
+        section_number: role === "student" ? parseInt(formData.sectionNumber) : null,
+        subject_id: formData.subjectIds[0] ?? null,
       });
+      const newUserId = created?.user?.id;
+      if (!newUserId) throw new Error("تعذر إنشاء الحساب.");
 
       // After user created, assign all subjects via junction table
       const assignSubjectsAfterCreate = async (userId: string) => {
@@ -322,10 +321,6 @@ export function useUserManagement(initialRole = "all") {
         }
       };
 
-      if (rpcError) {
-        toast.error(getFriendlyErrorMessage(rpcError.message, "تعذر إنشاء الحساب. راجع البيانات."));
-        return;
-      }
       // Assign multiple subjects if provided
       if (
         newUserId &&
