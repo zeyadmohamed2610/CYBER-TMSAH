@@ -391,8 +391,9 @@ export function useLoginForm(initialTab?: Tab) {
         );
         return;
       }
-      if (joinPassword.length < 6) {
-        reportJoinError("كلمة المرور يجب ألا تقل عن 6 أحرف.", "j-pass");
+      const passwordError = newPasswordError(joinPassword);
+      if (passwordError) {
+        reportJoinError(passwordError, "j-pass");
         return;
       }
       if (joinPassword !== confirmPassword) {
@@ -537,3 +538,4 @@ export function useLoginForm(initialTab?: Tab) {
     isStudent,
   };
 }
+import { newPasswordError } from "@/shared/lib/passwordPolicy";

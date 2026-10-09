@@ -63,7 +63,7 @@ export function ProfilePassword({ model }: { model: ReturnType<typeof useProfile
                   autoComplete="new-password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="أدخل كلمة مرور قوية (6 أحرف على الأقل)"
+                  placeholder="أدخل كلمة مرور قوية (8 أحرف على الأقل)"
                   className="bg-black/60 border-purple-500/25 focus:border-purple-500 text-white rounded-2xl h-12 text-sm px-4 pl-12"
                   required
                   disabled={savingPassword}

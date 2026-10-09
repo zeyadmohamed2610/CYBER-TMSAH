@@ -266,8 +266,9 @@ export function useUserManagement(initialRole = "all") {
       return;
     }
 
-    if (!formData.password || formData.password.length < 6) {
-      toast.error("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
+    const passwordError = newPasswordError(formData.password);
+    if (passwordError) {
+      toast.error(passwordError);
       return;
     }
 
@@ -547,3 +548,4 @@ export function useUserManagement(initialRole = "all") {
     copiedField,
   };
 }
+import { newPasswordError } from "@/shared/lib/passwordPolicy";

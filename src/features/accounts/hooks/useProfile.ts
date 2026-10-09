@@ -238,8 +238,9 @@ export function useProfile() {
   };
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPassword || newPassword.length < 6) {
-      toast.error("كلمة المرور يجب أن تتكون من 6 أحرف على الأقل");
+    const passwordError = newPasswordError(newPassword);
+    if (passwordError) {
+      toast.error(passwordError);
       return;
     }
 
@@ -330,3 +331,4 @@ export function useProfile() {
     updateAvatarUrl,
   };
 }
+import { newPasswordError } from "@/shared/lib/passwordPolicy";

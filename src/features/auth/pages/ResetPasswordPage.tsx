@@ -17,6 +17,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { isAuthError } from "@supabase/supabase-js";
 import { PasswordStrengthMeter } from "../components/PasswordStrengthMeter";
+import { newPasswordError } from "@/shared/lib/passwordPolicy";
 
 export default function ResetPasswordPage() {
   const { lang, isRTL } = useLang();
@@ -64,12 +65,9 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     if (pending.current || validSession !== true) return;
 
-    if (!newPassword || newPassword.length < 6) {
-      toast.error(
-        lang === "ar"
-          ? "يجب أن لا تقل كلمة المرور عن 6 خانات"
-          : "Password must be at least 6 characters",
-      );
+    const passwordError = newPasswordError(newPassword, lang);
+    if (passwordError) {
+      toast.error(passwordError);
       return;
     }
 
