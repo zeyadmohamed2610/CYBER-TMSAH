@@ -188,7 +188,11 @@ export const OwnerDashboard = () => {
         </TabsContent>
         <TabsContent aria-label="الجلسات الدراسية" value="lectures" className="mt-4 outline-none">
           {selectedLecture ? (
-            <LectureDetailView lecture={selectedLecture} onBack={() => setSelectedLecture(null)} />
+            <LectureDetailView
+              lecture={selectedLecture}
+              onSelectLecture={setSelectedLecture}
+              onBack={() => setSelectedLecture(null)}
+            />
           ) : (
             <LectureManagementPanel onSelectLecture={setSelectedLecture} />
           )}

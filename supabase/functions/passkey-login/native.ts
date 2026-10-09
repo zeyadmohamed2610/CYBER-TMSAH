@@ -50,6 +50,12 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
       } = await context.supabase.auth.getUser();
       if (authError || !user)
         return json({ success: false, error: "يرجى تسجيل الدخول مجددًا." }, 401);
+      const active = await admin.rpc("is_current_platform_session", {
+        p_auth_id: user.id,
+        p_session_id: (context.jwtClaims as unknown as { session_id?: string }).session_id ?? null,
+      });
+      if (active.error || !active.data)
+        return json({ success: false, error: "يرجى تسجيل الدخول مجددًا." }, 401);
       userId = user.id;
     }
     const attendance = action.startsWith("attendance-");
@@ -70,6 +76,25 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
           !/^(?:[a-f0-9]{64}|fb[a-f0-9]{16})$/i.test(body.deviceFingerprint ?? ""))
       )
         return json({ success: false, error: "راجع رمز الحضور والجهاز." }, 400);
+      const scoped = await admin.rpc("passkey_assertion_options", {
+        p_auth_id: userId,
+        p_attendance: attendance,
+        p_selected: attendance ? null : body.credentialId,
+      });
+      if (scoped.error)
+        return json({ success: false, error: "تعذر التحقق من مفاتيح الحساب." }, 503);
+      const selection = scoped.data as {
+        bound: string | null;
+        credentials: { key_id: string; id: string; type: string }[];
+      } | null;
+      if (!selection?.credentials.length)
+        return json(
+          {
+            success: false,
+            error: "مفتاح الحضور المعتمد غير متاح. اطلب من الإدارة إلغاء الاعتماد السابق.",
+          },
+          403,
+        );
       const start = await native.auth.passkey.startAuthentication();
       if (start.error || !start.data)
         return json({ success: false, error: "تعذر بدء التحقق." }, 503);
@@ -79,7 +104,7 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
         purpose: attendance ? "attendance" : "verify",
         attendance_hash: attendance ? body.attendanceHash : null,
         device_fingerprint: attendance ? body.deviceFingerprint : null,
-        selected_key: attendance ? null : body.credentialId,
+        selected_key: attendance ? selection.bound : body.credentialId,
       });
       if (inserted.error) return json({ success: false, error: "تعذر بدء التحقق." }, 503);
       await admin
@@ -89,7 +114,11 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
       return json({
         success: true,
         challengeId: start.data.challenge_id,
-        options: start.data.options,
+        options: {
+          ...start.data.options,
+          allowCredentials: selection.credentials.map(({ id, type }) => ({ id, type })),
+          userVerification: "required",
+        },
       });
     }
     let binding: Record<string, unknown> | undefined;

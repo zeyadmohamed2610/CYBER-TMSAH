@@ -1,19 +1,19 @@
 import { getFriendlyErrorMessage } from "@/shared/lib/academicCopy";
 /**
  * LiveSessionPanel — shown to doctors and owners after a session is created.
- * Displays the rotating short code + QR code, stop button, and duration editor.
+ * Displays the attendance URL and QR code, stop button, and duration editor.
  */
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Clock, Copy, MapPin, RefreshCw, Square, TimerReset } from "lucide-react";
+import { Clock, Copy, MapPin, Square, TimerReset } from "lucide-react";
 import QRCode from "qrcode";
 import { useEffect, useRef, useState } from "react";
 import { useRotatingHash } from "../hooks/useRotatingHash";
 import type { ActiveSession } from "../hooks/useSessionManager";
-import { generateTOTPCode } from "../utils/rotatingSession";
+import { attendanceLink } from "../utils/attendanceLink";
 
 interface Props {
   session: ActiveSession;
@@ -28,9 +28,6 @@ export function LiveSessionPanel({ session, onStop, onUpdateDuration }: Props) {
   const [durationError, setDurationError] = useState<string | null>(null);
   const [stopping, setStopping] = useState(false);
   const [updating, setUpdating] = useState(false);
-  const [totpCode, setTotpCode] = useState<string>("------");
-  const [refreshIn, setRefreshIn] = useState<number>(10);
-  const prevCodeRef = useRef<string>("------");
 
   const { secondsUntilExpiry } = useRotatingHash({
     rotatingHash: session.rotating_hash,
@@ -42,40 +39,18 @@ export function LiveSessionPanel({ session, onStop, onUpdateDuration }: Props) {
     setNewMinutes(session.duration_minutes);
   }, [session.duration_minutes]);
 
-  // Generate TOTP code every second — only update state when code actually changes
+  // A stable session link resolves a fresh challenge after account authentication.
   useEffect(() => {
-    let mounted = true;
-    const updateCode = async () => {
-      const code = await generateTOTPCode(session.rotating_hash);
-      const seconds = Math.floor(Date.now() / 1000);
-      const remaining = 10 - (seconds % 10);
-
-      if (mounted) {
-        setRefreshIn(remaining);
-        if (code !== prevCodeRef.current) {
-          prevCodeRef.current = code;
-          setTotpCode(code);
-        }
-      }
-    };
-
-    updateCode();
-    const interval = window.setInterval(updateCode, 1000);
-    return () => {
-      mounted = false;
-      window.clearInterval(interval);
-    };
-  }, [session.rotating_hash]);
-
-  // Generate QR code from TOTP code
-  useEffect(() => {
-    if (!totpCode || totpCode === "------" || !canvasRef.current) return;
-    QRCode.toCanvas(canvasRef.current, totpCode, {
-      width: 220,
-      margin: 1,
+    if (!canvasRef.current) return;
+    QRCode.toCanvas(canvasRef.current, attendanceLink(session.id), {
+      width: 256,
+      margin: 4,
+      errorCorrectionLevel: "M",
       color: { dark: "#0f172a", light: "#ffffff" },
-    }).catch(console.error);
-  }, [totpCode]);
+    }).catch(() =>
+      toast({ variant: "destructive", title: "تعذر عرض رابط QR", description: "أعد فتح الجلسة." }),
+    );
+  }, [session.id, toast]);
 
   const handleStop = async () => {
     setStopping(true);
@@ -93,20 +68,17 @@ export function LiveSessionPanel({ session, onStop, onUpdateDuration }: Props) {
   };
 
   const handleCopyCode = async () => {
-    if (totpCode && totpCode !== "------") {
-      try {
-        await navigator.clipboard.writeText(totpCode);
-        toast({ title: "تم نسخ الرمز", description: totpCode });
-      } catch {
-        toast({
-          variant: "destructive",
-          title: "تعذر نسخ الرمز",
-          description: "اسمح للمتصفح بالوصول للحافظة، أو انسخ الرمز المعروض يدويًا.",
-        });
-      }
+    try {
+      await navigator.clipboard.writeText(attendanceLink(session.id));
+      toast({ title: "تم نسخ رابط الحضور" });
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "تعذر نسخ الرابط",
+        description: "افتح الرابط المعروض أو امسح QR بكاميرا الهاتف.",
+      });
     }
   };
-
   const formatCountdown = (s: number) => {
     const m = Math.floor(s / 60);
     const sec = s % 60;
@@ -143,23 +115,28 @@ export function LiveSessionPanel({ session, onStop, onUpdateDuration }: Props) {
           {/* TOTP Code Block */}
           <div className="flex-1 w-full rounded-3xl border-2 border-primary/30 bg-background/50 backdrop-blur-xl px-4 sm:px-8 py-8 text-center shadow-[0_0_30px_rgba(0,180,216,0.15)] flex flex-col justify-center">
             <p className="mb-3 text-xs sm:text-sm font-bold text-primary tracking-widest uppercase opacity-80">
-              رمز الحضور المباشر
+              رابط تسجيل الحضور
             </p>
-            <p
-              className="font-mono text-5xl sm:text-7xl lg:text-8xl font-black tracking-[0.2em] sm:tracking-[0.3em] text-foreground select-all break-all"
-              style={{ textShadow: "0 0 25px hsl(var(--primary)/0.4)" }}
+            <a
+              href={attendanceLink(session.id)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex rounded-xl border border-primary/30 p-4 font-bold text-primary hover:bg-primary/10"
             >
-              {totpCode}
+              فتح رابط تسجيل الحضور
+            </a>
+            <p className="mt-3 text-sm text-muted-foreground" dir="ltr">
+              www.cyber-tmsah.site
             </p>
             <Button
               variant="ghost"
               size="sm"
               className="mt-4 gap-2 mx-auto text-muted-foreground hover:text-primary transition-colors"
               onClick={handleCopyCode}
-              aria-label="نسخ رمز الحضور"
+              aria-label="نسخ رابط الحضور"
             >
               <Copy className="h-4 w-4" />
-              نسخ الرمز
+              نسخ الرابط
             </Button>
           </div>
 
@@ -169,17 +146,14 @@ export function LiveSessionPanel({ session, onStop, onUpdateDuration }: Props) {
               ref={canvasRef}
               className="rounded-2xl border-none shadow-xl scale-110 sm:scale-100"
             />
-            <div
-              className={`flex items-center gap-2 text-sm font-bold px-4 py-1.5 rounded-full ${refreshIn <= 3 ? "bg-destructive/20 text-destructive animate-pulse" : "bg-primary/20 text-primary"}`}
-            >
-              <RefreshCw className={`h-4 w-4 ${refreshIn <= 3 ? "animate-spin" : ""}`} />
-              يتجدد بعد {refreshIn} ثانية
-            </div>
+            <p className="max-w-64 text-center text-sm text-muted-foreground">
+              امسح بكاميرا الهاتف، ثم أكّد مفتاح حسابك وموقعك. الرابط صالح طوال فترة التسجيل.
+            </p>
           </div>
         </div>
 
         {/* GPS info */}
-        {session.latitude && session.longitude && (
+        {session.latitude != null && session.longitude != null && (
           <div className="flex flex-col sm:flex-row items-center gap-3 rounded-xl border border-white/5 bg-background/50 px-5 py-4 text-sm text-muted-foreground shadow-inner">
             <MapPin className="h-5 w-5 text-primary" />
             <span dir="ltr" className="font-mono bg-black/20 px-2 py-1 rounded">

@@ -7,17 +7,8 @@ import { AcademicSchedulePanel } from "../../schedule/components/AcademicSchedul
 import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
 import { TabsContent } from "@/shared/components/ui/tabs";
-import {
-  Activity,
-  CalendarDays,
-  CloudOff,
-  History,
-  QrCode,
-  RefreshCw,
-  Sparkles,
-} from "lucide-react";
+import { CalendarDays, CloudOff, History, QrCode, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { ActiveSessionsBar } from "../../attendance/components/ActiveSessionsBar";
 import { AttendanceSubmissionForm } from "../../attendance/components/AttendanceSubmissionForm";
 import { useAttendanceDashboardData } from "../../attendance/hooks/useAttendanceDashboardData";
 import { StudentAttendanceAccess } from "../../attendance/components/StudentAttendanceAccess";
@@ -128,26 +119,6 @@ export const StudentDashboard = () => {
           className="space-y-6 focus-visible:outline-none"
         >
           <StudentAttendanceAccess>
-            {/* Active Sessions Panel */}
-            <div className="rounded-3xl glass-card p-5 sm:p-6 border border-white/10 shadow-lg">
-              <div className="flex items-center justify-between gap-3 mb-4">
-                <h2 className="text-lg font-bold flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-primary animate-pulse" />
-                  الجلسات النشطة الآن
-                </h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => refetch()}
-                  className="h-8 px-2 text-xs text-muted-foreground hover:text-white gap-1"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  تحديث
-                </Button>
-              </div>
-              <ActiveSessionsBar />
-            </div>
-
             {/* Submission Form */}
             <GpsProvider>
               <AttendanceSubmissionForm sessions={sessions} onSubmitSuccess={refetch} />

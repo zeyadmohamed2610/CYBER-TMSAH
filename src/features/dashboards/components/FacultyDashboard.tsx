@@ -27,7 +27,13 @@ export function FacultyDashboard({ role }: { role: "doctor" | "ta" }) {
   const [activeTab, setActiveTab] = useDashboardTab(defaultTab, allowedTabs);
   const classes = role === "doctor" ? "المحاضرات" : "السكاشن";
   if (selectedLecture)
-    return <LectureDetailView lecture={selectedLecture} onBack={() => setSelectedLecture(null)} />;
+    return (
+      <LectureDetailView
+        lecture={selectedLecture}
+        onSelectLecture={setSelectedLecture}
+        onBack={() => setSelectedLecture(null)}
+      />
+    );
   return (
     <div className="space-y-6" dir="rtl">
       {fullName && (

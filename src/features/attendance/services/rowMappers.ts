@@ -46,6 +46,7 @@ export const mapSessionSummary = (row: SessionRow): SessionSummary => {
     longitude: row.longitude ?? null,
     radiusMeters: row.radius_meters ?? 50,
     lectureId: row.lecture_id ?? null,
+    section: row.section ?? null,
   };
 };
 export const mapAttendanceRecord = (row: AttendanceRow): AttendanceRecord => {

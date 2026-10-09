@@ -71,6 +71,7 @@ export function DashboardWorkspace({
           return rank(a) - rank(b);
         });
   const mobileItems = priority.slice(0, 4);
+  const hasMobileDock = items.length > 4;
   const shortLabel = (item: DashboardDestination) =>
     item.shortLabel ??
     (
@@ -156,7 +157,8 @@ export function DashboardWorkspace({
       orientation={desktop ? "vertical" : "horizontal"}
       dir="rtl"
       className={cn(
-        "dashboard-workspace grid min-w-0 gap-4 pb-24 lg:pb-0 lg:gap-6",
+        "dashboard-workspace grid min-w-0 gap-4 lg:pb-0 lg:gap-6",
+        hasMobileDock ? "pb-24" : "pb-0",
         collapsed ? "lg:grid-cols-[5rem_minmax(0,1fr)]" : "lg:grid-cols-[15rem_minmax(0,1fr)]",
       )}
     >
@@ -193,7 +195,29 @@ export function DashboardWorkspace({
         </TabsList>
       </aside>
       <div className="min-w-0 space-y-4">
-        {!desktop && (
+        {!desktop && !hasMobileDock && (
+          <TabsList
+            aria-label="أقسام لوحة التحكم"
+            className="grid h-auto w-full gap-1 bg-card p-1"
+            style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+          >
+            {items.map((item) => {
+              const Icon = item.icon;
+              return (
+                <TabsTrigger
+                  key={item.value}
+                  value={item.value}
+                  aria-label={item.label}
+                  className="min-h-12 gap-2 whitespace-normal px-2 text-xs"
+                >
+                  <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
+                  <span>{shortLabel(item)}</span>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+        )}
+        {!desktop && hasMobileDock && (
           <div className="contents">
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogContent
