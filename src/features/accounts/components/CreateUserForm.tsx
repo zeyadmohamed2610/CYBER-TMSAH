@@ -103,7 +103,7 @@ export function CreateUserForm({ model }: Props) {
 
         {/* Password */}
         <div className="space-y-1.5">
-          <Label className="text-xs text-slate-300">كلمة المرور (6 أحرف فأكثر)*</Label>
+          <Label className="text-xs text-slate-300">كلمة المرور (8 أحرف فأكثر)*</Label>
           <div className="relative">
             <Input
               type={showPassword ? "text" : "password"}

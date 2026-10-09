@@ -1,6 +1,7 @@
 import { createSupabaseContext } from "npm:@supabase/server@1.8.0";
 import { readJsonObject, RequestFailure, serverEnvironment } from "../_shared/request.ts";
 import { corsHeaders, isAllowedOrigin, json } from "../passkey-login/support.ts";
+import { newPasswordError } from "../../../src/shared/lib/passwordPolicy.ts";
 export async function handleCreateUser(request: Request): Promise<Response> {
   if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -23,8 +24,7 @@ export async function handleCreateUser(request: Request): Promise<Response> {
       body.name.trim().length < 3 ||
       body.name.length > 120 ||
       typeof body.password !== "string" ||
-      body.password.length < 8 ||
-      new TextEncoder().encode(body.password).length > 72
+      newPasswordError(body.password) !== null
     )
       return json({ error: "Invalid account details" }, 400);
     const profile = await context.supabase
