@@ -39,6 +39,9 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
     if (linkedSession) {
       setSelectedId(linkedSession);
       setMethod("qr");
+      setMessage("");
+      setFailure("");
+      setAttempt((n) => n + 1);
     }
   }, [linkedSession]);
   const active = sessions.filter(
@@ -95,10 +98,15 @@ export const AttendanceSubmissionForm = ({ sessions, onSubmitSuccess }: Props) =
       const result = await offlineAttendanceService.queueSubmission(verifiedHash, receipt);
       if (!result.success)
         throw new Error(getFriendlyErrorMessage(result.error ?? "تعذر تسجيل الحضور."));
+      if (selectedRef.current !== selected.id) {
+        onSubmitSuccess?.();
+        return;
+      }
       setMessage("تم تسجيل حضورك بنجاح.");
       toast({ title: "تم تسجيل الحضور", description: "أُكد مفتاح حسابك وموقعك لهذه الجلسة." });
       onSubmitSuccess?.();
     } catch (error) {
+      if (selectedRef.current !== selected.id) return;
       setFailure(error instanceof Error ? error.message : "تعذر تسجيل الحضور. أعد المحاولة.");
       setAttempt((n) => n + 1);
     } finally {
