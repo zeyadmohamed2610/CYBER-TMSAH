@@ -2,7 +2,7 @@ import { useSearchParams } from "react-router-dom";
 import { Button } from "@/shared/components/ui/button";
 import { UserList } from "@/features/accounts/components/UserList";
 import { JoinRequestsPanel } from "@/features/accounts/components/JoinRequestsPanel";
-import { DeviceLockPanel } from "@/features/attendance/components/DeviceLockPanel";
+import { TrustedAttendanceKeysPanel } from "@/features/attendance/components/TrustedAttendanceKeysPanel";
 import { FixesReportsPanel } from "@/features/reports/components/FixesReportsPanel";
 export function AccountsWorkspace({
   initialRole = "all",
@@ -15,7 +15,7 @@ export function AccountsWorkspace({
   const choices = [
     { id: "accounts", label: "الحسابات" },
     { id: "requests", label: "طلبات الانضمام" },
-    { id: "devices", label: "أجهزة الحضور" },
+    { id: "devices", label: "مفاتيح الحضور" },
     { id: "fixes", label: "بلاغات المشاكل" },
   ];
   const legacy = params.get("tab");
@@ -59,7 +59,7 @@ export function AccountsWorkspace({
       </nav>
       {current === "accounts" && <UserList role={initialRole} />}
       {current === "requests" && <JoinRequestsPanel />}
-      {current === "devices" && <DeviceLockPanel />}
+      {current === "devices" && <TrustedAttendanceKeysPanel />}
       {current === "fixes" && <FixesReportsPanel />}
     </section>
   );

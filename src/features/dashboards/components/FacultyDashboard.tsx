@@ -16,10 +16,10 @@ import { useDashboardTab } from "../hooks/useDashboardTab";
 import { DashboardWorkspace } from "./DashboardWorkspace";
 
 export function FacultyDashboard({ role }: { role: "doctor" | "ta" }) {
-  const { fullName, permissions } = useAuth();
+  const { fullName } = useAuth();
   const { error } = useAttendanceDashboardData(role);
   const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
-  const hasScheduleAccess = canViewSchedule(role, permissions);
+  const hasScheduleAccess = canViewSchedule(role);
 
   // Only include "schedule" tab if user has schedule access permission
   const allowedTabs = dashboardTabs(role).filter((t) => t !== "schedule" || hasScheduleAccess);

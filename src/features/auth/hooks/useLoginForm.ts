@@ -1,3 +1,4 @@
+import { securityRequest } from "@/shared/lib/passwordService";
 import { authenticateWithPasskey } from "@/features/auth/passkeys";
 import { recordAuditLog } from "@/features/auth/services/auditService";
 import { playCyberSuccessChime } from "@/features/auth/utils/cyberAudio";
@@ -429,7 +430,7 @@ export function useLoginForm(initialTab?: Tab) {
         reportJoinError("ظهرت كلمة المرور في تسريبات سابقة. اختر كلمة مرور أخرى.", "j-pass");
         return;
       }
-      const { error } = await supabase.from("join_requests").insert({
+      await securityRequest("join-request", {
         full_name: trimmedName,
         email: trimmedEmail,
         username: trimmedUsername,
@@ -441,14 +442,6 @@ export function useLoginForm(initialTab?: Tab) {
         section_number: joinRole === "student" ? parseInt(normalizeDigits(sectionNumber)) : null,
         national_id: trimmedNID,
       });
-      if (error) {
-        reportJoinError(
-          error.code === "23505"
-            ? "يوجد حساب أو طلب سابق بهذه البيانات. راجع اسم المستخدم والبريد أو تواصل مع الإدارة."
-            : "تعذر إرسال الطلب. احتفظنا ببياناتك؛ تحقق من الاتصال ثم أعد المحاولة.",
-        );
-        return;
-      }
       void recordAuditLog({
         action: "join_request",
         identifier: `${trimmedUsername} | ${trimmedEmail}`,
@@ -458,8 +451,12 @@ export function useLoginForm(initialTab?: Tab) {
       setJoinPassword("");
       setConfirmPassword("");
       toast.success(t.auth.requestSent);
-    } catch {
-      reportJoinError("تعذر إرسال الطلب. احتفظنا ببياناتك؛ تحقق من الاتصال ثم أعد المحاولة.");
+    } catch (error) {
+      reportJoinError(
+        error instanceof Error
+          ? error.message
+          : "تعذر إرسال الطلب. احتفظنا ببياناتك؛ تحقق من الاتصال ثم أعد المحاولة.",
+      );
     } finally {
       setJoinLoading(false);
       requestPending.current = false;

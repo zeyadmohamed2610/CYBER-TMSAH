@@ -1,3 +1,4 @@
+import { securityRequest } from "@/shared/lib/passwordService";
 import { recoverySessionReady, supabase } from "@/shared/api/supabaseClient";
 import { useLang } from "@/shared/i18n";
 import { getFriendlyErrorMessage } from "@/shared/lib/academicCopy";
@@ -91,11 +92,7 @@ export default function ResetPasswordPage() {
         setValidSession(false);
         return;
       }
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-
-      if (error) throw error;
+      await securityRequest("account-password", { password: newPassword });
       setNewPassword("");
       setConfirmPassword("");
       await supabase.auth.signOut({ scope: "global" });
@@ -111,7 +108,10 @@ export default function ResetPasswordPage() {
         navigate("/login", { replace: true });
       }, 2500);
     } catch (err: unknown) {
-      if (isAuthError(err) && err.code === "same_password") {
+      if (
+        (isAuthError(err) && err.code === "same_password") ||
+        (err as { code?: string })?.code === "PASSWORD_SAME"
+      ) {
         setFormError("لا يمكن استخدام كلمة المرور القديمة. اختر كلمة مرور جديدة مختلفة عنها.");
         passwordInput.current?.focus();
         return;

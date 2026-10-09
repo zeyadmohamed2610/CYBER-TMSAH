@@ -2,6 +2,7 @@ import { createSupabaseContext } from "npm:@supabase/server@1.8.0";
 import { readJsonObject, RequestFailure, serverEnvironment } from "../_shared/request.ts";
 import { corsHeaders, isAllowedOrigin, json } from "../passkey-login/support.ts";
 import { newPasswordError } from "../../../src/shared/lib/passwordPolicy.ts";
+import { assertUncompromisedPassword } from "../_shared/passwordBreach.ts";
 export async function handleCreateUser(request: Request): Promise<Response> {
   if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -15,9 +16,14 @@ export async function handleCreateUser(request: Request): Promise<Response> {
     if (error || !context) return json({ error: "Authentication required" }, 401);
     const fresh = await context.supabase.auth.getUser();
     if (fresh.error || !fresh.data.user) return json({ error: "Authentication required" }, 401);
+    const active = await context.supabaseAdmin.rpc("is_current_platform_session", {
+      p_auth_id: fresh.data.user.id,
+      p_session_id: (context.jwtClaims as unknown as { session_id?: string }).session_id ?? null,
+    });
+    if (active.error || !active.data) return json({ error: "Authentication required" }, 401);
     const body = await readJsonObject(request);
     const role = body.role;
-    if (!["student", "doctor", "ta"].includes(String(role)))
+    if (!["student", "doctor", "ta", "coordinator"].includes(String(role)))
       return json({ error: "Invalid role" }, 400);
     if (
       typeof body.name !== "string" ||
@@ -34,9 +40,7 @@ export async function handleCreateUser(request: Request): Promise<Response> {
       .single();
     if (profile.error || !["owner", "coordinator"].includes(profile.data?.role))
       return json({ error: "Permission denied" }, 403);
-    const nid = typeof body.national_id === "string" ? body.national_id : null;
-    const email =
-      role === "student" && nid && /^\d{14}$/.test(nid) ? `${nid}@nid.local` : body.email;
+    const email = body.email;
     if (
       typeof email !== "string" ||
       email.length > 254 ||
@@ -48,6 +52,24 @@ export async function handleCreateUser(request: Request): Promise<Response> {
       typeof body.department === "string" ? body.department : profile.data.department;
     if (typeof department !== "string" || !department)
       return json({ error: "Department required" }, 400);
+    if (
+      profile.data.role === "coordinator" &&
+      (role === "coordinator" || department !== profile.data.department)
+    )
+      return json({ error: "Permission denied" }, 403);
+    const allowed = await context.supabaseAdmin.rpc("reserve_password_action", {
+      p_ip: request.headers.get("x-real-ip") ?? "unknown",
+      p_actor: fresh.data.user.id,
+      p_operation: "create",
+    });
+    if (allowed.error || !allowed.data) return json({ error: "Try again later" }, 429);
+    await assertUncompromisedPassword(body.password);
+    const proof = await context.supabaseAdmin.rpc("register_password_check", {
+      p_password: body.password,
+      p_actor: fresh.data.user.id,
+      p_target: null,
+    });
+    if (proof.error) return json({ error: "Account creation unavailable" }, 503);
     // The same transactional RPC used by the dashboard enforces department/rank bounds.
     const result = await context.supabase.rpc("admin_create_user", {
       p_full_name: body.name.trim(),

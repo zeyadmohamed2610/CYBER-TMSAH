@@ -17,7 +17,7 @@
     "preview": "vite preview",
     "supabase:deploy:create-user": "npx supabase@latest functions deploy createUser --use-api --no-verify-jwt",
     "supabase:deploy:health-check": "npx supabase@latest functions deploy health-check --use-api --no-verify-jwt",
-    "supabase:deploy:all": "npx supabase@latest functions deploy account-login account-recovery passkey-login createUser health-check --use-api --no-verify-jwt",
+    "supabase:deploy:all": "npx supabase@latest functions deploy account-login account-recovery account-password join-request trusted-devices passkey-login createUser health-check --use-api --no-verify-jwt",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
