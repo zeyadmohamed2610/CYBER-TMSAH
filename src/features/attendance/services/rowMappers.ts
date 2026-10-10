@@ -1,3 +1,4 @@
+import { sessionSectionsText } from "@/features/attendance/utils/attendanceSections";
 import { type AttendanceRecord, type SessionSummary } from "@/features/attendance/types";
 export type AttendanceRow = {
   id: string;
@@ -26,6 +27,7 @@ export type SessionRow = {
   radius_meters?: number | null;
   lecture_id?: string | null;
   section?: string | null;
+  section_numbers?: number[] | null;
   subjects?: { name?: string | null } | Array<{ name?: string | null }> | null;
 };
 export const asObj = <T>(value: T | T[] | null | undefined): T | null => {
@@ -50,7 +52,7 @@ export const mapSessionSummary = (row: SessionRow): SessionSummary => {
     longitude: row.longitude ?? null,
     radiusMeters: row.radius_meters ?? 50,
     lectureId: row.lecture_id ?? null,
-    section: row.section ?? null,
+    section: sessionSectionsText(row),
   };
 };
 export const mapAttendanceRecord = (row: AttendanceRow): AttendanceRecord => {
