@@ -94,6 +94,7 @@ scratch/
 **/*.spec.ts
 **/*.spec.tsx
 /supabase/migrations/
+/supabase/tests/
 /supabase/templates/
 /docs/
 /playwright.config.ts
