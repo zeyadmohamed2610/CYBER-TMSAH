@@ -1,7 +1,7 @@
 /**
  * SHA-256 hashing with automatic fallback for HTTP.
  * On HTTPS: uses Web Crypto API
- * On HTTP: uses FNV-1a hash (deterministic, not cryptographically secure but sufficient for fingerprinting)
+ * On HTTP: uses FNV-1a hash (deterministic, not cryptographically secure but used only for non-secure local previews)
  */
 
 function simpleHash(str: string): string {
@@ -26,22 +26,5 @@ export async function sha256Hash(input: string): Promise<string> {
     return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
   } catch {
     return "fb" + simpleHash(input);
-  }
-}
-
-export async function computeFingerprint(): Promise<string> {
-  try {
-    const raw = [
-      navigator.userAgent,
-      navigator.language,
-      navigator.platform,
-      navigator.hardwareConcurrency ?? 0,
-      Intl.DateTimeFormat().resolvedOptions().timeZone,
-      navigator.vendor,
-    ].join("|");
-
-    return await sha256Hash(raw);
-  } catch {
-    return "no-fp-" + Date.now();
   }
 }

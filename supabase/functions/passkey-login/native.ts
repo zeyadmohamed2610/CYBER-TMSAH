@@ -7,7 +7,6 @@ interface PasskeyRequestBody {
   challengeId: string;
   credentialId?: string;
   attendanceHash?: string;
-  deviceFingerprint?: string;
   credential: Parameters<
     ReturnType<typeof nativePasskeyClient>["auth"]["passkey"]["verifyAuthentication"]
   >[0]["credential"];
@@ -70,12 +69,8 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
         });
       if (!attendance && !listed.data.some((key) => key.id === body.credentialId))
         return json({ success: false, error: "المفتاح لا يخص حسابك." }, 403);
-      if (
-        attendance &&
-        (!/^\d{6}$/.test(body.attendanceHash ?? "") ||
-          !/^(?:[a-f0-9]{64}|fb[a-f0-9]{16})$/i.test(body.deviceFingerprint ?? ""))
-      )
-        return json({ success: false, error: "راجع رمز الحضور والجهاز." }, 400);
+      if (attendance && !/^\d{6}$/.test(body.attendanceHash ?? ""))
+        return json({ success: false, error: "راجع رمز الحضور." }, 400);
       const scoped = await admin.rpc("passkey_assertion_options", {
         p_auth_id: userId,
         p_attendance: attendance,
@@ -103,7 +98,6 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
         auth_id: userId,
         purpose: attendance ? "attendance" : "verify",
         attendance_hash: attendance ? body.attendanceHash : null,
-        device_fingerprint: attendance ? body.deviceFingerprint : null,
         selected_key: attendance ? selection.bound : body.credentialId,
       });
       if (inserted.error) return json({ success: false, error: "تعذر بدء التحقق." }, 503);
@@ -134,12 +128,8 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
       if (claimed.error || claimed.data?.length !== 1)
         return json({ success: false, error: "انتهى طلب التحقق أو استُخدم. أعد المحاولة." }, 409);
       binding = claimed.data[0];
-      if (
-        attendance &&
-        (binding!.attendance_hash !== body.attendanceHash ||
-          binding!.device_fingerprint !== body.deviceFingerprint)
-      )
-        return json({ success: false, error: "تغير رمز الحضور أو الجهاز. أعد التحقق." }, 403);
+      if (attendance && binding!.attendance_hash !== body.attendanceHash)
+        return json({ success: false, error: "تغير رمز الحضور. أعد التحقق." }, 403);
     }
     const encoded = body.credential?.response?.authenticatorData;
     if (typeof encoded !== "string")
@@ -219,7 +209,6 @@ export async function handlePasskeyRequest(req: Request): Promise<Response> {
           auth_id: userId,
           credential_id: body.credential.id,
           attendance_hash: binding!.attendance_hash,
-          device_fingerprint: binding!.device_fingerprint,
         })
         .select("id")
         .single();

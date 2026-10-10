@@ -6,7 +6,6 @@ interface PendingSubmission {
   authId?: string;
   id: string;
   hash: string;
-  deviceFingerprint: string;
   latitude: number | null;
   longitude: number | null;
   biometricCredentialId: string | undefined;
@@ -19,7 +18,25 @@ const STORAGE_KEY = "cyber_tmsah_pending_attendance";
 function getPending(): PendingSubmission[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as PendingSubmission[];
+    if (!Array.isArray(parsed)) return [];
+    // Keep only current submission fields when reading an older browser queue.
+    const items = parsed.map(
+      ({ authId, id, hash, latitude, longitude, biometricCredentialId, timestamp, retries }) => ({
+        ...(authId ? { authId } : {}),
+        id,
+        hash,
+        latitude,
+        longitude,
+        biometricCredentialId,
+        timestamp,
+        retries,
+      }),
+    );
+    const normalized = JSON.stringify(items);
+    if (normalized !== raw) localStorage.setItem(STORAGE_KEY, normalized);
+    return items;
   } catch {
     return [];
   }
@@ -29,7 +46,7 @@ function savePending(items: PendingSubmission[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
 }
 
-/** Submit attendance via RPC with device fingerprint, GPS, and biometric credential */
+/** Submit attendance via RPC with GPS and a server-validated Passkey receipt */
 async function submitAttendanceDirect(
   hash: string,
   lat: number | null,
