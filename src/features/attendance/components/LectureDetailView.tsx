@@ -1,3 +1,5 @@
+import { useAuth } from "@/features/auth/context/AuthContext";
+import { CompletedAttendanceCleanup } from "./CompletedAttendanceCleanup";
 import { lectureService } from "@/features/attendance/services/lectureService";
 import { sessionService } from "@/features/attendance/services/sessionService";
 import { supabase } from "@/shared/api/supabaseClient";
@@ -40,6 +42,7 @@ import { LiveSessionPanel } from "./LiveSessionPanel";
 interface Props {
   lecture: Lecture;
   onBack: () => void;
+  onSelectLecture?: (lecture: Lecture) => void;
   fixedSubjectId?: string | undefined;
 }
 
@@ -63,8 +66,10 @@ interface SessionHistoryItem {
   gps_radius?: number | null;
 }
 
-export function LectureDetailView({ lecture, onBack }: Props) {
+export function LectureDetailView({ lecture, onBack, onSelectLecture }: Props) {
   const { toast } = useToast();
+  const { role } = useAuth();
+  const canChooseType = role === "owner" || role === "coordinator";
   const [attendees, setAttendees] = useState<LectureAttendee[]>([]);
   const [sessionHistory, setSessionHistory] = useState<SessionHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,7 +77,8 @@ export function LectureDetailView({ lecture, onBack }: Props) {
   const [sessionDuration, setSessionDuration] = useState(60);
   const [sessionRadius, setSessionRadius] = useState(50);
   const [selectedSection, setSelectedSection] = useState<string>(lecture.section ?? "1");
-  const sessionType = lecture.kind ?? "lecture";
+  const [sessionType, setSessionType] = useState<"lecture" | "section">(lecture.kind ?? "lecture");
+  useEffect(() => setSessionType(lecture.kind ?? "lecture"), [lecture.id, lecture.kind]);
   const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [gpsError, setGpsError] = useState("");
   const {
@@ -103,11 +109,12 @@ export function LectureDetailView({ lecture, onBack }: Props) {
   // Load session history for this lecture with enhanced details
   const loadSessionHistory = useCallback(async () => {
     try {
-      const { data: sessions } = await supabase
+      const { data: sessions, error: historyError } = await supabase
         .from("sessions")
         .select("id, created_at, expires_at, section, radius_meters, attendance(count)")
         .eq("lecture_id", lecture.id);
 
+      if (historyError) throw historyError;
       const sortedSessions = (sessions ?? []).sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       );
@@ -130,10 +137,16 @@ export function LectureDetailView({ lecture, onBack }: Props) {
         });
       }
       setSessionHistory(history);
-    } catch {
-      // silently fail
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "تعذر تحميل سجل الجلسات",
+        description: getFriendlyErrorMessage(
+          error instanceof Error ? error.message : String(error),
+        ),
+      });
     }
-  }, [lecture.id]);
+  }, [lecture.id, toast]);
 
   // Restore active session on mount
   useEffect(() => {
@@ -201,7 +214,7 @@ export function LectureDetailView({ lecture, onBack }: Props) {
   );
 
   const handleCreateSession = async () => {
-    await createSession(
+    const destinationId = await createSession(
       lecture.subject_id,
       sessionDuration,
       gpsCoords?.lat,
@@ -209,10 +222,20 @@ export function LectureDetailView({ lecture, onBack }: Props) {
       sessionRadius,
       lecture.id,
       sessionType === "section" ? selectedSection : null,
+      sessionType,
     );
+    if (destinationId && destinationId !== lecture.id && onSelectLecture) {
+      const units = await lectureService.fetchLectures(lecture.subject_id);
+      const destination = units.data?.find((unit) => unit.id === destinationId);
+      if (destination) onSelectLecture(destination);
+    }
     setTimeout(() => void loadSessionHistory(), 2000);
   };
 
+  const refreshAfterCleanup = async () => {
+    await load();
+    await loadSessionHistory();
+  };
   const handleEndLecture = async () => {
     setEnding(true);
     const result = await lectureService.endLecture(lecture.id);
@@ -318,6 +341,13 @@ export function LectureDetailView({ lecture, onBack }: Props) {
 
   return (
     <div className="space-y-4">
+      {canChooseType && (
+        <CompletedAttendanceCleanup
+          mode="sessions"
+          lectureId={lecture.id}
+          onComplete={refreshAfterCleanup}
+        />
+      )}
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3 min-w-0">
@@ -592,15 +622,7 @@ export function LectureDetailView({ lecture, onBack }: Props) {
       </Card>
 
       {/* Active session or create new */}
-      {lecture.is_ended ? (
-        <Card>
-          <CardContent className="p-6 text-center space-y-3">
-            <StopCircle className="h-10 w-10 mx-auto text-muted-foreground/50" />
-            <p className="font-bold text-lg text-foreground">تم إنهاء هذه المحاضرة</p>
-            <p className="text-sm text-muted-foreground">لا يمكن إنشاء جلسات جديدة.</p>
-          </CardContent>
-        </Card>
-      ) : activeSession && activeSession.is_active ? (
+      {activeSession && activeSession.is_active ? (
         <LiveSessionPanel
           session={activeSession}
           onStop={stopSession}
@@ -625,7 +647,11 @@ export function LectureDetailView({ lecture, onBack }: Props) {
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">نوع الجلسة</Label>
-                <Select value={sessionType} disabled>
+                <Select
+                  value={sessionType}
+                  onValueChange={(value) => setSessionType(value as "lecture" | "section")}
+                  disabled={!canChooseType}
+                >
                   <SelectTrigger className="h-8 text-sm">
                     <SelectValue />
                   </SelectTrigger>
@@ -635,13 +661,21 @@ export function LectureDetailView({ lecture, onBack }: Props) {
                   </SelectContent>
                 </Select>
               </div>
+              {canChooseType &&
+                (sessionType !== lecture.kind ||
+                  (sessionType === "section" && selectedSection !== lecture.section)) && (
+                  <p className="text-xs text-muted-foreground sm:col-span-2 md:col-span-3">
+                    سيبدأ التسجيل في حصة مستقلة للنوع والسكشن المختارين، وتبقى سجلات هذه الحصة كما
+                    هي.
+                  </p>
+                )}
               {sessionType === "section" ? (
                 <div className="space-y-1">
                   <Label className="text-xs">رقم السكشن</Label>
                   <Select
                     value={selectedSection}
                     onValueChange={setSelectedSection}
-                    disabled={Boolean(lecture.section)}
+                    disabled={!canChooseType && Boolean(lecture.section)}
                   >
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue placeholder="اختر السكشن..." />

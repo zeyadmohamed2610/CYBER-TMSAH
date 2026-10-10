@@ -47,7 +47,8 @@ interface UseSessionManagerReturn {
     radiusMeters?: number,
     lectureId?: string | null,
     section?: string | null,
-  ) => Promise<void>;
+    kind?: "lecture" | "section",
+  ) => Promise<string | undefined>;
   stopSession: (sessionId: string) => Promise<void>;
   updateDuration: (sessionId: string, durationMinutes: number) => Promise<{ error?: string }>;
   refreshHash: () => Promise<void>;
@@ -59,10 +60,12 @@ export function useSessionManager(): UseSessionManagerReturn {
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const restoreRequest = useRef(0);
   const hashRefreshTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /** Restore active session from DB (after page refresh or navigation) */
   const restoreActiveSession = useCallback(async (lectureId?: string) => {
+    const request = ++restoreRequest.current;
     setLoading(true);
     try {
       let query = supabase
@@ -76,7 +79,10 @@ export function useSessionManager(): UseSessionManagerReturn {
 
       if (lectureId) query = query.eq("lecture_id", lectureId);
 
-      const { data } = await query;
+      const { data, error: restoreError } = await query;
+      if (request !== restoreRequest.current) return;
+      if (restoreError) throw restoreError;
+      setActiveSession(null);
       const row = (data ?? [])[0] as
         (SessionRow & { subjects?: { name?: string; doctor_name?: string } }) | undefined;
 
@@ -109,9 +115,10 @@ export function useSessionManager(): UseSessionManagerReturn {
         }
       }
     } catch {
-      // silently fail - session will just not be restored
+      if (request === restoreRequest.current) setError("تعذر استعادة الجلسة. أعد المحاولة.");
+    } finally {
+      if (request === restoreRequest.current) setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   /** Refresh hash on existing session (60-second rotation) */
@@ -171,19 +178,26 @@ export function useSessionManager(): UseSessionManagerReturn {
       radiusMeters?: number,
       lectureId?: string | null,
       section?: string | null,
+      kind?: "lecture" | "section",
     ) => {
+      restoreRequest.current++;
+      setLoading(false);
       setCreating(true);
       setError(null);
 
-      const { data, error: rpcErr } = await supabase.rpc("generate_rotating_hash", {
-        p_subject_id: subjectId,
-        p_duration_minutes: durationMinutes,
-        p_latitude: latitude ?? null,
-        p_longitude: longitude ?? null,
-        p_radius_meters: radiusMeters ?? 50,
-        p_lecture_id: lectureId ?? null,
-        p_section: section ?? null,
-      });
+      const { data, error: rpcErr } = await supabase.rpc(
+        kind ? "open_typed_attendance_session" : "generate_rotating_hash",
+        {
+          ...(kind ? { p_kind: kind } : {}),
+          p_subject_id: subjectId,
+          p_duration_minutes: durationMinutes,
+          p_latitude: latitude ?? null,
+          p_longitude: longitude ?? null,
+          p_radius_meters: radiusMeters ?? 50,
+          p_lecture_id: lectureId ?? null,
+          p_section: section ?? null,
+        },
+      );
 
       if (rpcErr) {
         setError(rpcErr.message);
@@ -224,6 +238,7 @@ export function useSessionManager(): UseSessionManagerReturn {
         section: row.section ?? section ?? null,
       });
       setCreating(false);
+      return row.lecture_id ?? undefined;
     },
     [],
   );

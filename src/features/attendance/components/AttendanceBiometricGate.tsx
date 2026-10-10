@@ -9,13 +9,14 @@ import {
   ShieldAlert,
   ShieldCheck,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 interface AttendanceBiometricGateProps {
   /** Called when biometric verification succeeds */
-  onVerified: (credentialId: string) => void;
-  attendanceHash: string;
+  onVerified: (credentialId: string, verifiedHash: string) => void | Promise<void>;
+  onBusyChange?: (busy: boolean) => void;
+  attendanceHash: string | (() => Promise<string>);
   // NO onBypass — biometric is MANDATORY
 }
 
@@ -28,14 +29,17 @@ type GateState = "idle" | "loading" | "verified" | "error" | "no_passkey" | "uns
 export const AttendanceBiometricGate = ({
   onVerified,
   attendanceHash,
+  onBusyChange,
 }: AttendanceBiometricGateProps) => {
   const navigate = useNavigate();
+  const verifying = useRef(false);
   const [state, setState] = useState<GateState>("idle");
   const [errorMsg, setErrorMsg] = useState<string>("");
 
   const isSupported = isWebAuthnSupported();
 
   const handleVerify = async () => {
+    if (verifying.current) return;
     if (!isSupported) {
       setState("unsupported");
       return;
@@ -43,28 +47,44 @@ export const AttendanceBiometricGate = ({
     setState("loading");
     setErrorMsg("");
 
-    const result = await verifyPasskeyForCurrentUser(attendanceHash);
+    verifying.current = true;
+    onBusyChange?.(true);
+    try {
+      const verifiedHash =
+        typeof attendanceHash === "function" ? await attendanceHash() : attendanceHash;
+      const result = await verifyPasskeyForCurrentUser(verifiedHash);
 
-    if (result.success && result.credentialId) {
-      setState("verified");
-      onVerified(result.credentialId);
-      return;
+      if (result.success && result.credentialId) {
+        setState("verified");
+        await onVerified(result.credentialId, verifiedHash);
+        return;
+      }
+
+      if (result.noPasskeyRegistered) {
+        setState("no_passkey");
+        setErrorMsg(getFriendlyErrorMessage(result.error ?? ""));
+        return;
+      }
+
+      if (result.cancelled) {
+        setState("idle");
+        setErrorMsg("تم إلغاء التحقق بالبصمة. يجب الموافقة على البصمة لتسجيل الحضور.");
+        return;
+      }
+
+      setState("error");
+      setErrorMsg(getFriendlyErrorMessage(result.error ?? "فشل التحقق بمفتاح المرور."));
+    } catch (error) {
+      setState("error");
+      setErrorMsg(
+        error instanceof Error
+          ? getFriendlyErrorMessage(error.message)
+          : "تعذر التحقق بمفتاح المرور.",
+      );
+    } finally {
+      verifying.current = false;
+      onBusyChange?.(false);
     }
-
-    if (result.noPasskeyRegistered) {
-      setState("no_passkey");
-      setErrorMsg(getFriendlyErrorMessage(result.error ?? ""));
-      return;
-    }
-
-    if (result.cancelled) {
-      setState("idle");
-      setErrorMsg("تم إلغاء التحقق بالبصمة. يجب الموافقة على البصمة لتسجيل الحضور.");
-      return;
-    }
-
-    setState("error");
-    setErrorMsg(getFriendlyErrorMessage(result.error ?? "فشل التحقق بالبصمة."));
   };
 
   // ── Verified ──────────────────────────────────────────────────────────────
@@ -74,8 +94,8 @@ export const AttendanceBiometricGate = ({
         <div className="w-16 h-16 rounded-full bg-emerald-500/15 flex items-center justify-center ring-2 ring-emerald-500/30">
           <ShieldCheck className="h-8 w-8 text-emerald-400" />
         </div>
-        <p className="text-emerald-400 font-bold text-base">تم التحقق بالبصمة بنجاح!</p>
-        <p className="text-xs text-muted-foreground">يمكنك الآن تسجيل حضورك.</p>
+        <p className="text-emerald-400 font-bold text-base">تم تأكيد مفتاح المرور</p>
+        <p className="text-xs text-muted-foreground">جارٍ إكمال تسجيل الحضور.</p>
       </div>
     );
   }
@@ -92,9 +112,9 @@ export const AttendanceBiometricGate = ({
             <AlertTriangle className="h-5 w-5 text-destructive" />
           </div>
           <div>
-            <p className="font-bold text-destructive text-sm">تسجيل البصمة إلزامي لتسجيل الحضور</p>
+            <p className="font-bold text-destructive text-sm">مفتاح المرور مطلوب لتسجيل الحضور</p>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              لم تقم بتسجيل بصمة على حسابك. يجب تسجيل البصمة أولاً — لا يمكن تخطي هذه الخطوة.
+              أضف مفتاح مرور لحسابك أولًا. يمكن تأكيده بالبصمة أو الوجه أو رمز قفل الهاتف.
             </p>
           </div>
         </div>
@@ -160,7 +180,7 @@ export const AttendanceBiometricGate = ({
         </div>
         <div>
           <p className="font-bold text-base text-foreground flex items-center gap-2">
-            التحقق بالبصمة الإلزامي
+            تأكيد الحضور بمفتاح المرور
             <span className="text-[10px] bg-destructive/20 text-destructive px-2 py-0.5 rounded-full font-bold">
               مطلوب
             </span>
@@ -212,19 +232,22 @@ export const AttendanceBiometricGate = ({
       <Button
         type="button"
         onClick={handleVerify}
-        disabled={state === "loading" || !/^[0-9]{6}$/.test(attendanceHash)}
+        disabled={
+          state === "loading" ||
+          (typeof attendanceHash === "string" && !/^[0-9]{6}$/.test(attendanceHash))
+        }
         className="w-full h-13 rounded-xl text-base font-bold btn-cyber shadow-lg gap-2"
         size="lg"
       >
         {state === "loading" ? (
           <>
             <Loader2 className="h-5 w-5 animate-spin" />
-            جارٍ التحقق من البصمة...
+            جارٍ تأكيد مفتاح المرور...
           </>
         ) : (
           <>
             <Fingerprint className="h-5 w-5" />
-            تحقق بالبصمة / الوجه / رمز قفل الجهاز
+            تأكيد حضوري بمفتاح المرور
           </>
         )}
       </Button>

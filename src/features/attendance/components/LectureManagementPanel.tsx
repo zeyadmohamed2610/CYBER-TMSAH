@@ -1,3 +1,4 @@
+import { CompletedAttendanceCleanup } from "./CompletedAttendanceCleanup";
 import { lectureService } from "@/features/attendance/services/lectureService";
 import { supabase } from "@/shared/api/supabaseClient";
 import { Badge } from "@/shared/components/ui/badge";
@@ -194,6 +195,9 @@ export function LectureManagementPanel({ fixedSubjectId, onSelectLecture }: Prop
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {(role === "owner" || role === "coordinator") && (
+          <CompletedAttendanceCleanup mode="units" subjectId={fixedSubjectId} onComplete={load} />
+        )}
         {showCreate && (
           <form onSubmit={handleCreate} className="space-y-3 rounded-lg border bg-muted/30 p-4">
             <div className="flex gap-3 flex-wrap">

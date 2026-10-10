@@ -4,11 +4,15 @@ export type AttendanceRow = {
   session_id: string;
   student_id: string;
   created_at: string;
+  metadata?: { ip?: string | null } | null;
   sessions?: {
     subject_id?: string | null;
     subjects?: { name?: string | null } | Array<{ name?: string | null }> | null;
   } | null;
-  users?: { full_name?: string | null } | Array<{ full_name?: string | null }> | null;
+  users?:
+    | { full_name?: string | null; national_id?: string | null }
+    | Array<{ full_name?: string | null; national_id?: string | null }>
+    | null;
 };
 export type SessionRow = {
   id: string;
@@ -46,6 +50,7 @@ export const mapSessionSummary = (row: SessionRow): SessionSummary => {
     longitude: row.longitude ?? null,
     radiusMeters: row.radius_meters ?? 50,
     lectureId: row.lecture_id ?? null,
+    section: row.section ?? null,
   };
 };
 export const mapAttendanceRecord = (row: AttendanceRow): AttendanceRecord => {
@@ -57,6 +62,8 @@ export const mapAttendanceRecord = (row: AttendanceRow): AttendanceRecord => {
     sessionId: row.session_id,
     studentId: row.student_id,
     studentName: student?.full_name ?? "",
+    ...(student?.national_id ? { nationalId: student.national_id } : {}),
+    ...(typeof row.metadata?.ip === "string" ? { ipAddress: row.metadata.ip } : {}),
     subjectName: subject?.name ?? "",
     submittedAt: row.created_at,
   };

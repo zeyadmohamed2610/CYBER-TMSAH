@@ -27,7 +27,7 @@ export const attendanceRecordService = {
       const { from, to } = getPaginationRange(page, pageSize);
 
       const attendanceSelect =
-        "id, session_id, student_id, created_at, sessions(subject_id, subjects(name)), users!attendance_student_id_fkey(full_name)";
+        "id, session_id, student_id, created_at, metadata, sessions(subject_id, subjects(name)), users!attendance_student_id_fkey(full_name, national_id)";
 
       // The attendance policy checks the session and all subject assignments.
       let query = supabase
