@@ -12,7 +12,6 @@ import { type AppRole } from "@/features/auth/types";
 import { fail, ok } from "@/shared/api/result";
 import { supabase } from "@/shared/api/supabaseClient";
 import { type ApiResponse } from "@/shared/api/types";
-import { computeFingerprint } from "@/shared/lib/deviceFingerprint";
 import { getPaginationRange } from "@/shared/lib/pagination";
 export const attendanceRecordService = {
   async fetchAttendanceRecords(
@@ -53,12 +52,8 @@ export const attendanceRecordService = {
   ): Promise<ApiResponse<AttendanceSubmissionResult>> {
     const operation = "attendanceRecordService.submitAttendance";
     try {
-      // Use the same device identity as registration and device-lock checks.
-      const deviceFingerprint = await computeFingerprint();
-
       const validation = validateRpcInput(submitAttendanceSchema, {
         p_hash: hash,
-        p_device_fingerprint: deviceFingerprint,
         p_student_latitude: latitude ?? null,
         p_student_longitude: longitude ?? null,
         p_biometric_credential_id: biometricCredentialId ?? null,
@@ -67,7 +62,7 @@ export const attendanceRecordService = {
         return fail<AttendanceSubmissionResult>(operation, new Error(validation.error));
       }
 
-      const { data, error } = await supabase.rpc("submit_attendance", validation.data);
+      const { data, error } = await supabase.rpc("submit_passkey_attendance", validation.data);
 
       if (error) throw error;
 

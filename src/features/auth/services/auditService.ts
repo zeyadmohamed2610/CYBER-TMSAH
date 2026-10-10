@@ -1,5 +1,4 @@
 import { supabase } from "@/shared/api/supabaseClient";
-import { computeFingerprint } from "@/shared/lib/deviceFingerprint";
 
 export interface AuditLogEntry {
   action: "login_success" | "login_failed" | "join_request";
@@ -12,8 +11,6 @@ export interface AuditLogEntry {
 
 export const recordAuditLog = async (entry: AuditLogEntry): Promise<void> => {
   try {
-    const fingerprint = await computeFingerprint();
-
     const payload = {
       action: entry.action,
       identifier: entry.identifier,
@@ -22,7 +19,6 @@ export const recordAuditLog = async (entry: AuditLogEntry): Promise<void> => {
       screen_resolution: `${window.screen.width}x${window.screen.height}`,
       metadata: {
         ...(entry.metadata || {}),
-        fingerprint,
         ...(entry.notes ? { failure_reason: entry.notes } : {}),
       },
       created_at: new Date().toISOString(),

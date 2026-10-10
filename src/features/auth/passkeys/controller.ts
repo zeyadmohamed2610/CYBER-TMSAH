@@ -1,4 +1,3 @@
-import { computeFingerprint } from "@/shared/lib/deviceFingerprint";
 import { supabase } from "../../../shared/api/supabaseClient";
 import {
   createPasskey,
@@ -102,7 +101,6 @@ async function assertionCeremony(
 ) {
   const token = purpose === "login" ? undefined : await currentPasskeySession();
   const prefix = purpose === "login" ? "auth" : purpose === "verify" ? "verify" : "attendance";
-  const fingerprint = purpose === "attendance" ? await computeFingerprint() : undefined;
   const nativeStart =
     purpose === "login" ? await supabase.auth.passkey.startAuthentication() : null;
   if (nativeStart?.error) throw new PasskeyError("تعذر بدء الدخول بمفتاحك. أعد المحاولة.");
@@ -113,9 +111,7 @@ async function assertionCeremony(
           purpose === "verify" ? "verify-start" : "attendance-start",
           {
             ...(purpose === "verify" ? { credentialId: input.credentialId } : {}),
-            ...(purpose === "attendance"
-              ? { attendanceHash: input.attendanceHash, deviceFingerprint: fingerprint }
-              : {}),
+            ...(purpose === "attendance" ? { attendanceHash: input.attendanceHash } : {}),
           },
           token,
         );
@@ -126,9 +122,7 @@ async function assertionCeremony(
       {
         credential,
         challengeId: start.challengeId,
-        ...(purpose === "attendance"
-          ? { attendanceHash: input.attendanceHash, deviceFingerprint: fingerprint }
-          : {}),
+        ...(purpose === "attendance" ? { attendanceHash: input.attendanceHash } : {}),
       },
       token,
     );

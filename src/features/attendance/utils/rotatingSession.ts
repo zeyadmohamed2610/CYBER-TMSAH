@@ -1,4 +1,4 @@
-import { sha256Hash } from "../../../shared/lib/deviceFingerprint";
+import { sha256Hash } from "../../../shared/lib/hash";
 
 export const ROTATING_WINDOW_SECONDS = 10;
 

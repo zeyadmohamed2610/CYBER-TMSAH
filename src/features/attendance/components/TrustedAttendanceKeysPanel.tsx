@@ -6,7 +6,7 @@ import { securityRequest } from "@/shared/lib/passwordService";
 import { KeyRound, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-interface TrustedDevice {
+interface TrustedAttendanceKey {
   auth_id: string;
   full_name: string;
   credential_id: string | null;
@@ -16,7 +16,7 @@ interface TrustedDevice {
   credential_exists: boolean;
 }
 export function TrustedAttendanceKeysPanel() {
-  const [devices, setDevices] = useState<TrustedDevice[]>([]);
+  const [devices, setDevices] = useState<TrustedAttendanceKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -26,8 +26,11 @@ export function TrustedAttendanceKeysPanel() {
     setError("");
     try {
       setDevices(
-        (await securityRequest<{ devices: TrustedDevice[] }>("trusted-devices", { action: "list" }))
-          .devices,
+        (
+          await securityRequest<{ devices: TrustedAttendanceKey[] }>("trusted-devices", {
+            action: "list",
+          })
+        ).devices,
       );
     } catch {
       setError("تعذر تحميل مفاتيح الحضور المعتمدة. أعد المحاولة.");
@@ -38,7 +41,7 @@ export function TrustedAttendanceKeysPanel() {
   useEffect(() => {
     void load();
   }, [load]);
-  const revoke = async (device: TrustedDevice) => {
+  const revoke = async (device: TrustedAttendanceKey) => {
     if (revoking) return;
     setRevoking(device.auth_id);
     try {
@@ -69,8 +72,8 @@ export function TrustedAttendanceKeysPanel() {
           </Button>
         </div>
         <p className="text-sm text-muted-foreground">
-          اعتماد مفتاح مرور متحقق منه بدل بصمة المتصفح. الإلغاء يحذف المفتاح السابق من الحساب، ويبطل
-          إثباتات حضوره، ويسجل الإجراء. تحقق من هوية الطالب قبل الإلغاء.
+          إدارة مفتاح المرور المعتمد للحضور. الإلغاء يحذف المفتاح السابق من الحساب، ويبطل إثباتات
+          حضوره، ويسجل الإجراء. تحقق من هوية الطالب قبل الإلغاء.
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
