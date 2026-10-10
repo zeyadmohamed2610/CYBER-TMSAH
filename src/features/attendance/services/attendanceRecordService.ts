@@ -26,8 +26,7 @@ export const attendanceRecordService = {
       const pageSize = pagination?.pageSize ?? 50;
       const { from, to } = getPaginationRange(page, pageSize);
 
-      const attendanceSelect =
-        "id, session_id, student_id, created_at, metadata, sessions(subject_id, subjects(name)), users!attendance_student_id_fkey(full_name, national_id)";
+      const attendanceSelect = `id, session_id, student_id, created_at, metadata, sessions${sectionFilter?.length ? "!inner" : ""}(subject_id, subjects(name)), users!attendance_student_id_fkey(full_name, national_id)`;
 
       // The attendance policy checks the session and all subject assignments.
       let query = supabase
@@ -35,7 +34,8 @@ export const attendanceRecordService = {
         .select(attendanceSelect)
         .order("created_at", { ascending: false })
         .range(from, to);
-      if (sectionFilter?.length) query = query.in("section", sectionFilter);
+      if (sectionFilter?.length)
+        query = query.overlaps("sessions.section_numbers", sectionFilter.map(Number));
       const { data, error } = await query;
       if (error) throw error;
       return ok<AttendanceRecord[]>(

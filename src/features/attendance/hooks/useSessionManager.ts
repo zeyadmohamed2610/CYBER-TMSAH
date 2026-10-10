@@ -1,3 +1,7 @@
+import {
+  parseAttendanceSections,
+  sessionSectionsText,
+} from "@/features/attendance/utils/attendanceSections";
 import { supabase } from "@/shared/api/supabaseClient";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -18,6 +22,7 @@ export interface ActiveSession {
   radius_meters: number;
   lecture_id?: string | null;
   section?: string | null;
+  section_numbers?: number[] | null;
 }
 
 interface SessionRow {
@@ -32,6 +37,7 @@ interface SessionRow {
   radius_meters: number | null;
   lecture_id?: string | null;
   section?: string | null;
+  section_numbers?: number[] | null;
 }
 
 interface UseSessionManagerReturn {
@@ -48,6 +54,7 @@ interface UseSessionManagerReturn {
     lectureId?: string | null,
     section?: string | null,
     kind?: "lecture" | "section",
+    sections?: number[],
   ) => Promise<string | undefined>;
   stopSession: (sessionId: string) => Promise<void>;
   updateDuration: (sessionId: string, durationMinutes: number) => Promise<{ error?: string }>;
@@ -71,7 +78,7 @@ export function useSessionManager(): UseSessionManagerReturn {
       let query = supabase
         .from("sessions")
         .select(
-          "id, subject_id, rotating_hash, short_code, expires_at, created_at, latitude, longitude, radius_meters, lecture_id, section, subjects(name, doctor_name)",
+          "id, subject_id, rotating_hash, short_code, expires_at, created_at, latitude, longitude, radius_meters, lecture_id, section, section_numbers, subjects(name, doctor_name)",
         )
         .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: false })
@@ -110,7 +117,7 @@ export function useSessionManager(): UseSessionManagerReturn {
             longitude: row.longitude ?? null,
             radius_meters: row.radius_meters ?? 50,
             lecture_id: row.lecture_id ?? null,
-            section: row.section ?? null,
+            section: sessionSectionsText(row),
           });
         }
       }
@@ -179,6 +186,7 @@ export function useSessionManager(): UseSessionManagerReturn {
       lectureId?: string | null,
       section?: string | null,
       kind?: "lecture" | "section",
+      sections?: number[],
     ) => {
       restoreRequest.current++;
       setLoading(false);
@@ -186,7 +194,7 @@ export function useSessionManager(): UseSessionManagerReturn {
       setError(null);
 
       const { data, error: rpcErr } = await supabase.rpc(
-        kind ? "open_typed_attendance_session" : "generate_rotating_hash",
+        kind ? "open_group_attendance_session" : "generate_rotating_hash",
         {
           ...(kind ? { p_kind: kind } : {}),
           p_subject_id: subjectId,
@@ -195,7 +203,12 @@ export function useSessionManager(): UseSessionManagerReturn {
           p_longitude: longitude ?? null,
           p_radius_meters: radiusMeters ?? 50,
           p_lecture_id: lectureId ?? null,
-          p_section: section ?? null,
+          ...(kind
+            ? {
+                p_sections:
+                  kind === "section" ? (sections ?? parseAttendanceSections(section)) : null,
+              }
+            : { p_section: section ?? null }),
         },
       );
 
@@ -235,7 +248,7 @@ export function useSessionManager(): UseSessionManagerReturn {
         longitude: row.longitude ?? longitude ?? null,
         radius_meters: row.radius_meters ?? radiusMeters ?? 50,
         lecture_id: row.lecture_id ?? lectureId ?? null,
-        section: row.section ?? section ?? null,
+        section: sessionSectionsText(row) ?? section ?? null,
       });
       setCreating(false);
       return row.lecture_id ?? undefined;

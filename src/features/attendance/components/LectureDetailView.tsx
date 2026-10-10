@@ -1,3 +1,7 @@
+import {
+  parseAttendanceSections,
+  sessionSectionsText,
+} from "@/features/attendance/utils/attendanceSections";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { CompletedAttendanceCleanup } from "./CompletedAttendanceCleanup";
 import { lectureService } from "@/features/attendance/services/lectureService";
@@ -51,6 +55,7 @@ interface SessionDbRow {
   created_at: string;
   expires_at: string;
   section: string | null;
+  section_numbers?: number[] | null;
   radius_meters: number | null;
   attendance?: { count: number }[];
 }
@@ -76,7 +81,11 @@ export function LectureDetailView({ lecture, onBack, onSelectLecture }: Props) {
   const [ending, setEnding] = useState(false);
   const [sessionDuration, setSessionDuration] = useState(60);
   const [sessionRadius, setSessionRadius] = useState(50);
-  const [selectedSection, setSelectedSection] = useState<string>(lecture.section ?? "1");
+  const [selectedSections, setSelectedSections] = useState<number[]>(() =>
+    parseAttendanceSections(lecture.section).length
+      ? parseAttendanceSections(lecture.section)
+      : [1],
+  );
   const [sessionType, setSessionType] = useState<"lecture" | "section">(lecture.kind ?? "lecture");
   useEffect(() => setSessionType(lecture.kind ?? "lecture"), [lecture.id, lecture.kind]);
   const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -111,7 +120,9 @@ export function LectureDetailView({ lecture, onBack, onSelectLecture }: Props) {
     try {
       const { data: sessions, error: historyError } = await supabase
         .from("sessions")
-        .select("id, created_at, expires_at, section, radius_meters, attendance(count)")
+        .select(
+          "id, created_at, expires_at, section, section_numbers, radius_meters, attendance(count)",
+        )
         .eq("lecture_id", lecture.id);
 
       if (historyError) throw historyError;
@@ -131,7 +142,7 @@ export function LectureDetailView({ lecture, onBack, onSelectLecture }: Props) {
           expires_at: s.expires_at,
           is_active: new Date(s.expires_at).getTime() > Date.now(),
           attendee_count: s.attendance?.[0]?.count ?? 0,
-          section: s.section ?? null,
+          section: sessionSectionsText(s),
           duration_minutes: durationMinutes,
           gps_radius: s.radius_meters ?? null,
         });
@@ -165,9 +176,13 @@ export function LectureDetailView({ lecture, onBack, onSelectLecture }: Props) {
   // Reset section when session type changes
   useEffect(() => {
     if (sessionType === "lecture") {
-      setSelectedSection("1");
+      setSelectedSections([1]);
     } else {
-      setSelectedSection(lecture.section ?? "1");
+      setSelectedSections(
+        parseAttendanceSections(lecture.section).length
+          ? parseAttendanceSections(lecture.section)
+          : [1],
+      );
     }
   }, [sessionType, lecture.section]);
 
@@ -221,8 +236,9 @@ export function LectureDetailView({ lecture, onBack, onSelectLecture }: Props) {
       gpsCoords?.lng,
       sessionRadius,
       lecture.id,
-      sessionType === "section" ? selectedSection : null,
+      sessionType === "section" ? String(selectedSections[0]) : null,
       sessionType,
+      selectedSections,
     );
     if (destinationId && destinationId !== lecture.id && onSelectLecture) {
       const units = await lectureService.fetchLectures(lecture.subject_id);
@@ -661,33 +677,47 @@ export function LectureDetailView({ lecture, onBack, onSelectLecture }: Props) {
                   </SelectContent>
                 </Select>
               </div>
-              {canChooseType &&
-                (sessionType !== lecture.kind ||
-                  (sessionType === "section" && selectedSection !== lecture.section)) && (
-                  <p className="text-xs text-muted-foreground sm:col-span-2 md:col-span-3">
-                    سيبدأ التسجيل في حصة مستقلة للنوع والسكشن المختارين، وتبقى سجلات هذه الحصة كما
-                    هي.
-                  </p>
-                )}
+              {(sessionType !== lecture.kind ||
+                (sessionType === "section" &&
+                  selectedSections.join(",") !==
+                    parseAttendanceSections(lecture.section).join(","))) && (
+                <p className="text-xs text-muted-foreground sm:col-span-2 md:col-span-3">
+                  سيبدأ التسجيل في حصة مستقلة للنوع والسكاشن المختارة، وتبقى سجلات هذه الحصة كما هي.
+                </p>
+              )}
               {sessionType === "section" ? (
                 <div className="space-y-1">
-                  <Label className="text-xs">رقم السكشن</Label>
-                  <Select
-                    value={selectedSection}
-                    onValueChange={setSelectedSection}
-                    disabled={!canChooseType && Boolean(lecture.section)}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue placeholder="اختر السكشن..." />
-                    </SelectTrigger>
-                    <SelectContent>
+                  <details className="rounded-md border border-input bg-background text-sm">
+                    <summary className="cursor-pointer px-3 py-2">
+                      {selectedSections.length
+                        ? "السكاشن المختارة: " + selectedSections.join("، ")
+                        : "اختر السكاشن"}
+                    </summary>
+                    <fieldset className="grid grid-cols-3 gap-2 border-t p-3">
+                      <legend className="sr-only">السكاشن المشاركة في الجلسة</legend>
                       {Array.from({ length: 15 }, (_, i) => i + 1).map((n) => (
-                        <SelectItem key={n} value={String(n)}>
+                        <label
+                          key={n}
+                          className="flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-muted"
+                        >
+                          <input
+                            type="checkbox"
+                            aria-label={"سكشن " + n}
+                            checked={selectedSections.includes(n)}
+                            onChange={(event) =>
+                              setSelectedSections((previous) =>
+                                event.target.checked
+                                  ? [...previous, n].sort((a, b) => a - b)
+                                  : previous.filter((section) => section !== n),
+                              )
+                            }
+                            className="h-4 w-4 accent-primary"
+                          />
                           سكشن {n}
-                        </SelectItem>
+                        </label>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </fieldset>
+                  </details>
                 </div>
               ) : null}
               <div className="space-y-1">
@@ -716,7 +746,13 @@ export function LectureDetailView({ lecture, onBack, onSelectLecture }: Props) {
             )}
             <Button
               onClick={handleCreateSession}
-              disabled={creating || !gpsCoords || sessionRadius < 10 || sessionRadius > 500}
+              disabled={
+                creating ||
+                !gpsCoords ||
+                sessionRadius < 10 ||
+                sessionRadius > 500 ||
+                (sessionType === "section" && !selectedSections.length)
+              }
               className="w-full gap-2"
             >
               <Hash className="h-4 w-4" />

@@ -23,11 +23,12 @@ export const sessionService = {
       let query = supabase
         .from("sessions")
         .select(
-          "id, subject_id, lecture_id, section, rotating_hash, short_code, expires_at, created_at, latitude, longitude, radius_meters, subjects(name)",
+          "id, subject_id, lecture_id, section, section_numbers, rotating_hash, short_code, expires_at, created_at, latitude, longitude, radius_meters, subjects(name)",
         )
         .order("created_at", { ascending: false });
       if (role === "student") query = query.gt("expires_at", new Date().toISOString());
-      if (sectionFilter?.length) query = query.in("section", sectionFilter);
+      if (sectionFilter?.length)
+        query = query.overlaps("section_numbers", sectionFilter.map(Number));
       const { data, error } = await query;
       if (error) throw error;
       return ok<SessionSummary[]>(((data ?? []) as SessionRow[]).map(mapSessionSummary));
@@ -98,7 +99,7 @@ export const sessionService = {
     const operation = "sessionService.fetchSessionsForLecture";
     try {
       const select =
-        "id, subject_id, rotating_hash, short_code, expires_at, created_at, latitude, longitude, radius_meters, lecture_id, subjects(name)";
+        "id, subject_id, rotating_hash, short_code, expires_at, created_at, latitude, longitude, radius_meters, lecture_id, section, section_numbers, subjects(name)";
       const { data, error } = await supabase
         .from("sessions")
         .select(select)
